@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1f756e52.js";
+            window.path_to_searchindex_js = "searchindex-8481e1c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-00ba28f5.js"></script>
+        <script src="toc-d720c678.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -15583,6 +15583,172 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><strong>Trimming <code>zarf</code>/<code>k8s.io/client-go</code> dependencies</strong> - these are the largest remaining contributors to binary size (particularly <code>zarf</code>’s signing stack, which pulls in <code>sigstore</code>/<code>cosign</code>/<code>go-tuf</code>/cloud SDKs), but they’re load-bearing for existing features (image signing, cluster operations) and weren’t touched here. Removing them would require dropping or refactoring those features, not just changing build flags.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="running-the-cluster-suite-against-your-own-fleet"><a class="header" href="#running-the-cluster-suite-against-your-own-fleet">Running the cluster suite against your own fleet</a></h1>
+<p>The cluster phase suite normally provisions the hosts it tests: bootloose containers by default, or local virtual machines with <code>CARGOSHIP_E2E_BACKEND=microvm</code>. The third backend provisions nothing. Point it at a <code>ZarfCluster</code> document naming hosts that already exist and it runs the same phase assertions against them.</p>
+<pre><code class="language-sh">CARGOSHIP_E2E_BACKEND=inventory \
+CARGOSHIP_E2E_INVENTORY=$PWD/my-fleet.yaml \
+  go test -mod=vendor -count=1 -v -timeout=90m ./test/e2e/cluster/...
+</code></pre>
+<p>That is what makes the suite usable as an acceptance test for an environment cargoship has not been proven against – EC2, GCE, vSphere, Proxmox, Hetzner, bare metal – rather than only as a regression test for the two fleets this repository knows how to build. The phases are the product; the hosts are yours.</p>
+<p><strong>The apply walk expects hosts with no engine on them.</strong> <code>Test_12_GatherFactsDistro</code> asserts every host reports no engine version before anything is installed, which is what makes the later upgrade-phase assertions mean anything. So the walk is a one-shot against a given fleet: running it a second time fails, correctly, and what follows an install is the upgrade or reset walk rather than another apply. Reset or rebuild the hosts before installing again.</p>
+<p><strong>It changes the hosts it is given, and it does not change them back.</strong> The walk installs an engine, rewrites <code>/etc/hosts</code>, configures the firewall, writes sysctl and fapolicyd files, and installs packages. Nothing is torn down on the way out – the suite did not create these machines, so it will not destroy them, and that cuts both ways. Use hosts you are willing to lose.</p>
+<h2 id="the-document"><a class="header" href="#the-document">The document</a></h2>
+<p>The same <code>ZarfCluster</code> document <code>cargoship apply --config</code> takes. It is read through the loader the CLI uses, so anything cargoship accepts is accepted here and anything it rejects fails before a host is touched.</p>
+<pre><code class="language-yaml">apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: my-fleet
+spec:
+  config:
+    loadbalancer: 10.0.1.10
+  hosts:
+    - ssh:
+        address: 10.0.1.10
+        user: ubuntu
+        port: 22
+        keyPath: /home/me/.ssh/fleet
+      hostname: ip-10-0-1-10
+      privateAddress: 10.0.1.10
+      role: controller
+      profile: controller
+    - ssh:
+        address: 10.0.1.11
+        user: ubuntu
+        port: 22
+        keyPath: /home/me/.ssh/fleet
+      hostname: ip-10-0-1-11
+      privateAddress: 10.0.1.11
+      role: worker
+      profile: worker
+</code></pre>
+<p><a href="https://github.com/colonel-byte/cargoship/blob/main/test/e2e/cluster/testdata/inventory-external.yaml"><code>test/e2e/cluster/testdata/inventory-external.yaml</code></a> is a working example of the shape, and is what the unit tests read.</p>
+<p>What the suite requires of it:</p>
+<ul>
+<li><strong>At least one host with <code>role: controller</code>.</strong> Without one there is no control plane to install, and the run says so rather than failing inside a phase.</li>
+<li><strong><code>role</code> on every host.</strong> This backend reads roles from the document and never from the hostnames. The other two fleets name their machines <code>kc0</code>, <code>kw0</code> and so on and let a prefix carry the role; your hostnames are whatever your fleet calls them, so the field is the only source.</li>
+<li><strong><code>privateAddress</code> on every host, and <code>privateInterface</code> where the default route is not on the interface the nodes talk to each other over.</strong> The firewall and <code>/etc/hosts</code> phases distribute these to every peer. Fact gathering will discover an address if you leave it out, and on a multi-homed host it discovers the one holding the default route, which may not be the one the cluster should use.</li>
+<li><strong>Key-based SSH, as a user who can <code>sudo</code> without a password.</strong> Every phase runs privileged commands through <code>Sudo()</code>.</li>
+<li><strong><code>SSH_KNOWN_HOSTS=""</code></strong> in the environment if your hosts’ keys are not in a known-hosts file the test binary will read.</li>
+</ul>
+<h2 id="environment"><a class="header" href="#environment">Environment</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>CARGOSHIP_E2E_BACKEND</code></td><td><code>inventory</code> to select this backend</td></tr>
+<tr><td><code>CARGOSHIP_E2E_INVENTORY</code></td><td>Path to the <code>ZarfCluster</code> document</td></tr>
+<tr><td><code>CARGOSHIP_E2E_JOIN_HOST</code></td><td>Hostname the join walk should join. Unset skips that walk; see below</td></tr>
+<tr><td><code>CARGOSHIP_E2E_DISTRO</code></td><td><code>k3s</code> (default) or <code>rke2</code>, which engine to install</td></tr>
+<tr><td><code>SSH_KNOWN_HOSTS</code></td><td>Set to <code>""</code> when your hosts’ keys are not in a known-hosts file the test binary reads</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="what-runs-and-what-stands-down"><a class="header" href="#what-runs-and-what-stands-down">What runs, and what stands down</a></h2>
+<p>Every phase runs. Some assertions do not, because they are assertions about a fleet this suite chose:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Assertion</th><th>Against your fleet</th></tr>
+</thead>
+<tbody>
+<tr><td>Each host runs the OS its image declared</td><td>Stands down. Your hosts’ operating systems are not knowable until phase 09 has asked them, so the test asserts only that detection produced an answer, and logs the mix it found</td></tr>
+<tr><td>The fleet runs every OS family</td><td>Stands down, for the same reason</td></tr>
+<tr><td>An Enterprise Linux host exists for the RPM phase, a Debian host for the APT phase</td><td>Stands down. Those guards protect a fleet that was meant to cover a branch and lost the host for it, which cannot be said about hosts the suite did not choose</td></tr>
+<tr><td>The join walk</td><td>Skipped unless <code>CARGOSHIP_E2E_JOIN_HOST</code> names a host for it, because the suite cannot create one. See “Adding a host” below</td></tr>
+<tr><td>Everything else – the prepare phases, SELinux, fapolicyd, the firewall, all four upload phases, the engine config, the engine install, the upgrade and reset walks</td><td>Runs, and asserts</td></tr>
+</tbody>
+</table>
+</div>
+<p>The run logs which of these it stood down, so a green result does not quietly read as broader coverage than it was.</p>
+<h2 id="adding-a-host-and-running-the-join-walk-against-it"><a class="header" href="#adding-a-host-and-running-the-join-walk-against-it">Adding a host, and running the join walk against it</a></h2>
+<p>The join walk installs the engine on a host that was not in the cluster when the install ran, then asserts the cluster is one node larger rather than one node different. The other two backends create that host on demand. Here you create it, and it takes two runs – the suite’s walks run in one process, so there is no moment in a single run at which a host can appear.</p>
+<p><strong>First run: install the cluster on the hosts you have.</strong> Stop after the apply walk, because the join walk has nothing to join yet. The hosts have to be carrying no engine at this point, per the note above.</p>
+<pre><code class="language-sh">CARGOSHIP_E2E_BACKEND=inventory CARGOSHIP_E2E_INVENTORY=$PWD/my-fleet.yaml   go test -mod=vendor -count=1 -v -timeout=90m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+</code></pre>
+<p><strong>Then provision the new host yourself</strong> – another instance in the same subnet or VLAN, reachable over SSH by the same key, able to reach the other nodes on the ports the engine uses – and add it to the document. A worker, since that is what the walk joins:</p>
+<pre><code class="language-yaml">    - ssh:
+        address: 10.0.1.12
+        user: ubuntu
+        port: 22
+        keyPath: /home/me/.ssh/fleet
+      hostname: ip-10-0-1-12
+      privateAddress: 10.0.1.12
+      role: worker
+      profile: worker
+</code></pre>
+<p><strong>Second run: name it, and run only the join walk.</strong></p>
+<pre><code class="language-sh">CARGOSHIP_E2E_BACKEND=inventory CARGOSHIP_E2E_INVENTORY=$PWD/my-fleet.yaml CARGOSHIP_E2E_JOIN_HOST=ip-10-0-1-12   go test -mod=vendor -count=1 -v -timeout=60m -run 'TestClusterPhases/join' ./test/e2e/cluster/...
+</code></pre>
+<p><code>CARGOSHIP_E2E_JOIN_HOST</code> is the hostname as the document spells it, not the address. The walk resolves the host out of the inventory by that name, so a mismatch fails before any phase runs rather than after half a walk.</p>
+<h3 id="what-that-does-with-the-document"><a class="header" href="#what-that-does-with-the-document">What that does with the document</a></h3>
+<p>The named host is held out of the fleet the install is considered to have produced, and put back for the join. One file, read twice: the apply walk’s view has every host except that one, the join walk’s view has all of them, and the host counts the assertions compare against come out exactly as they do for a fleet the suite provisioned. That is why the new host must be in the document for the <em>second</em> run and may be absent from the first – adding it earlier is harmless, because the first run does not look at it either way.</p>
+<p>The walk then asserts what it always asserts: the phases claim the new node and not the established ones, the engine comes up on it at the version the cluster already runs, every established node’s firewall learns the new node’s address, and the cluster reports one more <code>Ready</code> node than before.</p>
+<p>Two ways naming it goes wrong, both reported before a host is touched:</p>
+<ul>
+<li><strong>A name the document does not hold.</strong> Check the <code>hostname</code> field rather than the address.</li>
+<li><strong>The only host in the document.</strong> There is no cluster for it to join.</li>
+</ul>
+<p>Leave <code>CARGOSHIP_E2E_JOIN_HOST</code> unset and the join walk is skipped with a line saying why, which is the right default: a document whose hosts are all already in the cluster has nothing to join.</p>
+<h2 id="removing-a-host-and-adding-it-back"><a class="header" href="#removing-a-host-and-adding-it-back">Removing a host, and adding it back</a></h2>
+<p>A removal and a re-join are the same host taken out of the cluster and put back, and running them in sequence is the most useful exercise this backend offers: it is the only one that covers the phases in both directions against hosts you did not create.</p>
+<h3 id="taking-it-out"><a class="header" href="#taking-it-out">Taking it out</a></h3>
+<p><code>cargoship reset</code> scoped to the host. Keep the whole fleet in the document and name the one to remove:</p>
+<pre><code class="language-sh">cargoship reset --config my-fleet.yaml --distro rke2 --confirm --dry-run --target-hosts ip-10-0-1-12
+cargoship reset --config my-fleet.yaml --distro rke2 --confirm --target-hosts ip-10-0-1-12
+</code></pre>
+<p>The dry run first: it reports every host it would reset and what it would do to each, and touches none.</p>
+<p><strong>The full inventory matters.</strong> The node is drained and deleted from the cluster before its engine comes down, and cargoship does that by driving <code>kubectl</code> through a controller that is <em>staying</em> – so one has to be in the document. A run that targets every running controller while keeping some other host is refused rather than attempted, because it would delete nodes through a machine it is about to uninstall. Targeting every host is allowed: that is a whole-cluster reset, which is what plain <code>reset</code> is. Removing more than one running controller in a single run is also refused; one run per controller.</p>
+<p>What the host is left in is the point for what follows. The engine is uninstalled, its data and config directories go with it, and so does <code>/etc/cargoship</code> – the machine is back to the state the install walk expects, which is exactly the precondition a re-join needs. Verify it on the host rather than trusting the run, and check the engine-specific paths rather than their parents:</p>
+<pre><code class="language-sh">ssh ip-10-0-1-12 'for d in /var/lib/rancher/rke2 /etc/rancher/rke2 /etc/cargoship; do
+  printf "%-26s %s\n" "$d" "$(sudo test -e $d &amp;&amp; echo present || echo gone)"; done'
+</code></pre>
+<p><code>/var/lib/rancher</code> and <code>/etc/rancher</code> themselves stay, which is correct: the engine owns the subdirectory under each, and that is what <code>CleanupPaths</code> names. <code>/etc/rancher/node</code> stays too – the node-password material the engine’s own package put there is not cargoship’s to remove, and a re-join writes a fresh one.</p>
+<p>Removing a <em>controller</em> also repoints the ones that stayed: the survivors carry <code>server:</code> naming the controller they joined through, so taking the first one out rewrites that on the rest and drops it from whichever survivor becomes first. Without that the cluster keeps working and cannot come back, because <code>server:</code> is read at startup. Check it the same way:</p>
+<pre><code class="language-sh">ssh ip-10-0-1-11 'sudo grep -H "^server:" /etc/rancher/rke2/config.yaml'   # names a host that is still there
+</code></pre>
+<h3 id="checking-what-is-left"><a class="header" href="#checking-what-is-left">Checking what is left</a></h3>
+<p>Take the host out of the document, then check the remaining fleet. Not with the apply walk: those hosts run the engine and that walk asserts they do not. A CLI dry run reports over live state and changes nothing:</p>
+<pre><code class="language-sh">cargoship apply --config my-fleet.yaml --dry-run &lt;package&gt;
+</code></pre>
+<p>It should name no install work – the remaining hosts are already at the packaged version – and no host you removed. Confirm the cluster agrees from inside a node, which on a fleet whose load balancer is private is the only place the API is reachable:</p>
+<pre><code class="language-sh">kubectl get nodes      # the removed node is gone, not NotReady
+</code></pre>
+<p>A node deleted from the cluster but left in the document shows up as a host the dry run still plans for, which is why the order matters.</p>
+<h3 id="putting-it-back"><a class="header" href="#putting-it-back">Putting it back</a></h3>
+<p>The host is clean, so it re-joins the way any new host does – put it back in the document and name it to the join walk:</p>
+<pre><code class="language-sh">CARGOSHIP_E2E_BACKEND=inventory \
+CARGOSHIP_E2E_INVENTORY=$PWD/my-fleet.yaml \
+CARGOSHIP_E2E_JOIN_HOST=ip-10-0-1-12 \
+  go test -mod=vendor -count=1 -v -timeout=60m -run 'TestClusterPhases/join' ./test/e2e/cluster/...
+</code></pre>
+<p>That is the same invocation as “Adding a host” above, and it is the same work: the walk prepares the host, uploads to it, installs the engine and waits for the node to report Ready alongside the others. What makes the round trip worth running is that it is the one path through this suite where a host’s <em>second</em> install has to behave like its first – anything the reset left behind shows up here as a phase that finds work already done, or as an engine that starts against stale configuration.</p>
+<p>Two things worth watching on the way back in:</p>
+<ul>
+<li><strong>The node name.</strong> It rejoins under the name the inventory gives it, so a host put back under a different <code>hostname</code> arrives as a new node and the old object is not reused. That is usually what you want after a rebuild; it is a surprise if you expected the name to follow the machine.</li>
+<li><strong>Whether it was a controller.</strong> A controller that rejoins is not automatically the first one again: the survivor elected when it left keeps that role, and the returning host joins through it. The cluster is correct either way, and <code>cargoship apply</code> is what re-renders the whole fleet’s view of who is first.</li>
+</ul>
+<p>Removing the <em>whole</em> cluster is the reset walk, which runs last in a full <code>TestClusterPhases</code> and needs no flags. It is destructive and backs nothing up; what follows a reset is an apply.</p>
+<h2 id="reading-a-failure"><a class="header" href="#reading-a-failure">Reading a failure</a></h2>
+<p>A failure here is more likely to be about your environment than about cargoship, and the suite is not in a position to tell the difference. Three things worth checking before filing anything:</p>
+<ul>
+<li><strong>Node-to-node traffic.</strong> The engine phases are the first that need it, and a security group or host firewall that allows your SSH but not the cluster’s own ports fails at the worker join – the agent never starts, and the real reason is in the node’s journal rather than in the test output. The phase captures the journal of the host whose wait timed out.</li>
+<li><strong>Which address the nodes got.</strong> If <code>privateAddress</code> is wrong or discovered from the wrong interface, the firewall and <code>/etc/hosts</code> phases distribute addresses no peer can reach, and everything up to the engine still passes.</li>
+<li><strong><code>dnf versionlock</code> and the SELinux policy packages.</strong> A minimal Enterprise Linux image carries neither the versionlock plugin nor <code>container-selinux</code>, and phase 21 is fatal when it cannot install the latter. Both need a reachable package repository, which an air-gapped fleet does not have by definition – stage them into the image instead.</li>
+</ul>
+<h2 id="verifying-work-that-is-not-on-main-yet"><a class="header" href="#verifying-work-that-is-not-on-main-yet">Verifying work that is not on <code>main</code> yet</a></h2>
+<p>This backend and <a href="#a-local-vm-fleet">the VM fleet</a> are also how a change to the lifecycle phases gets exercised before it merges, which previously had no local path at all: the container backend cannot form a multi-node cluster on a host whose firewall drops container-to-container traffic, so the full walk – the join, upgrade and reset walks, and every phase after the engine starts – has never run outside CI, and CI runs only the staging half.</p>
+<p>Check out the branch, bring a fleet up, and run the suite against it. <code>--target-hosts</code> is the worked example, and it is worth knowing what came out of running it this way before it merged. A subset reset’s whole risk is in which hosts it claims and which controller it drives <code>kubectl</code> through, and neither is observable without a real multi-node cluster to take one node out of – the first run against one found three defects that every unit test passed over:</p>
+<ul>
+<li>the host was matched to its node by the name the <em>machine</em> reports, which on anything with a search domain is not the node’s name, so the phase claimed no hosts and the engine was uninstalled while the node stayed in the cluster</li>
+<li>the worker path deleted the node without stopping the engine first, so the kubelet re-registered it seconds later</li>
+<li>the uninstall guarded every directory removal on a <code>test -f</code> check, which is false for a directory, so a reset left the whole data directory behind while reporting success</li>
+</ul>
+<p>None of those is visible from a single-node cluster or from a container, which is the argument for this backend in one paragraph.</p>
+<h2 id="the-other-two-backends"><a class="header" href="#the-other-two-backends">The other two backends</a></h2>
+<p><a href="#a-local-vm-fleet">microvm</a> is the local VM fleet, which is the one to reach for first: it is a real kernel with SELinux enforcing and costs a minute to bring up. <a href="#running-the-end-to-end-tests">e2e-tests</a> and <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a> cover the suite itself and the default container backend.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
 <p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
 <p>One top-level test, <code>TestClusterPhases</code>, runs five walks against the same cluster in the order they work in: <code>dryrun</code> runs whole actions with <code>--dry-run</code> over nodes with nothing on them and asserts it left them that way, <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, <code>upgrade</code> walks the same phases again with a newer package, and <code>reset</code> takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
@@ -15779,6 +15945,11 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in betwe
 $ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
 $ docker exec -it &lt;container&gt; sh
 </code></pre>
+<p><strong>Run against virtual machines instead of containers.</strong> <code>CARGOSHIP_E2E_BACKEND=microvm</code>, or <code>mage test:endToEndClusterVM</code>, provisions the hosts as local Rocky 10 virtual machines rather than bootloose containers. Everything downstream of the inventory is identical; what changes is that the hosts have a real kernel, so the phases that correctly do nothing against a container – SELinux, fapolicyd, the firewalld backend – run as the paths they are:</p>
+<pre><code class="language-sh">$ CARGOSHIP_E2E_BACKEND=microvm go test -mod=vendor -count=1 -v -timeout=60m ./test/e2e/cluster/...
+</code></pre>
+<p>It needs KVM, and a bring-up costs a minute or two against a container’s seconds. It is also one distribution, so it covers none of the family routing the container fleet’s Ubuntu, Fedora and Alpine mix exists for – run both, not one instead of the other. See <a href="#a-local-vm-fleet">microvm</a> for the fleet itself and <a href="#why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace">choice-microvm-backend</a> for the reasoning.</p>
+<p><strong>Run against a fleet the suite did not create.</strong> <code>CARGOSHIP_E2E_BACKEND=inventory</code> with <code>CARGOSHIP_E2E_INVENTORY</code> pointing at a <code>ZarfCluster</code> document runs every phase against hosts that already exist, wherever they are. The assertions that are about a fleet this suite chose – the declared OS per host, the OS mix, the per-family upload guards, the join walk – stand down and say so; everything else asserts as usual. See <a href="#running-the-cluster-suite-against-your-own-fleet">e2e-external-inventory</a>, including the warning that it changes those hosts and does not change them back.</p>
 <p><strong>Walk the suite against rke2 instead of k3s.</strong> <code>CARGOSHIP_E2E_DISTRO=rke2</code> switches which distro every step installs, and which package <code>cluster_lifecycle_test.go</code> builds. The default is <code>k3s</code>. A phase that branches on the engine needs a run each way:</p>
 <pre><code class="language-console">$ CARGOSHIP_E2E_DISTRO=rke2 go test -mod=vendor -count=1 -v -timeout=90m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
 </code></pre>
@@ -15836,10 +16007,24 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 </code></pre>
 <h2 id="environment-variables-1"><a class="header" href="#environment-variables-1">Environment variables</a></h2>
 <ul>
-<li><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> - parent directory for the temp dirs the harness creates, one per <code>e2e.Cargoship</code> call, plus the shared minimal package. Unset means the system temp directory. Point it at <code>build/tmp</code> to keep all test scratch inside the repo, which makes it easy to see what a run left behind: <code>CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...</code>.</li>
-<li><strong><code>TMPDIR</code></strong> - respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.</li>
-<li><strong><code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG</code></strong> - set to any non-empty value to keep the in-memory registry’s request log for passing tests as well as failing ones. See “Artifacts and logs” below.</li>
-<li><strong><code>CARGOSHIP_CONFIG</code></strong> - the config file the binary loads. <code>TestCargoshipCreateExample</code> sets it (to <code>test/e2e/cargoship-config.yaml</code>), and the Ansible module suite’s “reports a broken config file as a module failure” case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> - parent directory for the temp dirs the harness creates, one per <code>e2e.Cargoship</code> call, plus the shared minimal package. Unset means the system temp directory. Point it at <code>build/tmp</code> to keep all test scratch inside the repo, which makes it easy to see what a run left behind: <code>CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...</code>.</p>
+</li>
+<li>
+<p><strong><code>TMPDIR</code></strong> - respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_BACKEND</code></strong> - what provisions the cluster suite’s hosts: <code>bootloose</code> (the default) for privileged containers, <code>microvm</code> for local Rocky 10 virtual machines, or <code>inventory</code> for hosts that already exist. The VM backend is the only way the SELinux, fapolicyd and firewalld phases run as the paths they are rather than as gates that correctly do nothing, and it needs KVM. It is additional coverage rather than a replacement, since it runs one distribution; see <a href="#a-local-vm-fleet">microvm</a>.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_INVENTORY</code></strong> - with <code>CARGOSHIP_E2E_BACKEND=inventory</code>, the path to a <code>ZarfCluster</code> document naming hosts that already exist. The suite provisions nothing and tears nothing down, which is how the phase assertions are run against a fleet on EC2, vSphere, Proxmox or bare metal. It changes those hosts and does not change them back; see <a href="#running-the-cluster-suite-against-your-own-fleet">e2e-external-inventory</a>.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG</code></strong> - set to any non-empty value to keep the in-memory registry’s request log for passing tests as well as failing ones. See “Artifacts and logs” below.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_CONFIG</code></strong> - the config file the binary loads. <code>TestCargoshipCreateExample</code> sets it (to <code>test/e2e/cargoship-config.yaml</code>), and the Ansible module suite’s “reports a broken config file as a module failure” case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.</p>
+</li>
 </ul>
 <h2 id="seeing-what-the-binary-actually-did"><a class="header" href="#seeing-what-the-binary-actually-did">Seeing what the binary actually did</a></h2>
 <p><code>e2e.Cargoship</code> runs the binary with <code>exec.PrintCfg()</code>, so its stdout and stderr are written through to the test process’s stdout and stderr, not into <code>t.Log</code>. <code>go test</code> buffers that per package and prints it only when the package fails; add <code>-v</code> to see it as it happens.</p>
@@ -16539,6 +16724,305 @@ mage generate:examples
 </code></pre>
 <p>Note that <code>magefiles/</code> itself remains its own <code>package main</code> for the <code>mage</code> CLI’s benefit; <code>core/core.go</code> is a separate package and binary, not part of that compiled unit.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="a-local-vm-fleet"><a class="header" href="#a-local-vm-fleet">A local VM fleet</a></h1>
+<p><code>mage dev:vmUp</code> brings up a fleet of Rocky 10 virtual machines on your own machine and writes a <code>ZarfCluster</code> inventory pointing at them, so that <code>cargoship prepare</code> and <code>cargoship apply</code> can be run against hosts with a real kernel. <code>mage dev:vmDown</code> takes it away again.</p>
+<p>It exists for the phases the <a href="#running-the-end-to-end-tests">cluster e2e suite</a> cannot reach. Those nodes are containers, and a container reports no SELinux, runs no fapolicyd and has no firewall of its own, so <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go"><code>pkg/phase/21_prepare_selinux.go</code></a> and its neighbours correctly do nothing there. Testing a change to any of them means a virtual machine. <a href="#why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace">choice-microvm-backend</a> records why this is plain qemu rather than Firecracker or libvirt.</p>
+<p>Nothing it does touches the host. It needs no root, starts no daemon, and changes no SELinux, firewall or kernel setting on your machine - which is the point, since the configuration under investigation is usually the host’s own.</p>
+<h2 id="what-you-need"><a class="header" href="#what-you-need">What you need</a></h2>
+<p><code>qemu-system-x86_64</code>, <code>qemu-img</code>, <code>mkfs.vfat</code>, <code>mcopy</code>, <code>ssh</code>, and a readable <code>/dev/kvm</code>. <code>mage dev:vmUp</code> reports every missing tool at once rather than failing part way through a bring-up.</p>
+<p><a href="#setting-a-machine-up-to-run-the-vm-fleet">qemu-setup</a> is the full walkthrough: which package provides each of those on Fedora and Debian, how <code>/dev/kvm</code> access works without joining a group, what to do when your development machine is itself a virtual machine, and how to tell a node is really accelerated rather than emulated.</p>
+<h2 id="bringing-a-fleet-up"><a class="header" href="#bringing-a-fleet-up">Bringing a fleet up</a></h2>
+<pre><code class="language-sh">mage dev:vmUp -control=1 -worker=2
+mage dev:vmUp -control=1 -worker=2 -infra=3 -distro=rke2
+</code></pre>
+<p>Every flag has a default, so <code>mage dev:vmUp</code> on its own gives one control-plane node and two workers running k3s.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Flag</th><th>Default</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>-control</code></td><td><code>1</code></td><td>Control-plane nodes. The first is the leader, which is what the inventory’s load balancer names</td></tr>
+<tr><td><code>-worker</code></td><td><code>2</code></td><td>Plain worker nodes</td></tr>
+<tr><td><code>-infra</code></td><td><code>0</code></td><td>Infra nodes: workers carrying an <code>infra</code> profile of their own</td></tr>
+<tr><td><code>-ubuntuControl</code></td><td><code>0</code></td><td>Control-plane nodes running Ubuntu instead of Rocky</td></tr>
+<tr><td><code>-ubuntuWorker</code></td><td><code>0</code></td><td>Worker nodes running Ubuntu instead of Rocky</td></tr>
+<tr><td><code>-distro</code></td><td><code>k3s</code></td><td>The engine the fleet is prepared for, <code>k3s</code> or <code>rke2</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><code>-distro</code> changes nothing about the guests. It decides only which of the leader’s ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.</p>
+<p>Infra nodes join as workers – the engine has no third role – and what makes them infra is their profile, which <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go"><code>pkg/phase/81_label_nodes.go</code></a> turns into a <code>node-role.kubernetes.io/infra</code> label and which a cluster config can hang a per-profile concurrency off. They are worth asking for because every other host in the generated inventory has a profile that just restates its role, which leaves both of those mechanisms indistinguishable from the role they came from. Ask for some and the engine phases batch them separately: <code>starting agent (profile: infra)</code>.</p>
+<p>The first run downloads a pinned Rocky 10 GenericCloud image, roughly 520MiB, into <code>$XDG_CACHE_HOME/cargoship/microvm</code> and verifies its digest. That cache is outside the repository and survives a clean checkout; later runs reuse it.</p>
+<p>Each node is a copy-on-write overlay over that image, so a bring-up costs a few megabytes rather than another copy. Bring-up takes a minute or two: a node answers SSH about six seconds in, and the rest is cloud-init installing firewalld and fapolicyd. The fleet is only handed back once cloud-init has finished on every node, because the gates in phases 22 and 26 ask whether those services are <em>running</em> - a fleet returned any earlier looks healthy and has both of those phases silently skipping.</p>
+<pre><code>NODE  ROLE        STATE                 SSH              PRIVATE ADDRESS
+kc0   controller  running (pid 197656)  127.0.0.1:26241  10.73.156.11
+kw0   worker      running (pid 197673)  127.0.0.1:26242  10.73.156.12
+kw1   worker      running (pid 197714)  127.0.0.1:26243  10.73.156.13
+
+Inventory: build/microvm/dev/inventory.yaml
+</code></pre>
+<p>Then drive cargoship at it the way you would any other inventory:</p>
+<pre><code class="language-sh">cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+</code></pre>
+<h2 id="what-a-bring-up-is-doing-while-it-waits"><a class="header" href="#what-a-bring-up-is-doing-while-it-waits">What a bring-up is doing while it waits</a></h2>
+<p><code>dev:vmUp</code> blocks until the fleet is usable, and on a six-node fleet that is minutes. It reports what it is waiting on so a long wait does not read as a hung shell:</p>
+<pre><code class="language-console">$ mage dev:vmUp -control=3 -worker=3
+Bringing up 3 control-plane, 3 worker node(s) for k3s
+waiting for 6 node(s) to finish cloud-init, up to 15m0s
+  ready: kc0   1m4s
+  waiting: kc1 cloud-init is still running (30s)
+  ready: kc1   1m12s
+</code></pre>
+<p>The wait is for cloud-init rather than for sshd, which answers about six seconds in. The packages that open the fapolicyd and firewall gates are installed after that, so a fleet handed back at the earlier moment looks healthy and has both of those phases silently skipping – see “Bringing a fleet up” above.</p>
+<p>The 15 minute budget covers the whole fleet, not each node: they are all started before any is waited on, so the wall time is the slowest node rather than the sum.</p>
+<p><strong>Interrupting the wait does not stop the fleet.</strong> Each node is a detached qemu process, so <code>Ctrl-C</code> leaves them running and the inventory in place – which is deliberate, since a node that is slow to configure is usually one worth logging into. <code>dev:vmList</code> shows what is there and <code>dev:vmDown</code> removes it; a later <code>dev:vmUp</code> refuses rather than adopting a fleet that is already up.</p>
+<p><strong>Memory is the limit worth planning.</strong> Each node takes 4096MiB and 2 vCPUs by default, so six nodes want 24GiB and a bring-up that would not fit in <code>MemAvailable</code> is refused rather than left to the OOM killer. <code>-memory</code> and <code>-cpus</code> are how to fit a bigger fleet into a smaller machine:</p>
+<pre><code class="language-sh">mage dev:vmUp -control=3 -worker=3 -memory=2048
+</code></pre>
+<p>2048MiB is ample for the host-preparation phases. An rke2 control-plane node wants the default: three of them at 2048 will come up and then struggle once etcd and the control plane are both running.</p>
+<h2 id="a-mixed-fleet"><a class="header" href="#a-mixed-fleet">A mixed fleet</a></h2>
+<p>The fleet runs Rocky 10 unless you ask for something else. Two counts opt in to Ubuntu nodes alongside them:</p>
+<pre><code class="language-sh">mage dev:vmUp -control=1 -worker=1 -ubuntuWorker=2 -distro=k3s
+mage dev:vmUp -control=0 -ubuntuControl=1 -ubuntuWorker=1 -distro=k3s   # Ubuntu only
+</code></pre>
+<p>Rocky nodes are <code>kc*</code> / <code>kw*</code> / <code>ki*</code>; Ubuntu nodes are <code>uc*</code> / <code>uw*</code>. <code>dev:vmList</code> shows which guest each node runs.</p>
+<p>This is what a single-distribution fleet cannot cover, and it is the gap <a href="#why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace">choice-microvm-backend</a> records as the reason the container matrix is still the only thing that covers family routing. With Ubuntu nodes in the fleet, apply routes for real:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>On a Rocky node</th><th>On an Ubuntu node</th></tr>
+</thead>
+<tbody>
+<tr><td>Phase 21 installs <code>container-selinux</code>, because <code>getenforce</code> reports <code>Enforcing</code></td><td>Phase 21 does nothing, because there is no SELinux</td></tr>
+<tr><td>Phase 22 writes fapolicyd rules and restarts the service</td><td>Phase 22 does nothing: fapolicyd is not packaged for Ubuntu</td></tr>
+<tr><td>Phase 26 selects the firewalld backend</td><td>Phase 26 selects ufw</td></tr>
+<tr><td>Phase 57 installs the staged RPMs through <code>dnf</code></td><td>Phase 57 declines it; 59 installs the binary the package ships for hosts it carries no <code>.deb</code> for</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each of those <em>doing nothing</em> on the other guest is the assertion worth having: the phase tests compare what ran against what the hosts report, so a gate that routes wrongly shows up as a mismatch rather than as a silent skip.</p>
+<p>Two things to know before reaching for one:</p>
+<ul>
+<li>
+<p><strong>An Ubuntu node is installed from a binary, not from packages, and it does join.</strong> The <code>rke2</code> examples ship RPMs for the Enterprise Linux family and a tarball for everything else, so phase 57 claims the Rocky nodes and phase 59 claims the Ubuntu one. Verified on a mixed fleet: no <code>dpkg</code> entry for rke2, a 133MB <code>/usr/local/bin/rke2</code>, <code>rke2-agent</code> active, the node <code>Ready</code>. The glibc constraint that makes the container fleet’s Alpine node upload-only is about musl, and Ubuntu is not musl.</p>
+<p>What that means for coverage is narrower than it looks. Phase 58 runs and has nothing to install, because no <code>k3s</code> or <code>rke2</code> example carries a <code>.deb</code>; the <code>upstream-*</code> packages are the only ones that do, so they are what exercises the APT path with real packages. A <code>k3s</code> or <code>rke2</code> fleet exercises the <em>routing</em> – which phase claims which host – rather than the apt install itself.</p>
+</li>
+<li>
+<p><strong>ufw is enabled by cloud-init</strong>, which cargoship deliberately never does: bringing up a default-deny firewall over the SSH connection a phase is running on can cut it, so <code>pkg/firewall/ufw.go</code> applies only to a host whose ufw is already active. A stock cloud image ships it inactive, so without that the ufw path is not reachable at all.</p>
+</li>
+</ul>
+<h2 id="updating-a-pinned-image"><a class="header" href="#updating-a-pinned-image">Updating a pinned image</a></h2>
+<p>Both guests are pinned by dated build and digest in <code>internal/microvm/image.go</code>, not by a <code>latest</code> alias. The aliases move without warning, and a release that ships a broken build – Rocky has published a GenericCloud image with no cloud-init in it – is then something this package steps over by not moving, rather than something every developer hits at once. <code>TestEveryImageIsPinnedAndVerifiable</code> fails on a URL containing <code>latest</code>, so the pin cannot quietly become a moving one.</p>
+<p>Bumping one is three edits and a download. For <strong>Rocky</strong>, the dated builds and their checksums are published side by side:</p>
+<pre><code class="language-sh">curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/ | grep -o 'Rocky-10-GenericCloud-Base-[0-9.]*-[0-9.]*\.x86_64\.qcow2' | sort -u | tail -3
+curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/&lt;file&gt;.CHECKSUM
+</code></pre>
+<p>For <strong>Ubuntu</strong>, the dated directory is what to pin – <code>releases/26.04/release/</code> is a pointer that moves:</p>
+<pre><code class="language-sh">curl -s https://cloud-images.ubuntu.com/releases/26.04/ | grep -o 'release-[0-9]\{8\}' | sort -u | tail -3
+curl -s https://cloud-images.ubuntu.com/releases/26.04/release-&lt;date&gt;/SHA256SUMS | grep amd64.img
+</code></pre>
+<p>Then update <code>file</code>, <code>url</code> and <code>sha256</code> on that image, and run the download so the verification actually sees the new build:</p>
+<pre><code class="language-sh">mage dev:vmImage -image=rocky        # or ubuntu, or all
+</code></pre>
+<p><code>Fetch</code> checks the digest and then asks <code>guestfish</code> two things the digest cannot: that cloud-init is in the image at all, and – for a guest declared <code>selinux: true</code> – that it sets <code>SELINUX=enforcing</code>. Both have been wrong in a published build, and both fail late and unrecognisably if nobody looks: without cloud-init the seed is ignored and every node simply times out waiting for SSH, and with SELinux disabled the fleet comes up fine and every phase it exists to test quietly skips.</p>
+<p>A cached image whose digest no longer matches the pin is reported rather than silently replaced, naming the file to remove – re-downloading half a gigabyte is not something to do behind somebody’s back. After a bump, bring a fleet up and check the guest is what you think it is:</p>
+<pre><code class="language-sh">mage dev:vmUp -control=1 -worker=0
+mage dev:vmShell kc0        # then: cat /etc/os-release; getenforce
+</code></pre>
+<h2 id="looking-around-and-tearing-down"><a class="header" href="#looking-around-and-tearing-down">Looking around, and tearing down</a></h2>
+<pre><code class="language-sh">mage dev:vmList         # what is there and whether it is running
+mage dev:vmShell kc0    # a root shell on one node
+mage dev:vmDown         # every node stopped, every trace removed
+mage dev:vmImage        # fetch and verify the base image, start nothing
+</code></pre>
+<p>Each of those takes <code>-fleet</code> as well, and it matters once the e2e suite has been run against VMs: <code>CARGOSHIP_E2E_BACKEND=microvm</code> brings up a fleet named <code>e2e</code>, which the default <code>dev</code> fleet does not cover. A suite run killed before its own teardown leaves that fleet behind, and nothing else will remove it:</p>
+<pre><code class="language-sh">mage dev:vmList -fleet=e2e
+mage dev:vmDown -fleet=e2e
+</code></pre>
+<p><code>dev:vmUp</code> refuses a fleet that is already up rather than adopting it, so every bring-up starts from a fresh overlay. Tear the old one down first. That refusal is deliberate: a node still carrying the state of a previous apply is the one thing that makes a phase failure impossible to reason about.</p>
+<p>Note that <code>mage dev:clean</code> does not remove a fleet. It removes built binaries, and deleting a live fleet’s directory from under it would leave its qemu processes running with no record of them. <code>dev:vmDown</code> is what takes a fleet away.</p>
+<h2 id="how-the-networking-works"><a class="header" href="#how-the-networking-works">How the networking works</a></h2>
+<p>Each node has two interfaces, and which is which matters when reading a phase’s output.</p>
+<p><code>enp0s3</code> is the management interface, a qemu <code>user</code> (slirp) network. It carries the SSH forward your machine connects through, and outbound access to the internet - which phase 21 depends on, since it installs <code>container-selinux</code> by name and fails the run if it cannot. Every node has the same address on it, <code>10.0.2.15</code>, and no node can reach another there.</p>
+<p><code>enp0s4</code> is the fleet’s own layer 2 segment, carried between the qemu processes on a multicast socket. This is where the nodes see each other, on <code>10.73.&lt;fleet&gt;.&lt;node&gt;</code>, and it is what the inventory names as each host’s <code>privateAddress</code> and <code>privateInterface</code>. Those two fields are set explicitly rather than discovered, because the default route is on the management interface: fact gathering would pick <code>10.0.2.15</code> for every host, and the firewall and <code>/etc/hosts</code> phases would faithfully distribute an address no peer can reach.</p>
+<p>The leader additionally forwards its engine API port to your machine, so <code>cargoship kube-config</code> and <code>kubectl</code> work from here rather than only from inside the fleet.</p>
+<h2 id="when-a-node-does-not-come-up"><a class="header" href="#when-a-node-does-not-come-up">When a node does not come up</a></h2>
+<p>A node that never answers is reported with the tail of its serial console, and the full log is at <code>build/microvm/dev/&lt;node&gt;/console.log</code>. That is the only record: qemu is detached, so nothing else captured its boot.</p>
+<p>A node whose cloud-init failed is reported with cloud-init’s own explanation, from <code>cloud-init status --long</code>. Run that on the node yourself for more, and read <code>/var/log/cloud-init.log</code>.</p>
+<p>Host keys are regenerated on every bring-up, so host key checking is off and known-hosts is <code>/dev/null</code> for every connection the fleet makes. Set <code>SSH_KNOWN_HOSTS=""</code> when running <code>cargoship</code> against the inventory, for the same reason.</p>
+<h2 id="what-the-management-node-can-and-cannot-reach"><a class="header" href="#what-the-management-node-can-and-cannot-reach">What the management node can and cannot reach</a></h2>
+<p>Your machine reaches a node on exactly one path: the forwarded SSH port. That is enough for every phase cargoship drives over SSH, which is all of the host preparation, the uploads, the engine install and the join – and it is all this fleet sets out to cover.</p>
+<p>It is not enough for the phases that talk to the Kubernetes API from the management node. Two independent things stop them:</p>
+<ul>
+<li>The inventory’s <code>loadbalancer</code> is the leader’s address on the fleet’s private segment, because that is the address the other nodes join through. Nothing outside the qemu processes can route to that segment, so a phase that dials the load balancer from here gets a timeout.</li>
+<li>Once <code>--firewall</code> has run, firewalld’s <code>public</code> zone – which holds both of a node’s interfaces – allows ssh and nothing else. Node-to-node traffic works because the trusted zone admits the private addresses by source, so the leader’s forwarded API port reaches the guest and is then dropped. This is the firewall behaving correctly.</li>
+</ul>
+<p>In practice that means <code>cargoship apply --label-nodes</code> fails at <code>Labeling nodes with their profile group</code>, and a kubeconfig written for this fleet does not work from here. Drive <code>kubectl</code> from inside a node instead:</p>
+<pre><code class="language-sh">mage dev:vmShell kc0
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml   # or /etc/rancher/k3s/k3s.yaml
+/var/lib/rancher/rke2/bin/kubectl get nodes -o wide
+</code></pre>
+<p>Note what that costs in the suite: <code>Test_ZZ1_ClusterHealthy</code> is the only step that asserts the cluster actually works, and it is skipped here because it needs an API route from the management node. A green run against this fleet therefore says the phases did their work, not that the cluster is healthy. Check that from inside a node when it matters.</p>
+<p>Giving the management node a routable path onto the private segment would mean a tap device or a bridge, which needs root and puts the fleet back under the host’s firewall – the two things <a href="#why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace">choice-microvm-backend</a> picked a multicast socket to avoid.</p>
+<h2 id="the-engines-node-ip"><a class="header" href="#the-engines-node-ip">The engine’s node IP</a></h2>
+<p>Each node reports its own address on the private segment, which is what makes a multi-controller cluster possible here at all. That was not always true, and the story is worth knowing because this fleet is what found it.</p>
+<p>Cargoship used to render no <code>node-ip</code>, so the engine chose its own node address from whichever interface held the default route – the management one. Every node then reported <code>10.0.2.15</code>, the same slirp address, and a three-controller cluster could not form: all three advertised the same etcd peer URL, so the second could never be added and the apply sat on <code>MemberAdd request timed out</code> until it gave up. A single controller hid it completely. The API server also could not reach a kubelet it believed was at an address shared with every other node, so <code>kubectl logs</code> and <code>kubectl exec</code> returned <code>502 Bad Gateway</code> and a Helm-installed CNI could fail outright, leaving every node <code>NotReady</code>.</p>
+<p><code>ConfigureEngine</code> now writes <code>node-ip</code> from the host’s <code>privateAddress</code>, beside the <code>node-name</code> it already wrote, so the fleet behaves the way any multi-homed fleet should:</p>
+<pre><code class="language-console">$ kubectl get nodes -o wide
+NAME   STATUS   ROLES                INTERNAL-IP
+kc0    Ready    control-plane,etcd   10.73.156.11
+kw0    Ready    &lt;none&gt;               10.73.156.12
+kw1    Ready    &lt;none&gt;               10.73.156.13
+</code></pre>
+<h2 id="driving-the-opentofu-provider-at-a-fleet"><a class="header" href="#driving-the-opentofu-provider-at-a-fleet">Driving the OpenTofu provider at a fleet</a></h2>
+<p>The provider takes the same hosts, so a fleet is also how <code>cargoship_cluster</code> gets exercised against real machines rather than one container. <code>mage dev:vmUp</code> writes a <code>ZarfCluster</code> inventory, and every field a <code>hosts</code> entry needs is in it:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Inventory</th><th><code>hosts</code> entry</th><th>For the fleet</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ssh.address</code></td><td><code>address</code></td><td>Always <code>127.0.0.1</code> – the forwards bind loopback</td></tr>
+<tr><td><code>ssh.port</code></td><td><code>port</code></td><td>The per-node forwarded SSH port</td></tr>
+<tr><td><code>ssh.user</code></td><td><code>user</code></td><td><code>root</code></td></tr>
+<tr><td><code>ssh.keyPath</code></td><td><code>key_path</code></td><td>The fleet key, under <code>build/microvm/&lt;fleet&gt;/key</code></td></tr>
+<tr><td><code>hostname</code></td><td><code>hostname</code></td><td><code>kc0</code>, <code>kw0</code>, …</td></tr>
+<tr><td><code>privateAddress</code></td><td><code>private_address</code></td><td>The node’s address on the private segment</td></tr>
+<tr><td><code>privateInterface</code></td><td><code>private_interface</code></td><td><code>enp0s4</code></td></tr>
+<tr><td><code>role</code> / <code>profile</code></td><td><code>role</code> / <code>profile</code></td><td>Unchanged</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-hcl">resource "cargoship_cluster" "fleet" {
+  name          = "microvm-dev"
+  load_balancer = "10.73.156.11"            # the leader's private address
+  package       = "./build/cargoship-distro-amd64.tar.zst"
+
+  hosts = {
+    kc0 = {
+      address           = "127.0.0.1"
+      port              = 26241
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kc0"
+      private_address   = "10.73.156.11"
+      private_interface = "enp0s4"
+      role              = "controller"
+      profile           = "controller"
+    }
+    kw0 = {
+      address           = "127.0.0.1"
+      port              = 26242
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kw0"
+      private_address   = "10.73.156.12"
+      private_interface = "enp0s4"
+      role              = "worker"
+      profile           = "worker"
+    }
+  }
+}
+</code></pre>
+<p>Four things to get right, each of which is a property of the fleet rather than of the provider:</p>
+<ul>
+<li><strong><code>key_path</code> must be absolute.</strong> The inventory already holds an absolute path for this reason; OpenTofu runs from wherever you invoke it.</li>
+<li><strong><code>load_balancer</code> is the leader’s private address</strong>, not a forwarded loopback port. It is the address the other nodes join through, and they reach each other on the private segment rather than through your machine.</li>
+<li><strong>Export <code>SSH_KNOWN_HOSTS=""</code></strong> before <code>tofu apply</code>. Host keys are regenerated on every bring-up, so a known-hosts entry is wrong by construction.</li>
+<li><strong>Leave <code>export_kubeconfig</code> and <code>label_nodes</code> off.</strong> Both need the management node to reach the API server, which it cannot on a fleet whose load balancer is private – see above. A provider run that sets either will fail there rather than in anything it is testing.</li>
+</ul>
+<p>The <code>hosts</code> key orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader. Keying the map by the fleet’s own hostnames keeps that in step with how <code>mage dev:vmUp</code> numbers them.</p>
+<p>Bring the fleet up, generate the block from the inventory, and <code>tofu apply</code>. A removal is the other half: set a host’s <code>state = "absent"</code> and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work <a href="#running-the-cluster-suite-against-your-own-fleet">e2e-external-inventory</a> drives through the CLI. <a href="#running-the-opentofu-provider">tofu-provider</a> covers building and running the provider itself.</p>
+<h2 id="the-shipped-k3s-packages-and-what-is-still-unproven"><a class="header" href="#the-shipped-k3s-packages-and-what-is-still-unproven">The shipped k3s packages, and what is still unproven</a></h2>
+<p>Two separate things used to stop a k3s cluster coming up, and only one of them is fixed.</p>
+<p><strong>Fixed: the join URL named the wrong port.</strong> <code>ConfigureEngine</code> wrote <code>server: https://&lt;host&gt;:9345</code> for both engines. 9345 is rke2’s – it runs its supervisor separately – while k3s multiplexes its supervisor onto 6443 and listens on nothing at 9345. <code>K3S</code> embeds the shared Rancher configuration without overriding that, so every k3s cluster was handed a join URL its own engine was not serving, and nothing could join. The port now comes from the distro.</p>
+<p><strong>Not fixed, and not retested since: the SELinux policy is staged and never installed.</strong> Every <code>example/k3s-*</code> package sets <code>selinux: true</code> and ships <code>k3s-selinux-*.rpm</code> under <code>selector.package: binary</code>. The BIN upload phase moves staged files into place and runs no package manager, so that RPM lands in <code>/var/lib/rancher/k3s/rpm/</code> and the <code>%post</code> that loads the policy module never runs – leaving a node with SELinux enforcing, an engine told to use it, and no policy for it. The <code>rke2</code> examples select <code>package: rpm</code> for the equivalent file, which is why <code>semodule -l</code> lists <code>rke2</code> there.</p>
+<p>So a k3s walk on this fleet is worth trying and is not yet known to pass. <code>mage test:endToEndClusterVM</code> still defaults to rke2 for that reason; <code>CARGOSHIP_E2E_DISTRO=k3s</code> is how to find out, and the node’s journal is where the answer will be.</p>
+<h2 id="limits"><a class="header" href="#limits">Limits</a></h2>
+<p>The fleet runs Rocky and, when asked, Ubuntu. That covers the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and – with <code>-ubuntuWorker</code> – the Debian branch beside it, which is the pair apply routes between in most of the places it routes at all.</p>
+<p>It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer <code>selinux-policy</code>, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in <code>internal/microvm/image.go</code> plus its cloud-init packages, so neither is hard – they are simply not done. Run both suites.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="setting-a-machine-up-to-run-the-vm-fleet"><a class="header" href="#setting-a-machine-up-to-run-the-vm-fleet">Setting a machine up to run the VM fleet</a></h1>
+<p><a href="#a-local-vm-fleet"><code>mage dev:vmUp</code></a> runs its virtual machines under plain qemu, as your own user, with no daemon and no root. This page is how to get a machine into that state and how to tell that it worked. <a href="#why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace">choice-microvm-backend</a> records why the fleet is built this way rather than on libvirt or Firecracker.</p>
+<p>Nothing here installs a service, adds a system unit, or changes a firewall, SELinux or kernel setting. That is deliberate: the fleet exists to test host configuration, so a developer running it should not have to change the configuration of the host they are running it from.</p>
+<h2 id="what-has-to-be-present"><a class="header" href="#what-has-to-be-present">What has to be present</a></h2>
+<p>Five executables and one device:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Needed</th><th>Fedora package</th><th>Debian/Ubuntu package</th></tr>
+</thead>
+<tbody>
+<tr><td><code>qemu-system-x86_64</code></td><td><code>qemu-system-x86-core</code></td><td><code>qemu-system-x86</code></td></tr>
+<tr><td><code>qemu-img</code></td><td><code>qemu-img</code></td><td><code>qemu-utils</code></td></tr>
+<tr><td><code>mkfs.vfat</code></td><td><code>dosfstools</code></td><td><code>dosfstools</code></td></tr>
+<tr><td><code>mcopy</code></td><td><code>mtools</code></td><td><code>mtools</code></td></tr>
+<tr><td><code>ssh</code>, <code>ssh-keygen</code></td><td><code>openssh</code></td><td><code>openssh-client</code></td></tr>
+<tr><td><code>/dev/kvm</code></td><td>the kernel</td><td>the kernel</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-sh">sudo dnf install qemu-system-x86-core qemu-img dosfstools mtools openssh
+</code></pre>
+<p><code>guestfish</code>, from <code>libguestfs</code>/<code>guestfs-tools</code>, is optional. It is used once per image download to check that the base image carries cloud-init and sets SELinux to enforcing; without it the fetch says it is skipping that check and carries on.</p>
+<p><code>dev:vmUp</code> reports every missing tool in one message rather than failing part way through a bring-up, so running it is a reasonable way to find out what you are missing.</p>
+<h3 id="why-no-libvirt"><a class="header" href="#why-no-libvirt">Why no libvirt</a></h3>
+<p>There is no <code>libvirtd</code> here, and installing one changes nothing. qemu is driven directly, each node is a <code>qemu-system-x86_64</code> process owned by your user, and the only state is a directory under <code>build/microvm</code>. If you already run libvirt for other work it will not conflict: the fleet defines no libvirt domain, claims no libvirt network, and creates no tap device or bridge.</p>
+<h2 id="kvm-access-without-being-in-a-group"><a class="header" href="#kvm-access-without-being-in-a-group">KVM access, without being in a group</a></h2>
+<p>The fleet refuses to start without <code>/dev/kvm</code>, because the alternative is qemu falling back to emulation, which is slow enough that an engine never finishes coming up.</p>
+<p>On current Fedora the device is world-accessible and there is nothing to do:</p>
+<pre><code class="language-sh">$ ls -l /dev/kvm
+crw-rw-rw-. 1 root kvm 10, 232 Oct 10 15:44 /dev/kvm
+</code></pre>
+<p>That <code>crw-rw-rw-</code> is the point – mode <code>0666</code>, set by a udev rule systemd ships, so an ordinary user can open it without being in the <code>kvm</code> group. On a distribution that still ships <code>0660 root:kvm</code>, the group is how you get access:</p>
+<pre><code class="language-sh">sudo usermod -aG kvm "$USER"   # then log out and back in, or: newgrp kvm
+</code></pre>
+<p>Check that virtualisation is actually available to the CPU, not merely that the device file exists:</p>
+<pre><code class="language-sh">grep -Eom1 'vmx|svm' /proc/cpuinfo   # vmx on Intel, svm on AMD; no output means it is off
+</code></pre>
+<p>No output usually means virtualisation is disabled in firmware rather than absent from the processor.</p>
+<h3 id="if-your-development-machine-is-itself-a-virtual-machine"><a class="header" href="#if-your-development-machine-is-itself-a-virtual-machine">If your development machine is itself a virtual machine</a></h3>
+<p>The fleet then needs nested virtualisation, which the outer hypervisor has to expose:</p>
+<pre><code class="language-sh">cat /sys/module/kvm_amd/parameters/nested     # or kvm_intel; 1 or Y means available
+</code></pre>
+<p>If that reads <code>0</code> or <code>N</code>, enable it on the host running your development machine – on a Linux host, <code>kvm_intel.nested=1</code> or <code>kvm_amd.nested=1</code> – rather than on the machine you are reading it from. Without it <code>/dev/kvm</code> may not exist at all inside the guest.</p>
+<h2 id="confirming-a-node-really-is-accelerated"><a class="header" href="#confirming-a-node-really-is-accelerated">Confirming a node really is accelerated</a></h2>
+<p>The surest check is how long a bring-up takes. A node reaches sshd in about six seconds with KVM; under emulation it is minutes, and that is the symptom people usually notice first.</p>
+<pre><code class="language-sh">mage dev:vmUp -control=1 -worker=0
+</code></pre>
+<p>To see it directly, look at what the process was given: the command line carries <code>accel=kvm</code>, and the fleet passes nothing else, so qemu either accelerates or fails to start.</p>
+<pre><code class="language-sh">pgrep -a qemu-system-x86_64 | tr ' ' '\n' | grep -A1 machine
+</code></pre>
+<h2 id="memory-disk-and-what-a-fleet-costs"><a class="header" href="#memory-disk-and-what-a-fleet-costs">Memory, disk, and what a fleet costs</a></h2>
+<p>Each node defaults to 4GiB and 2 vCPUs, so the usual three-node fleet wants 12GiB available. <code>dev:vmUp</code> refuses a fleet that would not fit in <code>MemAvailable</code> rather than letting the OOM killer choose which process dies, and says what it would have needed.</p>
+<p>Disk is cheaper than it looks. The base image is fetched once, about 520MiB, into <code>$XDG_CACHE_HOME/cargoship/microvm</code> – outside the repository, so it survives a clean checkout. Each node is a copy-on-write overlay on top of it, a few megabytes at bring-up, growing to roughly 250MiB after a boot and one <code>dnf</code> transaction. Fleet state lives in <code>build/microvm</code>, which is gitignored and on real storage rather than a tmpfs; see <a href="#a-local-vm-fleet">microvm</a> for why that matters here.</p>
+<h2 id="networking-and-why-there-is-nothing-to-configure"><a class="header" href="#networking-and-why-there-is-nothing-to-configure">Networking, and why there is nothing to configure</a></h2>
+<p>Neither interface a node gets needs a privilege or a host-side rule.</p>
+<p>The management interface is qemu’s <code>user</code> (slirp) network, implemented inside the qemu process. It provides the forwarded SSH port your machine connects through and outbound access for <code>dnf</code>. Nothing listens on a routable address: every forward binds <code>127.0.0.1</code>.</p>
+<p>The fleet’s own segment is a <code>socket</code> netdev on a multicast group, which joins the fleet’s qemu processes into one broadcast domain over loopback UDP. There is no tap device, no bridge, and nothing for <code>firewalld</code>, <code>nftables</code> or Docker’s rules to have an opinion about – which is exactly why it was chosen. A fleet’s internal networking cannot be broken by the host firewall configuration you are in the middle of changing.</p>
+<p>Two consequences worth knowing before debugging: your machine cannot reach that segment at all, and the host’s own firewall needs no rules for any of this. The first is covered under “What the management node can and cannot reach” in <a href="#a-local-vm-fleet">microvm</a>.</p>
+<h2 id="host-selinux"><a class="header" href="#host-selinux">Host SELinux</a></h2>
+<p>A host running SELinux in enforcing mode needs no change. The qemu processes are started from your shell, so they inherit your unconfined context rather than the <code>svirt_t</code> confinement libvirt would apply, and every file they touch – the image cache, the overlays, the seed images – is one your user owns. The fleet never relabels anything on the host.</p>
+<p>Note that the <em>guests</em> run SELinux enforcing, and that is the point of the fleet rather than an accident of the host.</p>
+<h2 id="when-it-does-not-work"><a class="header" href="#when-it-does-not-work">When it does not work</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Symptom</th><th>Cause</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/dev/kvm is not available</code></td><td>The device is missing or not readable by you. See the KVM section above</td></tr>
+<tr><td><code>missing qemu-system-x86_64, mkfs.vfat</code> and similar</td><td>Install the packages in the table above; the message names everything it could not find</td></tr>
+<tr><td><code>Could not access KVM kernel module</code> from qemu</td><td><code>/dev/kvm</code> exists but your user cannot open it – check the mode and the <code>kvm</code> group</td></tr>
+<tr><td>A node never answers ssh, minutes in</td><td>Usually emulation rather than KVM. The failure prints the tail of the node’s serial console, and the full log is at <code>build/microvm/&lt;fleet&gt;/&lt;node&gt;/console.log</code></td></tr>
+<tr><td><code>a 3 node fleet at 4096MiB each needs ...</code></td><td>The memory guard. Lower <code>-worker</code>, or pass fewer nodes</td></tr>
+<tr><td><code>cached image ... has digest ..., want ...</code></td><td>An interrupted or corrupted download. Remove the named file and run <code>mage dev:vmImage</code></td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="shell-tab-completion"><a class="header" href="#shell-tab-completion">Shell Tab Completion</a></h1>
 <p>Two commands complete on the command line in this repository. <code>cargoship</code> generates its own completion scripts, and <code>mage</code> installs its own for targets and flags - but neither knows about the positional arguments the <code>generate:</code> targets take, which is what the overlay in this document adds.</p>
 <h2 id="cargoship-2"><a class="header" href="#cargoship-2">cargoship</a></h2>
@@ -16875,7 +17359,7 @@ docker exec facts-host systemctl start ssh
 </code></pre>
 <p>Both the <code>chown</code> and the mode matter: <code>docker cp</code> leaves the file owned by whichever uid the image’s build left in place, and sshd refuses a key file it does not trust. The symptom is an authentication failure that looks like a wrong key, and it retries for the whole <code>connect_timeout</code> before saying so.</p>
 <p>Then point a host block at <code>127.0.0.1</code> port <code>2223</code> with <code>key_path = "/tmp/facts-key"</code>, and <code>SSH_KNOWN_HOSTS=""</code> so the container’s regenerated host key is not checked against a known-hosts file. Remove it with <code>docker rm -f facts-host</code> when finished.</p>
-<p>For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs – see <a href="#running-the-end-to-end-tests">e2e-tests</a> – and the addresses, user and key path in it are what a host block needs.</p>
+<p>For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs – see <a href="#running-the-end-to-end-tests">e2e-tests</a> – and the addresses, user and key path in it are what a host block needs. <code>mage dev:vmUp -control=1 -worker=0</code> writes the same thing for a single virtual machine, which is the easier route when the host needs a real kernel rather than only an sshd; see <a href="#a-local-vm-fleet">microvm</a>.</p>
 <h2 id="connect_timeout-and-why-it-exists"><a class="header" href="#connect_timeout-and-why-it-exists"><code>connect_timeout</code>, and why it exists</a></h2>
 <p>cargoship’s connect phase retries for <strong>ten minutes</strong> (<code>pkg/phase/07_connect.go</code>), because a host rebooting into a new kernel mid-apply is ordinary. That is the wrong answer for a plan: a typo in an address would make <code>tofu plan</code> sit silent for ten minutes before failing. The provider bounds every read at <code>connect_timeout</code>, one minute by default, and says so when it gives up:</p>
 <pre><code>cargoship could not gather facts for bubbles: gave up after 1m0s: failed on 1 hosts:
@@ -17528,6 +18012,32 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p><strong>A prefix instead of a suffix.</strong> A prefix would have to be cargoship’s own, which would rename every <code>HelmChartConfig</code> the project has ever written and orphan the files already on upgraded nodes. The suffix is what the files are already called.</p>
 <p>A malformed pattern matches nothing rather than everything (<code>ManagedDir.prunes</code>). Pruning is cleanup, and cleanup is not worth deleting something on a guess.</p>
 <p>See <a href="#package-values">package-values</a> for how a package produces the <code>HelmChartConfig</code> files this glob scopes pruning to.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace"><a class="header" href="#why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace">Why the local VM fleet runs on plain qemu, and what it does not replace</a></h1>
+<p><code>internal/microvm</code> brings Enterprise Linux virtual machines up and down on a developer’s own machine so that the phases routing on OS family can be exercised against a real kernel. It exists because a container cannot answer the question <code>pkg/phase/21_prepare_selinux.go</code> asks: that phase gates on <code>getenforce</code> reporting <code>Enforcing</code>, no container reports it, and the phase is fatal on failure – so the one branch able to stop an apply was the one branch never run. <code>pkg/phase/22_prepare_fapolicyd.go</code>, the firewalld backend in <code>pkg/firewall/firewalld.go</code>, the <code>semodule</code> scriptlets in <code>k3s-selinux</code> and <code>rke2-selinux</code>, and the reboot in <code>pkg/phase/23_prepare_kernel_modules.go</code> are all in the same position, and <code>selinux: true</code> is set by every shipped package under <code>example/</code> without anything ever having checked that an engine configured that way starts.</p>
+<h2 id="qemu-not-firecracker-and-not-libvirt"><a class="header" href="#qemu-not-firecracker-and-not-libvirt">qemu, not Firecracker, and not libvirt</a></h2>
+<p>Firecracker is the obvious reach for “microVM”, and it does not fit. It requires an uncompressed kernel binary with every driver statically compiled and no bootloader, and explicitly does not support loadable modules – which is exactly what k3s and rke2 need, and what <code>23_prepare_kernel_modules</code> writes <code>/etc/modules-load.d</code> entries for. A RHEL-family <code>GenericCloud</code> qcow2 cannot boot on it at all without extracting a kernel out of the image first. qemu’s own <code>microvm</code> machine type carries the same constraint for the same reason, so the name is not the thing that matters here.</p>
+<p>libvirt would work, and costs more than it returns. It needs <code>libvirt-daemon-kvm</code> and <code>virt-install</code> installed, a daemon running, and its NAT network managed through the host’s firewalld – host state, on a machine whose SELinux and firewall configuration is frequently the thing under investigation. Lima was ruled out on a narrower point: its default 9p mounts are documented as incompatible with AlmaLinux, CentOS Stream, Oracle Linux and Rocky.</p>
+<p>Plain qemu needs nothing beyond <code>qemu-system-x86_64</code>, <code>qemu-img</code>, <code>mkfs.vfat</code>, <code>mcopy</code> and <code>ssh</code>, runs as the developer, and leaves nothing behind. Each node is a copy-on-write overlay over one cached base image, so a bring-up costs a few megabytes and the overlay is recreated every time – which is also why <code>Up</code> refuses a live fleet rather than adopting it. A node carrying state from a previous run is the single thing that makes a phase failure impossible to reason about.</p>
+<h2 id="a-multicast-socket-netdev-not-a-bridge"><a class="header" href="#a-multicast-socket-netdev-not-a-bridge">A multicast socket netdev, not a bridge</a></h2>
+<p>Every node gets two interfaces. The management one is a slirp <code>user</code> netdev with loopback forwards, which needs no privileges and gives the outbound access phase 21 depends on – it installs <code>container-selinux</code> by name and is fatal if it cannot reach a mirror. The private one is <code>-netdev socket,mcast=</code>, which joins every qemu process in the fleet onto one broadcast domain.</p>
+<p>A tap device or a bridge would be the conventional answer and both need root. The deciding point is subtler than that: on a host running firewalld with Docker’s nftables firewall backend, container-to-container traffic is silently dropped, which is enough on its own to stop every multi-node run from forming a cluster. A bridge is subject to the same ruleset. A multicast socket between qemu processes over loopback is not something the host’s firewall has an opinion about, so the fleet’s own networking cannot be broken by the host configuration a developer is in the middle of changing. <code>vde_switch</code> would have been the other rootless option and is not packaged for current Fedora.</p>
+<p>The private segment is also why <code>Inventory</code> sets <code>PrivateAddress</code> and <code>PrivateInterface</code> explicitly, where the bootloose equivalent leaves both to fact gathering. A node’s default route is on the management interface, so discovery would give every host the same slirp address – <code>10.0.2.15</code>, reachable from no peer – and the firewall and <code>/etc/hosts</code> phases would faithfully distribute it.</p>
+<h2 id="infra-nodes-are-workers-with-a-profile-of-their-own"><a class="header" href="#infra-nodes-are-workers-with-a-profile-of-their-own">Infra nodes are workers with a profile of their own</a></h2>
+<p>A fleet is counted in three groups – control, worker, infra – and the third is not a third role. The engine has two, so an infra node joins as a worker and is distinguished only by its <code>Profile</code>, which <code>pkg/phase/81_label_nodes.go</code> turns into a <code>node-role.kubernetes.io/infra</code> label and which a cluster config can hang a per-profile <code>Concurrency</code> off.</p>
+<p>They exist because every other host in a generated inventory has a profile that restates its role, which makes both of those mechanisms untestable: a label derived from <code>controller</code> on a controller proves nothing about a label derived from a name the role does not supply, and a per-profile concurrency is indistinguishable from the phase default when every profile holds the same hosts as its role. One group whose profile is not its role’s name is enough to tell those apart.</p>
+<p>They are named <code>ki*</code>, a prefix of its own rather than an extension of the worker prefix the way the container fleet’s <code>kwf*</code> and <code>kwa*</code> are. The three prefixes then partition the names, so nothing matching on them depends on test order or on matching longest – which the container suite’s prefixes do, since <code>kwa</code> is also <code>kw</code>.</p>
+<p>The consequence is that a mapping keyed only on <code>kc</code> and <code>kw</code> claims an infra node as neither. Nothing in <code>internal/microvm</code> is such a mapping: <code>Inventory</code> reads a node’s role and profile off the node, not off its name. The container suite’s <code>renderClusterInventory</code> <em>is</em> one, so wiring infra nodes into that fleet means teaching it this prefix rather than relying on the name to carry the role.</p>
+<p>The group is created last, after the plain workers, so that asking for infra nodes does not renumber the hosts ahead of them – a fleet brought up with none is addressed exactly as it was before the group existed.</p>
+<h2 id="internal-not-magefilespkg"><a class="header" href="#internal-not-magefilespkg"><code>internal/</code>, not <code>magefiles/pkg/</code></a></h2>
+<p><a href="../magefiles/AGENTS.html"><code>magefiles/AGENTS.md</code></a> puts implementation logic under <code>magefiles/pkg/</code>, and this package is deliberately not there. It has two consumers – the <code>Dev</code> mage targets and the e2e cluster suite – and a test suite importing out of <code>magefiles/</code> would invert the dependency. <code>internal/</code> is what the root <a href="../CLAUDE.html"><code>CLAUDE.md</code></a> names for packages private to the module, and the mage targets stay thin wrappers over it, which is what that rule is protecting.</p>
+<p>Fleet state lives under <code>build/microvm/</code> rather than <code>TMPDIR</code>. An overlay reaches a quarter of a gigabyte after one boot and one dnf transaction, and <code>TMPDIR</code> is routinely a tmpfs here – the repository’s own <code>.envrc</code> points it at one. <code>build/</code> is already the scratch directory, gitignored and on real storage. Note that <code>dev:clean</code> does not touch it – that target removes built binaries, and removing a live fleet’s directory out from under it would orphan the qemu processes holding its overlays. <code>dev:vmDown</code> is what takes a fleet away.</p>
+<h2 id="rocky-only-and-why-that-does-not-retire-the-bootloose-cluster"><a class="header" href="#rocky-only-and-why-that-does-not-retire-the-bootloose-cluster">Rocky only, and why that does not retire the bootloose cluster</a></h2>
+<p>The fleet runs one distribution. <a href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time"><code>choice-phase-e2e-tests</code></a> argues that the OS <em>mix</em> is the substantive part of the bootloose cluster – apply routes on OS family in at least five places, and on a single-family cluster the branch that does not match is never taken while the gate assertions still pass, so the suite reports coverage it does not have. That argument applies to this fleet exactly as written.</p>
+<p>So the VM backend is additional coverage, not a replacement. It is the only way to run the Enterprise Linux branch against something that actually has SELinux, fapolicyd and firewalld; the bootloose matrix remains the only thing that covers routing between families, and the Alpine upload-only node remains the only host belonging to neither. <code>CARGOSHIP_E2E_BACKEND</code> selects between them and defaults to bootloose.</p>
+<p>Adding a second guest image is a later change and a cheap one – the image is one pinned URL and digest in <code>internal/microvm/image.go</code>. It was left out of the first version because one distribution with SELinux enforcing closes the gap that motivated the package, and a second would double the bring-up cost of every run before anything had been learned from the first.</p>
+<h2 id="two-qemu-details-that-each-cost-a-boot-to-find"><a class="header" href="#two-qemu-details-that-each-cost-a-boot-to-find">Two qemu details that each cost a boot to find</a></h2>
+<p><code>-display none</code>, not <code>-nographic</code>: qemu refuses <code>-nographic</code> together with <code>-daemonize</code>, and reports it only once the process has been launched, so the failure arrives as a node that never appears rather than as a bad flag. And the overlay is opened <code>cache=unsafe</code>, which is correct precisely because these disks are disposable – there is no state on them worth an fsync, and the next bring-up recreates them.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table"><a class="header" href="#why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table">Why the nftables backend shells out to <code>nft</code> and owns a single table</a></h1>
 <p>Cargoship’s firewall support (<code>cargoship apply --firewall</code>) renders a backend-neutral <code>firewall.Plan</code> onto whichever firewall a node runs. <code>firewalld</code> and <code>ufw</code> cover Enterprise Linux and Debian-family hosts that use a front end. The <code>nftables</code> backend (<code>pkg/firewall/nftables.go</code>) covers the rest: Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all. Several design choices there are not obvious from the code, and each had an alternative that was considered and rejected.</p>

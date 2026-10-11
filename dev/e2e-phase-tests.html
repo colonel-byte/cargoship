@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1f756e52.js";
+            window.path_to_searchindex_js = "../searchindex-8481e1c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-00ba28f5.js"></script>
+        <script src="../toc-d720c678.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -378,6 +378,11 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in betwe
 $ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
 $ docker exec -it &lt;container&gt; sh
 </code></pre>
+<p><strong>Run against virtual machines instead of containers.</strong> <code>CARGOSHIP_E2E_BACKEND=microvm</code>, or <code>mage test:endToEndClusterVM</code>, provisions the hosts as local Rocky 10 virtual machines rather than bootloose containers. Everything downstream of the inventory is identical; what changes is that the hosts have a real kernel, so the phases that correctly do nothing against a container – SELinux, fapolicyd, the firewalld backend – run as the paths they are:</p>
+<pre><code class="language-sh">$ CARGOSHIP_E2E_BACKEND=microvm go test -mod=vendor -count=1 -v -timeout=60m ./test/e2e/cluster/...
+</code></pre>
+<p>It needs KVM, and a bring-up costs a minute or two against a container’s seconds. It is also one distribution, so it covers none of the family routing the container fleet’s Ubuntu, Fedora and Alpine mix exists for – run both, not one instead of the other. See <a href="microvm.html">microvm</a> for the fleet itself and <a href="../agent/choice-microvm-backend.html">choice-microvm-backend</a> for the reasoning.</p>
+<p><strong>Run against a fleet the suite did not create.</strong> <code>CARGOSHIP_E2E_BACKEND=inventory</code> with <code>CARGOSHIP_E2E_INVENTORY</code> pointing at a <code>ZarfCluster</code> document runs every phase against hosts that already exist, wherever they are. The assertions that are about a fleet this suite chose – the declared OS per host, the OS mix, the per-family upload guards, the join walk – stand down and say so; everything else asserts as usual. See <a href="e2e-external-inventory.html">e2e-external-inventory</a>, including the warning that it changes those hosts and does not change them back.</p>
 <p><strong>Walk the suite against rke2 instead of k3s.</strong> <code>CARGOSHIP_E2E_DISTRO=rke2</code> switches which distro every step installs, and which package <code>cluster_lifecycle_test.go</code> builds. The default is <code>k3s</code>. A phase that branches on the engine needs a run each way:</p>
 <pre><code class="language-console">$ CARGOSHIP_E2E_DISTRO=rke2 go test -mod=vendor -count=1 -v -timeout=90m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
 </code></pre>
@@ -398,7 +403,7 @@ $ docker exec -it &lt;container&gt; sh
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dev/build-flags.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dev/e2e-external-inventory.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -412,7 +417,7 @@ $ docker exec -it &lt;container&gt; sh
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dev/build-flags.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dev/e2e-external-inventory.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

@@ -1,0 +1,461 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>microvm</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
+        <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-8481e1c9.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-d720c678.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/dev/microvm.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="a-local-vm-fleet"><a class="header" href="#a-local-vm-fleet">A local VM fleet</a></h1>
+<p><code>mage dev:vmUp</code> brings up a fleet of Rocky 10 virtual machines on your own machine and writes a <code>ZarfCluster</code> inventory pointing at them, so that <code>cargoship prepare</code> and <code>cargoship apply</code> can be run against hosts with a real kernel. <code>mage dev:vmDown</code> takes it away again.</p>
+<p>It exists for the phases the <a href="e2e-tests.html">cluster e2e suite</a> cannot reach. Those nodes are containers, and a container reports no SELinux, runs no fapolicyd and has no firewall of its own, so <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go"><code>pkg/phase/21_prepare_selinux.go</code></a> and its neighbours correctly do nothing there. Testing a change to any of them means a virtual machine. <a href="../agent/choice-microvm-backend.html">choice-microvm-backend</a> records why this is plain qemu rather than Firecracker or libvirt.</p>
+<p>Nothing it does touches the host. It needs no root, starts no daemon, and changes no SELinux, firewall or kernel setting on your machine - which is the point, since the configuration under investigation is usually the host’s own.</p>
+<h2 id="what-you-need"><a class="header" href="#what-you-need">What you need</a></h2>
+<p><code>qemu-system-x86_64</code>, <code>qemu-img</code>, <code>mkfs.vfat</code>, <code>mcopy</code>, <code>ssh</code>, and a readable <code>/dev/kvm</code>. <code>mage dev:vmUp</code> reports every missing tool at once rather than failing part way through a bring-up.</p>
+<p><a href="qemu-setup.html">qemu-setup</a> is the full walkthrough: which package provides each of those on Fedora and Debian, how <code>/dev/kvm</code> access works without joining a group, what to do when your development machine is itself a virtual machine, and how to tell a node is really accelerated rather than emulated.</p>
+<h2 id="bringing-a-fleet-up"><a class="header" href="#bringing-a-fleet-up">Bringing a fleet up</a></h2>
+<pre><code class="language-sh">mage dev:vmUp -control=1 -worker=2
+mage dev:vmUp -control=1 -worker=2 -infra=3 -distro=rke2
+</code></pre>
+<p>Every flag has a default, so <code>mage dev:vmUp</code> on its own gives one control-plane node and two workers running k3s.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Flag</th><th>Default</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>-control</code></td><td><code>1</code></td><td>Control-plane nodes. The first is the leader, which is what the inventory’s load balancer names</td></tr>
+<tr><td><code>-worker</code></td><td><code>2</code></td><td>Plain worker nodes</td></tr>
+<tr><td><code>-infra</code></td><td><code>0</code></td><td>Infra nodes: workers carrying an <code>infra</code> profile of their own</td></tr>
+<tr><td><code>-ubuntuControl</code></td><td><code>0</code></td><td>Control-plane nodes running Ubuntu instead of Rocky</td></tr>
+<tr><td><code>-ubuntuWorker</code></td><td><code>0</code></td><td>Worker nodes running Ubuntu instead of Rocky</td></tr>
+<tr><td><code>-distro</code></td><td><code>k3s</code></td><td>The engine the fleet is prepared for, <code>k3s</code> or <code>rke2</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><code>-distro</code> changes nothing about the guests. It decides only which of the leader’s ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.</p>
+<p>Infra nodes join as workers – the engine has no third role – and what makes them infra is their profile, which <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go"><code>pkg/phase/81_label_nodes.go</code></a> turns into a <code>node-role.kubernetes.io/infra</code> label and which a cluster config can hang a per-profile concurrency off. They are worth asking for because every other host in the generated inventory has a profile that just restates its role, which leaves both of those mechanisms indistinguishable from the role they came from. Ask for some and the engine phases batch them separately: <code>starting agent (profile: infra)</code>.</p>
+<p>The first run downloads a pinned Rocky 10 GenericCloud image, roughly 520MiB, into <code>$XDG_CACHE_HOME/cargoship/microvm</code> and verifies its digest. That cache is outside the repository and survives a clean checkout; later runs reuse it.</p>
+<p>Each node is a copy-on-write overlay over that image, so a bring-up costs a few megabytes rather than another copy. Bring-up takes a minute or two: a node answers SSH about six seconds in, and the rest is cloud-init installing firewalld and fapolicyd. The fleet is only handed back once cloud-init has finished on every node, because the gates in phases 22 and 26 ask whether those services are <em>running</em> - a fleet returned any earlier looks healthy and has both of those phases silently skipping.</p>
+<pre><code>NODE  ROLE        STATE                 SSH              PRIVATE ADDRESS
+kc0   controller  running (pid 197656)  127.0.0.1:26241  10.73.156.11
+kw0   worker      running (pid 197673)  127.0.0.1:26242  10.73.156.12
+kw1   worker      running (pid 197714)  127.0.0.1:26243  10.73.156.13
+
+Inventory: build/microvm/dev/inventory.yaml
+</code></pre>
+<p>Then drive cargoship at it the way you would any other inventory:</p>
+<pre><code class="language-sh">cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+</code></pre>
+<h2 id="what-a-bring-up-is-doing-while-it-waits"><a class="header" href="#what-a-bring-up-is-doing-while-it-waits">What a bring-up is doing while it waits</a></h2>
+<p><code>dev:vmUp</code> blocks until the fleet is usable, and on a six-node fleet that is minutes. It reports what it is waiting on so a long wait does not read as a hung shell:</p>
+<pre><code class="language-console">$ mage dev:vmUp -control=3 -worker=3
+Bringing up 3 control-plane, 3 worker node(s) for k3s
+waiting for 6 node(s) to finish cloud-init, up to 15m0s
+  ready: kc0   1m4s
+  waiting: kc1 cloud-init is still running (30s)
+  ready: kc1   1m12s
+</code></pre>
+<p>The wait is for cloud-init rather than for sshd, which answers about six seconds in. The packages that open the fapolicyd and firewall gates are installed after that, so a fleet handed back at the earlier moment looks healthy and has both of those phases silently skipping – see “Bringing a fleet up” above.</p>
+<p>The 15 minute budget covers the whole fleet, not each node: they are all started before any is waited on, so the wall time is the slowest node rather than the sum.</p>
+<p><strong>Interrupting the wait does not stop the fleet.</strong> Each node is a detached qemu process, so <code>Ctrl-C</code> leaves them running and the inventory in place – which is deliberate, since a node that is slow to configure is usually one worth logging into. <code>dev:vmList</code> shows what is there and <code>dev:vmDown</code> removes it; a later <code>dev:vmUp</code> refuses rather than adopting a fleet that is already up.</p>
+<p><strong>Memory is the limit worth planning.</strong> Each node takes 4096MiB and 2 vCPUs by default, so six nodes want 24GiB and a bring-up that would not fit in <code>MemAvailable</code> is refused rather than left to the OOM killer. <code>-memory</code> and <code>-cpus</code> are how to fit a bigger fleet into a smaller machine:</p>
+<pre><code class="language-sh">mage dev:vmUp -control=3 -worker=3 -memory=2048
+</code></pre>
+<p>2048MiB is ample for the host-preparation phases. An rke2 control-plane node wants the default: three of them at 2048 will come up and then struggle once etcd and the control plane are both running.</p>
+<h2 id="a-mixed-fleet"><a class="header" href="#a-mixed-fleet">A mixed fleet</a></h2>
+<p>The fleet runs Rocky 10 unless you ask for something else. Two counts opt in to Ubuntu nodes alongside them:</p>
+<pre><code class="language-sh">mage dev:vmUp -control=1 -worker=1 -ubuntuWorker=2 -distro=k3s
+mage dev:vmUp -control=0 -ubuntuControl=1 -ubuntuWorker=1 -distro=k3s   # Ubuntu only
+</code></pre>
+<p>Rocky nodes are <code>kc*</code> / <code>kw*</code> / <code>ki*</code>; Ubuntu nodes are <code>uc*</code> / <code>uw*</code>. <code>dev:vmList</code> shows which guest each node runs.</p>
+<p>This is what a single-distribution fleet cannot cover, and it is the gap <a href="../agent/choice-microvm-backend.html">choice-microvm-backend</a> records as the reason the container matrix is still the only thing that covers family routing. With Ubuntu nodes in the fleet, apply routes for real:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>On a Rocky node</th><th>On an Ubuntu node</th></tr>
+</thead>
+<tbody>
+<tr><td>Phase 21 installs <code>container-selinux</code>, because <code>getenforce</code> reports <code>Enforcing</code></td><td>Phase 21 does nothing, because there is no SELinux</td></tr>
+<tr><td>Phase 22 writes fapolicyd rules and restarts the service</td><td>Phase 22 does nothing: fapolicyd is not packaged for Ubuntu</td></tr>
+<tr><td>Phase 26 selects the firewalld backend</td><td>Phase 26 selects ufw</td></tr>
+<tr><td>Phase 57 installs the staged RPMs through <code>dnf</code></td><td>Phase 57 declines it; 59 installs the binary the package ships for hosts it carries no <code>.deb</code> for</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each of those <em>doing nothing</em> on the other guest is the assertion worth having: the phase tests compare what ran against what the hosts report, so a gate that routes wrongly shows up as a mismatch rather than as a silent skip.</p>
+<p>Two things to know before reaching for one:</p>
+<ul>
+<li>
+<p><strong>An Ubuntu node is installed from a binary, not from packages, and it does join.</strong> The <code>rke2</code> examples ship RPMs for the Enterprise Linux family and a tarball for everything else, so phase 57 claims the Rocky nodes and phase 59 claims the Ubuntu one. Verified on a mixed fleet: no <code>dpkg</code> entry for rke2, a 133MB <code>/usr/local/bin/rke2</code>, <code>rke2-agent</code> active, the node <code>Ready</code>. The glibc constraint that makes the container fleet’s Alpine node upload-only is about musl, and Ubuntu is not musl.</p>
+<p>What that means for coverage is narrower than it looks. Phase 58 runs and has nothing to install, because no <code>k3s</code> or <code>rke2</code> example carries a <code>.deb</code>; the <code>upstream-*</code> packages are the only ones that do, so they are what exercises the APT path with real packages. A <code>k3s</code> or <code>rke2</code> fleet exercises the <em>routing</em> – which phase claims which host – rather than the apt install itself.</p>
+</li>
+<li>
+<p><strong>ufw is enabled by cloud-init</strong>, which cargoship deliberately never does: bringing up a default-deny firewall over the SSH connection a phase is running on can cut it, so <code>pkg/firewall/ufw.go</code> applies only to a host whose ufw is already active. A stock cloud image ships it inactive, so without that the ufw path is not reachable at all.</p>
+</li>
+</ul>
+<h2 id="updating-a-pinned-image"><a class="header" href="#updating-a-pinned-image">Updating a pinned image</a></h2>
+<p>Both guests are pinned by dated build and digest in <code>internal/microvm/image.go</code>, not by a <code>latest</code> alias. The aliases move without warning, and a release that ships a broken build – Rocky has published a GenericCloud image with no cloud-init in it – is then something this package steps over by not moving, rather than something every developer hits at once. <code>TestEveryImageIsPinnedAndVerifiable</code> fails on a URL containing <code>latest</code>, so the pin cannot quietly become a moving one.</p>
+<p>Bumping one is three edits and a download. For <strong>Rocky</strong>, the dated builds and their checksums are published side by side:</p>
+<pre><code class="language-sh">curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/ | grep -o 'Rocky-10-GenericCloud-Base-[0-9.]*-[0-9.]*\.x86_64\.qcow2' | sort -u | tail -3
+curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/&lt;file&gt;.CHECKSUM
+</code></pre>
+<p>For <strong>Ubuntu</strong>, the dated directory is what to pin – <code>releases/26.04/release/</code> is a pointer that moves:</p>
+<pre><code class="language-sh">curl -s https://cloud-images.ubuntu.com/releases/26.04/ | grep -o 'release-[0-9]\{8\}' | sort -u | tail -3
+curl -s https://cloud-images.ubuntu.com/releases/26.04/release-&lt;date&gt;/SHA256SUMS | grep amd64.img
+</code></pre>
+<p>Then update <code>file</code>, <code>url</code> and <code>sha256</code> on that image, and run the download so the verification actually sees the new build:</p>
+<pre><code class="language-sh">mage dev:vmImage -image=rocky        # or ubuntu, or all
+</code></pre>
+<p><code>Fetch</code> checks the digest and then asks <code>guestfish</code> two things the digest cannot: that cloud-init is in the image at all, and – for a guest declared <code>selinux: true</code> – that it sets <code>SELINUX=enforcing</code>. Both have been wrong in a published build, and both fail late and unrecognisably if nobody looks: without cloud-init the seed is ignored and every node simply times out waiting for SSH, and with SELinux disabled the fleet comes up fine and every phase it exists to test quietly skips.</p>
+<p>A cached image whose digest no longer matches the pin is reported rather than silently replaced, naming the file to remove – re-downloading half a gigabyte is not something to do behind somebody’s back. After a bump, bring a fleet up and check the guest is what you think it is:</p>
+<pre><code class="language-sh">mage dev:vmUp -control=1 -worker=0
+mage dev:vmShell kc0        # then: cat /etc/os-release; getenforce
+</code></pre>
+<h2 id="looking-around-and-tearing-down"><a class="header" href="#looking-around-and-tearing-down">Looking around, and tearing down</a></h2>
+<pre><code class="language-sh">mage dev:vmList         # what is there and whether it is running
+mage dev:vmShell kc0    # a root shell on one node
+mage dev:vmDown         # every node stopped, every trace removed
+mage dev:vmImage        # fetch and verify the base image, start nothing
+</code></pre>
+<p>Each of those takes <code>-fleet</code> as well, and it matters once the e2e suite has been run against VMs: <code>CARGOSHIP_E2E_BACKEND=microvm</code> brings up a fleet named <code>e2e</code>, which the default <code>dev</code> fleet does not cover. A suite run killed before its own teardown leaves that fleet behind, and nothing else will remove it:</p>
+<pre><code class="language-sh">mage dev:vmList -fleet=e2e
+mage dev:vmDown -fleet=e2e
+</code></pre>
+<p><code>dev:vmUp</code> refuses a fleet that is already up rather than adopting it, so every bring-up starts from a fresh overlay. Tear the old one down first. That refusal is deliberate: a node still carrying the state of a previous apply is the one thing that makes a phase failure impossible to reason about.</p>
+<p>Note that <code>mage dev:clean</code> does not remove a fleet. It removes built binaries, and deleting a live fleet’s directory from under it would leave its qemu processes running with no record of them. <code>dev:vmDown</code> is what takes a fleet away.</p>
+<h2 id="how-the-networking-works"><a class="header" href="#how-the-networking-works">How the networking works</a></h2>
+<p>Each node has two interfaces, and which is which matters when reading a phase’s output.</p>
+<p><code>enp0s3</code> is the management interface, a qemu <code>user</code> (slirp) network. It carries the SSH forward your machine connects through, and outbound access to the internet - which phase 21 depends on, since it installs <code>container-selinux</code> by name and fails the run if it cannot. Every node has the same address on it, <code>10.0.2.15</code>, and no node can reach another there.</p>
+<p><code>enp0s4</code> is the fleet’s own layer 2 segment, carried between the qemu processes on a multicast socket. This is where the nodes see each other, on <code>10.73.&lt;fleet&gt;.&lt;node&gt;</code>, and it is what the inventory names as each host’s <code>privateAddress</code> and <code>privateInterface</code>. Those two fields are set explicitly rather than discovered, because the default route is on the management interface: fact gathering would pick <code>10.0.2.15</code> for every host, and the firewall and <code>/etc/hosts</code> phases would faithfully distribute an address no peer can reach.</p>
+<p>The leader additionally forwards its engine API port to your machine, so <code>cargoship kube-config</code> and <code>kubectl</code> work from here rather than only from inside the fleet.</p>
+<h2 id="when-a-node-does-not-come-up"><a class="header" href="#when-a-node-does-not-come-up">When a node does not come up</a></h2>
+<p>A node that never answers is reported with the tail of its serial console, and the full log is at <code>build/microvm/dev/&lt;node&gt;/console.log</code>. That is the only record: qemu is detached, so nothing else captured its boot.</p>
+<p>A node whose cloud-init failed is reported with cloud-init’s own explanation, from <code>cloud-init status --long</code>. Run that on the node yourself for more, and read <code>/var/log/cloud-init.log</code>.</p>
+<p>Host keys are regenerated on every bring-up, so host key checking is off and known-hosts is <code>/dev/null</code> for every connection the fleet makes. Set <code>SSH_KNOWN_HOSTS=""</code> when running <code>cargoship</code> against the inventory, for the same reason.</p>
+<h2 id="what-the-management-node-can-and-cannot-reach"><a class="header" href="#what-the-management-node-can-and-cannot-reach">What the management node can and cannot reach</a></h2>
+<p>Your machine reaches a node on exactly one path: the forwarded SSH port. That is enough for every phase cargoship drives over SSH, which is all of the host preparation, the uploads, the engine install and the join – and it is all this fleet sets out to cover.</p>
+<p>It is not enough for the phases that talk to the Kubernetes API from the management node. Two independent things stop them:</p>
+<ul>
+<li>The inventory’s <code>loadbalancer</code> is the leader’s address on the fleet’s private segment, because that is the address the other nodes join through. Nothing outside the qemu processes can route to that segment, so a phase that dials the load balancer from here gets a timeout.</li>
+<li>Once <code>--firewall</code> has run, firewalld’s <code>public</code> zone – which holds both of a node’s interfaces – allows ssh and nothing else. Node-to-node traffic works because the trusted zone admits the private addresses by source, so the leader’s forwarded API port reaches the guest and is then dropped. This is the firewall behaving correctly.</li>
+</ul>
+<p>In practice that means <code>cargoship apply --label-nodes</code> fails at <code>Labeling nodes with their profile group</code>, and a kubeconfig written for this fleet does not work from here. Drive <code>kubectl</code> from inside a node instead:</p>
+<pre><code class="language-sh">mage dev:vmShell kc0
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml   # or /etc/rancher/k3s/k3s.yaml
+/var/lib/rancher/rke2/bin/kubectl get nodes -o wide
+</code></pre>
+<p>Note what that costs in the suite: <code>Test_ZZ1_ClusterHealthy</code> is the only step that asserts the cluster actually works, and it is skipped here because it needs an API route from the management node. A green run against this fleet therefore says the phases did their work, not that the cluster is healthy. Check that from inside a node when it matters.</p>
+<p>Giving the management node a routable path onto the private segment would mean a tap device or a bridge, which needs root and puts the fleet back under the host’s firewall – the two things <a href="../agent/choice-microvm-backend.html">choice-microvm-backend</a> picked a multicast socket to avoid.</p>
+<h2 id="the-engines-node-ip"><a class="header" href="#the-engines-node-ip">The engine’s node IP</a></h2>
+<p>Each node reports its own address on the private segment, which is what makes a multi-controller cluster possible here at all. That was not always true, and the story is worth knowing because this fleet is what found it.</p>
+<p>Cargoship used to render no <code>node-ip</code>, so the engine chose its own node address from whichever interface held the default route – the management one. Every node then reported <code>10.0.2.15</code>, the same slirp address, and a three-controller cluster could not form: all three advertised the same etcd peer URL, so the second could never be added and the apply sat on <code>MemberAdd request timed out</code> until it gave up. A single controller hid it completely. The API server also could not reach a kubelet it believed was at an address shared with every other node, so <code>kubectl logs</code> and <code>kubectl exec</code> returned <code>502 Bad Gateway</code> and a Helm-installed CNI could fail outright, leaving every node <code>NotReady</code>.</p>
+<p><code>ConfigureEngine</code> now writes <code>node-ip</code> from the host’s <code>privateAddress</code>, beside the <code>node-name</code> it already wrote, so the fleet behaves the way any multi-homed fleet should:</p>
+<pre><code class="language-console">$ kubectl get nodes -o wide
+NAME   STATUS   ROLES                INTERNAL-IP
+kc0    Ready    control-plane,etcd   10.73.156.11
+kw0    Ready    &lt;none&gt;               10.73.156.12
+kw1    Ready    &lt;none&gt;               10.73.156.13
+</code></pre>
+<h2 id="driving-the-opentofu-provider-at-a-fleet"><a class="header" href="#driving-the-opentofu-provider-at-a-fleet">Driving the OpenTofu provider at a fleet</a></h2>
+<p>The provider takes the same hosts, so a fleet is also how <code>cargoship_cluster</code> gets exercised against real machines rather than one container. <code>mage dev:vmUp</code> writes a <code>ZarfCluster</code> inventory, and every field a <code>hosts</code> entry needs is in it:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Inventory</th><th><code>hosts</code> entry</th><th>For the fleet</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ssh.address</code></td><td><code>address</code></td><td>Always <code>127.0.0.1</code> – the forwards bind loopback</td></tr>
+<tr><td><code>ssh.port</code></td><td><code>port</code></td><td>The per-node forwarded SSH port</td></tr>
+<tr><td><code>ssh.user</code></td><td><code>user</code></td><td><code>root</code></td></tr>
+<tr><td><code>ssh.keyPath</code></td><td><code>key_path</code></td><td>The fleet key, under <code>build/microvm/&lt;fleet&gt;/key</code></td></tr>
+<tr><td><code>hostname</code></td><td><code>hostname</code></td><td><code>kc0</code>, <code>kw0</code>, …</td></tr>
+<tr><td><code>privateAddress</code></td><td><code>private_address</code></td><td>The node’s address on the private segment</td></tr>
+<tr><td><code>privateInterface</code></td><td><code>private_interface</code></td><td><code>enp0s4</code></td></tr>
+<tr><td><code>role</code> / <code>profile</code></td><td><code>role</code> / <code>profile</code></td><td>Unchanged</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-hcl">resource "cargoship_cluster" "fleet" {
+  name          = "microvm-dev"
+  load_balancer = "10.73.156.11"            # the leader's private address
+  package       = "./build/cargoship-distro-amd64.tar.zst"
+
+  hosts = {
+    kc0 = {
+      address           = "127.0.0.1"
+      port              = 26241
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kc0"
+      private_address   = "10.73.156.11"
+      private_interface = "enp0s4"
+      role              = "controller"
+      profile           = "controller"
+    }
+    kw0 = {
+      address           = "127.0.0.1"
+      port              = 26242
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kw0"
+      private_address   = "10.73.156.12"
+      private_interface = "enp0s4"
+      role              = "worker"
+      profile           = "worker"
+    }
+  }
+}
+</code></pre>
+<p>Four things to get right, each of which is a property of the fleet rather than of the provider:</p>
+<ul>
+<li><strong><code>key_path</code> must be absolute.</strong> The inventory already holds an absolute path for this reason; OpenTofu runs from wherever you invoke it.</li>
+<li><strong><code>load_balancer</code> is the leader’s private address</strong>, not a forwarded loopback port. It is the address the other nodes join through, and they reach each other on the private segment rather than through your machine.</li>
+<li><strong>Export <code>SSH_KNOWN_HOSTS=""</code></strong> before <code>tofu apply</code>. Host keys are regenerated on every bring-up, so a known-hosts entry is wrong by construction.</li>
+<li><strong>Leave <code>export_kubeconfig</code> and <code>label_nodes</code> off.</strong> Both need the management node to reach the API server, which it cannot on a fleet whose load balancer is private – see above. A provider run that sets either will fail there rather than in anything it is testing.</li>
+</ul>
+<p>The <code>hosts</code> key orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader. Keying the map by the fleet’s own hostnames keeps that in step with how <code>mage dev:vmUp</code> numbers them.</p>
+<p>Bring the fleet up, generate the block from the inventory, and <code>tofu apply</code>. A removal is the other half: set a host’s <code>state = "absent"</code> and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work <a href="e2e-external-inventory.html">e2e-external-inventory</a> drives through the CLI. <a href="tofu-provider.html">tofu-provider</a> covers building and running the provider itself.</p>
+<h2 id="the-shipped-k3s-packages-and-what-is-still-unproven"><a class="header" href="#the-shipped-k3s-packages-and-what-is-still-unproven">The shipped k3s packages, and what is still unproven</a></h2>
+<p>Two separate things used to stop a k3s cluster coming up, and only one of them is fixed.</p>
+<p><strong>Fixed: the join URL named the wrong port.</strong> <code>ConfigureEngine</code> wrote <code>server: https://&lt;host&gt;:9345</code> for both engines. 9345 is rke2’s – it runs its supervisor separately – while k3s multiplexes its supervisor onto 6443 and listens on nothing at 9345. <code>K3S</code> embeds the shared Rancher configuration without overriding that, so every k3s cluster was handed a join URL its own engine was not serving, and nothing could join. The port now comes from the distro.</p>
+<p><strong>Not fixed, and not retested since: the SELinux policy is staged and never installed.</strong> Every <code>example/k3s-*</code> package sets <code>selinux: true</code> and ships <code>k3s-selinux-*.rpm</code> under <code>selector.package: binary</code>. The BIN upload phase moves staged files into place and runs no package manager, so that RPM lands in <code>/var/lib/rancher/k3s/rpm/</code> and the <code>%post</code> that loads the policy module never runs – leaving a node with SELinux enforcing, an engine told to use it, and no policy for it. The <code>rke2</code> examples select <code>package: rpm</code> for the equivalent file, which is why <code>semodule -l</code> lists <code>rke2</code> there.</p>
+<p>So a k3s walk on this fleet is worth trying and is not yet known to pass. <code>mage test:endToEndClusterVM</code> still defaults to rke2 for that reason; <code>CARGOSHIP_E2E_DISTRO=k3s</code> is how to find out, and the node’s journal is where the answer will be.</p>
+<h2 id="limits"><a class="header" href="#limits">Limits</a></h2>
+<p>The fleet runs Rocky and, when asked, Ubuntu. That covers the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and – with <code>-ubuntuWorker</code> – the Debian branch beside it, which is the pair apply routes between in most of the places it routes at all.</p>
+<p>It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer <code>selinux-policy</code>, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in <code>internal/microvm/image.go</code> plus its cloud-init packages, so neither is hard – they are simply not done. Run both suites.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dev/mage.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../dev/qemu-setup.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dev/mage.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../dev/qemu-setup.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

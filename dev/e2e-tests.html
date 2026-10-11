@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1f756e52.js";
+            window.path_to_searchindex_js = "../searchindex-8481e1c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-00ba28f5.js"></script>
+        <script src="../toc-d720c678.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -223,10 +223,24 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 </code></pre>
 <h2 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h2>
 <ul>
-<li><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> - parent directory for the temp dirs the harness creates, one per <code>e2e.Cargoship</code> call, plus the shared minimal package. Unset means the system temp directory. Point it at <code>build/tmp</code> to keep all test scratch inside the repo, which makes it easy to see what a run left behind: <code>CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...</code>.</li>
-<li><strong><code>TMPDIR</code></strong> - respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.</li>
-<li><strong><code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG</code></strong> - set to any non-empty value to keep the in-memory registry’s request log for passing tests as well as failing ones. See “Artifacts and logs” below.</li>
-<li><strong><code>CARGOSHIP_CONFIG</code></strong> - the config file the binary loads. <code>TestCargoshipCreateExample</code> sets it (to <code>test/e2e/cargoship-config.yaml</code>), and the Ansible module suite’s “reports a broken config file as a module failure” case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> - parent directory for the temp dirs the harness creates, one per <code>e2e.Cargoship</code> call, plus the shared minimal package. Unset means the system temp directory. Point it at <code>build/tmp</code> to keep all test scratch inside the repo, which makes it easy to see what a run left behind: <code>CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...</code>.</p>
+</li>
+<li>
+<p><strong><code>TMPDIR</code></strong> - respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_BACKEND</code></strong> - what provisions the cluster suite’s hosts: <code>bootloose</code> (the default) for privileged containers, <code>microvm</code> for local Rocky 10 virtual machines, or <code>inventory</code> for hosts that already exist. The VM backend is the only way the SELinux, fapolicyd and firewalld phases run as the paths they are rather than as gates that correctly do nothing, and it needs KVM. It is additional coverage rather than a replacement, since it runs one distribution; see <a href="microvm.html">microvm</a>.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_INVENTORY</code></strong> - with <code>CARGOSHIP_E2E_BACKEND=inventory</code>, the path to a <code>ZarfCluster</code> document naming hosts that already exist. The suite provisions nothing and tears nothing down, which is how the phase assertions are run against a fleet on EC2, vSphere, Proxmox or bare metal. It changes those hosts and does not change them back; see <a href="e2e-external-inventory.html">e2e-external-inventory</a>.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG</code></strong> - set to any non-empty value to keep the in-memory registry’s request log for passing tests as well as failing ones. See “Artifacts and logs” below.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_CONFIG</code></strong> - the config file the binary loads. <code>TestCargoshipCreateExample</code> sets it (to <code>test/e2e/cargoship-config.yaml</code>), and the Ansible module suite’s “reports a broken config file as a module failure” case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.</p>
+</li>
 </ul>
 <h2 id="seeing-what-the-binary-actually-did"><a class="header" href="#seeing-what-the-binary-actually-did">Seeing what the binary actually did</a></h2>
 <p><code>e2e.Cargoship</code> runs the binary with <code>exec.PrintCfg()</code>, so its stdout and stderr are written through to the test process’s stdout and stderr, not into <code>t.Log</code>. <code>go test</code> buffers that per package and prints it only when the package fails; add <code>-v</code> to see it as it happens.</p>

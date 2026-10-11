@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1f756e52.js";
+            window.path_to_searchindex_js = "../searchindex-8481e1c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-00ba28f5.js"></script>
+        <script src="../toc-d720c678.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -283,7 +283,7 @@ docker exec facts-host systemctl start ssh
 </code></pre>
 <p>Both the <code>chown</code> and the mode matter: <code>docker cp</code> leaves the file owned by whichever uid the image’s build left in place, and sshd refuses a key file it does not trust. The symptom is an authentication failure that looks like a wrong key, and it retries for the whole <code>connect_timeout</code> before saying so.</p>
 <p>Then point a host block at <code>127.0.0.1</code> port <code>2223</code> with <code>key_path = "/tmp/facts-key"</code>, and <code>SSH_KNOWN_HOSTS=""</code> so the container’s regenerated host key is not checked against a known-hosts file. Remove it with <code>docker rm -f facts-host</code> when finished.</p>
-<p>For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs – see <a href="e2e-tests.html">e2e-tests</a> – and the addresses, user and key path in it are what a host block needs.</p>
+<p>For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs – see <a href="e2e-tests.html">e2e-tests</a> – and the addresses, user and key path in it are what a host block needs. <code>mage dev:vmUp -control=1 -worker=0</code> writes the same thing for a single virtual machine, which is the easier route when the host needs a real kernel rather than only an sshd; see <a href="microvm.html">microvm</a>.</p>
 <h2 id="connect_timeout-and-why-it-exists"><a class="header" href="#connect_timeout-and-why-it-exists"><code>connect_timeout</code>, and why it exists</a></h2>
 <p>cargoship’s connect phase retries for <strong>ten minutes</strong> (<code>pkg/phase/07_connect.go</code>), because a host rebooting into a new kernel mid-apply is ordinary. That is the wrong answer for a plan: a typo in an address would make <code>tofu plan</code> sit silent for ten minutes before failing. The provider bounds every read at <code>connect_timeout</code>, one minute by default, and says so when it gives up:</p>
 <pre><code>cargoship could not gather facts for bubbles: gave up after 1m0s: failed on 1 hosts:
