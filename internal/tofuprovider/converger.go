@@ -16,16 +16,22 @@ package tofuprovider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/action"
+	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // hostFacts is what the read-only phases learned about one host.
@@ -44,6 +50,57 @@ type hostFacts struct {
 	EngineVersion  string
 }
 
+// applyOptions are the apply settings a resource exposes. They are the subset of
+// action.ApplyOptions that changes what an apply does to a fleet rather than what it reports.
+type applyOptions struct {
+	// Package is the distro package to install: a path, or an OCI reference.
+	Package string
+	// ModifyHosts rewrites /etc/hosts on every host.
+	ModifyHosts bool
+	// ModifyFirewall rewrites the host firewall.
+	ModifyFirewall bool
+	// LabelNodes adds the node-role.kubernetes.io/<profile> label to each node.
+	LabelNodes bool
+	// WorkerConcurrent is the worker batch size, a count ("5") or a percentage ("25%").
+	WorkerConcurrent string
+	// AllowUnmanagedNodes continues when the cluster holds a node the configuration does not.
+	AllowUnmanagedNodes bool
+	// AllowDowngrade continues when a host runs a version newer than the package.
+	AllowDowngrade bool
+	// Timeout bounds the retry loops the phases run through.
+	Timeout time.Duration
+	// Kubeconfig asks for the cluster's admin credentials to be returned. Nothing is written to
+	// the machine running OpenTofu either way -- see rule 4 of docs/agent/choice-tofu-secrets.md
+	// for why they are not returned unless they are asked for.
+	Kubeconfig bool
+}
+
+// applyResult is what an apply leaves for the resource to write to state.
+type applyResult struct {
+	// DistroID is the engine the package carries, which is what a later refresh needs and what a
+	// configuration never states twice.
+	DistroID string
+	// EngineVersion is the version the package carries.
+	EngineVersion string
+	// Facts are the per-host facts the read-only phases gathered on the way through.
+	Facts []hostFacts
+	// Kubeconfig is the cluster's admin credentials, populated only when they were asked for.
+	Kubeconfig []byte
+}
+
+// teardownOptions are the reset settings a resource exposes.
+type teardownOptions struct {
+	// DistroID is the engine to remove. A reset loads no package, so it has nothing else to read
+	// the engine's identity from.
+	DistroID string
+	// WorkerConcurrent is the batch size nodes are drained and deleted in.
+	WorkerConcurrent string
+	// NoDrain skips draining a node before deleting it.
+	NoDrain bool
+	// Timeout bounds the retry loops the phases run through.
+	Timeout time.Duration
+}
+
 // converger is everything the provider asks of cargoship.
 //
 // It exists as an interface so the resources and data sources can be tested without SSH, a
@@ -54,6 +111,19 @@ type converger interface {
 	// Refresh runs the read-only phases and reports what they found, host by host. It changes
 	// nothing, which is what lets a data source and a resource's Read share it.
 	Refresh(ctx context.Context, c *cluster.ZarfCluster, distroID string) ([]hostFacts, error)
+	// DistroFromPackage reads the engine the package carries, for the paths that have no engine
+	// recorded in state to act on.
+	DistroFromPackage(ctx context.Context, pkg string) (string, error)
+	// Apply converges the cluster on the configuration: one phase list covering install, join
+	// and upgrade, each phase gated by its own ShouldRun, which is why Create and Update are the
+	// same call.
+	//
+	// A result comes back even when the error is non-nil, and it is not empty: an apply that
+	// failed part way through has already changed hosts, and the facts it gathered before failing
+	// are what stop the next plan from deciding nothing is installed.
+	Apply(ctx context.Context, c *cluster.ZarfCluster, opts applyOptions) (applyResult, error)
+	// Teardown removes the engine and its data from every host in the configuration.
+	Teardown(ctx context.Context, c *cluster.ZarfCluster, opts teardownOptions) error
 }
 
 // DefaultConnectTimeout bounds how long a read waits for a fleet.
@@ -87,19 +157,8 @@ func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.ZarfCluste
 		return nil, fmt.Errorf("distro is required: the engine to read, %q or %q", "k3s", "rke2")
 	}
 
-	out := c.out
-	if out == nil {
-		out = io.Discard
-	}
-
 	refresh, err := action.NewRefresh(action.RefreshOptions{
-		Manager: &phase.Manager{
-			Config:            cfg,
-			DistroID:          distroID,
-			Concurrency:       c.concurrency,
-			ConcurrentUploads: c.concurrency,
-			Writer:            out,
-		},
+		Manager: c.manager(cfg, distroID),
 	})
 	if err != nil {
 		return nil, err
@@ -172,4 +231,177 @@ func addressOf(host *cluster.ZarfHost) string {
 		return cfg.Address
 	}
 	return net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port))
+}
+
+// DistroFromPackage loads the package's definition and returns the engine type it carries.
+func (c cargoshipConverger) DistroFromPackage(ctx context.Context, pkg string) (string, error) {
+	if pkg == "" {
+		return "", errors.New("package is required: the distro package to inspect")
+	}
+
+	cache, err := cachePath()
+	if err != nil {
+		return "", err
+	}
+	layout, err := distro.Load(ctx, pkg, distro.LoadOptions{
+		CachePath:    cache,
+		Architecture: config.CLIArch,
+		Output:       config.CommonOptions.TempDirectory,
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to load the package %s: %w", pkg, err)
+	}
+	defer func() {
+		if err := os.RemoveAll(layout.DirPath()); err != nil {
+			tflog.Warn(ctx, "could not remove the extracted package", map[string]any{
+				"path":  layout.DirPath(),
+				"error": err.Error(),
+			})
+		}
+	}()
+
+	return layout.Distro.Spec.Type, nil
+}
+
+// Apply loads the package and converges the cluster on it.
+//
+// The package is loaded here rather than in the resource because what comes out of it -- the
+// engine's identity and its version -- is what the manager needs and what the resource writes to
+// state. A configuration states the package once; it never states the engine as well.
+//
+// The extracted package is removed on the way out. It is tens of megabytes of staging data per
+// apply, and nothing after the run reads it.
+func (c cargoshipConverger) Apply(ctx context.Context, cfg *cluster.ZarfCluster, opts applyOptions) (applyResult, error) {
+	var result applyResult
+
+	if opts.Package == "" {
+		return result, fmt.Errorf("package is required: the distro package to install")
+	}
+
+	cache, err := cachePath()
+	if err != nil {
+		return result, err
+	}
+	layout, err := distro.Load(ctx, opts.Package, distro.LoadOptions{
+		CachePath:    cache,
+		Architecture: config.CLIArch,
+		Output:       config.CommonOptions.TempDirectory,
+	})
+	if err != nil {
+		return result, fmt.Errorf("unable to load the package %s: %w", opts.Package, err)
+	}
+	defer func() {
+		if err := os.RemoveAll(layout.DirPath()); err != nil {
+			tflog.Warn(ctx, "could not remove the extracted package", map[string]any{
+				"path":  layout.DirPath(),
+				"error": err.Error(),
+			})
+		}
+	}()
+
+	result.DistroID = layout.Distro.Spec.Type
+	result.EngineVersion = layout.Distro.Spec.Version
+
+	manager := c.manager(cfg, layout.Distro.Spec.Type)
+	manager.Distro = &layout.Distro
+	manager.TempDirectory = layout.DirPath()
+	if opts.Timeout > 0 {
+		manager.SetTimeout(opts.Timeout)
+	}
+
+	apply, err := action.NewApply(action.ApplyOptions{
+		Manager:             manager,
+		ModifyHosts:         opts.ModifyHosts,
+		ModifyFirewall:      opts.ModifyFirewall,
+		LabelNodes:          opts.LabelNodes,
+		WorkerConcurrent:    opts.WorkerConcurrent,
+		AllowUnmanagedNodes: opts.AllowUnmanagedNodes,
+		AllowDowngrade:      opts.AllowDowngrade,
+		// The apply never writes the operator's kubeconfig. A provider that merged credentials
+		// into ~/.kube/config as a side effect of an apply would be changing the machine running
+		// OpenTofu, which is not what the resource describes. The credentials are read back
+		// afterwards instead, and only when they were asked for.
+		UpdateKubeConfig: opts.Kubeconfig,
+		NoKubeConfigFile: true,
+	})
+	if err != nil {
+		return result, err
+	}
+
+	if err := riglogger.RigLogger(ctx); err != nil {
+		return result, fmt.Errorf("unable to route the SSH logs: %w", err)
+	}
+
+	runErr := apply.Run(ctx)
+
+	// The facts come back either way. An apply that failed has still changed hosts, and the next
+	// plan reading an empty state would decide nothing is installed and re-bootstrap a live
+	// cluster.
+	result.Facts = factsOf(cfg.Spec.Hosts)
+
+	if opts.Kubeconfig && runErr == nil {
+		bytes, err := apply.KubeConfigBytes()
+		if err != nil {
+			return result, fmt.Errorf("the apply finished but the kubeconfig could not be read: %w", err)
+		}
+		result.Kubeconfig = bytes
+	}
+	return result, runErr
+}
+
+// Teardown removes the engine from every host, which is what a destroy does.
+func (c cargoshipConverger) Teardown(ctx context.Context, cfg *cluster.ZarfCluster, opts teardownOptions) error {
+	if opts.DistroID == "" {
+		return fmt.Errorf("the engine to remove is not recorded in state, so there is nothing to tear down safely")
+	}
+
+	manager := c.manager(cfg, opts.DistroID)
+	if opts.Timeout > 0 {
+		manager.SetTimeout(opts.Timeout)
+	}
+
+	reset, err := action.NewReset(action.ResetOptions{
+		Manager:          manager,
+		WorkerConcurrent: opts.WorkerConcurrent,
+		NoDrain:          opts.NoDrain,
+		NoWait:           true,
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := riglogger.RigLogger(ctx); err != nil {
+		return fmt.Errorf("unable to route the SSH logs: %w", err)
+	}
+	return reset.Run(ctx)
+}
+
+// manager builds the phase.Manager every action here runs through, the way the CLI builds one.
+func (c cargoshipConverger) manager(cfg *cluster.ZarfCluster, distroID string) *phase.Manager {
+	out := c.out
+	if out == nil {
+		out = io.Discard
+	}
+	return &phase.Manager{
+		Config:            cfg,
+		DistroID:          distroID,
+		Concurrency:       c.concurrency,
+		ConcurrentUploads: c.concurrency,
+		Writer:            out,
+	}
+}
+
+// cachePath fills in the cache and temp-directory defaults the CLI's root command fills in before
+// any command runs. A provider has no root command, so it does it here.
+func cachePath() (string, error) {
+	if config.CommonOptions.CachePath == "" {
+		config.CommonOptions.CachePath = config.DefaultCachePath
+	}
+	if config.CommonOptions.TempDirectory == "" {
+		config.CommonOptions.TempDirectory = os.TempDir()
+	}
+	if config.CLIArch == "" {
+		config.CLIArch = runtime.GOARCH
+	}
+	return config.GetAbsCachePath()
 }

@@ -27,19 +27,53 @@ import (
 // around: everything below it needs SSH and a cluster, and everything above it -- the state
 // mapping and the diagnostics, which is where provider bugs live -- does not.
 type fakeConverger struct {
-	facts []hostFacts
-	err   error
+	facts  []hostFacts
+	err    error
+	result applyResult
+	// applyErr and teardownErr are returned by Apply and Teardown. A non-nil applyErr still
+	// returns a result, which is the contract the converger documents: an apply that failed part
+	// way through has already changed hosts.
+	applyErr    error
+	teardownErr error
 
 	// got records what the provider asked for, so a test can assert the translation reached it
-	// rather than only that the result came back.
+	// rather than only that the result came back. applied and tornDown record the options of the
+	// last Apply and Teardown, which is how a test checks an attribute reached the action.
 	got      *cluster.ZarfCluster
 	distroID string
+	applied  *applyOptions
+	tornDown *teardownOptions
+
+	pkgDistro    string
+	pkgDistroErr error
+	pkgCalls     int
+}
+
+func (f *fakeConverger) DistroFromPackage(_ context.Context, _ string) (string, error) {
+	f.pkgCalls++
+	return f.pkgDistro, f.pkgDistroErr
 }
 
 func (f *fakeConverger) Refresh(_ context.Context, cfg *cluster.ZarfCluster, distroID string) ([]hostFacts, error) {
 	f.got = cfg
 	f.distroID = distroID
 	return f.facts, f.err
+}
+
+func (f *fakeConverger) Apply(_ context.Context, cfg *cluster.ZarfCluster, opts applyOptions) (applyResult, error) {
+	f.got = cfg
+	f.applied = &opts
+	result := f.result
+	if result.Facts == nil {
+		result.Facts = f.facts
+	}
+	return result, f.applyErr
+}
+
+func (f *fakeConverger) Teardown(_ context.Context, cfg *cluster.ZarfCluster, opts teardownOptions) error {
+	f.got = cfg
+	f.tornDown = &opts
+	return f.teardownErr
 }
 
 // factsModelFor is the configuration a practitioner would write, as the framework would decode it.
