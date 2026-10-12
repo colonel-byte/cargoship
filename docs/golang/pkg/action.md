@@ -10,6 +10,7 @@ Package action are various actions used by the package
 
 ## Index
 
+- [Variables](<#variables>)
 - [type Apply](<#Apply>)
   - [func NewApply\(opts ApplyOptions\) \(\*Apply, error\)](<#NewApply>)
   - [func \(a Apply\) KubeConfigBytes\(\) \(\[\]byte, error\)](<#Apply.KubeConfigBytes>)
@@ -39,8 +40,16 @@ Package action are various actions used by the package
 - [type ResetOptions](<#ResetOptions>)
 
 
+## Variables
+
+<a name="ErrNoDistroSelected"></a>ErrNoDistroSelected is returned when an action is built with no distro at all, rather than with one no module claims.
+
+```go
+var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
+```
+
 <a name="Apply"></a>
-## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L78-L84>)
+## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75-L81>)
 
 Apply state logic
 
@@ -53,7 +62,7 @@ type Apply struct {
 ```
 
 <a name="NewApply"></a>
-### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L87>)
+### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L84>)
 
 ```go
 func NewApply(opts ApplyOptions) (*Apply, error)
@@ -62,7 +71,7 @@ func NewApply(opts ApplyOptions) (*Apply, error)
 NewApply an apply action object
 
 <a name="Apply.KubeConfigBytes"></a>
-### func \(Apply\) [KubeConfigBytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L215>)
+### func \(Apply\) [KubeConfigBytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L207>)
 
 ```go
 func (a Apply) KubeConfigBytes() ([]byte, error)
@@ -73,7 +82,7 @@ KubeConfigBytes is the cluster's admin credentials, serialized, as the run built
 It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase is skipped otherwise and there is nothing to return. What comes back is cluster\-admin, so a caller holding it is holding the cluster.
 
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L223>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L215>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error
@@ -82,7 +91,7 @@ func (a Apply) Run(ctx context.Context) error
 Run the actions
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L37-L75>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L72>)
 
 ApplyOptions struct
 
@@ -129,7 +138,7 @@ type ApplyOptions struct {
 ```
 
 <a name="EngineConfigSync"></a>
-## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L51-L54>)
+## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L48-L51>)
 
 EngineConfigSync state logic
 
@@ -141,7 +150,7 @@ type EngineConfigSync struct {
 ```
 
 <a name="NewEngineConfigSync"></a>
-### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L57>)
+### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L54>)
 
 ```go
 func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error)
@@ -150,7 +159,7 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error
 NewEngineConfigSync an engine\-config\-sync action object
 
 <a name="EngineConfigSync.Run"></a>
-### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L119>)
+### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L111>)
 
 ```go
 func (r EngineConfigSync) Run(ctx context.Context) error
@@ -159,7 +168,7 @@ func (r EngineConfigSync) Run(ctx context.Context) error
 Run the actions
 
 <a name="EngineConfigSyncOptions"></a>
-## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L30-L48>)
+## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L27-L45>)
 
 EngineConfigSyncOptions struct
 
@@ -186,7 +195,7 @@ type EngineConfigSyncOptions struct {
 ```
 
 <a name="KubeConfig"></a>
-## type [KubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L54-L60>)
+## type [KubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L51-L57>)
 
 KubeConfig state logic
 
@@ -199,7 +208,7 @@ type KubeConfig struct {
 ```
 
 <a name="NewKubeConfig"></a>
-### func [NewKubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L63>)
+### func [NewKubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L60>)
 
 ```go
 func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)
@@ -208,7 +217,7 @@ func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)
 NewKubeConfig pulls the admin cert from a control\-plane node and updates the local kube\-config
 
 <a name="KubeConfig.Bytes"></a>
-### func \(KubeConfig\) [Bytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L106>)
+### func \(KubeConfig\) [Bytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L98>)
 
 ```go
 func (a KubeConfig) Bytes() ([]byte, error)
@@ -221,7 +230,7 @@ It is read after Run, and it is the half of this action that has nothing to do w
 What comes back is cluster\-admin credentials, so a caller holding them is holding the cluster.
 
 <a name="KubeConfig.Config"></a>
-### func \(KubeConfig\) [Config](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L115>)
+### func \(KubeConfig\) [Config](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L107>)
 
 ```go
 func (a KubeConfig) Config() *clientcmdapi.Config
@@ -230,7 +239,7 @@ func (a KubeConfig) Config() *clientcmdapi.Config
 Config is the same credentials as a structure, for a caller that wants to read a field rather than a file. Nil until Run has built it.
 
 <a name="KubeConfig.Run"></a>
-### func \(KubeConfig\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L123>)
+### func \(KubeConfig\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L115>)
 
 ```go
 func (a KubeConfig) Run(ctx context.Context) error
@@ -239,7 +248,7 @@ func (a KubeConfig) Run(ctx context.Context) error
 Run the actions
 
 <a name="KubeConfigOptions"></a>
-## type [KubeConfigOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L36-L51>)
+## type [KubeConfigOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L33-L48>)
 
 KubeConfigOptions struct
 
@@ -363,7 +372,7 @@ type RefreshOptions struct {
 ```
 
 <a name="Reset"></a>
-## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L58-L61>)
+## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L55-L58>)
 
 Reset state logic
 
@@ -375,7 +384,7 @@ type Reset struct {
 ```
 
 <a name="NewReset"></a>
-### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L64>)
+### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L61>)
 
 ```go
 func NewReset(opts ResetOptions) (*Reset, error)
@@ -384,7 +393,7 @@ func NewReset(opts ResetOptions) (*Reset, error)
 NewReset an apply action object
 
 <a name="Reset.Run"></a>
-### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L140>)
+### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L133>)
 
 ```go
 func (r Reset) Run(ctx context.Context) error
@@ -393,7 +402,7 @@ func (r Reset) Run(ctx context.Context) error
 Run the actions
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L35-L55>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L52>)
 
 ResetOptions struct
 
