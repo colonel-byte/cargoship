@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8481e1c9.js";
+            window.path_to_searchindex_js = "../searchindex-5c9e8923.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-d720c678.js"></script>
+        <script src="../toc-2d226b0c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -244,6 +244,12 @@
 <li>Prepare hosts - Enterprise Linux support - Fapolicyd
 <ul>
 <li>Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
+<li>Prepare hosts - Enterprise Linux support - SELinux policy
+<ul>
+<li>Installs the policy modules, booleans and file contexts from spec.config.os.selinux on hosts running SELinux in enforcing mode, using semodule, setsebool and semanage fcontext</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>

@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8481e1c9.js";
+            window.path_to_searchindex_js = "searchindex-5c9e8923.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d720c678.js"></script>
+        <script src="toc-2d226b0c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1619,7 +1619,7 @@ spec:
 <p><strong><code>spec.actions.onCreate</code></strong> – per action, when the action sets <code>template: true</code>. This renders at build time, on the machine building the package, and covers the action’s <code>cmd</code> and its <code>wait</code> block.</p>
 </li>
 </ul>
-<p><code>spec.config.os.sysctl</code>, <code>spec.config.os.environment</code>, and <code>spec.config.os.fapolicyd</code> do not render.</p>
+<p><code>spec.config.os.sysctl</code>, <code>spec.config.os.environment</code>, <code>spec.config.os.fapolicyd</code>, and <code>spec.config.os.selinux</code> do not render.</p>
 <p>A template that names a value the package does not define is an error, not an empty string, on every surface.</p>
 <h2 id="rendered-manifests-on-a-running-cluster"><a class="header" href="#rendered-manifests-on-a-running-cluster">Rendered manifests on a running cluster</a></h2>
 <p>The <code>HelmChartConfig</code> manifests a template produces are written to the engine’s manifest directory, which the Rancher engines re-read on their own. Cargoship marks them as not requiring a restart: <code>cargoship engine-config-sync</code> compares them on disk, writes the drift in place, and logs the paths it wrote. No node is drained for a values change that lands only in manifests.</p>
@@ -4685,7 +4685,59 @@ $ cargoship version -o json
 <tr><td><code>fapolicyd</code></td><td><code>string</code></td><td>no</td><td></td><td>holds the fapolicyd config file contents cargoship writes to a host.</td></tr>
 <tr><td><code>files</code></td><td><a href="#zarffiles">ZarfFiles</a></td><td>no</td><td></td><td>lists files cargoship uploads to a host.</td></tr>
 <tr><td><code>kernel</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the kernel modules cargoship enables on the host.</td></tr>
+<tr><td><code>selinux</code></td><td><a href="#zarfdistroselinux">ZarfDistroSELinux</a></td><td>no</td><td></td><td>holds the custom SELinux policy cargoship applies to a host.</td></tr>
 <tr><td><code>sysctl</code></td><td>map[string]<code>string</code> or <code>number</code></td><td>no</td><td></td><td>maps sysctl keys to the values cargoship applies to a host.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfdistroselinux"><a class="header" href="#zarfdistroselinux">ZarfDistroSELinux</a></h3>
+<p>holds the custom SELinux policy cargoship applies to hosts running SELinux in enforcing mode.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>booleans</code></td><td>map[string]<code>boolean</code></td><td>no</td><td></td><td>maps SELinux boolean names to the values cargoship sets persistently on a host.</td></tr>
+<tr><td><code>fileContexts</code></td><td>array of <a href="#zarfdistroselinuxfilecontext">ZarfDistroSELinuxFileContext</a></td><td>no</td><td></td><td>lists the file context mappings cargoship adds on a host.</td></tr>
+<tr><td><code>modules</code></td><td>array of <a href="#zarfdistroselinuxmodule">ZarfDistroSELinuxModule</a></td><td>no</td><td></td><td>lists the CIL policy modules cargoship installs on a host.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfdistroselinuxfilecontext"><a class="header" href="#zarfdistroselinuxfilecontext">ZarfDistroSELinuxFileContext</a></h3>
+<p>holds a single file context mapping cargoship adds with semanage.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>fileType</code></td><td><code>string</code></td><td>no</td><td><code>all</code></td><td>restricts the mapping to one kind of filesystem object. One of <code>all</code>, <code>file</code>, <code>dir</code>, <code>symlink</code>, <code>pipe</code>, <code>socket</code>, <code>block</code>, <code>char</code>.</td></tr>
+<tr><td><code>path</code></td><td><code>string</code></td><td>yes</td><td></td><td>holds the path regular expression the mapping applies to.</td></tr>
+<tr><td><code>type</code></td><td><code>string</code></td><td>yes</td><td></td><td>names the SELinux type the matching paths are labeled with.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfdistroselinuxmodule"><a class="header" href="#zarfdistroselinuxmodule">ZarfDistroSELinuxModule</a></h3>
+<p>holds a single CIL policy module cargoship installs with semodule.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cil</code></td><td><code>string</code></td><td>yes</td><td></td><td>holds the Common Intermediate Language policy source semodule installs.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the module to semodule, and names the file cargoship writes to the host.</td></tr>
+<tr><td><code>priority</code></td><td><code>integer</code></td><td>no</td><td><code>400.0</code></td><td>holds the semodule priority the module installs at.</td></tr>
 </tbody>
 </table>
 </div>
@@ -5762,6 +5814,12 @@ $ cargoship version -o json
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
+<li>Prepare hosts - Enterprise Linux support - SELinux policy
+<ul>
+<li>Installs the policy modules, booleans and file contexts from spec.config.os.selinux on hosts running SELinux in enforcing mode, using semodule, setsebool and semanage fcontext</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
 <li>Updating hosts file for clusters nodes
 <ul>
 <li>If enabled, then this will modify the <code>/etc/hosts</code> file on the remote nodes with the fully qualified domain name for each node in the cluster</li>
@@ -6040,6 +6098,12 @@ $ cargoship version -o json
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
+<li>Prepare hosts - Enterprise Linux support - SELinux policy
+<ul>
+<li>Installs the policy modules, booleans and file contexts from spec.config.os.selinux on hosts running SELinux in enforcing mode, using semodule, setsebool and semanage fcontext</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
 <li>Enable the requested kernel modules
 <ul>
 <li>Turns on the list of requested modules on the host, then reboots the box if modules are added</li>
@@ -6123,6 +6187,12 @@ $ cargoship version -o json
 <li>Repoint the controllers that were kept
 <ul>
 <li>When a removal takes a controller out, rewrites <code>server:</code> on the controllers that stayed so they name one that is still there, which is what lets them rejoin after a restart</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
+<li>Remove the SELinux policy cargoship applied
+<ul>
+<li>Removes the policy modules and file contexts recorded in /var/lib/cargoship/selinux/cargoship-state.json and returns the booleans to the values the host held before cargoship changed them</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
@@ -7333,6 +7403,13 @@ $ cargoship version -o json
 <li><a href="#ZarfDistroOS.JSONSchemaExtend">func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)</a></li>
 </ul>
 </li>
+<li><a href="#ZarfDistroSELinux">type ZarfDistroSELinux</a>
+<ul>
+<li><a href="#ZarfDistroSELinux.IsZero">func (s ZarfDistroSELinux) IsZero() bool</a></li>
+</ul>
+</li>
+<li><a href="#ZarfDistroSELinuxFileContext">type ZarfDistroSELinuxFileContext</a></li>
+<li><a href="#ZarfDistroSELinuxModule">type ZarfDistroSELinuxModule</a></li>
 <li><a href="#ZarfDistroSpec">type ZarfDistroSpec</a></li>
 <li><a href="#ZarfDistroValueMapping">type ZarfDistroValueMapping</a></li>
 <li><a href="#ZarfDistroValues">type ZarfDistroValues</a></li>
@@ -7386,12 +7463,12 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistro.Arches"></a></p>
-<h3 id="func-zarfdistro-arches"><a class="header" href="#func-zarfdistro-arches">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L315">Arches</a></a></h3>
+<h3 id="func-zarfdistro-arches"><a class="header" href="#func-zarfdistro-arches">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L353">Arches</a></a></h3>
 <pre><code class="language-go">func (distro ZarfDistro) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.</p>
 <p><a name="ZarfDistro.IsSBOMAble"></a></p>
-<h3 id="func-zarfdistro-issbomable"><a class="header" href="#func-zarfdistro-issbomable">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L323">IsSBOMAble</a></a></h3>
+<h3 id="func-zarfdistro-issbomable"><a class="header" href="#func-zarfdistro-issbomable">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L361">IsSBOMAble</a></a></h3>
 <pre><code class="language-go">func (distro ZarfDistro) IsSBOMAble() bool
 </code></pre>
 <p>IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.</p>
@@ -7440,7 +7517,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistroBuildData.Arches"></a></p>
-<h3 id="func-zarfdistrobuilddata-arches"><a class="header" href="#func-zarfdistrobuilddata-arches">func (ZarfDistroBuildData) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L302">Arches</a></a></h3>
+<h3 id="func-zarfdistrobuilddata-arches"><a class="header" href="#func-zarfdistrobuilddata-arches">func (ZarfDistroBuildData) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L340">Arches</a></a></h3>
 <pre><code class="language-go">func (b ZarfDistroBuildData) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package was built for. It prefers Architectures and falls back to the single Architecture field.</p>
@@ -7518,18 +7595,20 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistroMetadata.Arches"></a></p>
-<h3 id="func-zarfdistrometadata-arches"><a class="header" href="#func-zarfdistrometadata-arches">func (ZarfDistroMetadata) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L290">Arches</a></a></h3>
+<h3 id="func-zarfdistrometadata-arches"><a class="header" href="#func-zarfdistrometadata-arches">func (ZarfDistroMetadata) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L328">Arches</a></a></h3>
 <pre><code class="language-go">func (m ZarfDistroMetadata) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package targets. It prefers Architectures and falls back to the single Architecture field, so callers never have to know which one the package set.</p>
 <p><a name="ZarfDistroOS"></a></p>
-<h2 id="type-zarfdistroos"><a class="header" href="#type-zarfdistroos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L260-L271">ZarfDistroOS</a></a></h2>
+<h2 id="type-zarfdistroos"><a class="header" href="#type-zarfdistroos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L260-L273">ZarfDistroOS</a></a></h2>
 <p>ZarfDistroOS holds settings applied to a host.</p>
 <pre><code class="language-go">type ZarfDistroOS struct {
     // Sysctl maps sysctl keys to the values cargoship applies to a host.
     Sysctl map[string]string `json:"sysctl,omitempty"`
     // FAPolicyd holds the fapolicyd config file contents cargoship writes to a host.
     FAPolicyd string `json:"fapolicyd,omitempty"`
+    // SELinux holds the custom SELinux policy cargoship applies to a host.
+    SELinux ZarfDistroSELinux `json:"selinux,omitempty"`
     // Files lists files cargoship uploads to a host.
     Files v1alpha1.ZarfFiles `json:"files,omitempty"`
     // Kernel lists the kernel modules cargoship enables on the host.
@@ -7539,10 +7618,51 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistroOS.JSONSchemaExtend"></a></p>
-<h3 id="func-zarfdistroos-jsonschemaextend"><a class="header" href="#func-zarfdistroos-jsonschemaextend">func (ZarfDistroOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L275">JSONSchemaExtend</a></a></h3>
+<h3 id="func-zarfdistroos-jsonschemaextend"><a class="header" href="#func-zarfdistroos-jsonschemaextend">func (ZarfDistroOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L277">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend widens sysctl values to accept numbers alongside strings, so unquoted numeric values in YAML validate.</p>
+<p><a name="ZarfDistroSELinux"></a></p>
+<h2 id="type-zarfdistroselinux"><a class="header" href="#type-zarfdistroselinux">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L292-L299">ZarfDistroSELinux</a></a></h2>
+<p>ZarfDistroSELinux holds the custom SELinux policy cargoship applies to hosts running SELinux in enforcing mode. Every field is optional, and a host that is not enforcing is left alone.</p>
+<pre><code class="language-go">type ZarfDistroSELinux struct {
+    // Modules lists the CIL policy modules cargoship installs on a host.
+    Modules []ZarfDistroSELinuxModule `json:"modules,omitempty"`
+    // Booleans maps SELinux boolean names to the values cargoship sets persistently on a host.
+    Booleans map[string]bool `json:"booleans,omitempty"`
+    // FileContexts lists the file context mappings cargoship adds on a host.
+    FileContexts []ZarfDistroSELinuxFileContext `json:"fileContexts,omitempty"`
+}
+</code></pre>
+<p><a name="ZarfDistroSELinux.IsZero"></a></p>
+<h3 id="func-zarfdistroselinux-iszero"><a class="header" href="#func-zarfdistroselinux-iszero">func (ZarfDistroSELinux) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L302">IsZero</a></a></h3>
+<pre><code class="language-go">func (s ZarfDistroSELinux) IsZero() bool
+</code></pre>
+<p>IsZero reports whether no SELinux policy is configured, so a phase can gate on it.</p>
+<p><a name="ZarfDistroSELinuxFileContext"></a></p>
+<h2 id="type-zarfdistroselinuxfilecontext"><a class="header" href="#type-zarfdistroselinuxfilecontext">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L317-L324">ZarfDistroSELinuxFileContext</a></a></h2>
+<p>ZarfDistroSELinuxFileContext holds a single file context mapping cargoship adds with semanage.</p>
+<pre><code class="language-go">type ZarfDistroSELinuxFileContext struct {
+    // Path holds the path regular expression the mapping applies to.
+    Path string `json:"path" jsonschema:"example=/var/lib/rancher(/.*)?"`
+    // Type names the SELinux type the matching paths are labeled with.
+    Type string `json:"type" jsonschema:"example=container_var_lib_t"`
+    // FileType restricts the mapping to one kind of filesystem object.
+    FileType string `json:"fileType,omitempty" jsonschema:"default=all,enum=all,enum=file,enum=dir,enum=symlink,enum=pipe,enum=socket,enum=block,enum=char"`
+}
+</code></pre>
+<p><a name="ZarfDistroSELinuxModule"></a></p>
+<h2 id="type-zarfdistroselinuxmodule"><a class="header" href="#type-zarfdistroselinuxmodule">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L307-L314">ZarfDistroSELinuxModule</a></a></h2>
+<p>ZarfDistroSELinuxModule holds a single CIL policy module cargoship installs with semodule.</p>
+<pre><code class="language-go">type ZarfDistroSELinuxModule struct {
+    // Name identifies the module to semodule, and names the file cargoship writes to the host.
+    Name string `json:"name" jsonschema:"pattern=^[a-zA-Z0-9][a-zA-Z0-9_-]*$"`
+    // Priority holds the semodule priority the module installs at.
+    Priority int `json:"priority,omitempty" jsonschema:"default=400"`
+    // CIL holds the Common Intermediate Language policy source semodule installs.
+    CIL string `json:"cil"`
+}
+</code></pre>
 <p><a name="ZarfDistroSpec"></a></p>
 <h2 id="type-zarfdistrospec"><a class="header" href="#type-zarfdistrospec">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L132-L143">ZarfDistroSpec</a></a></h2>
 <p>ZarfDistroSpec holds the configuration for a distro package.</p>
@@ -7645,7 +7765,7 @@ $ cargoship version -o json
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L191">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L192">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
@@ -7767,7 +7887,7 @@ $ cargoship version -o json
 </code></pre>
 <p>NewPrepare an prepare action object</p>
 <p><a name="Prepare.Run"></a></p>
-<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L75">Run</a></a></h3>
+<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L76">Run</a></a></h3>
 <pre><code class="language-go">func (a Prepare) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
@@ -7803,7 +7923,7 @@ $ cargoship version -o json
 </code></pre>
 <p>NewReset an apply action object</p>
 <p><a name="Reset.Run"></a></p>
-<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L139">Run</a></a></h3>
+<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L140">Run</a></a></h3>
 <pre><code class="language-go">func (r Reset) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
@@ -11922,6 +12042,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#PrepareSelinux.Title">func (p *PrepareSelinux) Title() string</a></li>
 </ul>
 </li>
+<li><a href="#PrepareSelinuxPolicy">type PrepareSelinuxPolicy</a>
+<ul>
+<li><a href="#PrepareSelinuxPolicy.Explanation">func (p *PrepareSelinuxPolicy) Explanation() string</a></li>
+<li><a href="#PrepareSelinuxPolicy.Prepare">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareSelinuxPolicy.Run">func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error</a></li>
+<li><a href="#PrepareSelinuxPolicy.ShouldRun">func (p *PrepareSelinuxPolicy) ShouldRun() bool</a></li>
+<li><a href="#PrepareSelinuxPolicy.Title">func (p *PrepareSelinuxPolicy) Title() string</a></li>
+</ul>
+</li>
 <li><a href="#RPMUploadFiles">type RPMUploadFiles</a>
 <ul>
 <li><a href="#RPMUploadFiles.Explanation">func (p *RPMUploadFiles) Explanation() string</a></li>
@@ -11937,6 +12066,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#ReconfigureSurvivors.Run">func (p *ReconfigureSurvivors) Run(ctx context.Context) error</a></li>
 <li><a href="#ReconfigureSurvivors.ShouldRun">func (p *ReconfigureSurvivors) ShouldRun() bool</a></li>
 <li><a href="#ReconfigureSurvivors.Title">func (p *ReconfigureSurvivors) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#RemoveSelinuxPolicy">type RemoveSelinuxPolicy</a>
+<ul>
+<li><a href="#RemoveSelinuxPolicy.Explanation">func (p *RemoveSelinuxPolicy) Explanation() string</a></li>
+<li><a href="#RemoveSelinuxPolicy.Prepare">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#RemoveSelinuxPolicy.Run">func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error</a></li>
+<li><a href="#RemoveSelinuxPolicy.ShouldRun">func (p *RemoveSelinuxPolicy) ShouldRun() bool</a></li>
+<li><a href="#RemoveSelinuxPolicy.Title">func (p *RemoveSelinuxPolicy) Title() string</a></li>
 </ul>
 </li>
 <li><a href="#ResultSink">type ResultSink</a>
@@ -12024,6 +12162,22 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
     // FAPOLICYD name of the service for fapolicyd
     FAPOLICYD = "fapolicyd"
+)
+</code></pre>
+<p><a name="SELinuxPolicyDir"></a></p>
+<pre><code class="language-go">const (
+    // SELinuxPolicyDir is the directory on the host holding cargoship's CIL policy modules
+    SELinuxPolicyDir = "/var/lib/cargoship/selinux"
+    // SELinuxStateFile records the settings cargoship changed, so a reset can restore them
+    SELinuxStateFile = SELinuxPolicyDir + "/cargoship-state.json"
+    // SEModule name of the binary that installs a policy module
+    SEModule = "semodule"
+    // DefaultSELinuxModulePriority is the semodule priority a module installs at when it sets
+    // none. It sits above the distribution policy's 100 so a package module overrides rather
+    // than conflicts with the shipped policy.
+    DefaultSELinuxModulePriority = 400
+    // DefaultSELinuxFileType is the semanage fcontext file type used when a mapping sets none
+    DefaultSELinuxFileType = "all"
 )
 </code></pre>
 <p><a name="FIREWALLD"></a></p>
@@ -13258,6 +13412,39 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func (p *PrepareSelinux) Title() string
 </code></pre>
 <p>Title for the phase</p>
+<p><a name="PrepareSelinuxPolicy"></a></p>
+<h2 id="type-prepareselinuxpolicy"><a class="header" href="#type-prepareselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L76">PrepareSelinuxPolicy</a></a></h2>
+<p>PrepareSelinuxPolicy installs the distro-supplied SELinux policy on the hosts.</p>
+<pre><code class="language-go">type PrepareSelinuxPolicy struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="PrepareSelinuxPolicy.Explanation"></a></p>
+<h3 id="func-prepareselinuxpolicy-explanation"><a class="header" href="#func-prepareselinuxpolicy-explanation">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L93">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="PrepareSelinuxPolicy.Prepare"></a></p>
+<h3 id="func-prepareselinuxpolicy-prepare"><a class="header" href="#func-prepareselinuxpolicy-prepare">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="PrepareSelinuxPolicy.Run"></a></p>
+<h3 id="func-prepareselinuxpolicy-run"><a class="header" href="#func-prepareselinuxpolicy-run">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L98">Run</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="PrepareSelinuxPolicy.ShouldRun"></a></p>
+<h3 id="func-prepareselinuxpolicy-shouldrun"><a class="header" href="#func-prepareselinuxpolicy-shouldrun">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L111">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when a host can take a policy and the distro package supplies one</p>
+<p><a name="PrepareSelinuxPolicy.Title"></a></p>
+<h3 id="func-prepareselinuxpolicy-title"><a class="header" href="#func-prepareselinuxpolicy-title">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L88">Title</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Title() string
+</code></pre>
+<p>Title for the phase</p>
 <p><a name="RPMUploadFiles"></a></p>
 <h2 id="type-rpmuploadfiles"><a class="header" href="#type-rpmuploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L28-L30">RPMUploadFiles</a></a></h2>
 <p>RPMUploadFiles implements a phase which upload files to hosts</p>
@@ -13322,6 +13509,39 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="ReconfigureSurvivors.Title"></a></p>
 <h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L66">Title</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="RemoveSelinuxPolicy"></a></p>
+<h2 id="type-removeselinuxpolicy"><a class="header" href="#type-removeselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L34">RemoveSelinuxPolicy</a></a></h2>
+<p>RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.</p>
+<pre><code class="language-go">type RemoveSelinuxPolicy struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="RemoveSelinuxPolicy.Explanation"></a></p>
+<h3 id="func-removeselinuxpolicy-explanation"><a class="header" href="#func-removeselinuxpolicy-explanation">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L53">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="RemoveSelinuxPolicy.Prepare"></a></p>
+<h3 id="func-removeselinuxpolicy-prepare"><a class="header" href="#func-removeselinuxpolicy-prepare">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="RemoveSelinuxPolicy.Run"></a></p>
+<h3 id="func-removeselinuxpolicy-run"><a class="header" href="#func-removeselinuxpolicy-run">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L58">Run</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="RemoveSelinuxPolicy.ShouldRun"></a></p>
+<h3 id="func-removeselinuxpolicy-shouldrun"><a class="header" href="#func-removeselinuxpolicy-shouldrun">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L68">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when a host carries a policy cargoship recorded</p>
+<p><a name="RemoveSelinuxPolicy.Title"></a></p>
+<h3 id="func-removeselinuxpolicy-title"><a class="header" href="#func-removeselinuxpolicy-title">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L48">Title</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ResultSink"></a></p>
@@ -18299,6 +18519,27 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>The exception is a removal that leaves a single controller behind. There the member being removed has to still be up to form the majority of two that commits its own removal, so the engine stays running through the deletion and is uninstalled immediately after. <code>keepEngineForDelete</code> is that case, and it is the reason the ordering is decided in <code>Prepare</code> from the controller membership rather than being fixed.</p>
 <h2 id="what-is-not-covered"><a class="header" href="#what-is-not-covered">What is not covered</a></h2>
 <p>The refusals count controllers whose engine answers, not etcd’s own membership, so a cluster that is already one member down looks whole to them. A quorum check against etcd would be the stronger test and is not here.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-a-packages-selinux-policy-is-cil-applied-fatally-and-removed-from-a-record-on-the-host"><a class="header" href="#why-a-packages-selinux-policy-is-cil-applied-fatally-and-removed-from-a-record-on-the-host">Why a package’s SELinux policy is CIL, applied fatally, and removed from a record on the host</a></h1>
+<p><code>spec.config.os.selinux</code> lets a Cargo package carry the SELinux policy its workload needs: CIL policy modules, booleans, and file context mappings. <code>pkg/phase/24_prepare_selinux_policy.go</code> applies it, and <code>pkg/phase/89_remove_selinux_policy.go</code> takes it back off. Four decisions in there are not recoverable from the code, and this is the record of them.</p>
+<h2 id="cil-not-type-enforcement-source-and-not-a-compiled-module"><a class="header" href="#cil-not-type-enforcement-source-and-not-a-compiled-module">CIL, not Type Enforcement source and not a compiled module</a></h2>
+<p>A policy can reach a host in three shapes, and only one of them fits a management node driving an air-gapped fleet.</p>
+<p>Type Enforcement source – the familiar <code>.te</code> and <code>.fc</code> pair – has to be compiled on the host, with <code>checkmodule</code> and <code>semodule_package</code> out of <code>policycoreutils-devel</code> and <code>selinux-policy-devel</code>. Neither is on a minimal Enterprise Linux install, and neither is staged inside the package. Cargoship installs nothing on a host beyond what a phase uploads, so a feature whose first requirement is two development packages from a repository the host cannot reach is a feature that does not work on the fleet it was written for.</p>
+<p>A compiled <code>.pp</code> module avoids the toolchain by moving the build off-host, and pays for it in portability: a binary module is bound to the policy version it was built against, so a package carrying one works on the hosts whose policy matches and fails on the rest. For a package that is built once and applied to whatever an operator has, that is the wrong trade.</p>
+<p>CIL is what <code>semodule -i</code> accepts directly. No build tooling, no version binding, and it is plain text, so it lives in <code>distro.yaml</code> the way the fapolicyd rules already do and shows up in a review as the policy it is. The cost is that CIL is lower-level than <code>.te</code> and less pleasant to write by hand. That cost falls on the few packages that need a module at all, and booleans and file contexts – which need no policy language whatsoever – cover the common cases without it.</p>
+<h2 id="applying-is-fatal-removing-is-tolerant"><a class="header" href="#applying-is-fatal-removing-is-tolerant">Applying is fatal, removing is tolerant</a></h2>
+<p>The rule set in <a href="#why-a-missing-dnf-versionlock-plugin-warns-instead-of-failing-the-install"><code>choice-unpinnable-hosts.md</code></a> is prerequisite against convenience: a failure that leaves the install impossible stops the run, and a failure that leaves it merely weaker warns. A policy written into <code>distro.yaml</code> by hand is the first kind. Nobody adds a CIL module or a <code>container_var_lib_t</code> mapping speculatively; it is there because the workload is denied without it. A host that quietly skipped it is an enforcing host running a workload whose policy is absent, and the operator finds out from an AVC denial somewhere downstream rather than from the phase that could have told them. So <code>semodule</code>, <code>setsebool</code> and <code>semanage</code> failures return, and the phase stops the run.</p>
+<p>A host that cannot take a policy at all is a different question, and is filtered rather than failed – <code>selinuxPolicyCapable</code> requires both SELinux enforcing and <code>semodule</code> present, the same shape as <code>PrepareFapolicy</code> filtering on the service running. A Debian host with no SELinux is not a failure to apply a policy; it is a host the policy was never about.</p>
+<p>Removal inverts both. <code>RemoveSelinuxPolicy</code> warns and carries on through every step. A reset has to be re-runnable, and the state it is undoing can legitimately be half gone – a module an operator removed by hand, a context already deleted, a boolean already back at its default. Returning an error on the first absent thing would strand the host with the state file still claiming the policy is installed, which is worse than the inconsistency it was reporting.</p>
+<h2 id="reset-reads-a-record-on-the-host-because-it-has-no-package-to-read"><a class="header" href="#reset-reads-a-record-on-the-host-because-it-has-no-package-to-read">Reset reads a record on the host, because it has no package to read</a></h2>
+<p>A reset loads no distro package. <code>cmd/install_reset.go</code> builds its <code>phase.Manager</code> by hand precisely because there is nothing to load, and <code>Manager.Distro</code> is nil for the whole run. So the removal phase cannot ask <code>spec.config.os.selinux</code> what to remove: whatever it undoes, it has to learn from the host.</p>
+<p>That is what <code>/var/lib/cargoship/selinux/cargoship-state.json</code> is for. The apply phase writes it before it changes anything, recording the modules and their priorities, the file context mappings, and – the part that cannot be reconstructed any other way – the value each boolean held beforehand. <code>getsebool</code> after the fact reports cargoship’s own value, so without the record “unwind” could only mean guessing at a distribution default, and guessing wrong on a boolean is a security change made silently in the wrong direction. A boolean already present in the record keeps the value written the first time, so a second apply does not overwrite the host’s original with cargoship’s.</p>
+<p>A host with no record is skipped. It has nothing cargoship applied, or it has a policy applied by something else, and neither is the removal phase’s to touch.</p>
+<h2 id="no-command-line-flag"><a class="header" href="#no-command-line-flag">No command-line flag</a></h2>
+<p>The phase gates on two things only: what the hosts can take, and what the package asks for. There is no <code>--selinux-policy</code> flag, and this is deliberate rather than unfinished.</p>
+<p><code>apply</code> and <code>prepare</code> already bind <code>-f/--fapolicyd</code>, and no phase reads it – <code>PrepareFapolicy</code> has no <code>Enabled</code> field and <code>PrepareOptions</code> has no fapolicyd member. <code>CHANGELOG.md</code> records the matching cleanup on the phase side, <code>drop the unused InstallFapolicy phase</code>. A flag is not one flag: it is <code>types/config.go</code>, <code>cmd/root.go</code>, <code>cmd/viper.go</code>, both <code>cmd/install_*.go</code> files, <code>internal/ansiblemod/params.go</code>, and the <code>DOCUMENTATION</code> block in both Ansible action plugins. Adding that surface for a toggle nothing threads through is how the dead <code>-f</code> happened. An operator who does not want the policy applied removes it from the package, which is where it is declared.</p>
+<h2 id="dry-run"><a class="header" href="#dry-run">Dry run</a></h2>
+<p>The phase is classified <code>DryRunSkip</code>, like <code>PrepareSelinux</code> and <code>PrepareFapolicy</code> beside it: a dry run reports it and does not run it. Its mutations are still wrapped in <code>GenericPhase.Wet</code>, which under that classification never executes, and the wrapping is there so the phase does not have to be rewritten if it ever declares a dry-run path. Claiming <code>readOnly</code> would be wrong – the phase changes hosts – and a <code>DryRun()</code> that reported the commands it would run would have to re-derive the host filtering against live hosts to say anything true, which is work with no caller asking for it yet.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-opentofu-provider-is-a-package-of-this-module"><a class="header" href="#why-the-opentofu-provider-is-a-package-of-this-module">Why the OpenTofu provider is a package of this module</a></h1>
 <p>The provider that <a href="https://github.com/colonel-byte/cargoship/issues/302">#302</a> scopes lives at <code>cmd/terraform-provider-cargoship</code>, in this repository and in this Go module. Two alternatives were live: its own repository, <code>colonel-byte/terraform-provider-cargoship</code>, which is the only layout the OpenTofu registry accepts; and a second Go module here at <code>tofu/provider</code>, which would let the provider carry its own tags and keep its dependencies out of the committed vendor tree. This records why neither was taken, and what would make one of them right later.</p>

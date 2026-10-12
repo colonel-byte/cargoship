@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-8481e1c9.js";
+            window.path_to_searchindex_js = "../../searchindex-5c9e8923.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-d720c678.js"></script>
+        <script src="../../toc-2d226b0c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -488,6 +488,15 @@
 <li><a href="#PrepareSelinux.Title">func (p *PrepareSelinux) Title() string</a></li>
 </ul>
 </li>
+<li><a href="#PrepareSelinuxPolicy">type PrepareSelinuxPolicy</a>
+<ul>
+<li><a href="#PrepareSelinuxPolicy.Explanation">func (p *PrepareSelinuxPolicy) Explanation() string</a></li>
+<li><a href="#PrepareSelinuxPolicy.Prepare">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareSelinuxPolicy.Run">func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error</a></li>
+<li><a href="#PrepareSelinuxPolicy.ShouldRun">func (p *PrepareSelinuxPolicy) ShouldRun() bool</a></li>
+<li><a href="#PrepareSelinuxPolicy.Title">func (p *PrepareSelinuxPolicy) Title() string</a></li>
+</ul>
+</li>
 <li><a href="#RPMUploadFiles">type RPMUploadFiles</a>
 <ul>
 <li><a href="#RPMUploadFiles.Explanation">func (p *RPMUploadFiles) Explanation() string</a></li>
@@ -503,6 +512,15 @@
 <li><a href="#ReconfigureSurvivors.Run">func (p *ReconfigureSurvivors) Run(ctx context.Context) error</a></li>
 <li><a href="#ReconfigureSurvivors.ShouldRun">func (p *ReconfigureSurvivors) ShouldRun() bool</a></li>
 <li><a href="#ReconfigureSurvivors.Title">func (p *ReconfigureSurvivors) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#RemoveSelinuxPolicy">type RemoveSelinuxPolicy</a>
+<ul>
+<li><a href="#RemoveSelinuxPolicy.Explanation">func (p *RemoveSelinuxPolicy) Explanation() string</a></li>
+<li><a href="#RemoveSelinuxPolicy.Prepare">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#RemoveSelinuxPolicy.Run">func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error</a></li>
+<li><a href="#RemoveSelinuxPolicy.ShouldRun">func (p *RemoveSelinuxPolicy) ShouldRun() bool</a></li>
+<li><a href="#RemoveSelinuxPolicy.Title">func (p *RemoveSelinuxPolicy) Title() string</a></li>
 </ul>
 </li>
 <li><a href="#ResultSink">type ResultSink</a>
@@ -590,6 +608,22 @@
     FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
     // FAPOLICYD name of the service for fapolicyd
     FAPOLICYD = "fapolicyd"
+)
+</code></pre>
+<p><a name="SELinuxPolicyDir"></a></p>
+<pre><code class="language-go">const (
+    // SELinuxPolicyDir is the directory on the host holding cargoship's CIL policy modules
+    SELinuxPolicyDir = "/var/lib/cargoship/selinux"
+    // SELinuxStateFile records the settings cargoship changed, so a reset can restore them
+    SELinuxStateFile = SELinuxPolicyDir + "/cargoship-state.json"
+    // SEModule name of the binary that installs a policy module
+    SEModule = "semodule"
+    // DefaultSELinuxModulePriority is the semodule priority a module installs at when it sets
+    // none. It sits above the distribution policy's 100 so a package module overrides rather
+    // than conflicts with the shipped policy.
+    DefaultSELinuxModulePriority = 400
+    // DefaultSELinuxFileType is the semanage fcontext file type used when a mapping sets none
+    DefaultSELinuxFileType = "all"
 )
 </code></pre>
 <p><a name="FIREWALLD"></a></p>
@@ -1824,6 +1858,39 @@
 <pre><code class="language-go">func (p *PrepareSelinux) Title() string
 </code></pre>
 <p>Title for the phase</p>
+<p><a name="PrepareSelinuxPolicy"></a></p>
+<h2 id="type-prepareselinuxpolicy"><a class="header" href="#type-prepareselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L76">PrepareSelinuxPolicy</a></a></h2>
+<p>PrepareSelinuxPolicy installs the distro-supplied SELinux policy on the hosts.</p>
+<pre><code class="language-go">type PrepareSelinuxPolicy struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="PrepareSelinuxPolicy.Explanation"></a></p>
+<h3 id="func-prepareselinuxpolicy-explanation"><a class="header" href="#func-prepareselinuxpolicy-explanation">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L93">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="PrepareSelinuxPolicy.Prepare"></a></p>
+<h3 id="func-prepareselinuxpolicy-prepare"><a class="header" href="#func-prepareselinuxpolicy-prepare">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="PrepareSelinuxPolicy.Run"></a></p>
+<h3 id="func-prepareselinuxpolicy-run"><a class="header" href="#func-prepareselinuxpolicy-run">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L98">Run</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="PrepareSelinuxPolicy.ShouldRun"></a></p>
+<h3 id="func-prepareselinuxpolicy-shouldrun"><a class="header" href="#func-prepareselinuxpolicy-shouldrun">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L111">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when a host can take a policy and the distro package supplies one</p>
+<p><a name="PrepareSelinuxPolicy.Title"></a></p>
+<h3 id="func-prepareselinuxpolicy-title"><a class="header" href="#func-prepareselinuxpolicy-title">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L88">Title</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Title() string
+</code></pre>
+<p>Title for the phase</p>
 <p><a name="RPMUploadFiles"></a></p>
 <h2 id="type-rpmuploadfiles"><a class="header" href="#type-rpmuploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L28-L30">RPMUploadFiles</a></a></h2>
 <p>RPMUploadFiles implements a phase which upload files to hosts</p>
@@ -1888,6 +1955,39 @@
 <p><a name="ReconfigureSurvivors.Title"></a></p>
 <h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L66">Title</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="RemoveSelinuxPolicy"></a></p>
+<h2 id="type-removeselinuxpolicy"><a class="header" href="#type-removeselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L34">RemoveSelinuxPolicy</a></a></h2>
+<p>RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.</p>
+<pre><code class="language-go">type RemoveSelinuxPolicy struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="RemoveSelinuxPolicy.Explanation"></a></p>
+<h3 id="func-removeselinuxpolicy-explanation"><a class="header" href="#func-removeselinuxpolicy-explanation">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L53">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="RemoveSelinuxPolicy.Prepare"></a></p>
+<h3 id="func-removeselinuxpolicy-prepare"><a class="header" href="#func-removeselinuxpolicy-prepare">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="RemoveSelinuxPolicy.Run"></a></p>
+<h3 id="func-removeselinuxpolicy-run"><a class="header" href="#func-removeselinuxpolicy-run">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L58">Run</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="RemoveSelinuxPolicy.ShouldRun"></a></p>
+<h3 id="func-removeselinuxpolicy-shouldrun"><a class="header" href="#func-removeselinuxpolicy-shouldrun">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L68">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when a host carries a policy cargoship recorded</p>
+<p><a name="RemoveSelinuxPolicy.Title"></a></p>
+<h3 id="func-removeselinuxpolicy-title"><a class="header" href="#func-removeselinuxpolicy-title">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L48">Title</a></a></h3>
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ResultSink"></a></p>

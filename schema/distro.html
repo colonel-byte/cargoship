@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8481e1c9.js";
+            window.path_to_searchindex_js = "../searchindex-5c9e8923.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-d720c678.js"></script>
+        <script src="../toc-2d226b0c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -518,7 +518,59 @@
 <tr><td><code>fapolicyd</code></td><td><code>string</code></td><td>no</td><td></td><td>holds the fapolicyd config file contents cargoship writes to a host.</td></tr>
 <tr><td><code>files</code></td><td><a href="#zarffiles">ZarfFiles</a></td><td>no</td><td></td><td>lists files cargoship uploads to a host.</td></tr>
 <tr><td><code>kernel</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the kernel modules cargoship enables on the host.</td></tr>
+<tr><td><code>selinux</code></td><td><a href="#zarfdistroselinux">ZarfDistroSELinux</a></td><td>no</td><td></td><td>holds the custom SELinux policy cargoship applies to a host.</td></tr>
 <tr><td><code>sysctl</code></td><td>map[string]<code>string</code> or <code>number</code></td><td>no</td><td></td><td>maps sysctl keys to the values cargoship applies to a host.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfdistroselinux"><a class="header" href="#zarfdistroselinux">ZarfDistroSELinux</a></h3>
+<p>holds the custom SELinux policy cargoship applies to hosts running SELinux in enforcing mode.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>booleans</code></td><td>map[string]<code>boolean</code></td><td>no</td><td></td><td>maps SELinux boolean names to the values cargoship sets persistently on a host.</td></tr>
+<tr><td><code>fileContexts</code></td><td>array of <a href="#zarfdistroselinuxfilecontext">ZarfDistroSELinuxFileContext</a></td><td>no</td><td></td><td>lists the file context mappings cargoship adds on a host.</td></tr>
+<tr><td><code>modules</code></td><td>array of <a href="#zarfdistroselinuxmodule">ZarfDistroSELinuxModule</a></td><td>no</td><td></td><td>lists the CIL policy modules cargoship installs on a host.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfdistroselinuxfilecontext"><a class="header" href="#zarfdistroselinuxfilecontext">ZarfDistroSELinuxFileContext</a></h3>
+<p>holds a single file context mapping cargoship adds with semanage.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>fileType</code></td><td><code>string</code></td><td>no</td><td><code>all</code></td><td>restricts the mapping to one kind of filesystem object. One of <code>all</code>, <code>file</code>, <code>dir</code>, <code>symlink</code>, <code>pipe</code>, <code>socket</code>, <code>block</code>, <code>char</code>.</td></tr>
+<tr><td><code>path</code></td><td><code>string</code></td><td>yes</td><td></td><td>holds the path regular expression the mapping applies to.</td></tr>
+<tr><td><code>type</code></td><td><code>string</code></td><td>yes</td><td></td><td>names the SELinux type the matching paths are labeled with.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfdistroselinuxmodule"><a class="header" href="#zarfdistroselinuxmodule">ZarfDistroSELinuxModule</a></h3>
+<p>holds a single CIL policy module cargoship installs with semodule.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cil</code></td><td><code>string</code></td><td>yes</td><td></td><td>holds the Common Intermediate Language policy source semodule installs.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the module to semodule, and names the file cargoship writes to the host.</td></tr>
+<tr><td><code>priority</code></td><td><code>integer</code></td><td>no</td><td><code>400.0</code></td><td>holds the semodule priority the module installs at.</td></tr>
 </tbody>
 </table>
 </div>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8481e1c9.js";
+            window.path_to_searchindex_js = "../searchindex-5c9e8923.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-d720c678.js"></script>
+        <script src="../toc-2d226b0c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -364,7 +364,7 @@ spec:
 <p><strong><code>spec.actions.onCreate</code></strong> – per action, when the action sets <code>template: true</code>. This renders at build time, on the machine building the package, and covers the action’s <code>cmd</code> and its <code>wait</code> block.</p>
 </li>
 </ul>
-<p><code>spec.config.os.sysctl</code>, <code>spec.config.os.environment</code>, and <code>spec.config.os.fapolicyd</code> do not render.</p>
+<p><code>spec.config.os.sysctl</code>, <code>spec.config.os.environment</code>, <code>spec.config.os.fapolicyd</code>, and <code>spec.config.os.selinux</code> do not render.</p>
 <p>A template that names a value the package does not define is an error, not an empty string, on every surface.</p>
 <h2 id="rendered-manifests-on-a-running-cluster"><a class="header" href="#rendered-manifests-on-a-running-cluster">Rendered manifests on a running cluster</a></h2>
 <p>The <code>HelmChartConfig</code> manifests a template produces are written to the engine’s manifest directory, which the Rancher engines re-read on their own. Cargoship marks them as not requiring a restart: <code>cargoship engine-config-sync</code> compares them on disk, writes the drift in place, and logs the paths it wrote. No node is drained for a values change that lands only in manifests.</p>
