@@ -271,13 +271,56 @@ holds settings applied to a host.
 
 <div class="schema-table">
 
-| Property    | Type                            | Required | Default | Description                                                          |
-| ----------- | ------------------------------- | -------- | ------- | -------------------------------------------------------------------- |
-| `env`       | map[string]`string`             | no       |         | maps environment variables cargoship sets on the host.               |
-| `fapolicyd` | `string`                        | no       |         | holds the fapolicyd config file contents cargoship writes to a host. |
-| `files`     | [ZarfFiles](#zarffiles)         | no       |         | lists files cargoship uploads to a host.                             |
-| `kernel`    | array of `string`               | no       |         | lists the kernel modules cargoship enables on the host.              |
-| `sysctl`    | map[string]`string` or `number` | no       |         | maps sysctl keys to the values cargoship applies to a host.          |
+| Property    | Type                                    | Required | Default | Description                                                          |
+| ----------- | --------------------------------------- | -------- | ------- | -------------------------------------------------------------------- |
+| `env`       | map[string]`string`                     | no       |         | maps environment variables cargoship sets on the host.               |
+| `fapolicyd` | `string`                                | no       |         | holds the fapolicyd config file contents cargoship writes to a host. |
+| `files`     | [ZarfFiles](#zarffiles)                 | no       |         | lists files cargoship uploads to a host.                             |
+| `kernel`    | array of `string`                       | no       |         | lists the kernel modules cargoship enables on the host.              |
+| `selinux`   | [ZarfDistroSELinux](#zarfdistroselinux) | no       |         | holds the custom SELinux policy cargoship applies to a host.         |
+| `sysctl`    | map[string]`string` or `number`         | no       |         | maps sysctl keys to the values cargoship applies to a host.          |
+
+</div>
+
+### ZarfDistroSELinux
+
+holds the custom SELinux policy cargoship applies to hosts running SELinux in enforcing mode.
+
+<div class="schema-table">
+
+| Property       | Type                                                                   | Required | Default | Description                                                                     |
+| -------------- | ---------------------------------------------------------------------- | -------- | ------- | ------------------------------------------------------------------------------- |
+| `booleans`     | map[string]`boolean`                                                   | no       |         | maps SELinux boolean names to the values cargoship sets persistently on a host. |
+| `fileContexts` | array of [ZarfDistroSELinuxFileContext](#zarfdistroselinuxfilecontext) | no       |         | lists the file context mappings cargoship adds on a host.                       |
+| `modules`      | array of [ZarfDistroSELinuxModule](#zarfdistroselinuxmodule)           | no       |         | lists the CIL policy modules cargoship installs on a host.                      |
+
+</div>
+
+### ZarfDistroSELinuxFileContext
+
+holds a single file context mapping cargoship adds with semanage.
+
+<div class="schema-table">
+
+| Property   | Type     | Required | Default | Description                                                                                                                        |
+| ---------- | -------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `fileType` | `string` | no       | `all`   | restricts the mapping to one kind of filesystem object. One of `all`, `file`, `dir`, `symlink`, `pipe`, `socket`, `block`, `char`. |
+| `path`     | `string` | yes      |         | holds the path regular expression the mapping applies to.                                                                          |
+| `type`     | `string` | yes      |         | names the SELinux type the matching paths are labeled with.                                                                        |
+
+</div>
+
+### ZarfDistroSELinuxModule
+
+holds a single CIL policy module cargoship installs with semodule.
+
+<div class="schema-table">
+
+| Property   | Type      | Required | Default | Description                                                                         |
+| ---------- | --------- | -------- | ------- | ----------------------------------------------------------------------------------- |
+| `cil`      | `string`  | yes      |         | holds the Common Intermediate Language policy source semodule installs.             |
+| `name`     | `string`  | yes      |         | identifies the module to semodule, and names the file cargoship writes to the host. |
+| `priority` | `integer` | no       | `400.0` | holds the semodule priority the module installs at.                                 |
 
 </div>
 

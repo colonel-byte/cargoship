@@ -262,6 +262,8 @@ type ZarfDistroOS struct {
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 	// FAPolicyd holds the fapolicyd config file contents cargoship writes to a host.
 	FAPolicyd string `json:"fapolicyd,omitempty"`
+	// SELinux holds the custom SELinux policy cargoship applies to a host.
+	SELinux ZarfDistroSELinux `json:"selinux,omitempty"`
 	// Files lists files cargoship uploads to a host.
 	Files v1alpha1.ZarfFiles `json:"files,omitempty"`
 	// Kernel lists the kernel modules cargoship enables on the host.
@@ -283,6 +285,42 @@ func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema) {
 			{Type: "number"},
 		},
 	}
+}
+
+// ZarfDistroSELinux holds the custom SELinux policy cargoship applies to hosts running SELinux
+// in enforcing mode. Every field is optional, and a host that is not enforcing is left alone.
+type ZarfDistroSELinux struct {
+	// Modules lists the CIL policy modules cargoship installs on a host.
+	Modules []ZarfDistroSELinuxModule `json:"modules,omitempty"`
+	// Booleans maps SELinux boolean names to the values cargoship sets persistently on a host.
+	Booleans map[string]bool `json:"booleans,omitempty"`
+	// FileContexts lists the file context mappings cargoship adds on a host.
+	FileContexts []ZarfDistroSELinuxFileContext `json:"fileContexts,omitempty"`
+}
+
+// IsZero reports whether no SELinux policy is configured, so a phase can gate on it.
+func (s ZarfDistroSELinux) IsZero() bool {
+	return len(s.Modules) == 0 && len(s.Booleans) == 0 && len(s.FileContexts) == 0
+}
+
+// ZarfDistroSELinuxModule holds a single CIL policy module cargoship installs with semodule.
+type ZarfDistroSELinuxModule struct {
+	// Name identifies the module to semodule, and names the file cargoship writes to the host.
+	Name string `json:"name" jsonschema:"pattern=^[a-zA-Z0-9][a-zA-Z0-9_-]*$"`
+	// Priority holds the semodule priority the module installs at.
+	Priority int `json:"priority,omitempty" jsonschema:"default=400"`
+	// CIL holds the Common Intermediate Language policy source semodule installs.
+	CIL string `json:"cil"`
+}
+
+// ZarfDistroSELinuxFileContext holds a single file context mapping cargoship adds with semanage.
+type ZarfDistroSELinuxFileContext struct {
+	// Path holds the path regular expression the mapping applies to.
+	Path string `json:"path" jsonschema:"example=/var/lib/rancher(/.*)?"`
+	// Type names the SELinux type the matching paths are labeled with.
+	Type string `json:"type" jsonschema:"example=container_var_lib_t"`
+	// FileType restricts the mapping to one kind of filesystem object.
+	FileType string `json:"fileType,omitempty" jsonschema:"default=all,enum=all,enum=file,enum=dir,enum=symlink,enum=pipe,enum=socket,enum=block,enum=char"`
 }
 
 // Arches returns the CPU architectures the package targets. It prefers Architectures and falls
