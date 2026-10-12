@@ -102,6 +102,16 @@ Three things the first slice found, which the plan below did not anticipate:
 - **`tofu init` pins the binary's checksum**, so a rebuilt provider fails the next plan until `.terraform.lock.hcl` is deleted and `init` re-run. That is the development loop, not a bug.
 - **The connect phase retries for ten minutes**, which is right for an apply and wrong for a plan. The provider bounds every read at `connect_timeout` (one minute by default) and says so when it gives up. An authentication failure is retried the same way a refused connection is, so a wrong key also takes the full timeout -- worth fixing in `pkg/phase/07_connect.go` rather than in the provider, since the CLI has the same problem.
 
+### The core changes
+
+`pkg/action` now reports what it cannot do rather than returning something that cannot be used:
+
+- `NewApply`, `NewReset`, `NewKubeConfig` and `NewEngineConfigSync` return `(*T, error)`. They returned a nil action for a distro ID they could not resolve, which every caller dereferenced. The CLI reached that through a flag default; a provider reaches it through an attribute somebody types.
+- `KubeConfigOptions` gains `NoWrite`, and the action gains `Bytes()` and `Config()`. The field is the negative so the zero value still writes, which is what `cargoship install kube-config` exists to do; a caller that wants the value instead reads it back after `Run`.
+- `action.NewRefresh` is the read-only phase list as a named action, with `AllowDowngrade` set because a refresh reports rather than installs and has no package to refuse. `docs/phases/refresh.md` is generated from it, and the provider calls it instead of assembling phases itself.
+
+`TestNewRefreshIsEntirelyReadOnly` holds the property the action rests on, with one documented exception: `Disconnect` declares its own dry-run path rather than being read-only, because in an apply it has a staged binary to remove. After a refresh there is nothing to remove, and what it does is close connections.
+
 ## Order of work
 
 Five layers, stacked on #609 (the stack is linear and these all depend on the package existing):

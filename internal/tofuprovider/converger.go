@@ -24,9 +24,8 @@ import (
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/riglogger"
+	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/phase"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 )
 
 // hostFacts is what the read-only phases learned about one host.
@@ -78,14 +77,14 @@ type cargoshipConverger struct {
 	out io.Writer
 }
 
-// Refresh walks Connect, DetectOS, GatherFacts, GatherFactsDistro and Disconnect: the five phases
-// that each declare ReadOnly(), which is the property that makes this safe to run during a plan or
-// a refresh. Nothing here writes to a host, and no lock is taken -- Lock is deliberately not
-// read-only, so it is not in this list.
+// Refresh runs action.NewRefresh, which is the read-only half of an apply: it connects, resolves
+// each host's OS, gathers the network facts and reads the engine version already installed, and
+// disconnects. Every phase in it declares ReadOnly() and no cluster lock is taken, which is what
+// makes it safe during a plan -- and it lives in pkg/action rather than here so that "which phases
+// are safe to run" is decided in one place rather than two.
 func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.ZarfCluster, distroID string) ([]hostFacts, error) {
-	dis, err := distroModule(distroID)
-	if err != nil {
-		return nil, err
+	if distroID == "" {
+		return nil, fmt.Errorf("distro is required: the engine to read, %q or %q", "k3s", "rke2")
 	}
 
 	out := c.out
@@ -93,20 +92,18 @@ func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.ZarfCluste
 		out = io.Discard
 	}
 
-	manager := &phase.Manager{
-		Config:            cfg,
-		DistroID:          distroID,
-		Concurrency:       c.concurrency,
-		ConcurrentUploads: c.concurrency,
-		Writer:            out,
-	}
-	manager.SetPhases(phase.Phases{
-		&phase.Connect{},
-		&phase.DetectOS{},
-		&phase.GatherFacts{},
-		&phase.GatherFactsDistro{Distro: dis},
-		&phase.Disconnect{},
+	refresh, err := action.NewRefresh(action.RefreshOptions{
+		Manager: &phase.Manager{
+			Config:            cfg,
+			DistroID:          distroID,
+			Concurrency:       c.concurrency,
+			ConcurrentUploads: c.concurrency,
+			Writer:            out,
+		},
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	// rig logs through its own logger; routing it onto the context's logger is what puts an SSH
 	// failure in the provider's diagnostics rather than nowhere.
@@ -121,7 +118,7 @@ func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.ZarfCluste
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	if err := manager.Run(ctx); err != nil {
+	if err := refresh.Run(ctx); err != nil {
 		if ctx.Err() != nil {
 			return nil, fmt.Errorf("gave up after %s: %w (raise connect_timeout if the fleet is slow to answer)", timeout, err)
 		}
@@ -175,20 +172,4 @@ func addressOf(host *cluster.ZarfHost) string {
 		return cfg.Address
 	}
 	return net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port))
-}
-
-// distroModule resolves a distro ID to the module the phases take, the way every action does.
-func distroModule(distroID string) (distrocfg.Distro, error) {
-	if distroID == "" {
-		return nil, fmt.Errorf("distro is required: the engine to read, %q or %q", "k3s", "rke2")
-	}
-	builder, err := registry.GetDistroModuleBuilder(distroID)
-	if err != nil {
-		return nil, fmt.Errorf("no distro module for %q: %w", distroID, err)
-	}
-	dis, ok := builder().(distrocfg.Distro)
-	if !ok {
-		return nil, fmt.Errorf("the distro module for %q does not implement the distro interface", distroID)
-	}
-	return dis, nil
 }

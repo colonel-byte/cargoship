@@ -185,17 +185,20 @@ func TestFactsReadReportsAFailure(t *testing.T) {
 	}
 }
 
-// TestDistroModuleRefusesWhatItCannotBuild covers the message an operator sees for a typo in
+// TestRefreshRefusesADistroItCannotResolve covers the message an operator sees for a typo in
 // `distro`, which is the one attribute with a closed set of values and no way to validate it
-// against the registry at schema time.
-func TestDistroModuleRefusesWhatItCannotBuild(t *testing.T) {
-	if _, err := distroModule(""); err == nil {
-		t.Error("an empty distro was accepted")
+// against the registry at schema time. It reaches the real converger rather than the fake, and
+// fails before any connection is attempted -- which is why it needs no host.
+func TestRefreshRefusesADistroItCannotResolve(t *testing.T) {
+	cfg, err := translate(context.Background(), modelOf(factsModelFor()))
+	if err != nil {
+		t.Fatalf("translate reported %v", err)
 	}
-	if _, err := distroModule("k3ss"); err == nil {
-		t.Error("a misspelled distro was accepted")
-	}
-	if _, err := distroModule("k3s"); err != nil {
-		t.Errorf("k3s was refused: %v", err)
+
+	cargoship := cargoshipConverger{}
+	for _, distroID := range []string{"", "k3ss"} {
+		if _, err := cargoship.Refresh(context.Background(), cfg, distroID); err == nil {
+			t.Errorf("the distro %q was accepted", distroID)
+		}
 	}
 }

@@ -123,21 +123,16 @@ func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
 	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
 	defer cleanup()
 
-	// LabelNodes follows whether this machine can reach the cluster's API, rather than being
-	// on unconditionally. It is the only option here that talks to Kubernetes from the
-	// management node instead of to a host over SSH, so on a fleet whose API is not routable
-	// from here -- the VM fleet, by construction -- leaving it on would fail this step for a
-	// reason that has nothing to do with whether an apply is idempotent, which is what it is
-	// here to find out. Test_81 covers the labelling itself, and skips for the same reason.
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
-		LabelNodes:       reachesClusterAPI(manager.Config.Spec.Config.LoadBalancer),
-	}).Run(s.ctx)
+		LabelNodes:       true,
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(apply.Run(s.ctx))
 }
 
 // Test_ZZ3_ApplyDryRunConverges re-runs the apply as a dry run, now that the cluster is up, and
@@ -160,15 +155,16 @@ func (s *ApplyPhaseSuite) Test_ZZ3_ApplyDryRunConverges() {
 	manager.DryRun = true
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(apply.Run(ctx))
 
 	planned := len(sink.Result().Planned)
 	s.Require().Lessf(planned, dryRunPlannedFresh,
@@ -331,8 +327,9 @@ func (s *ResetSuite) Test_3_PostReset() {
 		}
 	}()
 
-	err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager}).Run(s.ctx)
-	s.Require().Error(err)
+	kubeConfig, err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager})
+	s.Require().NoError(err)
+	s.Require().Error(kubeConfig.Run(s.ctx))
 
 	_, err = os.Stat(kubeconfigPath)
 	s.Require().NoError(err)
