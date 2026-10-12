@@ -367,7 +367,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.11.0 // indirect
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.0 // indirect
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.0 // indirect
-	github.com/sigstore/timestamp-authority/v2 v2.1.3 // indirect
+	github.com/sigstore/timestamp-authority/v2 v2.1.4 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
