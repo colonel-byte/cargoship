@@ -18,18 +18,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // Changed signal values reported in Detail.ChangedSignal.
+//
+// They are the phase package's, not this package's: the CLI run receipt reports the same claim
+// about the same RunResult, and one vocabulary with two names for it is one thing to keep in step
+// rather than two. They are aliased here rather than referenced through phase at every use so the
+// names a reader of a module result sees still belong to the module.
 const (
 	// SignalUnknown means no phase reported whether it changed anything, so the changed field
 	// above it is a convention rather than an observation.
-	SignalUnknown = "unknown"
+	SignalUnknown = phase.SignalUnknown
 	// SignalPartial means some phases reported and some did not. The ones that did not are
 	// named in Detail.ChangedUndeclared.
-	SignalPartial = "partial"
+	SignalPartial = phase.SignalPartial
 	// SignalComplete means every phase the run reached reported whether it changed anything.
-	SignalComplete = "complete"
+	SignalComplete = phase.SignalComplete
 )
 
 // Response is the single JSON object a module writes.

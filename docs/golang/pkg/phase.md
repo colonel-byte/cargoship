@@ -119,6 +119,9 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*GenericPhase\) VersionLess\(host \*cluster.Host, version string\) bool](<#GenericPhase.VersionLess>)
   - [func \(p \*GenericPhase\) VersionSkewTooGreat\(host \*cluster.Host, target string\) bool](<#GenericPhase.VersionSkewTooGreat>)
   - [func \(p \*GenericPhase\) Wet\(host fmt.Stringer, msg string, funcs ...errorfunc\) error](<#GenericPhase.Wet>)
+- [type HostChange](<#HostChange>)
+- [type HostChangeDetail](<#HostChangeDetail>)
+- [type HostSummary](<#HostSummary>)
 - [type ImportImages](<#ImportImages>)
   - [func \(p \*ImportImages\) Explanation\(\) string](<#ImportImages.Explanation>)
   - [func \(p \*ImportImages\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#ImportImages.Prepare>)
@@ -237,7 +240,10 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
 - [type RunResult](<#RunResult>)
   - [func \(r RunResult\) Changed\(\) bool](<#RunResult.Changed>)
   - [func \(r RunResult\) Complete\(\) bool](<#RunResult.Complete>)
+  - [func \(r RunResult\) HostSummaries\(\) \[\]HostSummary](<#RunResult.HostSummaries>)
+  - [func \(r RunResult\) HostsUndeclared\(\) \[\]string](<#RunResult.HostsUndeclared>)
   - [func \(r RunResult\) Outstanding\(\) bool](<#RunResult.Outstanding>)
+  - [func \(r RunResult\) Signal\(\) string](<#RunResult.Signal>)
   - [func \(r RunResult\) Undeclared\(\) \[\]string](<#RunResult.Undeclared>)
 - [type UninstallEngine](<#UninstallEngine>)
   - [func \(p \*UninstallEngine\) Explanation\(\) string](<#UninstallEngine.Explanation>)
@@ -280,6 +286,23 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
 
 
 ## Constants
+
+<a name="SignalUnknown"></a>Changed signal values, naming how much a reported Changed is worth.
+
+They live here rather than with any one caller because more than one reports them: the Ansible module's changedSignal and the CLI run receipt are the same claim about the same RunResult, and a second copy of the vocabulary is a second thing to keep in step.
+
+```go
+const (
+    // SignalUnknown means no phase reported whether it changed anything, so the changed answer
+    // beside it is a convention rather than an observation.
+    SignalUnknown = "unknown"
+    // SignalPartial means some phases reported and some did not. The ones that did not are
+    // named by Undeclared.
+    SignalPartial = "partial"
+    // SignalComplete means every phase the run reached reported whether it changed anything.
+    SignalComplete = "complete"
+)
+```
 
 <a name="FAPolicydRuleFile"></a>
 
@@ -434,7 +457,7 @@ func DryRunNote(p Phase) string
 DryRunNote returns the phase's own account of why a dry run runs it, or "" for a phase that gives none. Only read\-only phases carry one: they are the phases a dry run runs against live hosts, so they are the ones a reader is entitled to an argument about.
 
 <a name="Titles"></a>
-## func [Titles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L273>)
+## func [Titles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L417>)
 
 ```go
 func Titles(results []PhaseResult) []string
@@ -1482,6 +1505,66 @@ func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) er
 
 Wet is a shorthand for manager.Wet
 
+<a name="HostChange"></a>
+## type [HostChange](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L212-L222>)
+
+HostChange is what one phase did to one host.
+
+```go
+type HostChange struct {
+    // Host identifies the host as the cluster configuration would: the address from its host
+    // block, with the port when it is not the default. A hostname is not enough on its own,
+    // because ZarfHost.Hostname is an optional override that is empty on most hosts.
+    Host    string
+    Changed bool
+    // Details names what moved on this host, one entry per file or setting. It is empty when
+    // the phase knows the host changed but not what in it, which is a weaker answer than a
+    // populated list rather than a claim that nothing in particular happened.
+    Details []HostChangeDetail
+}
+```
+
+<a name="HostChangeDetail"></a>
+## type [HostChangeDetail](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L225-L239>)
+
+HostChangeDetail is one thing a phase did to one host.
+
+```go
+type HostChangeDetail struct {
+    // Path is the file this is about, absolute as the host sees it.
+    Path string
+    // Reason is why the phase touched it, in the vocabulary the phases already log: "missing",
+    // "out of sync", "wrong mode", "stale".
+    Reason string
+    // Diff is a unified diff of the change. It is empty when the phase never read the prior
+    // content -- several phases compare by checksum or write unconditionally, and an empty Diff
+    // says the content was not compared rather than that it did not differ.
+    //
+    // It can carry anything the file carried, which for an engine configuration includes join
+    // tokens and registry credentials. Anything rendering a receipt outside the management node
+    // is expected to drop it.
+    Diff string
+}
+```
+
+<a name="HostSummary"></a>
+## type [HostSummary](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L368-L377>)
+
+HostSummary is one host's line in a run summary.
+
+```go
+type HostSummary struct {
+    Host    string
+    Changed bool
+    // Named is how many phases named this host, and Reporting how many declared per host at
+    // all. They are reported as a pair because Named alone cannot be read: a host named by two
+    // of two reporting phases has been fully accounted for, and a host named by two of fifteen
+    // has not, and the two look identical without the denominator.
+    Named     int
+    Reporting int
+}
+```
+
 <a name="ImportImages"></a>
 ## type [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L29-L34>)
 
@@ -1882,7 +1965,7 @@ func (p *Lock) UnlockPhase() Phase
 UnlockPhase returns an unlock phase for this lock phase
 
 <a name="Manager"></a>
-## type [Manager](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L377-L398>)
+## type [Manager](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L538-L559>)
 
 Manager executes phases to construct the cluster
 
@@ -1912,7 +1995,7 @@ type Manager struct {
 ```
 
 <a name="NewManager"></a>
-### func [NewManager](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L411>)
+### func [NewManager](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L572>)
 
 ```go
 func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)
@@ -1921,7 +2004,7 @@ func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, err
 NewManager creates a new Manager
 
 <a name="Manager.AddPhase"></a>
-### func \(\*Manager\) [AddPhase](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L423>)
+### func \(\*Manager\) [AddPhase](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L584>)
 
 ```go
 func (m *Manager) AddPhase(p ...Phase)
@@ -1930,7 +2013,7 @@ func (m *Manager) AddPhase(p ...Phase)
 AddPhase adds a Phase to Manager
 
 <a name="Manager.GetDistroOSFiles"></a>
-### func \(\*Manager\) [GetDistroOSFiles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L446>)
+### func \(\*Manager\) [GetDistroOSFiles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L607>)
 
 ```go
 func (m *Manager) GetDistroOSFiles() v1alpha1.Files
@@ -1939,7 +2022,7 @@ func (m *Manager) GetDistroOSFiles() v1alpha1.Files
 GetDistroOSFiles returns the ZarfFiles for a distro
 
 <a name="Manager.RetryTimeout"></a>
-### func \(\*Manager\) [RetryTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L438>)
+### func \(\*Manager\) [RetryTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L599>)
 
 ```go
 func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error
@@ -1948,7 +2031,7 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 RetryTimeout wraps retry Timeout logic
 
 <a name="Manager.Run"></a>
-### func \(\*Manager\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L471>)
+### func \(\*Manager\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L632>)
 
 ```go
 func (m *Manager) Run(ctx context.Context) error
@@ -1957,7 +2040,7 @@ func (m *Manager) Run(ctx context.Context) error
 Run executes all the added Phases in order
 
 <a name="Manager.SetPhases"></a>
-### func \(\*Manager\) [SetPhases](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L428>)
+### func \(\*Manager\) [SetPhases](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L589>)
 
 ```go
 func (m *Manager) SetPhases(p Phases)
@@ -1966,7 +2049,7 @@ func (m *Manager) SetPhases(p Phases)
 SetPhases sets the list of phases
 
 <a name="Manager.SetTimeout"></a>
-### func \(\*Manager\) [SetTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433>)
+### func \(\*Manager\) [SetTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L594>)
 
 ```go
 func (m *Manager) SetTimeout(tm time.Duration)
@@ -1975,7 +2058,7 @@ func (m *Manager) SetTimeout(tm time.Duration)
 SetTimeout sets the timeout for the manager
 
 <a name="Manager.Wet"></a>
-### func \(\*Manager\) [Wet](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L455>)
+### func \(\*Manager\) [Wet](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L616>)
 
 ```go
 func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
@@ -1984,7 +2067,7 @@ func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
 Wet runs the first given function when not in dry\-run mode. The second function will be run when in dry\-mode and the message will be displayed. Any error returned from the functions will be returned and will halt the operation.
 
 <a name="ManagerDistroConfig"></a>
-## type [ManagerDistroConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L401-L408>)
+## type [ManagerDistroConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L562-L569>)
 
 ManagerDistroConfig stores some values for manager distro config
 
@@ -2094,7 +2177,7 @@ type Phase interface {
 ```
 
 <a name="PhaseResult"></a>
-## type [PhaseResult](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L198-L207>)
+## type [PhaseResult](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L242-L259>)
 
 PhaseResult is what a single phase did during a run.
 
@@ -2108,6 +2191,14 @@ type PhaseResult struct {
     // false because nothing was asked, not because nothing happened.
     Declared bool
     Changed  bool
+    // HostsDeclared is whether the phase implements hostChangedReporter, and stands to Hosts as
+    // Declared stands to Changed.
+    HostsDeclared bool
+    Hosts         []HostChange
+    // Duration is how long the phase's Run -- or its DryRun, under a dry run -- took. It
+    // excludes the phase's Prepare, ShouldRun and in-phase Before/After hooks, so two phases'
+    // durations are comparable to each other rather than to the run's wall clock.
+    Duration time.Duration
 }
 ```
 
@@ -2605,7 +2696,7 @@ func (p *RemoveSelinuxPolicy) Title() string
 Title for the phase
 
 <a name="ResultSink"></a>
-## type [ResultSink](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L301-L305>)
+## type [ResultSink](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L445-L449>)
 
 ResultSink collects the RunResult of every Manager.Run that happens on a context.
 
@@ -2618,7 +2709,7 @@ type ResultSink struct {
 ```
 
 <a name="WithResultSink"></a>
-### func [WithResultSink](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L308>)
+### func [WithResultSink](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L452>)
 
 ```go
 func WithResultSink(ctx context.Context) (context.Context, *ResultSink)
@@ -2627,7 +2718,7 @@ func WithResultSink(ctx context.Context) (context.Context, *ResultSink)
 WithResultSink returns a context carrying a sink, and the sink itself.
 
 <a name="ResultSink.Observed"></a>
-### func \(\*ResultSink\) [Observed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L330>)
+### func \(\*ResultSink\) [Observed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L474>)
 
 ```go
 func (s *ResultSink) Observed() bool
@@ -2636,7 +2727,7 @@ func (s *ResultSink) Observed() bool
 Observed reports whether any run reached its phases at all. A command that failed before that \-\- an unreadable package, a configuration that does not validate \-\- publishes nothing, and that is a different thing from a run in which no phase changed anything.
 
 <a name="ResultSink.Result"></a>
-### func \(\*ResultSink\) [Result](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L321>)
+### func \(\*ResultSink\) [Result](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L465>)
 
 ```go
 func (s *ResultSink) Result() RunResult
@@ -2645,7 +2736,7 @@ func (s *ResultSink) Result() RunResult
 Result is every run that reached its phases on this context, flattened into one.
 
 <a name="RunResult"></a>
-## type [RunResult](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L211-L224>)
+## type [RunResult](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L263-L276>)
 
 RunResult is what a whole Manager.Run did, phase by phase. Manager.Run fills it in on the way through, so a run that returned an error still carries the phases it got through first.
 
@@ -2667,7 +2758,7 @@ type RunResult struct {
 ```
 
 <a name="RunResult.Changed"></a>
-### func \(RunResult\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L228>)
+### func \(RunResult\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L280>)
 
 ```go
 func (r RunResult) Changed() bool
@@ -2676,7 +2767,7 @@ func (r RunResult) Changed() bool
 Changed reports whether any phase said it changed something on the fleet. Phases that declared nothing do not contribute; read Complete to find out whether that leaves the answer partial.
 
 <a name="RunResult.Complete"></a>
-### func \(RunResult\) [Complete](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L267>)
+### func \(RunResult\) [Complete](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L319>)
 
 ```go
 func (r RunResult) Complete() bool
@@ -2684,8 +2775,28 @@ func (r RunResult) Complete() bool
 
 Complete reports whether every phase the run reached declared whether it changed anything.
 
+<a name="RunResult.HostSummaries"></a>
+### func \(RunResult\) [HostSummaries](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L385>)
+
+```go
+func (r RunResult) HostSummaries() []HostSummary
+```
+
+HostSummaries rolls the per\-host answers up across every phase of the run, in the order the hosts were first named.
+
+A host appears here only if some phase named it, so this is not a roster of the fleet: a caller wanting every host, including the ones no phase spoke for, is expected to start from the cluster configuration and look each one up.
+
+<a name="RunResult.HostsUndeclared"></a>
+### func \(RunResult\) [HostsUndeclared](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L355>)
+
+```go
+func (r RunResult) HostsUndeclared() []string
+```
+
+HostsUndeclared names the phases that did not say which hosts they changed, in the order the run reached them. It stands to the per\-host answer as Undeclared stands to the fleet\-wide one: a caller rendering a per\-host summary is expected to report these alongside it, because a host missing from the summary may simply never have been spoken for.
+
 <a name="RunResult.Outstanding"></a>
-### func \(RunResult\) [Outstanding](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L243>)
+### func \(RunResult\) [Outstanding](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L295>)
 
 ```go
 func (r RunResult) Outstanding() bool
@@ -2693,8 +2804,19 @@ func (r RunResult) Outstanding() bool
 
 Outstanding is the dry\-run counterpart of Changed: it reports whether any phase that can report a change was reported rather than run. A phase reaches Planned only after its ShouldRun said there was work to do, so this answers "would a real run change anything" for the phases that have said how to tell.
 
+<a name="RunResult.Signal"></a>
+### func \(RunResult\) [Signal](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L344>)
+
+```go
+func (r RunResult) Signal() string
+```
+
+Signal reports how much Changed is worth, as one of SignalComplete or SignalPartial.
+
+SignalUnknown is deliberately not among the answers. It means no run reached its phases at all, which is a property of the sink rather than of a result \-\- an empty RunResult and a run in which nothing was declared are the same value here. See ResultSink.Observed.
+
 <a name="RunResult.Undeclared"></a>
-### func \(RunResult\) [Undeclared](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L254>)
+### func \(RunResult\) [Undeclared](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L306>)
 
 ```go
 func (r RunResult) Undeclared() []string
