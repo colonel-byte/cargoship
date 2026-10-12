@@ -208,3 +208,238 @@ func TestTranslateAcceptsEveryRole(t *testing.T) {
 		})
 	}
 }
+
+// profiledCluster is a fleet shaped the way the Ansible fleet example is: a control profile with
+// a port and a label, an infra profile with a taint, and one worker that selects infra while the
+// rest take the general profile.
+func profiledCluster() clusterModel {
+	model := threeHosts()
+	model.Profiles = map[string]profileModel{
+		"control": {
+			NodeLabels: map[string]string{"adrp.xyz/purpose-control": "true"},
+			Ports: []portModel{
+				{Port: "6443"},
+			},
+			Concurrency: "1",
+		},
+		"general": {},
+		"infra": {
+			NodeTaints: []string{"adrp.xyz/infra=true:NoSchedule"},
+			FirewallRules: []firewallRuleModel{
+				{
+					Name:   "allow-backup",
+					Action: "allow",
+					Source: "10.0.0.0/8",
+					Port:   "2049",
+				},
+			},
+		},
+	}
+	model.Hosts[0].Profile = "infra"
+	model.Hosts[1].Profile = "control"
+	model.Hosts[2].Profile = "general"
+	return model
+}
+
+// TestTranslateRendersProfiles is the question this slice answers: a profile defined once in the
+// configuration reaches the cluster document, so a host selecting it gets the labels, taints,
+// ports and concurrency the profile carries rather than only the node-role label its name implies.
+func TestTranslateRendersProfiles(t *testing.T) {
+	cfg, err := translate(context.Background(), profiledCluster())
+	if err != nil {
+		t.Fatalf("translate reported %v", err)
+	}
+
+	profiles := cfg.Spec.Config.Profiles
+	if len(profiles) != 3 {
+		t.Fatalf("the document holds %d profiles, want 3", len(profiles))
+	}
+
+	control := profiles["control"]
+	if got := control.Engine.NodeLabels["adrp.xyz/purpose-control"]; got != "true" {
+		t.Errorf("the control profile's label did not reach the document: %q", got)
+	}
+	if len(control.Host.Ports) != 1 || control.Host.Ports[0].Port != "6443" {
+		t.Errorf("the control profile's ports are %+v", control.Host.Ports)
+	}
+	// A port that names no protocol is tcp, which is what every port a cluster opens uses and
+	// what the API requires to be stated.
+	if got := control.Host.Ports[0].Protocol; got != defaultProtocol {
+		t.Errorf("the port's protocol defaulted to %q, want %q", got, defaultProtocol)
+	}
+	if control.Concurrency != "1" {
+		t.Errorf("the control profile's concurrency is %q", control.Concurrency)
+	}
+
+	infra := profiles["infra"]
+	if len(infra.Engine.NodeTaints) != 1 || infra.Engine.NodeTaints[0] != "adrp.xyz/infra=true:NoSchedule" {
+		t.Errorf("the infra profile's taints are %+v", infra.Engine.NodeTaints)
+	}
+	if len(infra.Host.Firewall.Rules) != 1 || infra.Host.Firewall.Rules[0].Action != "allow" {
+		t.Errorf("the infra profile's firewall rules are %+v", infra.Host.Firewall.Rules)
+	}
+
+	// The hosts carry the selection, which is what the phases look up by.
+	byProfile := map[string]string{}
+	for _, host := range cfg.Spec.Hosts {
+		byProfile[host.ConnectionConfig.SSH.Address] = host.Profile
+	}
+	if byProfile["10.0.0.21"] != "infra" {
+		t.Errorf("the worker's profile is %q, want infra", byProfile["10.0.0.21"])
+	}
+	if byProfile["10.0.0.11"] != "control" {
+		t.Errorf("the controller's profile is %q, want control", byProfile["10.0.0.11"])
+	}
+}
+
+// TestTranslateRefusesAProfileNothingDefines is the typo case, and the reason the check exists at
+// all: an undefined profile is not an error anywhere downstream. The lookup returns a zero value,
+// concurrency falls back, and the labels and taints the operator expected simply never exist --
+// a configuration that looks applied and is not.
+func TestTranslateRefusesAProfileNothingDefines(t *testing.T) {
+	model := profiledCluster()
+	model.Hosts[0].Profile = "infr"
+
+	_, err := translate(context.Background(), model)
+	if err == nil {
+		t.Fatal("translate accepted a profile the configuration does not define")
+	}
+	for _, want := range []string{"infr", "10.0.0.21", "control, general, infra"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the error does not mention %q: %v", want, err)
+		}
+	}
+}
+
+// TestTranslateAllowsAProfileWithNoProfilesBlock pins the other half of that check. A `profile`
+// with no profiles map is a legitimate configuration: it still names the
+// node-role.kubernetes.io/<profile> label the LabelNodes phase writes, and still groups hosts for
+// per-profile concurrency. Refusing it would break that for no gain.
+func TestTranslateAllowsAProfileWithNoProfilesBlock(t *testing.T) {
+	model := threeHosts()
+	model.Hosts[1].Profile = "control"
+
+	cfg, err := translate(context.Background(), model)
+	if err != nil {
+		t.Fatalf("translate refused a profile with no profiles block: %v", err)
+	}
+	if cfg.Spec.Hosts[0].Profile != "control" {
+		t.Errorf("the host's profile is %q", cfg.Spec.Hosts[0].Profile)
+	}
+	if len(cfg.Spec.Config.Profiles) != 0 {
+		t.Errorf("profiles were invented: %+v", cfg.Spec.Config.Profiles)
+	}
+}
+
+// TestTranslateCarriesHostOverrides covers the per-host half, which is what the Ansible fleet
+// example sets in host_vars: this node's own labels and taints, its environment, its ports, and
+// the bastion it is reached through.
+func TestTranslateCarriesHostOverrides(t *testing.T) {
+	model := threeHosts()
+	model.Hosts[1].PrivateInterface = "ens224"
+	model.Hosts[1].Environment = map[string]string{"NO_PROXY": "10.0.0.0/8"}
+	model.Hosts[1].NodeLabels = map[string]string{"adrp.xyz/purpose-infra": "true"}
+	model.Hosts[1].NodeTaints = []string{"adrp.xyz/infra=true:NoSchedule"}
+	model.Hosts[1].Ports = []portModel{
+		{
+			Port:     "2049",
+			Protocol: "udp",
+		},
+	}
+	model.Hosts[1].Bastion = &bastionModel{
+		Address: "10.0.0.1",
+		User:    "jump",
+		KeyPath: "/srv/staging/keys/bastion_ed25519",
+	}
+
+	cfg, err := translate(context.Background(), model)
+	if err != nil {
+		t.Fatalf("translate reported %v", err)
+	}
+
+	host := cfg.Spec.Hosts[0]
+	if host.PrivateInterface != "ens224" {
+		t.Errorf("the private interface is %q", host.PrivateInterface)
+	}
+	if host.Environment["NO_PROXY"] != "10.0.0.0/8" {
+		t.Errorf("the environment is %+v", host.Environment)
+	}
+	if host.Engine.NodeLabels["adrp.xyz/purpose-infra"] != "true" {
+		t.Errorf("the node labels are %+v", host.Engine.NodeLabels)
+	}
+	if len(host.Engine.NodeTaints) != 1 {
+		t.Errorf("the node taints are %+v", host.Engine.NodeTaints)
+	}
+	if len(host.Host.Ports) != 1 || host.Host.Ports[0].Protocol != "udp" {
+		t.Errorf("the ports are %+v", host.Host.Ports)
+	}
+
+	bastion := host.ConnectionConfig.SSH.Bastion
+	if bastion == nil {
+		t.Fatal("the bastion did not reach the document")
+	}
+	if bastion.Address != "10.0.0.1" || bastion.User != "jump" {
+		t.Errorf("the bastion is %+v", bastion)
+	}
+	// rig's defaults are written here for the same reason they are written for a host: its YAML
+	// tags carry no omitempty, so a port of zero would be written out and fail the schema.
+	if bastion.Port != defaultSSHPort {
+		t.Errorf("the bastion's port is %d, want the default %d", bastion.Port, defaultSSHPort)
+	}
+}
+
+// TestTranslateRefusesIncompleteOverrides covers the two fields the API requires and a
+// configuration can omit, where the failure downstream would be a rule or a port written to a
+// host that means nothing.
+func TestTranslateRefusesIncompleteOverrides(t *testing.T) {
+	cases := []struct {
+		name  string
+		model func(clusterModel) clusterModel
+		wants string
+	}{
+		{
+			name: "a port with no port",
+			model: func(m clusterModel) clusterModel {
+				m.Hosts[0].Ports = []portModel{{Protocol: "tcp"}}
+				return m
+			},
+			wants: "no port",
+		},
+		{
+			name: "a firewall rule with no action",
+			model: func(m clusterModel) clusterModel {
+				m.Hosts[0].FirewallRules = []firewallRuleModel{{Name: "allow-metrics", Port: "9100"}}
+				return m
+			},
+			wants: "no action",
+		},
+		{
+			name: "a bastion with no address",
+			model: func(m clusterModel) clusterModel {
+				m.Hosts[0].Bastion = &bastionModel{User: "jump"}
+				return m
+			},
+			wants: "bastion with no address",
+		},
+		{
+			name: "a profile port with no port",
+			model: func(m clusterModel) clusterModel {
+				m.Profiles = map[string]profileModel{"control": {Ports: []portModel{{Protocol: "tcp"}}}}
+				return m
+			},
+			wants: "profile control",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := translate(context.Background(), tc.model(threeHosts()))
+			if err == nil {
+				t.Fatal("translate accepted the configuration")
+			}
+			if !strings.Contains(err.Error(), tc.wants) {
+				t.Errorf("the error was %q, want it to mention %q", err, tc.wants)
+			}
+		})
+	}
+}
