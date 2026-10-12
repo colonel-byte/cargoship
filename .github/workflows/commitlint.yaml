@@ -21,7 +21,6 @@ permissions:
 
 jobs:
   title_check:
-    # if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
@@ -45,9 +44,23 @@ jobs:
       # This lints the PR title, not individual commits, since release-please squash-merges
       # and the PR title becomes the final commit message. wagoid/commitlint-github-action
       # lints commit messages instead, so it isn't a drop-in replacement for this step.
+      #
+      # Dependabot gets .commitlintrc.dependabot.yaml, which is the same config with
+      # header-max-length off: it cannot shorten a module path, and ten of the modules in
+      # go.mod overflow a 100-char title. Skipping the job for it instead would leave
+      # title_check without a result, and that is a required status check on main. See
+      # docs/agent/choice-dependabot-title-length.md.
       - name: Lint PR title
         if: github.event_name == 'pull_request'
         working-directory: .github/commitlint
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: echo "$PR_TITLE" | npx commitlint
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          config=.commitlintrc.yaml
+          if [ "${PR_AUTHOR}" = "dependabot[bot]" ]; then
+            config=.commitlintrc.dependabot.yaml
+          fi
+          echo "$PR_TITLE" | npx commitlint --config "${config}"

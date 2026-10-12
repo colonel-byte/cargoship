@@ -1,0 +1,22 @@
+# The config for Dependabot's pull request titles, selected by author in
+# .github/workflows/commitlint.yaml.
+#
+# Dependabot cannot shorten a module path. Ten of the modules in go.mod produce a
+# `build(deps): bump <module> from X to Y` title over 100 characters - the longest,
+# go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc, reaches 117 - so
+# header-max-length is off here and left on everywhere else. Every other rule still applies, so a
+# malformed type or subject fails the same way it would on a human's title. See
+# docs/agent/choice-dependabot-title-length.md.
+#
+# Rules other than header-max-length must match .commitlintrc.yaml. There is no shared base
+# because commitlint cannot extend a YAML sibling.
+extends:
+  - "@commitlint/config-conventional"
+rules:
+  header-max-length:
+    - 0
+  subject-case:
+    - 0
+    - always
+    - - "lower-case"
+      - "sentence-case"

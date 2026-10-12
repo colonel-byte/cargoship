@@ -1,3 +1,5 @@
+# The config for human pull request titles. .commitlintrc.dependabot.yaml is the same thing with
+# header-max-length off, so a rule added or changed below belongs in that file too.
 extends:
   - "@commitlint/config-conventional"
 rules:
