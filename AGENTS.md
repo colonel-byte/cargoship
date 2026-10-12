@@ -34,7 +34,7 @@ Several directories carry their own `AGENTS.md` with rules specific to that dire
 | [`ansible/colonel_byte/cargoship/AGENTS.md`](ansible/colonel_byte/cargoship/AGENTS.md) | Scope of the Ansible collection: drives cargoship from the management node, does not configure fleet hosts directly |
 | [`config/lang/AGENTS.md`](config/lang/AGENTS.md)                                       | Markdown/string formatting rules that feed generated docs                                                           |
 | [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                     | Don't name two `Fuzz*` functions where one is a prefix of the other                                                 |
-| [`magefiles/AGENTS.md`](magefiles/AGENTS.md)                                           | Mage target layout and structure rules                                                                              |
+| [`magefiles/AGENTS.md`](magefiles/AGENTS.md)                                           | Mage target layout and structure rules; how pinned versions, digests, and checksums are kept current                |
 
 `CLAUDE.md` in the repository root is a symlink to this file, so a Claude Code session started there loads these rules without being asked. That covers the root and nothing else: the directory-specific files in the table above are not symlinked, so a session whose working directory is `docs/`, `test/e2e/`, `fuzz/`, `example/`, `config/lang/`, or `ansible/` starts with none of their rules in context. The root is where a session normally starts, so this is usually moot - but do not treat "nothing was loaded for me" as "there are no rules here", and do not grep a rules file for the one thing you thought to ask about. Open the closest `AGENTS.md` and read it before writing anything in that directory.
 
@@ -86,6 +86,10 @@ Treat it as part of the change, not a follow-up:
 - **behaviour changes under an existing heading** - fix the prose and the snippet together. Commands shown in `README.md` are copied and pasted; they should work as written against the current build.
 
 The generated command and phase reference under `docs/` comes from the code, so it corrects itself on `go run ./magefiles/core generate:document`. `README.md` does not - it is hand-written, and nothing fails if it drifts. After editing it, run that target so `docs/index.md` matches.
+
+## Pinned versions, digests, and checksums
+
+Pins live all over the tree - container image digests in `containers/*/Dockerfile`, `dnf` package versions, upstream distro tags in `thirdparty-src/pins.json`, cloud image checksums in Go constants - but the machinery that moves them is mage and Dependabot. Every pin needs one of those owning it, or a written bump procedure where neither fits. Before adding a pinned value anywhere, read the rule and the worked examples in [`magefiles/AGENTS.md`](magefiles/AGENTS.md#every-pin-needs-an-owner).
 
 ## Committing changes
 
