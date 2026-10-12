@@ -62,6 +62,7 @@ func NewPrepare(opts PrepareOptions) *Prepare {
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
 			&phase.PrepareFapolicy{},
+			&phase.PrepareSelinuxPolicy{},
 			&phase.PrepareKernelModules{
 				Enabled: opts.ModifyModules,
 			},
