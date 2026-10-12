@@ -443,3 +443,31 @@ func TestTranslateRefusesIncompleteOverrides(t *testing.T) {
 		})
 	}
 }
+
+// TestTranslatePopulatesValues ensures YAML values are parsed and assigned to Spec.Config.Values.
+func TestTranslatePopulatesValues(t *testing.T) {
+	model := threeHosts()
+	model.Values = `
+cilium:
+  enabled: true
+  ipam:
+    mode: kubernetes
+`
+
+	cfg, err := translate(context.Background(), model)
+	if err != nil {
+		t.Fatalf("translate reported %v", err)
+	}
+
+	values := cfg.Spec.Config.Values
+	if values == nil {
+		t.Fatal("Spec.Config.Values is nil, want parsed values")
+	}
+	cilium, ok := values["cilium"].(map[string]any)
+	if !ok {
+		t.Fatalf("cilium is a %T, want map[string]any", values["cilium"])
+	}
+	if cilium["enabled"] != true {
+		t.Errorf("cilium.enabled = %v, want true", cilium["enabled"])
+	}
+}

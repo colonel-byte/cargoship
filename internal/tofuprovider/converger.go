@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 	"runtime"
@@ -30,8 +31,10 @@ import (
 	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/distro"
+	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // hostFacts is what the read-only phases learned about one host.
@@ -55,6 +58,8 @@ type hostFacts struct {
 type applyOptions struct {
 	// Package is the distro package to install: a path, or an OCI reference.
 	Package string
+	// ValuesFiles are file paths to YAML values files overriding the values the package ships with.
+	ValuesFiles []string
 	// ModifyHosts rewrites /etc/hosts on every host.
 	ModifyHosts bool
 	// ModifyFirewall rewrites the host firewall.
@@ -153,6 +158,7 @@ type cargoshipConverger struct {
 // makes it safe during a plan -- and it lives in pkg/action rather than here so that "which phases
 // are safe to run" is decided in one place rather than two.
 func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.ZarfCluster, distroID string) ([]hostFacts, error) {
+	ctx = withTofuLogger(ctx)
 	if distroID == "" {
 		return nil, fmt.Errorf("distro is required: the engine to read, %q or %q", "k3s", "rke2")
 	}
@@ -272,6 +278,7 @@ func (c cargoshipConverger) DistroFromPackage(ctx context.Context, pkg string) (
 // The extracted package is removed on the way out. It is tens of megabytes of staging data per
 // apply, and nothing after the run reads it.
 func (c cargoshipConverger) Apply(ctx context.Context, cfg *cluster.ZarfCluster, opts applyOptions) (applyResult, error) {
+	ctx = withTofuLogger(ctx)
 	var result applyResult
 
 	if opts.Package == "" {
@@ -302,8 +309,29 @@ func (c cargoshipConverger) Apply(ctx context.Context, cfg *cluster.ZarfCluster,
 	result.DistroID = layout.Distro.Spec.Type
 	result.EngineVersion = layout.Distro.Spec.Version
 
+	overrides := []map[string]any{cfg.Spec.Config.Values}
+	if len(opts.ValuesFiles) > 0 {
+		fromFiles, err := helmvalues.LoadFiles(ctx, "", "", opts.ValuesFiles)
+		if err != nil {
+			return result, fmt.Errorf("unable to read values files: %w", err)
+		}
+		overrides = append(overrides, fromFiles)
+	}
+
+	values, err := layout.Values(ctx, overrides...)
+	if err != nil {
+		return result, err
+	}
+	if err := layout.ApplyValues(values); err != nil {
+		return result, err
+	}
+	if err := layout.RenderFiles(ctx, values); err != nil {
+		return result, err
+	}
+
 	manager := c.manager(cfg, layout.Distro.Spec.Type)
 	manager.Distro = &layout.Distro
+	manager.Values = values
 	manager.TempDirectory = layout.DirPath()
 	if opts.Timeout > 0 {
 		manager.SetTimeout(opts.Timeout)
@@ -351,6 +379,7 @@ func (c cargoshipConverger) Apply(ctx context.Context, cfg *cluster.ZarfCluster,
 
 // Teardown removes the engine from every host, which is what a destroy does.
 func (c cargoshipConverger) Teardown(ctx context.Context, cfg *cluster.ZarfCluster, opts teardownOptions) error {
+	ctx = withTofuLogger(ctx)
 	if opts.DistroID == "" {
 		return fmt.Errorf("the engine to remove is not recorded in state, so there is nothing to tear down safely")
 	}
@@ -404,4 +433,70 @@ func cachePath() (string, error) {
 		config.CLIArch = runtime.GOARCH
 	}
 	return config.GetAbsCachePath()
+}
+
+// withTofuLogger bridges cargoship's context-scoped logger to tflog.
+func withTofuLogger(ctx context.Context) context.Context {
+	return logger.WithContext(ctx, slog.New(tofuSlogHandler{attrs: make(map[string]any)}))
+}
+
+type tofuSlogHandler struct {
+	attrs map[string]any
+}
+
+func (tofuSlogHandler) Enabled(context.Context, slog.Level) bool {
+	return true
+}
+
+func (h tofuSlogHandler) Handle(ctx context.Context, r slog.Record) error {
+	fields := make(map[string]any, len(h.attrs)+r.NumAttrs())
+	for k, v := range h.attrs {
+		fields[k] = v
+	}
+	r.Attrs(func(a slog.Attr) bool {
+		appendSlogAttr(fields, "", a)
+		return true
+	})
+
+	switch {
+	case r.Level >= slog.LevelError:
+		tflog.Error(ctx, r.Message, fields)
+	case r.Level >= slog.LevelWarn:
+		tflog.Warn(ctx, r.Message, fields)
+	case r.Level >= slog.LevelInfo:
+		tflog.Info(ctx, r.Message, fields)
+	default:
+		tflog.Debug(ctx, r.Message, fields)
+	}
+	return nil
+}
+
+func appendSlogAttr(fields map[string]any, prefix string, a slog.Attr) {
+	key := a.Key
+	if prefix != "" {
+		key = prefix + "." + key
+	}
+	val := a.Value.Resolve()
+	if val.Kind() == slog.KindGroup {
+		for _, child := range val.Group() {
+			appendSlogAttr(fields, key, child)
+		}
+		return
+	}
+	fields[key] = val.Any()
+}
+
+func (h tofuSlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	next := make(map[string]any, len(h.attrs)+len(attrs))
+	for k, v := range h.attrs {
+		next[k] = v
+	}
+	for _, a := range attrs {
+		appendSlogAttr(next, "", a)
+	}
+	return tofuSlogHandler{attrs: next}
+}
+
+func (h tofuSlogHandler) WithGroup(_ string) slog.Handler {
+	return h
 }
