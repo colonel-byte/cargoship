@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f69c2ef2.js";
+            window.path_to_searchindex_js = "searchindex-5f3febfc.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2d226b0c.js"></script>
+        <script src="toc-284a317a.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -18095,12 +18095,62 @@ return true if dependency_is_replaced(dep)
 <h2 id="when-this-entry-can-go-away"><a class="header" href="#when-this-entry-can-go-away">When this entry can go away</a></h2>
 <p>Delete the ignore entry when <code>sigstore/cosign/v3</code>’s <code>go.mod</code> requires <code>github.com/eclipse-keypont/crypto11</code> (or whatever path the project is on by then) instead of <code>github.com/ThalesIgnite/crypto11</code>. At that point the old path leaves the module graph on its own and the entry becomes a no-op. Until then, a Dependabot run that does not mention crypto11 is the entry working, not the problem having resolved itself.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-dependabots-pull-request-titles-are-exempt-from-header-max-length"><a class="header" href="#why-dependabots-pull-request-titles-are-exempt-from-header-max-length">Why Dependabot’s pull request titles are exempt from <code>header-max-length</code></a></h1>
+<p><code>PR Title Check</code> lints a pull request’s title with commitlint, because release-please squash-merges and the title becomes the final commit message. <code>@commitlint/config-conventional</code> caps a header at 100 characters, and ten of the modules in <code>go.mod</code> cannot produce a <code>build(deps): bump &lt;module&gt; from X to Y</code> title that fits. Dependabot has no way to shorten a module path, so every bump of one of those ten failed a required status check until somebody edited the title by hand. <code>.github/commitlint/.commitlintrc.dependabot.yaml</code> turns that one rule off for Dependabot and leaves it on for everybody else. This document records why the exemption is scoped that narrowly, and why the two changes that look like the obvious fix both make things worse.</p>
+<h2 id="what-forced-it-1"><a class="header" href="#what-forced-it-1">What forced it</a></h2>
+<p><a href="https://github.com/colonel-byte/cargoship/actions/runs/38300320379">Run 38300320379</a>, on the branch that became <a href="https://github.com/colonel-byte/cargoship/pull/722">#722</a>, reports one problem:</p>
+<pre><code>⧗   --- input ---
+build(deps): bump github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding from 1.13.19 to 1.13.20
+✖   header must not be longer than 100 characters, current length is 103 [header-max-length]
+</code></pre>
+<p><code>PR Title Check</code> failed four times on that pull request across three head commits, because every <code>synchronize</code> re-lints a title that has not changed. It passed at 20:53 on the same commit it had failed on at 19:50 - an <code>edited</code> event, which is a person renaming the pull request. Four other commits on <code>main</code> carry the same <code>/.../</code> elision made by hand: <a href="https://github.com/colonel-byte/cargoship/pull/660">#660</a>, <a href="https://github.com/colonel-byte/cargoship/pull/649">#649</a>, <a href="https://github.com/colonel-byte/cargoship/pull/639">#639</a> and <a href="https://github.com/colonel-byte/cargoship/pull/638">#638</a>.</p>
+<p>Ten of the 451 modules in <code>go.mod</code> overflow the cap, and they are not a random ten - they are the transitive trees that bump most often, which is why this came up five times in three weeks. Lengths below are for a 7-character version pair such as <code>1.13.19</code>, the worst case; the otel bump in #660 measured 115 rather than 117 because its versions are a character shorter.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Title length</th><th>Module</th></tr>
+</thead>
+<tbody>
+<tr><td>117</td><td><code>go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc</code></td></tr>
+<tr><td>113</td><td><code>github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider</code></td></tr>
+<tr><td>107</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc</code></td></tr>
+<tr><td>106</td><td><code>github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal</code></td></tr>
+<tr><td>105</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc</code></td></tr>
+<tr><td>104</td><td><code>github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys</code></td></tr>
+<tr><td>104</td><td><code>github.com/AliyunContainerService/ack-ram-tool/pkg/ecsmetadata</code></td></tr>
+<tr><td>103</td><td><code>go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp</code></td></tr>
+<tr><td>103</td><td><code>github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding</code></td></tr>
+<tr><td>101</td><td><code>github.com/aws/aws-sdk-go-v2/service/internal/presigned-url</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>None of them is a direct dependency. All ten arrive through the vendored cosign, Azure and otel trees, so there is no import to rewrite and no module to drop: the names are what they are.</p>
+<h2 id="grouping-lengthens-the-title-it-was-supposed-to-shorten"><a class="header" href="#grouping-lengthens-the-title-it-was-supposed-to-shorten">Grouping lengthens the title it was supposed to shorten</a></h2>
+<p>The gomod entry in <a href="../.github/dependabot.yaml"><code>.github/dependabot.yaml</code></a> had seven groups until <code>934972b78</code> removed them, and re-adding one looks like it would collapse these titles to <code>build(deps): bump the opentelemetry group with N updates</code>. It would, on a day when the group has more than one member. On a day when it has exactly one, Dependabot keeps the full module name and appends the group instead:</p>
+<pre><code>build(deps): bump k8s.io/streaming from 0.37.0 to 0.37.1 in the k8s group
+build(deps): bump github.com/ulikunitz/xz from 0.5.16 to 0.5.17 in the misc group
+</code></pre>
+<p>That is roughly twenty characters added to the form that was already too long. A group containing one long module is strictly worse than no group at all, and a single-module day is the common case for the otel and aws trees - which is exactly when the cap bites. Grouping is a reasonable answer to pull request volume; it is not an answer to title length.</p>
+<h2 id="the-job-cannot-be-skipped-for-dependabot"><a class="header" href="#the-job-cannot-be-skipped-for-dependabot">The job cannot be skipped for Dependabot</a></h2>
+<p><a href="../.github/workflows/commitlint.yaml"><code>.github/workflows/commitlint.yaml</code></a> carried <code># if: github.event.pull_request.user.login != 'dependabot[bot]'</code> as a commented-out line on the <code>title_check</code> job from <code>920e51591</code> until this change. Uncommenting it is the smaller diff and the wrong one: <code>title_check</code> is a required status check on the <code>main</code> ruleset, alongside <code>validate-go-mod</code>, <code>build-e2e</code>, <code>e2e-noncluster</code>, <code>prek</code> and <code>lint</code>. A job that never runs is a result the ruleset and Dependabot’s auto-merge may wait on forever, which trades a red check for a stuck pull request. The <code>merge_group</code> trigger on that workflow exists for the same reason - the job runs and reports success on a ref that has no pull request, rather than not running.</p>
+<p>Keeping the job and swapping its config keeps <code>title_check</code> reporting on every event, and keeps Dependabot’s titles linted for everything except the rule it cannot satisfy. <code>type-enum</code>, <code>subject-empty</code> and the rest still apply, so a malformed title from Dependabot fails as loudly as one from a person.</p>
+<h2 id="the-second-config-repeats-a-rule-instead-of-extending-the-first"><a class="header" href="#the-second-config-repeats-a-rule-instead-of-extending-the-first">The second config repeats a rule instead of extending the first</a></h2>
+<p><code>.commitlintrc.dependabot.yaml</code> names <code>@commitlint/config-conventional</code> and re-states <code>subject-case</code>, rather than extending its sibling:</p>
+<pre><code class="language-yaml">extends:
+  - "./.commitlintrc.yaml"
+</code></pre>
+<p>commitlint resolves an <code>extends</code> entry relative to the config file’s own location, which is why both files live in <code>.github/commitlint/</code> beside the <code>node_modules</code> that <code>npm ci</code> creates - see <a href="#why-binary-artifacts-and-two-pinned-dependencies-findings-stay-annotated-not-fixed"><code>choice-binary-artifact-opa-wasm.md</code></a> for how they got there. But a relative <code>extends</code> goes through <code>@commitlint/resolve-extends</code>, whose loader is built around JS and JSON modules, and a YAML sibling is neither. Duplicating one rule across two short files is cheaper than depending on behaviour that would have to be proven first, and <code>.commitlintrc.yaml</code> holds exactly one rule, so the copy is two lines. Both files carry a comment pointing at the other, because the duplication is the thing that will rot: a rule added to one and not the other means Dependabot and people are linted by different standards without anybody deciding that.</p>
+<h2 id="what-this-does-not-fix"><a class="header" href="#what-this-does-not-fix">What this does not fix</a></h2>
+<p><code>Check for go mod changes</code> still fails on the first run of every gomod pull request, and that is unrelated and deliberate. <code>go mod vendor</code> deletes the four generated <code>osv-scanner.toml</code> files under <code>vendor/</code>, <code>dev:verifyVendor</code> fails because of it, <a href="../.github/workflows/fix-vendor-osv.yaml"><code>fix-vendor-osv.yaml</code></a> pushes them back, and the rerun passes. The <code>cancelled</code> Unit tests, E2E cluster and CodeQL runs on a Dependabot branch’s first commit are that push superseding the in-flight ones. Both are self-healing and need nobody; the header comment on <a href="../.github/workflows/check-go-mod.yaml"><code>check-go-mod.yaml</code></a> explains the sequence.</p>
+<h2 id="when-this-entry-can-go-away-1"><a class="header" href="#when-this-entry-can-go-away-1">When this entry can go away</a></h2>
+<p>Raise the floor rather than delete the file: this stops mattering only if every one of the ten modules leaves the graph, which means cosign, the Azure keyvault SDK and the otel exporters all leaving it. More likely the file outlives the problem quietly. If <code>@commitlint/config-conventional</code> ever gains a rule that needs to differ between the two configs, that is the point to revisit whether a shared JS base is worth the resolution it would buy.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half"><a class="header" href="#why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half">Why the cluster e2e suite splits into a staging half and an engine half</a></h1>
 <blockquote>
 <p>The reasoning below was written against the original ten-machine, three-controller rke2 topology (<code>mixedOS</code>). The default full walk later switched engines, to a five-machine, single-controller k3s topology (<code>k3sOS</code>) – see the e2e-cluster workflow’s header comment – because rke2’s embedded etcd raft quorum across three controllers was timing out on the hosted runner. The rke2/overlayfs and host-count specifics below are historical; the stage/engine split they justify is still exactly how the suite works today.</p>
 </blockquote>
 <p>The cluster suite (<code>test/e2e/cluster</code>) walks the apply phase list one phase at a time against a bootloose cluster, as <a href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">choice-phase-e2e-tests</a> describes. That suite is two runs rather than one: with <code>CARGOSHIP_E2E_STAGE_ONLY</code> set it provisions the smaller staging inventory and stops asserting at the boundary <code>phase/60_configure_engine.go</code> draws, and without it, it walks the full inventory end to end. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.</p>
-<h2 id="what-forced-it-1"><a class="header" href="#what-forced-it-1">What forced it</a></h2>
+<h2 id="what-forced-it-2"><a class="header" href="#what-forced-it-2">What forced it</a></h2>
 <p>The suite was label-gated into CI on a hosted <code>ubuntu-latest</code> runner and did not pass there. Two things were wrong, and only the first was ours.</p>
 <p><code>phase/55_files_common.go</code> marked a host as claimed from the host list rather than from what it had uploaded. An rke2 package ships no <code>.deb</code>, so the APT phase claimed all five Debian hosts, uploaded nothing to them, and registered an <code>apt-get install</code> with an empty package list – which succeeds. <code>phase/59_bin_install.go</code>, the catch-all that exists precisely for a distro that ships neither RPMs nor debs, then filtered those hosts out as already claimed, and they reached the initialize phases with no engine on them at all. That is a real product bug, it is fixed, and the local run had never caught it because the failure needs a Debian host and a package with no debs to meet.</p>
 <p>Underneath it was the blocker that is not fixable in the product. rke2 runs its own containerd, whose default snapshotter is overlayfs, and overlayfs refuses an upperdir that is itself on an overlay mount – <code>EINVAL</code>, reported as <code>"overlayfs" snapshotter cannot be enabled for "/var/lib/rancher/rke2/agent/containerd"</code>. A hosted runner’s Docker uses the <code>overlay2</code> storage driver, so every node container’s root filesystem is an overlay mount and the snapshotter has nowhere to stack. The engine never reaches ready.</p>
@@ -18293,7 +18343,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-vendor-carries-four-generated-osv-scannertoml-files"><a class="header" href="#why-vendor-carries-four-generated-osv-scannertoml-files">Why vendor/ carries four generated osv-scanner.toml files</a></h1>
 <p><code>go mod vendor</code> copies four files into <code>vendor/</code> that have nothing to do with Go: a <code>package-lock.json</code> under <code>golang.org/x/telemetry</code>, and a <code>requirements</code> file each under <code>github.com/theupdateframework/go-tuf</code>, <code>github.com/txn2/txeh</code> and <code>go.opentelemetry.io/otel</code>. Next to each of them now sits a generated <code>osv-scanner.toml</code> that tells a scanner to skip that ecosystem. This document records why those four files exist, why they are generated rather than committed by hand, and what they deliberately do not cover.</p>
-<h2 id="what-forced-it-2"><a class="header" href="#what-forced-it-2">What forced it</a></h2>
+<h2 id="what-forced-it-3"><a class="header" href="#what-forced-it-3">What forced it</a></h2>
 <p>The <a href="https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship">OpenSSF Scorecard</a> Vulnerabilities check runs osv-scanner recursively over the whole checkout and scores it in <code>checks/evaluation/vulnerabilities.go</code> as <code>MaxResultScore - numVulnsFound</code>, floored at zero. There is no severity weighting and no reachability analysis: every finding is one point, so ten findings and four hundred score the same. The check read 0 against 42 findings, and <code>vendor/</code> supplied 40 of them.</p>
 <div class="table-wrapper">
 <table>
@@ -18670,7 +18720,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-oncreate-actions-go-through-zarfs-package-converter"><a class="header" href="#why-oncreate-actions-go-through-zarfs-package-converter">Why onCreate actions go through zarf’s package converter</a></h1>
 <p><code>runCreateActions</code> in <a href="#assemble"><code>pkg/packager/assemble/actions.go</code></a> hands each action to zarf, and since zarf v0.87.0 that means converting it first. The conversion is one function, <code>toAPIActionSet</code>, and it does something that looks wasteful: it wraps a single action set in a throwaway <code>ZarfPackage</code> carrying one unnamed component, runs <code>convert.PackageFromV1alpha1</code> over the whole thing, and reads the converted action set back out of <code>Components[0]</code>. This document records why that is the shape, and the behavior change it brought with it, because both look like accidents from the code alone.</p>
-<h2 id="what-forced-it-3"><a class="header" href="#what-forced-it-3">What forced it</a></h2>
+<h2 id="what-forced-it-4"><a class="header" href="#what-forced-it-4">What forced it</a></h2>
 <p>zarf v0.87.0 moved its canonical action model out of <code>src/api/v1alpha1</code> and into a normalized <code>src/api</code>, and retyped the executor against it:</p>
 <pre><code class="language-go">// v0.86.0
 func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error
