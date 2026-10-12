@@ -17,6 +17,7 @@ package tofuprovider
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // clusterModelFor is the configuration a practitioner would write, as the framework would decode
@@ -102,6 +104,7 @@ func TestConvergePassesEveryOptionToTheApply(t *testing.T) {
 
 	if _, err := fake.Apply(context.Background(), cfg, applyOptions{
 		Package:             model.Package.ValueString(),
+		ValuesFiles:         []string{"/tmp/values.yaml"},
 		ModifyHosts:         model.ModifyHosts.ValueBool(),
 		ModifyFirewall:      model.ModifyFirewall.ValueBool(),
 		LabelNodes:          model.LabelNodes.ValueBool(),
@@ -116,6 +119,7 @@ func TestConvergePassesEveryOptionToTheApply(t *testing.T) {
 
 	want := applyOptions{
 		Package:             "/srv/staging/k3s-v1.33.4.tar.zst",
+		ValuesFiles:         []string{"/tmp/values.yaml"},
 		ModifyHosts:         true,
 		ModifyFirewall:      true,
 		LabelNodes:          true,
@@ -125,7 +129,7 @@ func TestConvergePassesEveryOptionToTheApply(t *testing.T) {
 		Timeout:             20 * time.Minute,
 		Kubeconfig:          true,
 	}
-	if fake.applied == nil || *fake.applied != want {
+	if fake.applied == nil || !reflect.DeepEqual(*fake.applied, want) {
 		t.Errorf("the apply received %+v, want %+v", fake.applied, want)
 	}
 }
@@ -198,6 +202,7 @@ func TestFillUnknownLeavesNothingUnknown(t *testing.T) {
 	model.Distro = types.StringUnknown()
 	model.EngineVersion = types.StringUnknown()
 	model.Kubeconfig = types.StringUnknown()
+	model.Nodes = types.ListUnknown(nodesNestedObject().Type())
 
 	fillUnknown(&model)
 
@@ -210,6 +215,9 @@ func TestFillUnknownLeavesNothingUnknown(t *testing.T) {
 		if value.IsUnknown() {
 			t.Errorf("%s is still unknown, so the state could not be written", name)
 		}
+	}
+	if model.Nodes.IsUnknown() {
+		t.Error("nodes is still unknown, so the state could not be written")
 	}
 	if model.ID.ValueString() != "bubbles" {
 		t.Errorf("id was %q, want the cluster's name", model.ID.ValueString())
@@ -561,5 +569,64 @@ func TestUseStateUnlessPackageChanged(t *testing.T) {
 				t.Errorf("the plan value is %s, want it left unknown", resp.PlanValue)
 			}
 		})
+	}
+}
+
+// TestTofuSlogHandlerSurvivesEveryLevelAndAttribute is the crash test. The handler is on the path
+// of every log line cargoship writes during an apply, so a level or an attribute kind it cannot
+// render would take down the provider in the middle of a cluster installation rather than losing
+// a log line.
+func TestTofuSlogHandlerSurvivesEveryLevelAndAttribute(t *testing.T) {
+	ctx := withTofuLogger(context.Background())
+	l := logger.From(ctx)
+	if l == nil {
+		t.Fatal("withTofuLogger put no logger on the context")
+	}
+
+	l.Debug("debug message", "key", "val")
+	l.Info("info message", "number", 42)
+	l.Warn("warn message", "group", slog.GroupValue(slog.String("nested", "item")))
+	l.Error("error message", "err", errors.New("boom"))
+	l.With("extra", "field").Info("msg with attr")
+}
+
+// TestAppendSlogAttrFlattensGroups is what the handler's attribute walk is for: tflog takes a flat
+// map, and cargoship's phases log grouped and nested attributes. A group that reached tflog as a
+// slog.Value rather than as its members would render as an opaque struct in the one place an
+// operator goes to read why an apply failed.
+func TestAppendSlogAttrFlattensGroups(t *testing.T) {
+	fields := map[string]any{}
+
+	appendSlogAttr(fields, "", slog.String("host", "10.0.0.11"))
+	appendSlogAttr(fields, "", slog.Any("group", slog.GroupValue(
+		slog.String("nested", "item"),
+		slog.Any("deeper", slog.GroupValue(slog.Int("count", 2))),
+	)))
+
+	want := map[string]any{
+		"host":               "10.0.0.11",
+		"group.nested":       "item",
+		"group.deeper.count": int64(2),
+	}
+	if !reflect.DeepEqual(fields, want) {
+		t.Errorf("the attributes flattened to %#v, want %#v", fields, want)
+	}
+}
+
+// TestWithAttrsCarriesAcrossLoggers covers slog's With: a logger derived once and used for a whole
+// phase has to keep the attributes it was derived with, and must not share the parent's map -- two
+// derived loggers writing into one map is a data race under -race and a wrong log line without it.
+func TestWithAttrsCarriesAcrossLoggers(t *testing.T) {
+	base := tofuSlogHandler{attrs: map[string]any{"run": "apply"}}
+
+	derived, ok := base.WithAttrs([]slog.Attr{slog.String("host", "10.0.0.11")}).(tofuSlogHandler)
+	if !ok {
+		t.Fatal("WithAttrs returned another handler type")
+	}
+	if derived.attrs["run"] != "apply" || derived.attrs["host"] != "10.0.0.11" {
+		t.Errorf("the derived handler carries %#v", derived.attrs)
+	}
+	if _, leaked := base.attrs["host"]; leaked {
+		t.Error("WithAttrs wrote into the parent's attributes")
 	}
 }

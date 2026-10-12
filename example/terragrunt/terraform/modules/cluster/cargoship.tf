@@ -43,5 +43,8 @@ resource "cargoship_cluster" "this" {
   retain_on_destroy   = var.retain_on_destroy
   no_drain_on_destroy = var.no_drain_on_destroy
 
+  values       = var.values
+  values_files = var.values_files
+
   hosts = var.hosts
 }
