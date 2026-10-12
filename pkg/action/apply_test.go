@@ -247,3 +247,32 @@ func TestKubeConfigBytesBeforeTheRun(t *testing.T) {
 	require.ErrorIs(t, err, phase.ErrNoKubeConfig)
 	require.Nil(t, a.Config())
 }
+
+// TestApplyLabelsNodesWithoutWritingAKubeConfig covers a gate that was wrong rather than missing.
+// LabelNodes used to be enabled only when UpdateKubeConfig was also set, which read as a
+// dependency and is not one: the phase reads the cluster's admin credentials off a controller
+// itself (see LabelNodes.clientset) and dials the load balancer with them, so the operator's own
+// kubeconfig has nothing to do with it. Labelling a fleet meant writing a kubeconfig nobody asked
+// for, and an OpenTofu apply has no business writing one at all.
+func TestApplyLabelsNodesWithoutWritingAKubeConfig(t *testing.T) {
+	a, err := NewApply(ApplyOptions{
+		Manager: &phase.Manager{
+			DistroID: "k3s",
+			Config:   &cluster.ZarfCluster{},
+		},
+		LabelNodes:       true,
+		UpdateKubeConfig: false,
+	})
+	require.NoError(t, err)
+
+	var found bool
+	for _, p := range a.Phases {
+		label, ok := p.(*phase.LabelNodes)
+		if !ok {
+			continue
+		}
+		found = true
+		require.True(t, label.Enabled, "label_nodes was asked for and the phase is disabled")
+	}
+	require.True(t, found, "apply no longer holds a label-nodes phase")
+}
