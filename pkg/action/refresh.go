@@ -52,7 +52,7 @@ type Refresh struct {
 // command for it yet; see docs/agent/design-tofu-provider-install.md.
 //
 // What it leaves behind is on the hosts themselves: each phase records what it learned on the
-// ZarfHost it ran against, so a caller reads the facts off Manager.Config.Spec.Hosts afterwards
+// Host it ran against, so a caller reads the facts off Manager.Config.Spec.Hosts afterwards
 // rather than out of a return value.
 func NewRefresh(opts RefreshOptions) (*Refresh, error) {
 	if opts.Manager == nil {
