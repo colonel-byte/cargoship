@@ -881,7 +881,7 @@ github.com/fsnotify/fsnotify/internal
 # github.com/fvbommel/sortorder v1.2.0
 ## explicit; go 1.21
 github.com/fvbommel/sortorder
-# github.com/fxamacker/cbor/v2 v2.9.4
+# github.com/fxamacker/cbor/v2 v2.9.6
 ## explicit; go 1.20
 github.com/fxamacker/cbor/v2
 # github.com/gabriel-vasile/mimetype v1.4.15
