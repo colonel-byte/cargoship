@@ -18,6 +18,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/go-containerregistry v0.22.1
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
+	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/k0sproject/bootloose v0.9.6
@@ -253,7 +254,6 @@ require (
 	github.com/hashicorp/go-uuid v1.0.4 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
-	github.com/hashicorp/terraform-plugin-go v0.31.0 // indirect
 	github.com/hashicorp/terraform-registry-address v0.4.0 // indirect
 	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
 	github.com/hashicorp/vault/api v1.23.0 // indirect
