@@ -17,6 +17,7 @@ package tofuprovider
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
@@ -119,7 +120,7 @@ func TestModelOfCarriesEveryHostAttribute(t *testing.T) {
 		KeyPath: "/home/operator/.ssh/id_ed25519",
 		Role:    cluster.RoleController,
 	}
-	if controller != want {
+	if !reflect.DeepEqual(controller, want) {
 		t.Errorf("the controller mapped to %+v, want %+v", controller, want)
 	}
 

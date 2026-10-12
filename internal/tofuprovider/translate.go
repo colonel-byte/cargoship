@@ -24,6 +24,7 @@ package tofuprovider
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
@@ -43,6 +44,9 @@ const (
 	// zero -- and a document saying port 0 fails its own schema.
 	defaultSSHUser = "root"
 	defaultSSHPort = 22
+	// defaultProtocol is what a port entry means when it names only a port. The API requires a
+	// protocol, and tcp is what every port a cluster opens uses.
+	defaultProtocol = "tcp"
 )
 
 // hostRoles are the roles a host block may carry, which are the roles the cluster API defines.
@@ -80,6 +84,22 @@ type hostModel struct {
 	Hostname string
 	// PrivateAddress overrides the private address the facts phase would discover.
 	PrivateAddress string
+	// PrivateInterface overrides the private interface the facts phase would discover, for a
+	// node with more than one.
+	PrivateInterface string
+	// Environment are environment variables cargoship sets on the host.
+	Environment map[string]string
+	// NodeLabels and NodeTaints are this host's own, which replace whatever its profile sets
+	// rather than merging with them.
+	NodeLabels map[string]string
+	NodeTaints []string
+	// Ports are the ports opened on this host, replacing its profile's.
+	Ports []portModel
+	// FirewallRules are this host's own firewall rules. Unlike the fields above, a host's rules
+	// are unioned with its profile's rather than replacing them -- see ZarfFirewallConfig.Merge.
+	FirewallRules []firewallRuleModel
+	// Bastion is the jump host this host is reached through, when it is not reachable directly.
+	Bastion *bastionModel
 }
 
 // clusterModel is everything a translation needs that is not a host.
@@ -88,9 +108,62 @@ type clusterModel struct {
 	Name string
 	// LoadBalancer is the address clients use to reach the control plane.
 	LoadBalancer string
+	// Profiles maps a profile name to the overrides a host selecting it receives. A profile is
+	// how a fleet says "every infra node is tainted this way" once rather than per host.
+	Profiles map[string]profileModel
 	// Hosts are the fleet, in the order the resource handed them over: by map key, so the first
 	// controller -- the leader -- is the controller whose key sorts first.
 	Hosts []hostModel
+}
+
+// profileModel is one entry of the profiles map.
+//
+// It is the same shape as a host's own overrides plus a concurrency, because that is what a
+// profile is: the overrides a host would otherwise repeat, and how wide to act on the hosts
+// sharing them. A host's own values replace a profile's rather than merging into them, which is
+// the behaviour cluster.ZarfHostConfig.Merge and ZarfHostEngine.Merge implement.
+type profileModel struct {
+	// NodeLabels are the Kubernetes node labels applied to a host selecting this profile.
+	NodeLabels map[string]string
+	// NodeTaints are the Kubernetes node taints applied to a host selecting this profile.
+	NodeTaints []string
+	// Ports are the ports opened on a host selecting this profile.
+	Ports []portModel
+	// FirewallRules are the firewall rules applied to a host selecting this profile.
+	FirewallRules []firewallRuleModel
+	// Concurrency limits how many hosts sharing this profile cargoship acts on at once, as a
+	// count ("1") or a percentage of those hosts ("25%").
+	Concurrency string
+}
+
+// portModel is one port cargoship opens on a host.
+type portModel struct {
+	Port     string
+	Protocol string
+}
+
+// firewallRuleModel is one backend-neutral firewall rule. Every match field is optional, and an
+// omitted one means "any"; the backends translate a rule into their own dialect.
+type firewallRuleModel struct {
+	Name        string
+	Action      string
+	Direction   string
+	Source      string
+	Destination string
+	Ingress     string
+	Egress      string
+	Port        string
+	Protocol    string
+}
+
+// bastionModel is the jump host a host is reached through. Cargoship opens its own SSH
+// connections, so a bastion has to be stated here rather than inherited from an SSH client
+// configuration.
+type bastionModel struct {
+	Address string
+	User    string
+	Port    int
+	KeyPath string
 }
 
 // translate builds a ZarfCluster from a resource or data source model.
@@ -139,6 +212,14 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 		}
 	}
 
+	profiles, err := profilesFrom(model.Profiles)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkProfiles(model); err != nil {
+		return nil, err
+	}
+
 	out := &cluster.ZarfCluster{
 		APIVersion: apiVersion,
 		Kind:       documentKind,
@@ -146,6 +227,7 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 		Spec: cluster.ZarfClusterSpec{
 			Config: cluster.ZarfClusterConfig{
 				LoadBalancer: model.LoadBalancer,
+				Profiles:     profiles,
 			},
 			Hosts: hosts,
 		},
@@ -196,13 +278,160 @@ func hostFrom(model hostModel) (*cluster.ZarfHost, error) {
 		sshCfg.KeyPath = &keyPath
 	}
 
+	if model.Bastion != nil {
+		if model.Bastion.Address == "" {
+			return nil, fmt.Errorf("host %s has a bastion with no address", model.Address)
+		}
+		bastion := &ssh.Config{
+			Address: model.Bastion.Address,
+			User:    model.Bastion.User,
+			Port:    model.Bastion.Port,
+		}
+		if bastion.User == "" {
+			bastion.User = defaultSSHUser
+		}
+		if bastion.Port == 0 {
+			bastion.Port = defaultSSHPort
+		}
+		if model.Bastion.KeyPath != "" {
+			keyPath := model.Bastion.KeyPath
+			bastion.KeyPath = &keyPath
+		}
+		sshCfg.Bastion = bastion
+	}
+
+	ports, err := portsFrom(model.Ports)
+	if err != nil {
+		return nil, fmt.Errorf("host %s: %w", model.Address, err)
+	}
+	rules, err := rulesFrom(model.FirewallRules)
+	if err != nil {
+		return nil, fmt.Errorf("host %s: %w", model.Address, err)
+	}
+
 	return &cluster.ZarfHost{
-		Role:           model.Role,
-		Profile:        model.Profile,
-		Hostname:       model.Hostname,
-		PrivateAddress: model.PrivateAddress,
+		Role:             model.Role,
+		Profile:          model.Profile,
+		Hostname:         model.Hostname,
+		PrivateAddress:   model.PrivateAddress,
+		PrivateInterface: model.PrivateInterface,
+		Environment:      model.Environment,
+		Host: cluster.ZarfHostConfig{
+			Ports:    ports,
+			Firewall: cluster.ZarfFirewallConfig{Rules: rules},
+		},
+		Engine: cluster.ZarfHostEngine{
+			NodeLabels: model.NodeLabels,
+			NodeTaints: model.NodeTaints,
+		},
 		ClientWithConfig: rig.ClientWithConfig{
 			ConnectionConfig: rig.CompositeConfig{SSH: sshCfg},
 		},
 	}, nil
+}
+
+// profilesFrom renders the profiles map into the cluster document.
+func profilesFrom(models map[string]profileModel) (map[string]cluster.ZarfClusterProfiles, error) {
+	if len(models) == 0 {
+		return nil, nil
+	}
+
+	profiles := make(map[string]cluster.ZarfClusterProfiles, len(models))
+	for name, model := range models {
+		ports, err := portsFrom(model.Ports)
+		if err != nil {
+			return nil, fmt.Errorf("profile %s: %w", name, err)
+		}
+		rules, err := rulesFrom(model.FirewallRules)
+		if err != nil {
+			return nil, fmt.Errorf("profile %s: %w", name, err)
+		}
+		profiles[name] = cluster.ZarfClusterProfiles{
+			Host: cluster.ZarfHostConfig{
+				Ports:    ports,
+				Firewall: cluster.ZarfFirewallConfig{Rules: rules},
+			},
+			Engine: cluster.ZarfHostEngine{
+				NodeLabels: model.NodeLabels,
+				NodeTaints: model.NodeTaints,
+			},
+			Concurrency: model.Concurrency,
+		}
+	}
+	return profiles, nil
+}
+
+// checkProfiles refuses a host selecting a profile the configuration does not define.
+//
+// Only when the configuration defines profiles at all: a `profile` with no profiles block is a
+// legitimate configuration -- it still names the node-role.kubernetes.io label the LabelNodes
+// phase writes, and still groups hosts for per-profile concurrency. What is worth refusing is the
+// typo, where a profiles block exists and a host names something not in it, because the taints
+// and labels that profile would have applied then silently never exist.
+func checkProfiles(model clusterModel) error {
+	if len(model.Profiles) == 0 {
+		return nil
+	}
+
+	defined := make([]string, 0, len(model.Profiles))
+	for name := range model.Profiles {
+		defined = append(defined, name)
+	}
+	sort.Strings(defined)
+
+	for _, host := range model.Hosts {
+		if host.Profile == "" {
+			continue
+		}
+		if _, ok := model.Profiles[host.Profile]; !ok {
+			return fmt.Errorf("host %s selects the profile %q, which this configuration does not define: one of %s",
+				host.Address, host.Profile, strings.Join(defined, ", "))
+		}
+	}
+	return nil
+}
+
+// portsFrom renders the ports a host or profile opens, refusing one that names neither.
+func portsFrom(models []portModel) ([]cluster.ZarfHostPort, error) {
+	if len(models) == 0 {
+		return nil, nil
+	}
+	ports := make([]cluster.ZarfHostPort, 0, len(models))
+	for _, model := range models {
+		if model.Port == "" {
+			return nil, fmt.Errorf("a port entry has no port")
+		}
+		protocol := model.Protocol
+		if protocol == "" {
+			protocol = defaultProtocol
+		}
+		ports = append(ports, cluster.ZarfHostPort{Port: model.Port, Protocol: protocol})
+	}
+	return ports, nil
+}
+
+// rulesFrom renders firewall rules. Action is the one field the API requires, and a rule without
+// it would be written to a host as a rule that matches traffic and does nothing with it.
+func rulesFrom(models []firewallRuleModel) ([]cluster.ZarfFirewallRule, error) {
+	if len(models) == 0 {
+		return nil, nil
+	}
+	rules := make([]cluster.ZarfFirewallRule, 0, len(models))
+	for _, model := range models {
+		if model.Action == "" {
+			return nil, fmt.Errorf("the firewall rule %q has no action: one of allow, deny or reject", model.Name)
+		}
+		rules = append(rules, cluster.ZarfFirewallRule{
+			Name:        model.Name,
+			Action:      model.Action,
+			Direction:   model.Direction,
+			Source:      model.Source,
+			Destination: model.Destination,
+			Ingress:     model.Ingress,
+			Egress:      model.Egress,
+			Port:        model.Port,
+			Protocol:    model.Protocol,
+		})
+	}
+	return rules, nil
 }
