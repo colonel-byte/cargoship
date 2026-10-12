@@ -212,6 +212,7 @@
 - [choice-ansible-module](agent/choice-ansible-module.md)
 - [choice-binary-artifact-opa-wasm](agent/choice-binary-artifact-opa-wasm.md)
 - [choice-crypto11-rename](agent/choice-crypto11-rename.md)
+- [choice-dependabot-title-length](agent/choice-dependabot-title-length.md)
 - [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
 - [choice-example-release-floor](agent/choice-example-release-floor.md)
 - [choice-file-override-shasum](agent/choice-file-override-shasum.md)
