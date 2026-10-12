@@ -188,6 +188,12 @@ The unit tests need no cluster, no SSH and no `tofu` binary, and they are the on
 
 Acceptance tests with `terraform-plugin-testing` come with the resource, since what they are for is asserting that an apply converges a cluster. When they land they will need a `tofu` binary on the runner, and `TF_ACC_TERRAFORM_PATH` pointing at it -- the framework's harness looks for `terraform` by default.
 
+## Driving it from Terragrunt
+
+[`example/terragrunt/`](https://github.com/colonel-byte/cargoship/tree/main/example/terragrunt) is a worked layout: modules under `terraform/modules/`, one directory per cluster under `terraform/inventory/`, and nothing in a module that names a cluster. [opentofu-terragrunt](../guides/opentofu-terragrunt.md) is the operator-facing guide to it.
+
+Two things that cost a run each when they are missed. Terragrunt drives Terraform unless told otherwise, so `TG_TF_PATH=tofu` has to be exported. And the root of the inventory is `root.hcl` rather than `terragrunt.hcl`, because current Terragrunt warns that a `terragrunt.hcl` at the root of a tree is an anti-pattern and will become an error -- and it errors outright on the `skip = true` that used to accompany it.
+
 ## Publishing
 
 `mage release:tofuProvider <version>` builds every published platform and pushes an OCI image index to `ghcr.io` as an OpenTofu provider mirror; `mage release:tofuProviderLayout <version>` stops before the push and leaves the artifact under `build/` to inspect. See [mage](mage.md) and [release-tofu-provider](../workflows/release-tofu-provider.md).
