@@ -210,6 +210,7 @@
 - [ai-usage](agent/ai-usage.md)
 - [choice-age-encryption](agent/choice-age-encryption.md)
 - [choice-ansible-module](agent/choice-ansible-module.md)
+- [choice-api-group-move](agent/choice-api-group-move.md)
 - [choice-binary-artifact-opa-wasm](agent/choice-binary-artifact-opa-wasm.md)
 - [choice-crypto11-rename](agent/choice-crypto11-rename.md)
 - [choice-dependabot-title-length](agent/choice-dependabot-title-length.md)

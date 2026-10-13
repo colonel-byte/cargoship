@@ -266,9 +266,32 @@ Cargoship relies on strongly-typed YAML definitions to govern its operations:
 *   **Distro Package Definitions:** Map out the required binaries, OCI images, and layout settings.
 *   **Distro Runtime Configs:** Configure the underlying distribution engine.
 
+Inventories and package definitions are Kubernetes-style documents under cargoship's own API group:
+
+```yaml
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster      # or Distro, for a package definition
+metadata:
+  name: fleet-cluster
+```
+
 The corresponding JSON schemas are automatically generated from Go structs into `schema/`, and `cargoship schema` writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; `cargoship validate` checks a file against the right one without an editor.
 
 An inventory authoring guide is available in [Setting up an inventory](./docs/guides/setup-inv.md).
+
+### The `zarf.dev` group is deprecated
+
+These documents used to declare `apiVersion: zarf.dev/v1alpha1` with `kind: ZarfCluster` and `kind: ZarfDistro`. That group belongs to the upstream Zarf project, which defines its own kinds under it, so cargoship moved to a group it owns.
+
+Both spellings are accepted, in any combination, and a document using the old one needs no change today:
+
+|                | Old                 | New                         |
+| -------------- | ------------------- | --------------------------- |
+| API group      | `zarf.dev/v1alpha1` | `colonel-byte.dev/v1alpha1` |
+| Inventory kind | `ZarfCluster`       | `Cluster`                   |
+| Package kind   | `ZarfDistro`        | `Distro`                    |
+
+Everything cargoship writes itself - `cargoship inventory from-ansible`, the Ansible collection, the OpenTofu provider, the generated example packages - now emits the new spelling. No removal date is set for the old one; when one is, it will be announced in a release before it lands.
 
 ---
 
