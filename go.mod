@@ -176,7 +176,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
-	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.14.0 // indirect
 	github.com/emicklei/proto v1.14.3 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
