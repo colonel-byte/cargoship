@@ -44,7 +44,7 @@ type Lock struct {
 }
 
 // Prepare the phase
-func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *Lock) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error {
 	p.manager.Config = c
 	hn, err := os.Hostname()
 	if err != nil {
@@ -93,7 +93,7 @@ func (p *Lock) Run(ctx context.Context) error {
 	return p.manager.Config.Spec.Hosts.ParallelEach(ctx, p.startTicker)
 }
 
-func (p *Lock) startTicker(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *Lock) startTicker(ctx context.Context, h *cluster.Host) error {
 	p.wg.Add(1)
 	lfp := h.Configurer.CTLLockFilePath(h)
 	ticker := time.NewTicker(10 * time.Second)
@@ -124,7 +124,7 @@ func (p *Lock) startTicker(ctx context.Context, h *cluster.ZarfHost) error {
 	return nil
 }
 
-func (p *Lock) startLock(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *Lock) startLock(ctx context.Context, h *cluster.Host) error {
 	return retry.Times(ctx, 10, func(ctx context.Context) error {
 		return p.tryLock(ctx, h)
 	})
@@ -135,7 +135,7 @@ func (p *Lock) startLock(ctx context.Context, h *cluster.ZarfHost) error {
 // h.Sudo().FS() -- the lock file may live in a root-owned directory
 // (/run/lock), and dropping sudo on any of these calls would silently fail
 // the existence/ownership checks below instead of erroring loudly.
-func (p *Lock) tryLock(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *Lock) tryLock(ctx context.Context, h *cluster.Host) error {
 	lfp := h.Configurer.CTLLockFilePath(h)
 
 	f, err := h.Sudo().FS().OpenFile(lfp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)

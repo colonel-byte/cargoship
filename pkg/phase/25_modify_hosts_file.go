@@ -47,7 +47,7 @@ func (p *ModifyHosts) Explanation() string {
 }
 
 // Prepare the phase
-func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.hosts = make(map[string][]string)
 	for _, h := range p.manager.Config.Spec.Hosts {
 		p.hosts[h.PrivateAddress] = []string{
@@ -70,7 +70,7 @@ func (p *ModifyHosts) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.configureHostsFile)
 }
 
-func (p *ModifyHosts) configureHostsFile(_ context.Context, h *cluster.ZarfHost) error {
+func (p *ModifyHosts) configureHostsFile(_ context.Context, h *cluster.Host) error {
 	hostsCon, err := h.ReadFile("/etc/hosts")
 	if err != nil {
 		return err

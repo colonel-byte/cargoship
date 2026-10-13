@@ -91,7 +91,7 @@ func (o *installKubeConfigOptions) run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	clusterDef.Spec.Hosts = cluster.ZarfHosts{
+	clusterDef.Spec.Hosts = cluster.Hosts{
 		clusterDef.Spec.Hosts.Controllers().First(),
 	}
 

@@ -35,23 +35,23 @@ import (
 )
 
 // FetchDistroYAML fetches the distro.yaml file from the remote repository.
-func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.ZarfDistro, error) {
+func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.Distro, error) {
 	descriptor := root.Locate(config.DistroYAML)
 	if oci.IsEmptyDescriptor(descriptor) {
-		return distro.ZarfDistro{}, fmt.Errorf("unable to find %s in the manifest", config.DistroYAML)
+		return distro.Distro{}, fmt.Errorf("unable to find %s in the manifest", config.DistroYAML)
 	}
 	b, err := content.FetchAll(ctx, fetcher, descriptor)
 	if err != nil {
-		return distro.ZarfDistro{}, err
+		return distro.Distro{}, err
 	}
 	return cfg.ParseMultiDoc(ctx, b)
 }
 
 // FetchDistroYAML fetches the distro.yaml file from the remote repository.
-func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.ZarfDistro, error) {
+func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.Distro, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
-		return distro.ZarfDistro{}, err
+		return distro.Distro{}, err
 	}
 	return FetchDistroYAML(ctx, root, r)
 }

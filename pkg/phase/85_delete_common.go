@@ -51,7 +51,7 @@ type DeleteCommon struct {
 	GenericPhase
 	Distro      distrocfg.Distro
 	TargetHosts []string
-	leader      *cluster.ZarfHost
+	leader      *cluster.Host
 	// nodeNames maps a host to the name its node carries in the cluster. See resolveNodeNames.
 	nodeNames map[string]string
 	// keepEngineForDelete is set when the engine has to stay up on a controller while its node is
@@ -85,9 +85,9 @@ var ErrControllersNotOneAtATime = errors.New("more than one running controller i
 	"remove them one run at a time, so each removal starts from a cluster that still has every member")
 
 // Prepare the phase
-func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	hosts := p.manager.Config.Spec.Hosts
-	control := hosts.Filter(func(h *cluster.ZarfHost) bool {
+	control := hosts.Filter(func(h *cluster.Host) bool {
 		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) == 0 {
@@ -98,7 +98,7 @@ func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *d
 	// The leader has to be a controller that survives the run: every node deletion is a kubectl
 	// command run on it, and the phases that follow uninstall the engine from everything in the
 	// target list.
-	surviving := control.Filter(func(h *cluster.ZarfHost) bool {
+	surviving := control.Filter(func(h *cluster.Host) bool {
 		return !matchesTargetHost(h, p.TargetHosts)
 	})
 	if len(surviving) > 0 {
@@ -119,7 +119,7 @@ func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *d
 // whether the engine comes down before or after the node is deleted.
 //
 // control is every controller with a running engine; surviving is the subset the run keeps.
-func (p *DeleteCommon) planControllerRemovals(ctx context.Context, control, surviving cluster.ZarfHosts) error {
+func (p *DeleteCommon) planControllerRemovals(ctx context.Context, control, surviving cluster.Hosts) error {
 	removing := len(control) - len(surviving)
 	if removing > 1 {
 		return fmt.Errorf("%w: %d of %d running controllers are targeted", ErrControllersNotOneAtATime, removing, len(control))
@@ -140,7 +140,7 @@ func (p *DeleteCommon) planControllerRemovals(ctx context.Context, control, surv
 
 // stopEngineBeforeDelete takes the engine down on a host whose node is about to be deleted, unless
 // the membership arithmetic in planControllerRemovals says it has to stay up.
-func (p *DeleteCommon) stopEngineBeforeDelete(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *DeleteCommon) stopEngineBeforeDelete(ctx context.Context, h *cluster.Host) error {
 	if p.keepEngineForDelete {
 		return nil
 	}
@@ -168,7 +168,7 @@ func (p *DeleteCommon) stopEngineBeforeDelete(ctx context.Context, h *cluster.Za
 //
 // A host with no matching node is absent from the result, which is how the phases tell apart
 // "this host is in the cluster" from "this host is not", without a second probe.
-func (p *DeleteCommon) resolveNodeNames(ctx context.Context, hosts cluster.ZarfHosts) map[string]string {
+func (p *DeleteCommon) resolveNodeNames(ctx context.Context, hosts cluster.Hosts) map[string]string {
 	if p.leader == nil || len(hosts) == 0 {
 		return nil
 	}
@@ -186,7 +186,7 @@ func (p *DeleteCommon) resolveNodeNames(ctx context.Context, hosts cluster.ZarfH
 //
 // Split out from resolveNodeNames so the matching is testable without a cluster: the parsing
 // and the identifier comparison are where this goes wrong, not the kubectl call.
-func matchNodesToHosts(listed string, hosts cluster.ZarfHosts) map[string]string {
+func matchNodesToHosts(listed string, hosts cluster.Hosts) map[string]string {
 	byHost := make(map[string]string, len(hosts))
 
 	for line := range strings.SplitSeq(listed, "\n") {
@@ -220,7 +220,7 @@ func matchNodesToHosts(listed string, hosts cluster.ZarfHosts) map[string]string
 
 // hostMatchesIdentities reports whether any name or address the host is known by appears among
 // the identities a node reported. The set is the same one DetectRemovedHosts builds.
-func hostMatchesIdentities(h *cluster.ZarfHost, identities map[string]struct{}) bool {
+func hostMatchesIdentities(h *cluster.Host, identities map[string]struct{}) bool {
 	for _, id := range []string{h.Metadata.Hostname, h.Hostname, h.PrivateAddress, h.Address()} {
 		if id == "" {
 			continue
@@ -241,7 +241,7 @@ func hostMatchesIdentities(h *cluster.ZarfHost, identities map[string]struct{}) 
 // No membership arithmetic here. keepEngineForDelete exists because a controller removal that
 // leaves one controller needs the departing member up to commit its own removal; a worker is
 // not an etcd member and its engine can always come down first.
-func (p *DeleteCommon) stopAgentBeforeDelete(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *DeleteCommon) stopAgentBeforeDelete(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("stopping the engine before deleting the node", "host", h)
 	if err := p.Distro.StopWorkerService(h); err != nil {
 		return fmt.Errorf("stop the engine on %s before deleting its node: %w", h, err)
@@ -253,12 +253,12 @@ func (p *DeleteCommon) stopAgentBeforeDelete(ctx context.Context, h *cluster.Zar
 //
 // A host is matched by any name an operator could have written: the hostname in the configuration,
 // the hostname the host reported once it was visited, and the address the configuration connects
-// through. The address comes from the connection configuration rather than from ZarfHost.Address,
+// through. The address comes from the connection configuration rather than from Host.Address,
 // which reads the live rig client and is empty for a host that has not been dialled -- so matching
 // on it would depend on how far through a run the phase is, and would silently fall back to
 // hostname-only in exactly the case a target list is being checked against hosts that are about to
 // be removed.
-func matchesTargetHost(h *cluster.ZarfHost, targets []string) bool {
+func matchesTargetHost(h *cluster.Host, targets []string) bool {
 	if len(targets) == 0 {
 		return false
 	}
@@ -276,7 +276,7 @@ func matchesTargetHost(h *cluster.ZarfHost, targets []string) bool {
 }
 
 // hostIdentifiers are every name a host answers to, for matching a target against it.
-func hostIdentifiers(h *cluster.ZarfHost) []string {
+func hostIdentifiers(h *cluster.Host) []string {
 	names := []string{h.Hostname, h.Metadata.Hostname}
 	if cfg := h.ConnectionConfig.SSH; cfg != nil {
 		names = append(names, cfg.Address)
@@ -299,7 +299,7 @@ func hostIdentifiers(h *cluster.ZarfHost) []string {
 // A target nobody matches is the quiet failure this whole feature could have: the filter returns
 // an empty set, every phase reports nothing to do, and the run succeeds having removed nothing. A
 // typo in a hostname is the ordinary way to get there.
-func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error {
+func CheckTargetHosts(hosts cluster.Hosts, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
@@ -328,16 +328,16 @@ func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error {
 }
 
 // filterTargetHosts returns hosts matching targets. If targets is empty, it returns all hosts.
-func filterTargetHosts(hosts cluster.ZarfHosts, targets []string) cluster.ZarfHosts {
+func filterTargetHosts(hosts cluster.Hosts, targets []string) cluster.Hosts {
 	if len(targets) == 0 {
 		return hosts
 	}
-	return hosts.Filter(func(h *cluster.ZarfHost) bool {
+	return hosts.Filter(func(h *cluster.Host) bool {
 		return matchesTargetHost(h, targets)
 	})
 }
 
-func (p *DeleteCommon) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *DeleteCommon) drainNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("draining", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
 		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, p.nodeNameFor(h)))
@@ -347,14 +347,14 @@ func (p *DeleteCommon) drainNode(ctx context.Context, h *cluster.ZarfHost) error
 // nodeNameFor is the name h's node carries in the cluster, falling back to the name the
 // machine reports when the nodes could not be listed at all. The fallback keeps the old
 // behaviour for a cluster that cannot be read rather than silently acting on an empty name.
-func (p *DeleteCommon) nodeNameFor(h *cluster.ZarfHost) string {
+func (p *DeleteCommon) nodeNameFor(h *cluster.Host) string {
 	if name, ok := p.nodeNames[h.String()]; ok {
 		return name
 	}
 	return h.Configurer.Hostname(h)
 }
 
-func (p *DeleteCommon) deleteNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *DeleteCommon) deleteNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("deleting", "node", h)
 	err := retry.Timeout(ctx, 10*time.Second, func(_ context.Context) error {
 		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), deleteNode, p.nodeNameFor(h)))

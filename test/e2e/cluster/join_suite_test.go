@@ -67,7 +67,7 @@ var (
 type JoinPhaseSuite struct {
 	phaseWalk
 	// joined is the host the walk added, resolved from the inventory in Test_05.
-	joined *apicluster.ZarfHost
+	joined *apicluster.Host
 }
 
 func (s *JoinPhaseSuite) SetupSuite() {
@@ -140,14 +140,14 @@ func (s *JoinPhaseSuite) Test_05_Manager() {
 	s.Require().Len(s.harness.engineWorkers(), joinClusterWorkers)
 	s.Require().Len(s.harness.uploadOnly(), uploadOnlyCount)
 
-	s.joined = s.harness.hosts().Find(func(h *apicluster.ZarfHost) bool {
+	s.joined = s.harness.hosts().Find(func(h *apicluster.Host) bool {
 		return h.Hostname == clusterConfig().joinHostname()
 	})
 	s.Require().NotNilf(s.joined, "the inventory does not name %s, the machine this walk joins", clusterConfig().joinHostname())
 }
 
 // isJoined reports whether host is the machine this walk added.
-func (s *JoinPhaseSuite) isJoined(host *apicluster.ZarfHost) bool {
+func (s *JoinPhaseSuite) isJoined(host *apicluster.Host) bool {
 	return host.Hostname == clusterConfig().joinHostname()
 }
 

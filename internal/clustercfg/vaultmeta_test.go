@@ -75,7 +75,7 @@ func TestEncryptConfigRecordsRecipients(t *testing.T) {
 
 	// The record is part of the document an apply reads, so it has to decode into the spec types
 	// rather than only into the YAML parser this package splices with.
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}

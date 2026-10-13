@@ -76,12 +76,12 @@ kubeadm join 10.0.0.1:6443 --token abcdef.0123456789abcdef \
 func TestUpstreamIsBootstrapped(t *testing.T) {
 	d := newTestUpstream()
 
-	notYet := (&fakeHost{fileExist: map[string]bool{}}).attach(&cluster.ZarfHost{})
+	notYet := (&fakeHost{fileExist: map[string]bool{}}).attach(&cluster.Host{})
 	if d.IsBootstrapped(notYet) {
 		t.Fatalf("IsBootstrapped() = true, want false when %s is absent", upstreamKubeletConfPath)
 	}
 
-	done := (&fakeHost{fileExist: map[string]bool{upstreamKubeletConfPath: true}}).attach(&cluster.ZarfHost{})
+	done := (&fakeHost{fileExist: map[string]bool{upstreamKubeletConfPath: true}}).attach(&cluster.Host{})
 	if !d.IsBootstrapped(done) {
 		t.Fatalf("IsBootstrapped() = false, want true when %s exists", upstreamKubeletConfPath)
 	}
@@ -89,9 +89,9 @@ func TestUpstreamIsBootstrapped(t *testing.T) {
 
 func TestUpstreamBootstrapLeaderNotConnected(t *testing.T) {
 	d := newTestUpstream()
-	host := &cluster.ZarfHost{Metadata: cluster.ZarfHostMetadata{IsLeader: true}}
+	host := &cluster.Host{Metadata: cluster.HostMetadata{IsLeader: true}}
 
-	err := d.Bootstrap(context.Background(), host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+	err := d.Bootstrap(context.Background(), host, cluster.RuntimeMeta{}, distro.Distro{})
 
 	if !errors.Is(err, cluster.ErrNotConnected) {
 		t.Fatalf("Bootstrap() error = %v, want %v", err, cluster.ErrNotConnected)
@@ -100,9 +100,9 @@ func TestUpstreamBootstrapLeaderNotConnected(t *testing.T) {
 
 func TestUpstreamBootstrapJoinNoLeader(t *testing.T) {
 	d := newTestUpstream()
-	host := &cluster.ZarfHost{Role: cluster.RoleWorker}
+	host := &cluster.Host{Role: cluster.RoleWorker}
 
-	err := d.Bootstrap(context.Background(), host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+	err := d.Bootstrap(context.Background(), host, cluster.RuntimeMeta{}, distro.Distro{})
 
 	if !errors.Is(err, ErrNoLeader) {
 		t.Fatalf("Bootstrap() error = %v, want %v", err, ErrNoLeader)
@@ -115,14 +115,14 @@ func TestUpstreamBootstrapJoinReadsTokenAndHashFromLeader(t *testing.T) {
 		upstreamJoinTokenFile:  "worker-token.0123456789abcdef\n",
 		upstreamCACertHashFile: "sha256:abc\n",
 	}, fileExist: map[string]bool{}}
-	leader := leaderCfg.attach(&cluster.ZarfHost{Hostname: "leader-1", Metadata: cluster.ZarfHostMetadata{IsLeader: true}})
+	leader := leaderCfg.attach(&cluster.Host{Hostname: "leader-1", Metadata: cluster.HostMetadata{IsLeader: true}})
 
 	workerCfg := &fakeHost{fileExist: map[string]bool{}}
-	worker := workerCfg.attach(&cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker})
+	worker := workerCfg.attach(&cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker})
 
-	run := cluster.ZarfRuntimeMeta{Leader: leader, LoadBalancer: "lb.example.com"}
+	run := cluster.RuntimeMeta{Leader: leader, LoadBalancer: "lb.example.com"}
 
-	err := d.Bootstrap(context.Background(), worker, run, distro.ZarfDistro{})
+	err := d.Bootstrap(context.Background(), worker, run, distro.Distro{})
 
 	if !errors.Is(err, cluster.ErrNotConnected) {
 		t.Fatalf("Bootstrap() error = %v, want %v (kubeadm join itself is unmockable)", err, cluster.ErrNotConnected)
@@ -142,9 +142,9 @@ func TestUpstreamBootstrapJoinReadsTokenAndHashFromLeader(t *testing.T) {
 
 func TestUpstreamBootstrapJoinControllerNoLeader(t *testing.T) {
 	d := newTestUpstream()
-	host := &cluster.ZarfHost{Role: cluster.RoleController}
+	host := &cluster.Host{Role: cluster.RoleController}
 
-	err := d.Bootstrap(context.Background(), host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+	err := d.Bootstrap(context.Background(), host, cluster.RuntimeMeta{}, distro.Distro{})
 
 	if !errors.Is(err, ErrNoLeader) {
 		t.Fatalf("Bootstrap() error = %v, want %v", err, ErrNoLeader)
@@ -164,14 +164,14 @@ func TestUpstreamBootstrapAdditionalControllerFetchesCertsBeforeWriting(t *testi
 		upstreamJoinTokenFile:  "controller-token.0123456789abcdef\n",
 		upstreamCACertHashFile: "sha256:abc\n",
 	}, fileExist: map[string]bool{}}
-	leader := leaderCfg.attach(&cluster.ZarfHost{Hostname: "leader-1", Metadata: cluster.ZarfHostMetadata{IsLeader: true}})
+	leader := leaderCfg.attach(&cluster.Host{Hostname: "leader-1", Metadata: cluster.HostMetadata{IsLeader: true}})
 
 	controllerCfg := &fakeHost{fileExist: map[string]bool{}}
-	controller := controllerCfg.attach(&cluster.ZarfHost{Hostname: "controller-2", Role: cluster.RoleController})
+	controller := controllerCfg.attach(&cluster.Host{Hostname: "controller-2", Role: cluster.RoleController})
 
-	run := cluster.ZarfRuntimeMeta{Leader: leader, LoadBalancer: "lb.example.com"}
+	run := cluster.RuntimeMeta{Leader: leader, LoadBalancer: "lb.example.com"}
 
-	err := d.Bootstrap(context.Background(), controller, run, distro.ZarfDistro{})
+	err := d.Bootstrap(context.Background(), controller, run, distro.Distro{})
 
 	if !errors.Is(err, cluster.ErrNotConnected) {
 		t.Fatalf("Bootstrap() error = %v, want %v (kubeadm init phase upload-certs is unmockable)", err, cluster.ErrNotConnected)

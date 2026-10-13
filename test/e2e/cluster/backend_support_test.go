@@ -135,24 +135,24 @@ var vmFleet *microvm.Fleet //nolint:gochecknoglobals
 // provision brings the run's hosts up and renders them as an inventory. It is the one place
 // the two backends differ, and everything downstream of the returned inventory is identical
 // for both.
-func provision(ctx context.Context, spec fleetSpec) (apicluster.ZarfCluster, error) {
+func provision(ctx context.Context, spec fleetSpec) (apicluster.Cluster, error) {
 	name, err := backend()
 	if err != nil {
-		return apicluster.ZarfCluster{}, err
+		return apicluster.Cluster{}, err
 	}
 
 	switch name {
 	case backendInventory:
 		inv, err := readInventory()
 		if err != nil {
-			return apicluster.ZarfCluster{}, err
+			return apicluster.Cluster{}, err
 		}
 		return hostsNamedBy(inv, spec), nil
 
 	case backendMicroVM:
 		fleet, err := microvm.Up(ctx, microvmSpec(spec))
 		if err != nil {
-			return apicluster.ZarfCluster{}, err
+			return apicluster.Cluster{}, err
 		}
 		vmFleet = &fleet
 		return microvm.Inventory(fleet), nil
@@ -160,7 +160,7 @@ func provision(ctx context.Context, spec fleetSpec) (apicluster.ZarfCluster, err
 	default:
 		cluster, err := setup(spec)
 		if err != nil {
-			return apicluster.ZarfCluster{}, err
+			return apicluster.Cluster{}, err
 		}
 		testCluster = cluster
 		return bootlooseInventory(cluster, spec)
@@ -236,22 +236,22 @@ func carriesFamily(f fleetSpec, family string) bool {
 // It goes through the same loader the CLI uses rather than a plain unmarshal, so that a
 // document this backend accepts is one cargoship accepts: the inventory the suite is handed
 // and the inventory a real run would be handed are parsed by the same code.
-func readInventory() (apicluster.ZarfCluster, error) {
+func readInventory() (apicluster.Cluster, error) {
 	path := os.Getenv(inventoryEnvVar)
 	if path == "" {
-		return apicluster.ZarfCluster{}, fmt.Errorf("%s=%s needs %s set to a ZarfCluster document",
+		return apicluster.Cluster{}, fmt.Errorf("%s=%s needs %s set to a ZarfCluster document",
 			backendEnvVar, backendInventory, inventoryEnvVar)
 	}
 
 	inv, err := load.ClusterDefinition(context.Background(), path, load.ClusterOptions{})
 	if err != nil {
-		return apicluster.ZarfCluster{}, fmt.Errorf("reading %s: %w", path, err)
+		return apicluster.Cluster{}, fmt.Errorf("reading %s: %w", path, err)
 	}
 	if len(inv.Spec.Hosts) == 0 {
-		return apicluster.ZarfCluster{}, fmt.Errorf("%s names no hosts", path)
+		return apicluster.Cluster{}, fmt.Errorf("%s names no hosts", path)
 	}
 	if len(inv.Spec.Hosts.WithRole(apicluster.RoleController)) == 0 {
-		return apicluster.ZarfCluster{}, fmt.Errorf("%s names no controller, so there is nothing to install a control plane on", path)
+		return apicluster.Cluster{}, fmt.Errorf("%s names no controller, so there is nothing to install a control plane on", path)
 	}
 	return inv, nil
 }
@@ -302,12 +302,12 @@ func externalFleet() (fleetSpec, error) {
 // This is what holds the join host out of the apply walk and lets the join walk have it: both
 // read the same file, and the spec they are given is the difference. A spec naming every host
 // -- which is every spec the other backends produce -- returns the document unchanged.
-func hostsNamedBy(inv apicluster.ZarfCluster, spec fleetSpec) apicluster.ZarfCluster {
+func hostsNamedBy(inv apicluster.Cluster, spec fleetSpec) apicluster.Cluster {
 	wanted := make(map[string]bool, len(spec.machines))
 	for _, name := range spec.hostnames() {
 		wanted[name] = true
 	}
-	inv.Spec.Hosts = inv.Spec.Hosts.Filter(func(h *apicluster.ZarfHost) bool {
+	inv.Spec.Hosts = inv.Spec.Hosts.Filter(func(h *apicluster.Host) bool {
 		return wanted[h.Hostname]
 	})
 	return inv
@@ -317,7 +317,7 @@ func hostsNamedBy(inv apicluster.ZarfCluster, spec fleetSpec) apicluster.ZarfClu
 //
 // Separate from externalFleet because that memoises: this is the whole derivation and takes
 // its inputs as arguments, so it can be exercised over several documents in one process.
-func specFromInventory(inv apicluster.ZarfCluster, join string) fleetSpec {
+func specFromInventory(inv apicluster.Cluster, join string) fleetSpec {
 	spec := fleetSpec{name: inv.Metadata.Name}
 	for _, h := range inv.Spec.Hosts {
 		group := machineSpec{

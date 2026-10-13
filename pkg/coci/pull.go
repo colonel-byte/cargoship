@@ -151,7 +151,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, include ...layers.LayerType
 }
 
 // LayersFromFiles returns the file oci blob layers referenced by annotation.
-func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.ZarfFiles, folder string) ([]ocispec.Descriptor, error) {
+func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.Files, folder string) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
 	for i, f := range files {

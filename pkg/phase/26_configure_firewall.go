@@ -39,7 +39,7 @@ type ConfigureFirewall struct {
 	GenericPhase
 	Distro    distrocfg.Distro
 	Enabled   bool
-	hosts     cluster.ZarfHosts
+	hosts     cluster.Hosts
 	backends  map[string]firewall.Backend
 	ipaddress []string
 }
@@ -58,10 +58,10 @@ func (p *ConfigureFirewall) Explanation() string {
 }
 
 // Prepare the phase
-func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.backends = make(map[string]firewall.Backend)
 
-	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		selection := firewall.Select(ctx, h)
 		if selection.Backend == nil {
 			if selection.Skipped != nil {
@@ -83,7 +83,7 @@ func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 	}
 
 	for _, backend := range firewall.Backends() {
-		count := len(p.hosts.Filter(func(h *cluster.ZarfHost) bool {
+		count := len(p.hosts.Filter(func(h *cluster.Host) bool {
 			return p.backends[h.String()].Name() == backend.Name()
 		}))
 		logger.From(ctx).Info("nodes with a firewall running", "firewall", backend.Name(), "nodes", count)
@@ -104,7 +104,7 @@ func (p *ConfigureFirewall) Run(ctx context.Context) error {
 	})
 }
 
-func (p *ConfigureFirewall) configureFirewall(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *ConfigureFirewall) configureFirewall(ctx context.Context, h *cluster.Host) error {
 	backend := p.backends[h.String()]
 	if backend == nil {
 		return nil

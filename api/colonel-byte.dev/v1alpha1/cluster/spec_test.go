@@ -22,68 +22,68 @@ import (
 
 func TestZarfClusterProfilesResolveConcurrency(t *testing.T) {
 	t.Run("empty falls back", func(t *testing.T) {
-		p := ZarfClusterProfiles{}
+		p := Profiles{}
 		v, err := p.ResolveConcurrency(10, "5")
 		require.NoError(t, err)
 		require.Equal(t, 5, v)
 	})
 
 	t.Run("empty falls back to percentage", func(t *testing.T) {
-		p := ZarfClusterProfiles{}
+		p := Profiles{}
 		v, err := p.ResolveConcurrency(10, "25%")
 		require.NoError(t, err)
 		require.Equal(t, 3, v)
 	})
 
 	t.Run("fixed count is used as-is", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "1"}
+		p := Profiles{Concurrency: "1"}
 		v, err := p.ResolveConcurrency(10, "5")
 		require.NoError(t, err)
 		require.Equal(t, 1, v)
 	})
 
 	t.Run("fixed zero means unlimited", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "0"}
+		p := Profiles{Concurrency: "0"}
 		v, err := p.ResolveConcurrency(10, "5")
 		require.NoError(t, err)
 		require.Equal(t, 0, v)
 	})
 
 	t.Run("percentage scales and rounds up", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "25%"}
+		p := Profiles{Concurrency: "25%"}
 		v, err := p.ResolveConcurrency(10, "5")
 		require.NoError(t, err)
 		require.Equal(t, 3, v)
 	})
 
 	t.Run("percentage clamps to a minimum of 1", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "25%"}
+		p := Profiles{Concurrency: "25%"}
 		v, err := p.ResolveConcurrency(3, "5")
 		require.NoError(t, err)
 		require.Equal(t, 1, v)
 	})
 
 	t.Run("100 percent covers all hosts", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "100%"}
+		p := Profiles{Concurrency: "100%"}
 		v, err := p.ResolveConcurrency(7, "5")
 		require.NoError(t, err)
 		require.Equal(t, 7, v)
 	})
 
 	t.Run("negative fixed count is an error", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "-1"}
+		p := Profiles{Concurrency: "-1"}
 		_, err := p.ResolveConcurrency(10, "5")
 		require.Error(t, err)
 	})
 
 	t.Run("out of range percentage is an error", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "150%"}
+		p := Profiles{Concurrency: "150%"}
 		_, err := p.ResolveConcurrency(10, "5")
 		require.Error(t, err)
 	})
 
 	t.Run("non-numeric value is an error", func(t *testing.T) {
-		p := ZarfClusterProfiles{Concurrency: "abc"}
+		p := Profiles{Concurrency: "abc"}
 		_, err := p.ResolveConcurrency(10, "5")
 		require.Error(t, err)
 	})
@@ -121,89 +121,89 @@ func TestParseConcurrency(t *testing.T) {
 
 func TestZarfClusterRegistriesValidate(t *testing.T) {
 	cases := map[string]struct {
-		registry ZarfClusterRegistries
+		registry Registries
 		wantErr  string
 	}{
 		"a mirror alone is enough": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "docker.io",
-				Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"},
+				Proxy: &RegistryProxy{URL: "https://mirror.example.com"},
 			},
 		},
 		"credentials alone are enough, for a direct pull": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:           "nexus.example.com",
-				Authentication: ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"},
+				Authentication: RegistryAuth{Username: "robot", Password: "secretpassword"},
 			},
 		},
 		"tls alone is enough": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name: "nexus.example.com",
-				TLS:  &ZarfClusterRegistryTLS{CAFile: "/etc/pki/ca.crt"},
+				TLS:  &RegistryTLS{CAFile: "/etc/pki/ca.crt"},
 			},
 		},
 		"a name on its own configures nothing": {
-			registry: ZarfClusterRegistries{Name: "nexus.example.com"},
+			registry: Registries{Name: "nexus.example.com"},
 			wantErr:  `registry "nexus.example.com": needs at least one of proxy.url, auth, or tls`,
 		},
 		"a nameless entry has nothing to apply to": {
-			registry: ZarfClusterRegistries{
-				Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"},
+			registry: Registries{
+				Proxy: &RegistryProxy{URL: "https://mirror.example.com"},
 			},
 			wantErr: "registry: name is required",
 		},
 		"a name written as a url matches no image": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "https://docker.io",
-				Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"},
+				Proxy: &RegistryProxy{URL: "https://mirror.example.com"},
 			},
 			wantErr: `registry "https://docker.io": name is a registry host, not a URL -- drop the scheme`,
 		},
 		"a name carrying a repository path matches no image": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "docker.io/library",
-				Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"},
+				Proxy: &RegistryProxy{URL: "https://mirror.example.com"},
 			},
 			wantErr: `registry "docker.io/library": name is a registry host, not a repository path -- drop everything after the host`,
 		},
 		"a name with whitespace in it matches no image": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "docker.io ",
-				Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"},
+				Proxy: &RegistryProxy{URL: "https://mirror.example.com"},
 			},
 			wantErr: `registry "docker.io ": name contains whitespace`,
 		},
 		"every registry at once is a name an engine knows": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name: "*",
-				TLS:  &ZarfClusterRegistryTLS{InsecureSkipVerify: true},
+				TLS:  &RegistryTLS{InsecureSkipVerify: true},
 			},
 		},
 		"a proxy url with no host redirects pulls nowhere": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "docker.io",
-				Proxy: &ZarfClusterRegistryProxy{URL: "https:///v2"},
+				Proxy: &RegistryProxy{URL: "https:///v2"},
 			},
 			wantErr: `registry "docker.io": proxy.url "https:///v2" has no host`,
 		},
 		"a proxy url an engine cannot pull over": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "docker.io",
-				Proxy: &ZarfClusterRegistryProxy{URL: "ftp://mirror.example.com"},
+				Proxy: &RegistryProxy{URL: "ftp://mirror.example.com"},
 			},
 			wantErr: `registry "docker.io": proxy.url "ftp://mirror.example.com" uses scheme "ftp", want http or https`,
 		},
 		"credentials belong in auth, not in the proxy url": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "docker.io",
-				Proxy: &ZarfClusterRegistryProxy{URL: "https://robot:secretpassword@mirror.example.com"},
+				Proxy: &RegistryProxy{URL: "https://robot:secretpassword@mirror.example.com"},
 			},
 			wantErr: `registry "docker.io": proxy.url carries credentials -- put them in auth instead`,
 		},
 		"a rewrite the engine could not compile": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name: "docker.io",
-				Proxy: &ZarfClusterRegistryProxy{
+				Proxy: &RegistryProxy{
 					URL:     "https://mirror.example.com",
 					Rewrite: map[string]string{"^rancher/(.*": "mirror/$1"},
 				},
@@ -211,9 +211,9 @@ func TestZarfClusterRegistriesValidate(t *testing.T) {
 			wantErr: "registry \"docker.io\": proxy.rewrite pattern \"^rancher/(.*\" is not a valid regular expression: error parsing regexp: missing closing ): `^rancher/(.*`",
 		},
 		"a rewrite with nothing to rewrite to": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name: "docker.io",
-				Proxy: &ZarfClusterRegistryProxy{
+				Proxy: &RegistryProxy{
 					URL:     "https://mirror.example.com",
 					Rewrite: map[string]string{"^rancher/(.*)": ""},
 				},
@@ -221,23 +221,23 @@ func TestZarfClusterRegistriesValidate(t *testing.T) {
 			wantErr: `registry "docker.io": proxy.rewrite pattern "^rancher/(.*)" has an empty replacement`,
 		},
 		"half of a basic auth pair authenticates nothing": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:           "nexus.example.com",
-				Authentication: ZarfClusterRegistryAuth{Username: "robot"},
+				Authentication: RegistryAuth{Username: "robot"},
 			},
 			wantErr: `registry "nexus.example.com": auth.user is set without auth.pass`,
 		},
 		"a password with nobody to go with": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:           "nexus.example.com",
-				Authentication: ZarfClusterRegistryAuth{Password: "secretpassword"},
+				Authentication: RegistryAuth{Password: "secretpassword"},
 			},
 			wantErr: `registry "nexus.example.com": auth.pass is set without auth.user`,
 		},
 		"a proxy without a url redirects pulls nowhere": {
-			registry: ZarfClusterRegistries{
+			registry: Registries{
 				Name:  "docker.io",
-				Proxy: &ZarfClusterRegistryProxy{Rewrite: map[string]string{"^rancher/(.*)": "mirror/$1"}},
+				Proxy: &RegistryProxy{Rewrite: map[string]string{"^rancher/(.*)": "mirror/$1"}},
 			},
 			wantErr: `registry "docker.io": proxy.url is required when proxy is set`,
 		},
@@ -262,30 +262,30 @@ dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
 `
 
 	cases := map[string]struct {
-		tls     *ZarfClusterRegistryTLS
+		tls     *RegistryTLS
 		wantErr string
 	}{
 		"no tls at all is fine": {},
 		"an inline CA is fine": {
-			tls: &ZarfClusterRegistryTLS{CA: caPEM},
+			tls: &RegistryTLS{CA: caPEM},
 		},
 		"a CA path is fine": {
-			tls: &ZarfClusterRegistryTLS{CAFile: "/etc/pki/ca.crt"},
+			tls: &RegistryTLS{CAFile: "/etc/pki/ca.crt"},
 		},
 		"a client certificate needs its key": {
-			tls:     &ZarfClusterRegistryTLS{CertFile: "/etc/pki/client.crt"},
+			tls:     &RegistryTLS{CertFile: "/etc/pki/client.crt"},
 			wantErr: `registry "nexus.example.com": tls.certFile and tls.keyFile go together`,
 		},
 		"two ways to give the same CA": {
-			tls:     &ZarfClusterRegistryTLS{CA: caPEM, CAFile: "/etc/pki/ca.crt"},
+			tls:     &RegistryTLS{CA: caPEM, CAFile: "/etc/pki/ca.crt"},
 			wantErr: `registry "nexus.example.com": set tls.ca or tls.caFile, not both`,
 		},
 		"a CA that is not a certificate": {
-			tls:     &ZarfClusterRegistryTLS{CA: "/etc/pki/ca.crt"},
+			tls:     &RegistryTLS{CA: "/etc/pki/ca.crt"},
 			wantErr: `registry "nexus.example.com": tls.ca is not a PEM-encoded certificate`,
 		},
 		"a vault-encrypted CA is still ciphertext here": {
-			tls: &ZarfClusterRegistryTLS{CA: "$ANSIBLE_VAULT;1.1;AES256\n62306432326630316632\n"},
+			tls: &RegistryTLS{CA: "$ANSIBLE_VAULT;1.1;AES256\n62306432326630316632\n"},
 		},
 	}
 
@@ -313,9 +313,9 @@ func TestZarfClusterRegistriesMirrorEndpoint(t *testing.T) {
 		"http://mirror.example.com":       "http://mirror.example.com",
 	}
 	for url, want := range cases {
-		registry := ZarfClusterRegistries{Name: "docker.io"}
+		registry := Registries{Name: "docker.io"}
 		if url != "" {
-			registry.Proxy = &ZarfClusterRegistryProxy{URL: url}
+			registry.Proxy = &RegistryProxy{URL: url}
 		}
 		require.Equal(t, want, registry.MirrorEndpoint(), "proxy url %q", url)
 	}
@@ -335,9 +335,9 @@ func TestZarfClusterRegistriesConfigHost(t *testing.T) {
 		"mirror.example.com/ghcr":            "mirror.example.com",
 	}
 	for url, want := range cases {
-		registry := ZarfClusterRegistries{Name: "docker.io"}
+		registry := Registries{Name: "docker.io"}
 		if url != "" {
-			registry.Proxy = &ZarfClusterRegistryProxy{URL: url}
+			registry.Proxy = &RegistryProxy{URL: url}
 		}
 		require.Equal(t, want, registry.ConfigHost(), "proxy url %q", url)
 	}
@@ -348,42 +348,42 @@ func TestValidateRegistries(t *testing.T) {
 dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
 -----END CERTIFICATE-----
 `
-	robot := ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"}
+	robot := RegistryAuth{Username: "robot", Password: "secretpassword"}
 
 	cases := map[string]struct {
-		registries []ZarfClusterRegistries
+		registries []Registries
 		wantErr    string
 	}{
 		"nothing configured is fine": {},
 		"several registries behind one mirror, sharing its credentials": {
-			registries: []ZarfClusterRegistries{
-				{Name: "docker.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"}, Authentication: robot},
-				{Name: "ghcr.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com/ghcr"}, Authentication: robot},
+			registries: []Registries{
+				{Name: "docker.io", Proxy: &RegistryProxy{URL: "https://mirror.example.com"}, Authentication: robot},
+				{Name: "ghcr.io", Proxy: &RegistryProxy{URL: "https://mirror.example.com/ghcr"}, Authentication: robot},
 			},
 		},
 		"the same registry twice": {
-			registries: []ZarfClusterRegistries{
-				{Name: "docker.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"}},
-				{Name: "docker.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://other.example.com"}},
+			registries: []Registries{
+				{Name: "docker.io", Proxy: &RegistryProxy{URL: "https://mirror.example.com"}},
+				{Name: "docker.io", Proxy: &RegistryProxy{URL: "https://other.example.com"}},
 			},
 			wantErr: `registry "docker.io": listed more than once`,
 		},
 		"one mirror, two sets of credentials": {
-			registries: []ZarfClusterRegistries{
-				{Name: "docker.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"}, Authentication: robot},
-				{Name: "ghcr.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com/ghcr"}, Authentication: ZarfClusterRegistryAuth{Token: "tok"}},
+			registries: []Registries{
+				{Name: "docker.io", Proxy: &RegistryProxy{URL: "https://mirror.example.com"}, Authentication: robot},
+				{Name: "ghcr.io", Proxy: &RegistryProxy{URL: "https://mirror.example.com/ghcr"}, Authentication: RegistryAuth{Token: "tok"}},
 			},
 			wantErr: `registries "docker.io" and "ghcr.io" both configure host "mirror.example.com" with different auth or tls settings`,
 		},
 		"one mirror, two sets of tls settings": {
-			registries: []ZarfClusterRegistries{
-				{Name: "docker.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com"}, TLS: &ZarfClusterRegistryTLS{CA: caPEM}},
-				{Name: "ghcr.io", Proxy: &ZarfClusterRegistryProxy{URL: "https://mirror.example.com/ghcr"}, TLS: &ZarfClusterRegistryTLS{InsecureSkipVerify: true}},
+			registries: []Registries{
+				{Name: "docker.io", Proxy: &RegistryProxy{URL: "https://mirror.example.com"}, TLS: &RegistryTLS{CA: caPEM}},
+				{Name: "ghcr.io", Proxy: &RegistryProxy{URL: "https://mirror.example.com/ghcr"}, TLS: &RegistryTLS{InsecureSkipVerify: true}},
 			},
 			wantErr: `registries "docker.io" and "ghcr.io" both configure host "mirror.example.com" with different auth or tls settings`,
 		},
 		"a bad entry is still reported": {
-			registries: []ZarfClusterRegistries{{Name: "docker.io"}},
+			registries: []Registries{{Name: "docker.io"}},
 			wantErr:    `registry "docker.io": needs at least one of proxy.url, auth, or tls`,
 		},
 	}

@@ -23,7 +23,7 @@ import (
 // valuesPath is where a package's own values schema is grafted into the inventory
 // schema. spec and spec.config are both $ref nodes in the generated document, so the
 // $defs entry is the only place the subtree can be edited.
-var valuesPath = []string{"$defs", "ZarfClusterConfig", "properties", "values"}
+var valuesPath = []string{"$defs", "Config", "properties", "values"}
 
 // ComposeInventory returns the inventory schema with a package's values schema grafted
 // onto spec.config.values, so an editor can complete and check the one block of an

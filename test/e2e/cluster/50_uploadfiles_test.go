@@ -51,7 +51,7 @@ func (s *phaseWalk) uploadFiles() {
 
 // manifestOn returns the paths the upload manifest on host records, one per line as
 // "category\tpath".
-func (s *phaseWalk) manifestOn(host *apicluster.ZarfHost) []string {
+func (s *phaseWalk) manifestOn(host *apicluster.Host) []string {
 	s.T().Helper()
 
 	if !host.FileExist(uploadManifestPath) {

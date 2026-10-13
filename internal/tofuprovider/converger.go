@@ -54,7 +54,7 @@ type hostFacts struct {
 type converger interface {
 	// Refresh runs the read-only phases and reports what they found, host by host. It changes
 	// nothing, which is what lets a data source and a resource's Read share it.
-	Refresh(ctx context.Context, c *cluster.ZarfCluster, distroID string) ([]hostFacts, error)
+	Refresh(ctx context.Context, c *cluster.Cluster, distroID string) ([]hostFacts, error)
 }
 
 // DefaultConnectTimeout bounds how long a read waits for a fleet.
@@ -82,7 +82,7 @@ type cargoshipConverger struct {
 // that each declare ReadOnly(), which is the property that makes this safe to run during a plan or
 // a refresh. Nothing here writes to a host, and no lock is taken -- Lock is deliberately not
 // read-only, so it is not in this list.
-func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.ZarfCluster, distroID string) ([]hostFacts, error) {
+func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.Cluster, distroID string) ([]hostFacts, error) {
 	dis, err := distroModule(distroID)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (c cargoshipConverger) Refresh(ctx context.Context, cfg *cluster.ZarfCluste
 // The OS release is read through host.OS() rather than off the metadata, because that is where
 // DetectOS caches it -- and it is read only when the host has one, since the accessor would
 // otherwise try to detect it over a connection the disconnect phase has already closed.
-func factsOf(hosts cluster.ZarfHosts) []hostFacts {
+func factsOf(hosts cluster.Hosts) []hostFacts {
 	facts := make([]hostFacts, 0, len(hosts))
 	for _, host := range hosts {
 		fact := hostFacts{
@@ -163,10 +163,10 @@ func factsOf(hosts cluster.ZarfHosts) []hostFacts {
 // port when it is not the default.
 //
 // rig's CompositeConfig.String renders a Go-ish "ssh.Config{127.0.0.1:2223}", which is right for a
-// log line and wrong for an attribute somebody writes a comparison against. ZarfHost.Address is
+// log line and wrong for an attribute somebody writes a comparison against. Host.Address is
 // not an option either: it reads through the embedded rig client, which a host that has already
 // been disconnected no longer has.
-func addressOf(host *cluster.ZarfHost) string {
+func addressOf(host *cluster.Host) string {
 	cfg := host.ConnectionConfig.SSH
 	if cfg == nil {
 		return host.ConnectionConfig.String()

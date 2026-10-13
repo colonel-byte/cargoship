@@ -96,7 +96,7 @@ const distroTypeUpstream = "upstream"
 // that carries a key this binary has never heard of is still a package worth building. Install
 // time keeps the authoritative check, where the key is narrowed to the role the node actually
 // plays and an unrecognized one is dropped from the config it writes.
-func logUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
+func logUnknownEngineConfig(ctx context.Context, d distro.Distro) {
 	cfg := engineConfigKeys(d.Spec.Config.Engine[config.EngineConfig])
 	if len(cfg) == 0 {
 		return
@@ -142,7 +142,7 @@ func logUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
 // cfg alongside node instead of checking a flat key set, since upstream's schema is a nested
 // extract.FieldNode tree, not a flag-derived struct gen.Keys can reflect over. Warn-only, like
 // its caller -- nothing here mutates cfg.
-func logUnknownNestedEngineConfig(ctx context.Context, d distro.ZarfDistro, node extract.FieldNode, cfg map[string]any) {
+func logUnknownNestedEngineConfig(ctx context.Context, d distro.Distro, node extract.FieldNode, cfg map[string]any) {
 	l := logger.From(ctx)
 	for _, k := range slices.Sorted(maps.Keys(cfg)) {
 		child, known := node.Children[k]
@@ -173,7 +173,7 @@ func engineConfigKeys(v any) map[string]any {
 }
 
 // AssembleDistro creates the actual tarballs
-func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error) {
+func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
 	logUnknownEngineConfig(ctx, d)
@@ -322,7 +322,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 // package's own defaults: a cluster's overrides do not exist yet at create time, so an
 // action sees the same values every build, while the surfaces rendered at install time see
 // the overridden ones.
-func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, buildPath string) (_ distro.ZarfDistro, _ value.Values, err error) {
+func packageValues(ctx context.Context, d distro.Distro, distroPath string, buildPath string) (_ distro.Distro, _ value.Values, err error) {
 	vals := d.Spec.Values
 	if len(vals.Files) == 0 && vals.Schema == "" {
 		return d, nil, nil
@@ -392,7 +392,7 @@ func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, 
 // install time is the only thing that applies a mapping for real. It warns rather than
 // fails: a mapping that has always been wrong should not turn a package that builds today
 // into one that does not.
-func checkMappings(ctx context.Context, d distro.ZarfDistro, values map[string]any) {
+func checkMappings(ctx context.Context, d distro.Distro, values map[string]any) {
 	if len(d.Spec.Values.Mappings) == 0 {
 		return
 	}
@@ -488,7 +488,7 @@ func (c *downloadCache) cleanup() error {
 // archives may be nil, in which case any archive downloaded here is removed before returning.
 // A caller staging more than one file passes a shared cache so that an archive several files
 // are extracted from is downloaded once; see newDownloadCache.
-func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.ZarfFile, overrides []fileoverride.Override, archives *downloadCache) (provenance *distro.FileSource, err error) {
+func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, archives *downloadCache) (provenance *distro.FileSource, err error) {
 	rel := filepath.Join(resourceType, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 	dst := filepath.Join(buildPath, rel)
 	destinationDir := filepath.Dir(dst)
@@ -652,7 +652,7 @@ func archStrings(arches api.Arches) []string {
 	return out
 }
 
-func recordDistroMetadata(d distro.ZarfDistro, opts AssembleOptions, fileSources []distro.FileSource) distro.ZarfDistro {
+func recordDistroMetadata(d distro.Distro, opts AssembleOptions, fileSources []distro.FileSource) distro.Distro {
 	arches := d.Metadata.Arches()
 	d.Build.Architectures = arches
 	// The scalar stays populated for a single architecture package so that readers which only know

@@ -112,11 +112,11 @@ func TestResolveVaultPasswordUnreadableFile(t *testing.T) {
 }
 
 func TestDecryptRegistryAuthNoEncryptedValues(t *testing.T) {
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name: "docker.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{
+			Authentication: cluster.RegistryAuth{
 				Username: "plainuser",
 				Password: "plainpass",
 			},
@@ -144,11 +144,11 @@ func TestDecryptRegistryAuthDecryptsEncryptedFields(t *testing.T) {
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name: "ghcr.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{
+			Authentication: cluster.RegistryAuth{
 				Username: "plainuser",
 				Password: encryptedPass,
 				Token:    encryptedToken,
@@ -178,11 +178,11 @@ func TestDecryptRegistryAuthMissingPassword(t *testing.T) {
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name:           "ghcr.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{Password: encrypted},
+			Authentication: cluster.RegistryAuth{Password: encrypted},
 		},
 	}
 
@@ -223,11 +223,11 @@ func TestDecryptRegistryAuthWrongPassword(t *testing.T) {
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name:           "ghcr.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{Password: encrypted},
+			Authentication: cluster.RegistryAuth{Password: encrypted},
 		},
 	}
 
@@ -251,11 +251,11 @@ func TestDecryptRegistryAuthDecryptsInlineCA(t *testing.T) {
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name: "ghcr.io",
-			TLS:  &cluster.ZarfClusterRegistryTLS{CA: encryptedCA},
+			TLS:  &cluster.RegistryTLS{CA: encryptedCA},
 		},
 	}
 
@@ -277,11 +277,11 @@ func TestDecryptRegistryAuthRejectsDecryptedCAThatIsNotACertificate(t *testing.T
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name: "ghcr.io",
-			TLS:  &cluster.ZarfClusterRegistryTLS{CA: encryptedCA},
+			TLS:  &cluster.RegistryTLS{CA: encryptedCA},
 		},
 	}
 
@@ -302,12 +302,12 @@ func TestVerifyRegistryAuthLeavesTheDocumentAlone(t *testing.T) {
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name:           "ghcr.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: encryptedPass},
-			TLS:            &cluster.ZarfClusterRegistryTLS{CA: encryptedCA},
+			Authentication: cluster.RegistryAuth{Username: "robot", Password: encryptedPass},
+			TLS:            &cluster.RegistryTLS{CA: encryptedCA},
 		},
 	}
 
@@ -330,11 +330,11 @@ func TestVerifyRegistryAuthMissingPassword(t *testing.T) {
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name:           "ghcr.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: encrypted},
+			Authentication: cluster.RegistryAuth{Username: "robot", Password: encrypted},
 		},
 	}
 
@@ -354,11 +354,11 @@ func TestVerifyRegistryAuthWrongPassword(t *testing.T) {
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name:           "ghcr.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: encrypted},
+			Authentication: cluster.RegistryAuth{Username: "robot", Password: encrypted},
 		},
 	}
 
@@ -376,11 +376,11 @@ func TestVerifyRegistryAuthRejectsDecryptedCAThatIsNotACertificate(t *testing.T)
 		t.Fatalf("vault.Encrypt() error = %v", err)
 	}
 
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name: "ghcr.io",
-			TLS:  &cluster.ZarfClusterRegistryTLS{CA: encryptedCA},
+			TLS:  &cluster.RegistryTLS{CA: encryptedCA},
 		},
 	}
 
@@ -390,11 +390,11 @@ func TestVerifyRegistryAuthRejectsDecryptedCAThatIsNotACertificate(t *testing.T)
 }
 
 func TestVerifyRegistryAuthNothingEncrypted(t *testing.T) {
-	dis := &cluster.ZarfCluster{}
-	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+	dis := &cluster.Cluster{}
+	dis.Spec.Config.Registries = []cluster.Registries{
 		{
 			Name:           "docker.io",
-			Authentication: cluster.ZarfClusterRegistryAuth{Username: "plainuser", Password: "plainpass"},
+			Authentication: cluster.RegistryAuth{Username: "plainuser", Password: "plainpass"},
 		},
 	}
 

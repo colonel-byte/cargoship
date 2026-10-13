@@ -30,12 +30,12 @@ import (
 // RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.
 type RemoveSelinuxPolicy struct {
 	GenericPhase
-	selinuxPolicyHosts cluster.ZarfHosts
+	selinuxPolicyHosts cluster.Hosts
 }
 
 // Prepare the phase
-func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	p.selinuxPolicyHosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
+	p.selinuxPolicyHosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return selinuxPolicyCapable(h) && h.FileExist(SELinuxStateFile)
 	})
 
@@ -76,7 +76,7 @@ func (p *RemoveSelinuxPolicy) ShouldRun() bool {
 // state it is undoing can legitimately be half gone - a module removed by hand, a context already
 // deleted - so a failure to remove something that is not there must not strand the host with the
 // state file still claiming it is.
-func (p *RemoveSelinuxPolicy) removeHost(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *RemoveSelinuxPolicy) removeHost(ctx context.Context, h *cluster.Host) error {
 	state, err := readSELinuxState(h)
 	if err != nil {
 		logger.From(ctx).Warn("could not read the selinux state file, leaving the policy in place", "host", h, "file", SELinuxStateFile, "error", err)
@@ -97,9 +97,9 @@ func (p *RemoveSelinuxPolicy) removeHost(ctx context.Context, h *cluster.ZarfHos
 }
 
 // removeFileContexts deletes every recorded mapping and relabels the paths back to the default.
-func (p *RemoveSelinuxPolicy) removeFileContexts(ctx context.Context, h *cluster.ZarfHost, state selinuxState) {
+func (p *RemoveSelinuxPolicy) removeFileContexts(ctx context.Context, h *cluster.Host, state selinuxState) {
 	for _, fc := range state.FileContexts {
-		del := selinuxFcontextCommand("-d", distro.ZarfDistroSELinuxFileContext{
+		del := selinuxFcontextCommand("-d", distro.SELinuxFileContext{
 			Path:     fc.Path,
 			Type:     fc.Type,
 			FileType: fc.FileType,
@@ -119,7 +119,7 @@ func (p *RemoveSelinuxPolicy) removeFileContexts(ctx context.Context, h *cluster
 }
 
 // restoreBooleans puts every recorded boolean back to the value the host held beforehand.
-func (p *RemoveSelinuxPolicy) restoreBooleans(ctx context.Context, h *cluster.ZarfHost, state selinuxState) {
+func (p *RemoveSelinuxPolicy) restoreBooleans(ctx context.Context, h *cluster.Host, state selinuxState) {
 	if len(state.Booleans) == 0 {
 		return
 	}
@@ -135,7 +135,7 @@ func (p *RemoveSelinuxPolicy) restoreBooleans(ctx context.Context, h *cluster.Za
 }
 
 // removeModules uninstalls every recorded module and deletes the CIL source cargoship wrote.
-func (p *RemoveSelinuxPolicy) removeModules(ctx context.Context, h *cluster.ZarfHost, state selinuxState) {
+func (p *RemoveSelinuxPolicy) removeModules(ctx context.Context, h *cluster.Host, state selinuxState) {
 	for _, m := range state.Modules {
 		remove := fmt.Sprintf("%s -X %d -r %s", SEModule, m.Priority, shellQuote(m.Name))
 		logger.From(ctx).Info("removing selinux module", "host", h, "module", m.Name, "priority", m.Priority)
@@ -158,7 +158,7 @@ func (p *RemoveSelinuxPolicy) removeModules(ctx context.Context, h *cluster.Zarf
 }
 
 // readSELinuxState reads the record cargoship left on h.
-func readSELinuxState(h *cluster.ZarfHost) (selinuxState, error) {
+func readSELinuxState(h *cluster.Host) (selinuxState, error) {
 	var state selinuxState
 
 	raw, err := h.ReadFile(SELinuxStateFile)

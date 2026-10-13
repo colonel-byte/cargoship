@@ -321,7 +321,7 @@ func docWithPlaintext(value string) []byte {
 // The configuration type is not the route here, although it is everywhere the document under test
 // is a configuration. A fuzzed document is whatever YAML it happens to be, and a mapping holding a
 // key the configuration has no field for takes the rest of that mapping down with it: an auth
-// written "{0, pass: hunter2}" decodes to an empty ZarfClusterRegistryAuth, credential and all. A
+// written "{0, pass: hunter2}" decodes to an empty RegistryAuth, credential and all. A
 // decode into the configuration therefore cannot say what EncryptAtPath wrote, which is the one
 // thing the caller needs to know.
 //

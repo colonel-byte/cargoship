@@ -25,37 +25,37 @@ import (
 func TestFirewalldZoneCmd(t *testing.T) {
 	tests := []struct {
 		name string
-		rule cluster.ZarfFirewallRule
+		rule cluster.FirewallRule
 		want string
 	}{
 		{
 			name: "port only becomes add-port",
-			rule: cluster.ZarfFirewallRule{Action: "allow", Port: "6443", Protocol: "tcp"},
+			rule: cluster.FirewallRule{Action: "allow", Port: "6443", Protocol: "tcp"},
 			want: "firewall-cmd --permanent --zone=public --add-port=6443/tcp",
 		},
 		{
 			name: "port range keeps firewalld's dash form",
-			rule: cluster.ZarfFirewallRule{Action: "allow", Port: "30000-32767", Protocol: "tcp"},
+			rule: cluster.FirewallRule{Action: "allow", Port: "30000-32767", Protocol: "tcp"},
 			want: "firewall-cmd --permanent --zone=public --add-port=30000-32767/tcp",
 		},
 		{
 			name: "a source becomes a rich rule",
-			rule: cluster.ZarfFirewallRule{Action: "allow", Source: "10.0.0.0/8", Port: "9100", Protocol: "tcp"},
+			rule: cluster.FirewallRule{Action: "allow", Source: "10.0.0.0/8", Port: "9100", Protocol: "tcp"},
 			want: `firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" source address="10.0.0.0/8" port port="9100" protocol="tcp" accept'`,
 		},
 		{
 			name: "protocol without a port",
-			rule: cluster.ZarfFirewallRule{Action: "allow", Source: "10.0.0.0/8", Protocol: "sctp"},
+			rule: cluster.FirewallRule{Action: "allow", Source: "10.0.0.0/8", Protocol: "sctp"},
 			want: `firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" source address="10.0.0.0/8" protocol value="sctp" accept'`,
 		},
 		{
 			name: "an ipv6 address picks the ipv6 family",
-			rule: cluster.ZarfFirewallRule{Action: "deny", Source: "fd00::/8"},
+			rule: cluster.FirewallRule{Action: "deny", Source: "fd00::/8"},
 			want: `firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv6" source address="fd00::/8" drop'`,
 		},
 		{
 			name: "an out rule matches on the destination",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Action: "reject", Direction: "out", Destination: "10.43.0.10", Port: "53", Protocol: "udp",
 			},
 			want: `firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" destination address="10.43.0.10" port port="53" protocol="udp" reject'`,
@@ -71,23 +71,23 @@ func TestFirewalldZoneCmd(t *testing.T) {
 	}
 
 	t.Run("no match at all", func(t *testing.T) {
-		_, err := firewalldZoneCmd(cluster.ZarfFirewallRule{Action: "allow"})
+		_, err := firewalldZoneCmd(cluster.FirewallRule{Action: "allow"})
 		require.ErrorContains(t, err, "needs a source, destination, or port")
 	})
 
 	t.Run("a bare port cannot be denied", func(t *testing.T) {
-		_, err := firewalldZoneCmd(cluster.ZarfFirewallRule{Action: "deny", Port: "80", Protocol: "tcp"})
+		_, err := firewalldZoneCmd(cluster.FirewallRule{Action: "deny", Port: "80", Protocol: "tcp"})
 		require.ErrorContains(t, err, "can only allow a port")
 	})
 
 	t.Run("unknown action", func(t *testing.T) {
-		_, err := firewalldZoneCmd(cluster.ZarfFirewallRule{Action: "drop", Port: "80", Protocol: "tcp"})
+		_, err := firewalldZoneCmd(cluster.FirewallRule{Action: "drop", Port: "80", Protocol: "tcp"})
 		require.ErrorContains(t, err, "unknown firewall action")
 	})
 }
 
 func TestFirewalldPolicy(t *testing.T) {
-	got, err := firewalldPolicy(cluster.ZarfFirewallRule{
+	got, err := firewalldPolicy(cluster.FirewallRule{
 		Name: "ingress-http", Action: "allow", Direction: "forward",
 		Ingress: "public", Egress: "trusted", Port: "80", Protocol: "tcp",
 	})
@@ -95,11 +95,11 @@ func TestFirewalldPolicy(t *testing.T) {
 	require.Equal(t, "ACCEPT", got.Target)
 	require.Equal(t, "public", got.Ingress.Name)
 	require.Equal(t, "trusted", got.Egress.Name)
-	require.Equal(t, []cluster.ZarfFirewallPort{{Port: "80", Protocol: "tcp"}}, got.Ports)
+	require.Equal(t, []cluster.FirewallPort{{Port: "80", Protocol: "tcp"}}, got.Ports)
 	require.Equal(t, firewalldPolicyShort, got.Short)
 
 	t.Run("no port means no port element", func(t *testing.T) {
-		got, err := firewalldPolicy(cluster.ZarfFirewallRule{
+		got, err := firewalldPolicy(cluster.FirewallRule{
 			Action: "reject", Direction: "forward", Ingress: "public", Egress: "trusted",
 		})
 		require.NoError(t, err)
@@ -122,8 +122,8 @@ func TestFirewalldTarget(t *testing.T) {
 func TestPlanIsEmpty(t *testing.T) {
 	require.True(t, Plan{}.IsEmpty())
 	require.False(t, Plan{NodeAddresses: []string{"10.0.0.1"}}.IsEmpty())
-	require.False(t, Plan{Ports: []cluster.ZarfHostPort{{Port: "80", Protocol: "tcp"}}}.IsEmpty())
-	require.False(t, Plan{Policies: map[string]cluster.ZarfFirewallPolicyConfig{"p": {}}}.IsEmpty())
+	require.False(t, Plan{Ports: []cluster.HostPort{{Port: "80", Protocol: "tcp"}}}.IsEmpty())
+	require.False(t, Plan{Policies: map[string]cluster.FirewallPolicyConfig{"p": {}}}.IsEmpty())
 }
 
 func TestSortedKeys(t *testing.T) {
@@ -141,21 +141,21 @@ func TestBackendsOrder(t *testing.T) {
 
 func TestDetectWithoutAConfigurer(t *testing.T) {
 	ctx := context.Background()
-	require.False(t, (&Firewalld{}).Detect(ctx, &cluster.ZarfHost{}))
-	require.False(t, (&UFW{}).Detect(ctx, &cluster.ZarfHost{}))
-	require.False(t, (&Nftables{}).Detect(ctx, &cluster.ZarfHost{}))
-	require.Nil(t, Select(ctx, &cluster.ZarfHost{}).Backend)
-	require.Nil(t, Select(ctx, &cluster.ZarfHost{}).Skipped)
+	require.False(t, (&Firewalld{}).Detect(ctx, &cluster.Host{}))
+	require.False(t, (&UFW{}).Detect(ctx, &cluster.Host{}))
+	require.False(t, (&Nftables{}).Detect(ctx, &cluster.Host{}))
+	require.Nil(t, Select(ctx, &cluster.Host{}).Backend)
+	require.Nil(t, Select(ctx, &cluster.Host{}).Skipped)
 }
 
 func TestInstalledWithoutAConfigurer(t *testing.T) {
 	ctx := context.Background()
-	require.False(t, (&Firewalld{}).Installed(ctx, &cluster.ZarfHost{}))
-	require.False(t, (&UFW{}).Installed(ctx, &cluster.ZarfHost{}))
-	require.False(t, (&Nftables{}).Installed(ctx, &cluster.ZarfHost{}))
+	require.False(t, (&Firewalld{}).Installed(ctx, &cluster.Host{}))
+	require.False(t, (&UFW{}).Installed(ctx, &cluster.Host{}))
+	require.False(t, (&Nftables{}).Installed(ctx, &cluster.Host{}))
 }
 
 func TestPreferredFirewallWithoutAConfigurer(t *testing.T) {
 	require.Empty(t, preferredFirewall(nil))
-	require.Empty(t, preferredFirewall(&cluster.ZarfHost{}))
+	require.Empty(t, preferredFirewall(&cluster.Host{}))
 }

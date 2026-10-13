@@ -78,8 +78,8 @@ var known = []string{
 	VarProfile,
 }
 
-// hostFromVars builds one ZarfHost from the variables Ansible resolved for it.
-func hostFromVars(a assignment, vars map[string]any) (*cluster.ZarfHost, error) {
+// hostFromVars builds one Host from the variables Ansible resolved for it.
+func hostFromVars(a assignment, vars map[string]any) (*cluster.Host, error) {
 	if err := checkUnknown(a.Host, vars); err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func hostFromVars(a assignment, vars map[string]any) (*cluster.ZarfHost, error) 
 		hostname = given
 	}
 
-	host := &cluster.ZarfHost{
+	host := &cluster.Host{
 		ClientWithConfig: rig.ClientWithConfig{
 			ConnectionConfig: rig.CompositeConfig{SSH: sshCfg},
 		},

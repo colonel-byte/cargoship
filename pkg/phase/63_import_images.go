@@ -29,7 +29,7 @@ import (
 type ImportImages struct {
 	GenericPhase
 	Distro distrocfg.Distro
-	hosts  cluster.ZarfHosts
+	hosts  cluster.Hosts
 	path   string
 }
 
@@ -44,7 +44,7 @@ func (p *ImportImages) Explanation() string {
 }
 
 // Prepare the phase
-func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *ImportImages) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.GenericPhase.Prepare(c, d); err != nil {
 		logger.From(ctx).Warn("got", "error", err)
 	}
@@ -63,7 +63,7 @@ func (p *ImportImages) ShouldRun() bool {
 // Run the phase
 func (p *ImportImages) Run(ctx context.Context) error {
 	importer := p.Distro.(distrocfg.ImageImporter) //nolint:errcheck
-	return p.parallelDo(ctx, p.hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+	return p.parallelDo(ctx, p.hosts, func(_ context.Context, h *cluster.Host) error {
 		return importer.ImportImages(h, p.path)
 	})
 }

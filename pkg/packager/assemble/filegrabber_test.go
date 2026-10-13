@@ -60,7 +60,7 @@ func TestFileGrabberRemoteOverride(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + srv.URL + "/mirror"})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
@@ -92,7 +92,7 @@ func TestFileGrabberLocalOverride(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + staged})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
@@ -120,7 +120,7 @@ func TestFileGrabberRefusesOverrideWithoutShasum(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + srv.URL})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 	}
@@ -139,7 +139,7 @@ func TestFileGrabberChecksumMismatchLeavesNothingBehind(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + srv.URL})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
@@ -161,7 +161,7 @@ func TestFileGrabberUnmatchedSourceIsUntouched(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=https://mirror.invalid"})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: srv.URL + "/k3s",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
@@ -183,7 +183,7 @@ func TestFileGrabberLocalSourceStillResolvesAgainstDistroPath(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(distroPath, "k3s"), []byte(grabbedPayload), 0o600))
 
 	buildPath := t.TempDir()
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "k3s",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
@@ -213,7 +213,7 @@ func TestFileGrabberExtractPathChecksExtractedFileShasum(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://github.com=" + srv.URL})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      "https://github.com/rancher/rke2/releases/download/v1.37.0+rke2r1/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",
@@ -259,13 +259,13 @@ func TestFileGrabberExtractPathReusesCachedArchive(t *testing.T) {
 		require.NoError(t, archives.cleanup())
 	})
 
-	file1 := v1alpha1.ZarfFile{
+	file1 := v1alpha1.File{
 		Source:      srv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/one",
 		Target:      "/usr/local/bin/one",
 		Shasum:      file1Hex,
 	}
-	file2 := v1alpha1.ZarfFile{
+	file2 := v1alpha1.File{
 		Source:      srv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/two",
 		Target:      "/usr/local/bin/two",
@@ -364,7 +364,7 @@ func TestFileGrabberExtractPathWithoutCacheRemovesArchive(t *testing.T) {
 	tempRoot := isolateTempDirectory(t)
 	buildPath := t.TempDir()
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",
@@ -390,7 +390,7 @@ func TestFileGrabberExtractPathFailedDownloadRemovesArchive(t *testing.T) {
 	tempRoot := isolateTempDirectory(t)
 	archives := newDownloadCache()
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",
@@ -428,13 +428,13 @@ func TestFileGrabberExtractPathArchivesSharingABaseName(t *testing.T) {
 		require.NoError(t, archives.cleanup())
 	})
 
-	first := v1alpha1.ZarfFile{
+	first := v1alpha1.File{
 		Source:      firstSrv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/tool",
 		Target:      "/usr/local/bin/first",
 		Shasum:      hex.EncodeToString(firstSum[:]),
 	}
-	second := v1alpha1.ZarfFile{
+	second := v1alpha1.File{
 		Source:      secondSrv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/tool",
 		Target:      "/usr/local/bin/second",
@@ -482,7 +482,7 @@ func TestDownloadCacheCleanupRemovesCachedArchives(t *testing.T) {
 	tempRoot := isolateTempDirectory(t)
 	archives := newDownloadCache()
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",

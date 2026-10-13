@@ -53,17 +53,17 @@ import (
 type UploadFiles struct {
 	GenericPhase
 
-	hosts    cluster.ZarfHosts
-	disFiles v1alpha1.ZarfFiles
+	hosts    cluster.Hosts
+	disFiles v1alpha1.Files
 	// imgFiles holds the image tarballs to upload, keyed by the architecture of the host
 	// receiving them. An image pulled for several architectures is exported once per
 	// architecture the cluster actually runs, into its own directory under the tarball dir.
-	imgFiles map[api.Arch][]v1alpha1.ZarfFile
+	imgFiles map[api.Arch][]v1alpha1.File
 
 	// priorManifest holds each host's upload manifest as it was before this run touched it,
 	// captured in Prepare so Run can tell which images an upgrade no longer uploads (e.g. an
 	// image tag that was removed from the distro config, or renamed to a new version).
-	priorManifest map[*cluster.ZarfHost][]ManifestEntry
+	priorManifest map[*cluster.Host][]ManifestEntry
 }
 
 // Title for the phase
@@ -82,14 +82,14 @@ var (
 )
 
 // Prepare the phase
-func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	p.manager.Config = c
-	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return (len(h.Files) + len(d.Spec.Config.Files) + len(p.manager.Distro.Spec.Config.ImagesConfig.Images)) > 0
 	})
 	p.disFiles = p.manager.Distro.Spec.Config.Files
 
-	p.priorManifest = make(map[*cluster.ZarfHost][]ManifestEntry, len(p.manager.Config.Spec.Hosts))
+	p.priorManifest = make(map[*cluster.Host][]ManifestEntry, len(p.manager.Config.Spec.Hosts))
 	for _, h := range p.manager.Config.Spec.Hosts {
 		p.priorManifest[h] = p.readManifest(h)
 	}
@@ -106,7 +106,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 	// architecture the package carries, so applying a multi-architecture package to a cluster of
 	// one architecture does not pay to export images nobody uploads.
 	arches := hostArches(ctx, p.manager.Config.Spec.Hosts)
-	p.imgFiles = make(map[api.Arch][]v1alpha1.ZarfFile, len(arches))
+	p.imgFiles = make(map[api.Arch][]v1alpha1.File, len(arches))
 
 	for _, arch := range arches {
 		if err := p.exportImagesForArch(ctx, src, store, arch); err != nil {
@@ -194,7 +194,7 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 			return err
 		}
 
-		p.imgFiles[arch] = append(p.imgFiles[arch], v1alpha1.ZarfFile{
+		p.imgFiles[arch] = append(p.imgFiles[arch], v1alpha1.File{
 			Name:        tarBallName,
 			Target:      p.manager.Distro.Spec.Config.ImagesConfig.Path,
 			TargetIsDir: true,
@@ -296,7 +296,7 @@ func (p *UploadFiles) Run(ctx context.Context) error {
 // is scoped to the "image" category: the engine binary phases run after this one and haven't
 // recorded their own files into h.Metadata.UploadedFiles yet, so comparing the full manifest
 // here would misread their files as stale and delete a still-in-use engine binary.
-func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.Host) error {
 	current := ParseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
 	old := filterManifestByCategory(p.priorManifest[h], "image")
 	current = filterManifestByCategory(current, "image")
@@ -304,7 +304,7 @@ func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost
 	return nil
 }
 
-func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.Host) error {
 	l := logger.From(ctx)
 
 	files := slices.Concat(p.disFiles, p.manager.Distro.Spec.Config.OS.Files)
@@ -340,8 +340,8 @@ func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHos
 
 // distroFilesFor is the package's own files as this host needs them uploaded, holding only the
 // files a host running arch has any use for.
-func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.ZarfHost, arch api.Arch) ([]v1alpha1.ZarfFile, error) {
-	files := []v1alpha1.ZarfFile{}
+func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.Host, arch api.Arch) ([]v1alpha1.File, error) {
+	files := []v1alpha1.File{}
 
 	for i, f := range p.disFiles {
 		if ctx.Err() != nil {
@@ -360,7 +360,7 @@ func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.ZarfHost, a
 			f.OriginalTarget = target
 		}
 		logger.From(ctx).Debug("need to upload from distro package", "source", filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)), "target", target)
-		files = append(files, v1alpha1.ZarfFile{
+		files = append(files, v1alpha1.File{
 			Name:           filepath.Base(f.Target),
 			Target:         target,
 			OriginalTarget: f.Target,
@@ -375,7 +375,7 @@ func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.ZarfHost, a
 	return files, nil
 }
 
-func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.Host) error {
 	arch, err := hostArch(h)
 	if err != nil {
 		return err
@@ -392,7 +392,7 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		}
 		logger.From(ctx).Debug("need to upload", "target", f.Destination)
 		if f.Data != "" {
-			err := p.uploadData(ctx, h, &v1alpha1.ZarfFile{
+			err := p.uploadData(ctx, h, &v1alpha1.File{
 				Name:   filepath.Base(f.Destination),
 				Target: f.Destination,
 				Data:   f.Data,

@@ -22,7 +22,7 @@ import (
 // selinuxEnabled reports what the host itself says about SELinux, using the same check the
 // phase makes. The phase's own helper is unexported, so the walk asks the host directly
 // rather than reaching into the phase package.
-func selinuxEnabled(h *cluster.ZarfHost) bool {
+func selinuxEnabled(h *cluster.Host) bool {
 	return h.Sudo().Exec("getenforce | grep -iq enforcing") == nil
 }
 

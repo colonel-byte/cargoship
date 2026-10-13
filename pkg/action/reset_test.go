@@ -24,10 +24,10 @@ import (
 
 // targetedCluster is a fleet a target list can name: one controller and two workers, each with the
 // hostname an operator would write in --target-hosts.
-func targetedCluster() *cluster.ZarfCluster {
-	return &cluster.ZarfCluster{
-		Spec: cluster.ZarfClusterSpec{
-			Hosts: cluster.ZarfHosts{
+func targetedCluster() *cluster.Cluster {
+	return &cluster.Cluster{
+		Spec: cluster.Spec{
+			Hosts: cluster.Hosts{
 				{
 					Hostname: "control1",
 					Role:     cluster.RoleController,

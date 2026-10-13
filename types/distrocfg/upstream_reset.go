@@ -26,7 +26,7 @@ import (
 // rules rather than removing them itself. Each post-reset command is best-effort -- a link that
 // does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected
 // common case, not a failure worth reporting.
-func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) error {
+func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) error {
 	if _, err := host.SudoExecOutput("kubeadm reset -f"); err != nil {
 		return fmt.Errorf("kubeadm reset: %w", err)
 	}

@@ -32,7 +32,7 @@ import (
 // Distro struct
 type Distro struct {
 	cfg    *types.DistroConfig
-	distro distro.ZarfDistro
+	distro distro.Distro
 	tmp    string
 }
 
@@ -41,7 +41,7 @@ type DistroLayout struct {
 	dirPath string
 	digest  string
 	cache   *manifestCache
-	Distro  distro.ZarfDistro
+	Distro  distro.Distro
 }
 
 // DistroLayoutOptions struct
@@ -73,7 +73,7 @@ var ErrNoVerificationMaterial = errors.New("no verification material available")
 func New(cfg *types.DistroConfig) (*Distro, error) {
 	dis := Distro{
 		cfg:    cfg,
-		distro: distro.ZarfDistro{},
+		distro: distro.Distro{},
 		tmp:    "/tmp",
 	}
 

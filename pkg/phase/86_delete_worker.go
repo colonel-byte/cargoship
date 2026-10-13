@@ -33,7 +33,7 @@ type DeleteWorkers struct {
 	DeleteCommon
 	NoDrain          bool
 	WorkerConcurrent string
-	hosts            cluster.ZarfHosts
+	hosts            cluster.Hosts
 }
 
 // Title for the phase
@@ -52,7 +52,7 @@ func (p *DeleteWorkers) ShouldRun() bool {
 }
 
 // Prepare the phase
-func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.DeleteCommon.Prepare(ctx, c, d); err != nil {
 		logger.From(ctx).Warn("failed when setting up common logic", "error", err)
 	}
@@ -70,7 +70,7 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *
 
 	candidates := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
 	p.nodeNames = p.resolveNodeNames(ctx, candidates)
-	p.hosts = candidates.Filter(func(h *cluster.ZarfHost) bool {
+	p.hosts = candidates.Filter(func(h *cluster.Host) bool {
 		if _, inCluster := p.nodeNames[h.String()]; !inCluster {
 			return false
 		}

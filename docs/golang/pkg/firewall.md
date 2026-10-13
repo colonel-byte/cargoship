@@ -17,23 +17,23 @@ A Plan describes what the cluster needs open on one node: the addresses of its p
 - [type Backend](<#Backend>)
   - [func Backends\(\) \[\]Backend](<#Backends>)
 - [type Firewalld](<#Firewalld>)
-  - [func \(f \*Firewalld\) Apply\(ctx context.Context, h \*cluster.ZarfHost, p Plan\) error](<#Firewalld.Apply>)
-  - [func \(f \*Firewalld\) Detect\(ctx context.Context, h \*cluster.ZarfHost\) bool](<#Firewalld.Detect>)
-  - [func \(f \*Firewalld\) Installed\(\_ context.Context, h \*cluster.ZarfHost\) bool](<#Firewalld.Installed>)
+  - [func \(f \*Firewalld\) Apply\(ctx context.Context, h \*cluster.Host, p Plan\) error](<#Firewalld.Apply>)
+  - [func \(f \*Firewalld\) Detect\(ctx context.Context, h \*cluster.Host\) bool](<#Firewalld.Detect>)
+  - [func \(f \*Firewalld\) Installed\(\_ context.Context, h \*cluster.Host\) bool](<#Firewalld.Installed>)
   - [func \(f \*Firewalld\) Name\(\) string](<#Firewalld.Name>)
 - [type Nftables](<#Nftables>)
-  - [func \(n \*Nftables\) Apply\(ctx context.Context, h \*cluster.ZarfHost, p Plan\) error](<#Nftables.Apply>)
-  - [func \(n \*Nftables\) Detect\(ctx context.Context, h \*cluster.ZarfHost\) bool](<#Nftables.Detect>)
-  - [func \(n \*Nftables\) Installed\(\_ context.Context, h \*cluster.ZarfHost\) bool](<#Nftables.Installed>)
+  - [func \(n \*Nftables\) Apply\(ctx context.Context, h \*cluster.Host, p Plan\) error](<#Nftables.Apply>)
+  - [func \(n \*Nftables\) Detect\(ctx context.Context, h \*cluster.Host\) bool](<#Nftables.Detect>)
+  - [func \(n \*Nftables\) Installed\(\_ context.Context, h \*cluster.Host\) bool](<#Nftables.Installed>)
   - [func \(n \*Nftables\) Name\(\) string](<#Nftables.Name>)
 - [type Plan](<#Plan>)
   - [func \(p Plan\) IsEmpty\(\) bool](<#Plan.IsEmpty>)
 - [type Selection](<#Selection>)
-  - [func Select\(ctx context.Context, h \*cluster.ZarfHost\) Selection](<#Select>)
+  - [func Select\(ctx context.Context, h \*cluster.Host\) Selection](<#Select>)
 - [type UFW](<#UFW>)
-  - [func \(u \*UFW\) Apply\(ctx context.Context, h \*cluster.ZarfHost, p Plan\) error](<#UFW.Apply>)
-  - [func \(u \*UFW\) Detect\(\_ context.Context, h \*cluster.ZarfHost\) bool](<#UFW.Detect>)
-  - [func \(u \*UFW\) Installed\(\_ context.Context, h \*cluster.ZarfHost\) bool](<#UFW.Installed>)
+  - [func \(u \*UFW\) Apply\(ctx context.Context, h \*cluster.Host, p Plan\) error](<#UFW.Apply>)
+  - [func \(u \*UFW\) Detect\(\_ context.Context, h \*cluster.Host\) bool](<#UFW.Detect>)
+  - [func \(u \*UFW\) Installed\(\_ context.Context, h \*cluster.Host\) bool](<#UFW.Installed>)
   - [func \(u \*UFW\) Name\(\) string](<#UFW.Name>)
 
 
@@ -87,14 +87,14 @@ type Backend interface {
     // Detect is true when this backend manages the firewall on h, meaning the firewall is
     // installed and running. It runs commands on the host, so callers should call it once per
     // host and reuse the result.
-    Detect(ctx context.Context, h *cluster.ZarfHost) bool
+    Detect(ctx context.Context, h *cluster.Host) bool
     // Installed is true when this firewall is present on h, whether or not it is running. It
     // separates a host that has the firewall stopped from one that never had it at all.
-    Installed(ctx context.Context, h *cluster.ZarfHost) bool
+    Installed(ctx context.Context, h *cluster.Host) bool
     // Apply makes the node's firewall match p, then reloads the firewall. It is
     // idempotent: applying the same plan twice leaves the node in the same state, and
     // rules cargoship applied on an earlier run that p no longer contains are removed.
-    Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
+    Apply(ctx context.Context, h *cluster.Host, p Plan) error
 }
 ```
 
@@ -120,7 +120,7 @@ type Firewalld struct{}
 ### func \(\*Firewalld\) [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/firewalld.go#L94>)
 
 ```go
-func (f *Firewalld) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
+func (f *Firewalld) Apply(ctx context.Context, h *cluster.Host, p Plan) error
 ```
 
 Apply writes the ipsets, service, and policy files for p, enables them, and restarts firewalld.
@@ -129,7 +129,7 @@ Apply writes the ipsets, service, and policy files for p, enables them, and rest
 ### func \(\*Firewalld\) [Detect](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/firewalld.go#L75>)
 
 ```go
-func (f *Firewalld) Detect(ctx context.Context, h *cluster.ZarfHost) bool
+func (f *Firewalld) Detect(ctx context.Context, h *cluster.Host) bool
 ```
 
 Detect is true when firewalld is running on h.
@@ -138,7 +138,7 @@ Detect is true when firewalld is running on h.
 ### func \(\*Firewalld\) [Installed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/firewalld.go#L84>)
 
 ```go
-func (f *Firewalld) Installed(_ context.Context, h *cluster.ZarfHost) bool
+func (f *Firewalld) Installed(_ context.Context, h *cluster.Host) bool
 ```
 
 Installed is true when firewalld is present on h, running or not.
@@ -169,7 +169,7 @@ type Nftables struct{}
 ### func \(\*Nftables\) [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/nftables.go#L116>)
 
 ```go
-func (n *Nftables) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
+func (n *Nftables) Apply(ctx context.Context, h *cluster.Host, p Plan) error
 ```
 
 Apply renders p as a complete ruleset, checks it, and loads it in one transaction. The table is replaced rather than edited, so rules cargoship applied on an earlier run that p no longer contains are gone once the transaction commits.
@@ -178,7 +178,7 @@ Apply renders p as a complete ruleset, checks it, and loads it in one transactio
 ### func \(\*Nftables\) [Detect](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/nftables.go#L92>)
 
 ```go
-func (n *Nftables) Detect(ctx context.Context, h *cluster.ZarfHost) bool
+func (n *Nftables) Detect(ctx context.Context, h *cluster.Host) bool
 ```
 
 Detect is true when the node persists an nftables ruleset of its own, meaning the nftables service is running or one of the distro ruleset files exists.
@@ -189,7 +189,7 @@ A node whose only nftables content comes from kube\-proxy and the CNI is deliber
 ### func \(\*Nftables\) [Installed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/nftables.go#L105>)
 
 ```go
-func (n *Nftables) Installed(_ context.Context, h *cluster.ZarfHost) bool
+func (n *Nftables) Installed(_ context.Context, h *cluster.Host) bool
 ```
 
 Installed is true when the nft command is present on h.
@@ -217,12 +217,12 @@ type Plan struct {
     // trusts all traffic from these blocks.
     ClusterCIDRs []string
     // Ports lists the ports the node exposes publicly, from the inventory's `.host.ports`.
-    Ports []cluster.ZarfHostPort
+    Ports []cluster.HostPort
     // Rules lists the backend-neutral rules from the inventory's `.host.firewall.rules`.
-    Rules []cluster.ZarfFirewallRule
+    Rules []cluster.FirewallRule
     // Policies holds the legacy firewalld-only policies from the inventory's `.host.policy`.
     // Backends other than firewalld ignore it.
-    Policies map[string]cluster.ZarfFirewallPolicyConfig
+    Policies map[string]cluster.FirewallPolicyConfig
 }
 ```
 
@@ -257,7 +257,7 @@ type Selection struct {
 ### func [Select](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/firewall.go#L106>)
 
 ```go
-func Select(ctx context.Context, h *cluster.ZarfHost) Selection
+func Select(ctx context.Context, h *cluster.Host) Selection
 ```
 
 Select returns the backend cargoship configures on h.
@@ -281,7 +281,7 @@ type UFW struct{}
 ### func \(\*UFW\) [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/ufw.go#L89>)
 
 ```go
-func (u *UFW) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
+func (u *UFW) Apply(ctx context.Context, h *cluster.Host, p Plan) error
 ```
 
 Apply reconciles the node's ufw rules with p and reloads ufw. Rules cargoship applied on an earlier run that p no longer contains are deleted.
@@ -290,7 +290,7 @@ Apply reconciles the node's ufw rules with p and reloads ufw. Rules cargoship ap
 ### func \(\*UFW\) [Detect](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/ufw.go#L65>)
 
 ```go
-func (u *UFW) Detect(_ context.Context, h *cluster.ZarfHost) bool
+func (u *UFW) Detect(_ context.Context, h *cluster.Host) bool
 ```
 
 Detect is true when ufw is installed on h and reports itself active.
@@ -299,7 +299,7 @@ Detect is true when ufw is installed on h and reports itself active.
 ### func \(\*UFW\) [Installed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/firewall/ufw.go#L79>)
 
 ```go
-func (u *UFW) Installed(_ context.Context, h *cluster.ZarfHost) bool
+func (u *UFW) Installed(_ context.Context, h *cluster.Host) bool
 ```
 
 Installed is true when ufw is present on h, active or not.

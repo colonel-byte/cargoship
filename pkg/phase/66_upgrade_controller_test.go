@@ -32,9 +32,9 @@ func TestUpgradeControllerPrepareMarksTheLeader(t *testing.T) {
 
 	p := &UpgradeController{}
 	p.Distro = d
-	p.SetManager(&Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{Hosts: cluster.ZarfHosts{running, other}}}})
+	p.SetManager(&Manager{Config: &cluster.Cluster{Spec: cluster.Spec{Hosts: cluster.Hosts{running, other}}}})
 
-	dis := &distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Version: "v1.35.0"}}
+	dis := &distro.Distro{Spec: distro.Spec{Version: "v1.35.0"}}
 	require.NoError(t, p.Prepare(context.Background(), nil, dis))
 
 	require.True(t, running.Metadata.IsLeader)

@@ -66,9 +66,9 @@ func runFromAnsible(t *testing.T, stdin string, args ...string) (stdout string, 
 	return out.String(), errOut.String(), err
 }
 
-func decodeInventory(t *testing.T, doc string) *cluster.ZarfCluster {
+func decodeInventory(t *testing.T, doc string) *cluster.Cluster {
 	t.Helper()
-	var out cluster.ZarfCluster
+	var out cluster.Cluster
 	require.NoError(t, goyaml.Unmarshal([]byte(doc), &out))
 	return &out
 }

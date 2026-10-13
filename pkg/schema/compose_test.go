@@ -141,8 +141,8 @@ func TestComposeInventoryLeavesTheRestAlone(t *testing.T) {
 
 	// Everything outside the grafted node has to be untouched, or the composed schema stops
 	// describing an inventory.
-	delete(node(t, plain, "$defs", "ZarfClusterConfig", "properties"), "values")
-	delete(node(t, got, "$defs", "ZarfClusterConfig", "properties"), "values")
+	delete(node(t, plain, "$defs", "Config", "properties"), "values")
+	delete(node(t, got, "$defs", "Config", "properties"), "values")
 
 	want, err := json.Marshal(plain)
 	require.NoError(t, err)

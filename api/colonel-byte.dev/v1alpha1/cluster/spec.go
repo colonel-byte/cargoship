@@ -35,54 +35,54 @@ import (
 	"github.com/invopop/jsonschema"
 )
 
-// ZarfCluster is the root object of a cluster configuration document.
-type ZarfCluster struct {
+// Cluster is the root object of a cluster configuration document.
+type Cluster struct {
 	// APIVersion identifies the API group and version of this configuration document.
 	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
 	// Kind identifies the document type. The value must be ZarfCluster.
-	Kind v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfCluster"`
+	Kind v1alpha1.Kind `json:"kind" jsonschema:"enum=ZarfCluster"`
 	// Metadata holds identifying information for the cluster.
-	Metadata ZarfClusterMetadata `json:"metadata"`
+	Metadata Metadata `json:"metadata"`
 	// Spec holds the configuration and hosts for the cluster.
-	Spec ZarfClusterSpec `json:"spec"`
+	Spec Spec `json:"spec"`
 	// RuntimeMetadata stores data gathered while the phases run.
-	RuntimeMetadata ZarfRuntimeMeta `json:"-"`
+	RuntimeMetadata RuntimeMeta `json:"-"`
 }
 
-// ZarfClusterMetadata holds identifying information for a cluster.
-type ZarfClusterMetadata struct {
+// Metadata holds identifying information for a cluster.
+type Metadata struct {
 	// Name sets the cluster name. If you allow cargoship to update the kubeconfig, cargoship uses this name there.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 	// Encryption records how the credentials in this document were encrypted. Cargoship writes it and never reads it back as key material, because an age header names no recipient: this records what was done, not a fact anything can check against the ciphertext beside it.
-	Encryption *ZarfClusterEncryption `json:"encryption,omitempty"`
+	Encryption *Encryption `json:"encryption,omitempty"`
 }
 
-// ZarfClusterEncryption records how the credentials in a document were encrypted.
+// Encryption records how the credentials in a document were encrypted.
 //
 // There is a section per format rather than one flat list, so that a document holding both
 // Ansible Vault and age credentials has somewhere to say so later. Only age needs a record today:
 // a vaulted value is read with the one password the operator already has to supply by name.
-type ZarfClusterEncryption struct {
+type Encryption struct {
 	// Age records the age recipients this document's credentials were encrypted to. Nothing verifies this list and nothing can: an age header carries no recipient identifier, so editing it changes what the file claims and not a byte of what it holds.
-	Age *ZarfClusterAgeEncryption `json:"age,omitempty"`
+	Age *AgeEncryption `json:"age,omitempty"`
 }
 
-// ZarfClusterAgeEncryption records the age recipients a document's credentials were encrypted to.
+// AgeEncryption records the age recipients a document's credentials were encrypted to.
 //
 // It is advisory. Nothing verifies it, and nothing can: an age header carries no recipient
 // identifier, which is the property that keeps ciphertext from revealing who can read it. Editing
 // this list therefore changes what the file claims and not a byte of what it holds -- cargoship
 // compares it against the recipients you name and says so when the two differ, and never encrypts
 // to a key that came out of it.
-type ZarfClusterAgeEncryption struct {
+type AgeEncryption struct {
 	// Recipients lists the age public keys cargoship encrypted to, in the order they were given. An SSH key keeps its authorized_keys comment, since that is the part that says whose key it is.
 	Recipients []string `json:"recipients,omitempty"`
 	// LastModified is when cargoship last rewrote the credentials in this document, in RFC 3339.
 	LastModified string `json:"lastModified,omitempty" jsonschema:"format=date-time"`
 }
 
-// ZarfRuntimeMeta stores data gathered while the phases run.
-type ZarfRuntimeMeta struct {
+// RuntimeMeta stores data gathered while the phases run.
+type RuntimeMeta struct {
 	// ControllerTLS lists the names and addresses on the controller TLS certificate.
 	ControllerTLS []string
 	// ControllerToken authorizes a worker node to join the cluster as a controller.
@@ -92,27 +92,27 @@ type ZarfRuntimeMeta struct {
 	// LoadBalancer is the hostname clients use to reach the cluster control plane.
 	LoadBalancer string
 	// Leader is the controller host that stores the cluster join tokens.
-	Leader *ZarfHost
+	Leader *Host
 	// Registries lists the container registries the cluster uses.
-	Registries []ZarfClusterRegistries
+	Registries []Registries
 }
 
-// ZarfClusterSpec holds the configuration and hosts for a cluster.
-type ZarfClusterSpec struct {
+// Spec holds the configuration and hosts for a cluster.
+type Spec struct {
 	// Config holds the cluster-wide configuration.
-	Config ZarfClusterConfig `json:"config"`
+	Config Config `json:"config"`
 	// Hosts lists the hosts that make up the cluster.
-	Hosts ZarfHosts `json:"hosts" jsonschema:"minItems=1"`
+	Hosts Hosts `json:"hosts" jsonschema:"minItems=1"`
 }
 
-// ZarfClusterConfig holds cluster-wide configuration.
-type ZarfClusterConfig struct {
+// Config holds cluster-wide configuration.
+type Config struct {
 	// LoadBalancer is the hostname clients use to reach the cluster control plane.
 	LoadBalancer string `json:"loadbalancer" jsonschema:"format=hostname"`
 	// Registries lists the container registries the cluster uses.
-	Registries []ZarfClusterRegistries `json:"registries,omitempty"`
+	Registries []Registries `json:"registries,omitempty"`
 	// Profiles maps a profile name to host and engine overrides that a host can select.
-	Profiles map[string]ZarfClusterProfiles `json:"profiles,omitempty"`
+	Profiles map[string]Profiles `json:"profiles,omitempty"`
 	// Values overrides the values the distro package was built with. It is the same
 	// nested structure the package ships, addressed by the same dotted paths, and it
 	// must still satisfy the package's values schema. Keys the package does not
@@ -120,12 +120,12 @@ type ZarfClusterConfig struct {
 	Values map[string]any `json:"values,omitempty"`
 }
 
-// ZarfClusterProfiles holds the host and engine overrides for one profile.
-type ZarfClusterProfiles struct {
+// Profiles holds the host and engine overrides for one profile.
+type Profiles struct {
 	// Host holds the configuration overrides applied to a host that selects this profile.
-	Host ZarfHostConfig `json:"host,omitempty"`
+	Host HostConfig `json:"host,omitempty"`
 	// Engine holds the node label and taint overrides applied to a host that selects this profile.
-	Engine ZarfHostEngine `json:"engine,omitempty"`
+	Engine HostEngine `json:"engine,omitempty"`
 	// Concurrency limits how many hosts using this profile cargoship processes at once, e.g.
 	// draining, upgrading, initializing, or uninstalling. It accepts a fixed count ("1") or a
 	// percentage of the hosts sharing this profile ("25%"). Empty falls back to the phase's
@@ -138,7 +138,7 @@ type ZarfClusterProfiles struct {
 // rounded up, and clamped to a minimum of 1 so a low percentage never collapses to 0, which
 // would otherwise be indistinguishable from "unlimited". An empty Concurrency falls back to
 // fallback, parsed the same way against total.
-func (p ZarfClusterProfiles) ResolveConcurrency(total int, fallback string) (int, error) {
+func (p Profiles) ResolveConcurrency(total int, fallback string) (int, error) {
 	c := strings.TrimSpace(p.Concurrency)
 	if c == "" {
 		c = fallback
@@ -182,42 +182,42 @@ func ParseConcurrency(value string, total int) (int, error) {
 	return v, nil
 }
 
-// ZarfClusterRegistrieName is the registry name in ZarfClusterRegistries. It's a named
+// RegistryName is the registry name in Registries. It's a named
 // type (rather than a bare string) solely so it can implement JSONSchemaExtend below and
 // suggest common registries in the generated schema; the config file is not restricted to those.
-type ZarfClusterRegistrieName string
+type RegistryName string
 
 // JSONSchemaExtend adds CommonRegistries to the schema as examples, so editors can
 // suggest them for this string field without restricting it to just those values.
-func (ZarfClusterRegistrieName) JSONSchemaExtend(s *jsonschema.Schema) {
+func (RegistryName) JSONSchemaExtend(s *jsonschema.Schema) {
 	for _, registry := range types.CommonRegistries {
 		s.Examples = append(s.Examples, registry)
 	}
 }
 
-// ZarfClusterRegistries holds the credentials and pull proxy for one container registry. The
+// Registries holds the credentials and pull proxy for one container registry. The
 // proxy and the credentials are independent: an entry with both redirects pulls to a mirror and
 // authenticates to that mirror, while an entry with credentials alone authenticates a direct
 // pull from the registry itself. Upstream Kubernetes keeps the two in separate files entirely --
 // mirrors in containerd's hosts.toml, which holds no credentials, and credentials in a node
 // docker config -- so an entry must be able to carry either one on its own.
-type ZarfClusterRegistries struct {
+type Registries struct {
 	// Name identifies the registry. With a proxy it is the registry pulls are redirected away
 	// from; without one it is the registry the credentials authenticate to.
-	Name ZarfClusterRegistrieName `json:"name"`
+	Name RegistryName `json:"name"`
 	// Authentication holds the credentials for the registry.
-	Authentication ZarfClusterRegistryAuth `json:"auth,omitempty"`
+	Authentication RegistryAuth `json:"auth,omitempty"`
 	// Proxy holds the pull redirect settings for the registry. Omit it to configure credentials
 	// or TLS for the registry without redirecting pulls away from it.
-	Proxy *ZarfClusterRegistryProxy `json:"proxy,omitempty"`
+	Proxy *RegistryProxy `json:"proxy,omitempty"`
 	// TLS configures TLS verification and certificates for the registry endpoint.
-	TLS *ZarfClusterRegistryTLS `json:"tls,omitempty"`
+	TLS *RegistryTLS `json:"tls,omitempty"`
 }
 
 // Validate returns an error when the registry entry configures nothing. An entry has to carry a
 // proxy, credentials, or TLS settings to have any effect, and one that carries none of them is
 // more likely a mistyped document than an intentional no-op.
-func (r ZarfClusterRegistries) Validate() error {
+func (r Registries) Validate() error {
 	if err := validateRegistryName(r.Name); err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (r ZarfClusterRegistries) Validate() error {
 // proxy left out of a document is distinguishable from one written out empty, and so that
 // omitempty applies to it at all, which encoding/json does not do for a struct value -- and this
 // saves every caller a nil check to ask the only question most of them have.
-func (r ZarfClusterRegistries) ProxyURL() string {
+func (r Registries) ProxyURL() string {
 	if r.Proxy == nil {
 		return ""
 	}
@@ -255,7 +255,7 @@ func (r ZarfClusterRegistries) ProxyURL() string {
 // completed to https when it was given without a scheme, since that is both what a registry
 // serves by default and what the engine would otherwise have to guess at. It is empty when the
 // registry has no proxy.
-func (r ZarfClusterRegistries) MirrorEndpoint() string {
+func (r Registries) MirrorEndpoint() string {
 	proxy := r.ProxyURL()
 	switch {
 	case proxy == "":
@@ -271,7 +271,7 @@ func (r ZarfClusterRegistries) MirrorEndpoint() string {
 // when pulls are redirected to one, and the registry itself when they are not. The proxy address
 // may carry a scheme and a path -- "https://mirror.example.com:5000/v2" -- but an engine matches
 // its per-registry configuration on the host alone, so the host is what comes back here.
-func (r ZarfClusterRegistries) ConfigHost() string {
+func (r Registries) ConfigHost() string {
 	endpoint := r.MirrorEndpoint()
 	if endpoint == "" {
 		return string(r.Name)
@@ -285,7 +285,7 @@ func (r ZarfClusterRegistries) ConfigHost() string {
 
 // sameRegistryConfig reports whether two registry entries would write identical credentials and
 // TLS settings, in which case both landing on the same host is harmless rather than a conflict.
-func sameRegistryConfig(a, b ZarfClusterRegistries) bool {
+func sameRegistryConfig(a, b Registries) bool {
 	if a.Authentication != b.Authentication {
 		// When fields are encrypted with age or Ansible Vault, distinct ciphertext blocks encrypt
 		// the same underlying credential due to randomized salts/nonces. If both entries are
@@ -320,9 +320,9 @@ func sameRegistryConfig(a, b ZarfClusterRegistries) bool {
 // last entry wins and the earlier one silently does nothing, so the conflict is reported here
 // instead. Entries that resolve to the same host with identical settings are left alone: there
 // is nothing to lose between them.
-func ValidateRegistries(registries []ZarfClusterRegistries) error {
-	byName := map[ZarfClusterRegistrieName]struct{}{}
-	byHost := map[string]ZarfClusterRegistries{}
+func ValidateRegistries(registries []Registries) error {
+	byName := map[RegistryName]struct{}{}
+	byHost := map[string]Registries{}
 	for _, registry := range registries {
 		if err := registry.Validate(); err != nil {
 			return err
@@ -344,10 +344,10 @@ func ValidateRegistries(registries []ZarfClusterRegistries) error {
 	return nil
 }
 
-// ZarfClusterRegistryTLS holds the TLS connection settings for a container registry. The field
+// RegistryTLS holds the TLS connection settings for a container registry. The field
 // names are cargoship's own, in the camelCase the rest of this file uses; distrocfg maps them
 // onto whatever spelling each engine's registry configuration expects.
-type ZarfClusterRegistryTLS struct {
+type RegistryTLS struct {
 	// CA is the PEM-encoded CA certificate used to verify the registry certificate. Cargoship
 	// writes it to a file on each host and points the engine at that path, so the certificate
 	// travels with the cluster configuration instead of having to be distributed separately.
@@ -399,7 +399,7 @@ func IsEncrypted(value string) bool {
 
 // Validate returns an error when the TLS settings cannot be applied. A nil receiver is valid:
 // TLS is optional. name identifies the registry in the error.
-func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error {
+func (t *RegistryTLS) Validate(name RegistryName) error {
 	if t == nil {
 		return nil
 	}
@@ -420,14 +420,14 @@ func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error {
 	return nil
 }
 
-// ZarfClusterRegistryAuth holds the credentials for a container registry.
+// RegistryAuth holds the credentials for a container registry.
 // Username, Password, and Token may each be given in plaintext, or encrypted in
 // either of the two formats cargoship reads: an Ansible Vault string (the output
 // of `ansible-vault encrypt_string`, starting with "$ANSIBLE_VAULT"), or armored
 // age ciphertext (starting with "-----BEGIN AGE ENCRYPTED FILE-----"). Cargoship
 // decrypts either at apply time, using the vault password given via
 // --vault-password-file or the age identity given via --age-identity-file.
-type ZarfClusterRegistryAuth struct {
+type RegistryAuth struct {
 	// Username is the login name for the remote registry.
 	Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
 	// Password is the login secret for the remote registry.
@@ -439,8 +439,8 @@ type ZarfClusterRegistryAuth struct {
 // endpointSchemeRegex matches a URL that already names a scheme, e.g. "https://" or "http://".
 var endpointSchemeRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.\-]*://`)
 
-// ZarfClusterRegistryProxy redirects pulls for a registry to a different URL.
-type ZarfClusterRegistryProxy struct {
+// RegistryProxy redirects pulls for a registry to a different URL.
+type RegistryProxy struct {
 	// URL is the registry address the engine pulls from instead of the original registry.
 	URL string `json:"url"`
 	// Rewrite maps a regex pattern to a replacement, transforming the image name (not the tag)
@@ -453,7 +453,7 @@ type ZarfClusterRegistryProxy struct {
 // "docker.io", "ghcr.io", "nexus.example.com:5000" -- so a name carrying a scheme, a repository
 // path, or whitespace matches nothing, and the configuration written under it is dead weight
 // nobody hears about again. "*" is the one exception: engines read it as "every registry".
-func validateRegistryName(name ZarfClusterRegistrieName) error {
+func validateRegistryName(name RegistryName) error {
 	value := string(name)
 	switch {
 	case value == "":
@@ -473,7 +473,7 @@ func validateRegistryName(name ZarfClusterRegistrieName) error {
 // Validate returns an error when the proxy settings cannot be applied. A nil receiver is valid:
 // a registry may be configured without redirecting pulls away from it. name identifies the
 // registry in the error.
-func (p *ZarfClusterRegistryProxy) Validate(name ZarfClusterRegistrieName) error {
+func (p *RegistryProxy) Validate(name RegistryName) error {
 	if p == nil {
 		return nil
 	}
@@ -512,7 +512,7 @@ func (p *ZarfClusterRegistryProxy) Validate(name ZarfClusterRegistrieName) error
 
 // Validate returns an error when the credentials cannot be used as given. name identifies the
 // registry in the error.
-func (a ZarfClusterRegistryAuth) Validate(name ZarfClusterRegistrieName) error {
+func (a RegistryAuth) Validate(name RegistryName) error {
 	// Basic auth is a pair. Half of one authenticates nothing, and the engine reports it as a
 	// 401 from the registry rather than as the missing half it is.
 	if a.Username != "" && a.Password == "" {
@@ -524,8 +524,8 @@ func (a ZarfClusterRegistryAuth) Validate(name ZarfClusterRegistrieName) error {
 	return nil
 }
 
-// ZarfClusterFiles defines a file to write to a host.
-type ZarfClusterFiles struct {
+// Files defines a file to write to a host.
+type Files struct {
 	// Name identifies the file in the cluster configuration.
 	Name string `json:"name"`
 	// Source is the local path or URL cargoship reads the file from.

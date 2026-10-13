@@ -31,8 +31,8 @@ import (
 	"github.com/colonel-byte/cargoship/api"
 )
 
-// ZarfFile defines a file shared by the distro and cluster APIs.
-type ZarfFile struct {
+// File defines a file shared by the distro and cluster APIs.
+type File struct {
 	// Data holds the inline file content.
 	Data string `json:"data,omitempty"`
 	// Executable sets executable permissions on the file when true.
@@ -107,12 +107,12 @@ func (s BinarySelector) MatchesArch(arch api.Arch) bool {
 // IsTemplate reports whether this file's contents are rendered against the package's
 // values before upload. Unset means no, so a package that says nothing about templating
 // ships the bytes it was built with.
-func (u *ZarfFile) IsTemplate() bool {
+func (u *File) IsTemplate() bool {
 	return u.Template != nil && *u.Template
 }
 
 // String returns Name. If Name is empty, it returns Source instead.
-func (u *ZarfFile) String() string {
+func (u *File) String() string {
 	if u.Name == "" {
 		return u.Source
 	}
@@ -120,13 +120,13 @@ func (u *ZarfFile) String() string {
 }
 
 // Owner returns a chown-compatible "user:group" string built from User and Group. It returns an empty string when both are empty.
-func (u *ZarfFile) Owner() string {
+func (u *File) Owner() string {
 	return strings.TrimSuffix(fmt.Sprintf("%s:%s", u.User, u.Group), ":")
 }
 
 // UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.
-func (u *ZarfFile) UnmarshalYAML(unmarshal func(any) error) error {
-	type uploadFile ZarfFile
+func (u *File) UnmarshalYAML(unmarshal func(any) error) error {
+	type uploadFile File
 	yu := (*uploadFile)(u)
 
 	if err := unmarshal(yu); err != nil {
@@ -143,12 +143,12 @@ func (u *ZarfFile) UnmarshalYAML(unmarshal func(any) error) error {
 }
 
 // HasData reports whether Data holds non-blank content.
-func (u *ZarfFile) HasData() bool {
+func (u *File) HasData() bool {
 	return strings.TrimSpace(u.Data) != ""
 }
 
 // TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.
-func (u *ZarfFile) TargetDirectory() string {
+func (u *File) TargetDirectory() string {
 	if u.TargetIsDir {
 		return u.Target
 	}

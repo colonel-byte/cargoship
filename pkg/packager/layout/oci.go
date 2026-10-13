@@ -68,7 +68,7 @@ type manifestCache struct {
 }
 
 // AnnotationsFromMetadata extracts OCI manifest annotations from Zarf package metadata.
-func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string {
+func AnnotationsFromMetadata(metadata distro.Metadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,

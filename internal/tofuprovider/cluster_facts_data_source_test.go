@@ -32,11 +32,11 @@ type fakeConverger struct {
 
 	// got records what the provider asked for, so a test can assert the translation reached it
 	// rather than only that the result came back.
-	got      *cluster.ZarfCluster
+	got      *cluster.Cluster
 	distroID string
 }
 
-func (f *fakeConverger) Refresh(_ context.Context, cfg *cluster.ZarfCluster, distroID string) ([]hostFacts, error) {
+func (f *fakeConverger) Refresh(_ context.Context, cfg *cluster.Cluster, distroID string) ([]hostFacts, error) {
 	f.got = cfg
 	f.distroID = distroID
 	return f.facts, f.err

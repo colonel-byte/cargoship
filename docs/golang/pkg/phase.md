@@ -12,33 +12,33 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
-- [func CheckTargetHosts\(hosts cluster.ZarfHosts, targets \[\]string\) error](<#CheckTargetHosts>)
+- [func CheckTargetHosts\(hosts cluster.Hosts, targets \[\]string\) error](<#CheckTargetHosts>)
 - [func DryRunNote\(p Phase\) string](<#DryRunNote>)
 - [func Titles\(results \[\]PhaseResult\) \[\]string](<#Titles>)
 - [type APTUploadFiles](<#APTUploadFiles>)
   - [func \(p \*APTUploadFiles\) Explanation\(\) string](<#APTUploadFiles.Explanation>)
-  - [func \(p \*APTUploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#APTUploadFiles.Prepare>)
+  - [func \(p \*APTUploadFiles\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#APTUploadFiles.Prepare>)
   - [func \(p \*APTUploadFiles\) Run\(ctx context.Context\) \(err error\)](<#APTUploadFiles.Run>)
   - [func \(p \*APTUploadFiles\) Title\(\) string](<#APTUploadFiles.Title>)
 - [type ApplyManifests](<#ApplyManifests>)
   - [func \(p \*ApplyManifests\) Explanation\(\) string](<#ApplyManifests.Explanation>)
-  - [func \(p \*ApplyManifests\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#ApplyManifests.Prepare>)
+  - [func \(p \*ApplyManifests\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#ApplyManifests.Prepare>)
   - [func \(p \*ApplyManifests\) Run\(ctx context.Context\) error](<#ApplyManifests.Run>)
   - [func \(p \*ApplyManifests\) ShouldRun\(\) bool](<#ApplyManifests.ShouldRun>)
   - [func \(p \*ApplyManifests\) Title\(\) string](<#ApplyManifests.Title>)
 - [type BINUploadFiles](<#BINUploadFiles>)
   - [func \(p \*BINUploadFiles\) Explanation\(\) string](<#BINUploadFiles.Explanation>)
-  - [func \(p \*BINUploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#BINUploadFiles.Prepare>)
+  - [func \(p \*BINUploadFiles\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#BINUploadFiles.Prepare>)
   - [func \(p \*BINUploadFiles\) Run\(ctx context.Context\) \(err error\)](<#BINUploadFiles.Run>)
   - [func \(p \*BINUploadFiles\) Title\(\) string](<#BINUploadFiles.Title>)
 - [type ConfigureEngine](<#ConfigureEngine>)
   - [func \(p \*ConfigureEngine\) Explanation\(\) string](<#ConfigureEngine.Explanation>)
-  - [func \(p \*ConfigureEngine\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#ConfigureEngine.Prepare>)
+  - [func \(p \*ConfigureEngine\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#ConfigureEngine.Prepare>)
   - [func \(p \*ConfigureEngine\) Run\(ctx context.Context\) error](<#ConfigureEngine.Run>)
   - [func \(p \*ConfigureEngine\) Title\(\) string](<#ConfigureEngine.Title>)
 - [type ConfigureFirewall](<#ConfigureFirewall>)
   - [func \(p \*ConfigureFirewall\) Explanation\(\) string](<#ConfigureFirewall.Explanation>)
-  - [func \(p \*ConfigureFirewall\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#ConfigureFirewall.Prepare>)
+  - [func \(p \*ConfigureFirewall\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#ConfigureFirewall.Prepare>)
   - [func \(p \*ConfigureFirewall\) Run\(ctx context.Context\) error](<#ConfigureFirewall.Run>)
   - [func \(p \*ConfigureFirewall\) ShouldRun\(\) bool](<#ConfigureFirewall.ShouldRun>)
   - [func \(p \*ConfigureFirewall\) Title\(\) string](<#ConfigureFirewall.Title>)
@@ -53,16 +53,16 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*DaemonReload\) ShouldRun\(\) bool](<#DaemonReload.ShouldRun>)
   - [func \(p \*DaemonReload\) Title\(\) string](<#DaemonReload.Title>)
 - [type DeleteCommon](<#DeleteCommon>)
-  - [func \(p \*DeleteCommon\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#DeleteCommon.Prepare>)
+  - [func \(p \*DeleteCommon\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#DeleteCommon.Prepare>)
 - [type DeleteControllers](<#DeleteControllers>)
   - [func \(p \*DeleteControllers\) Explanation\(\) string](<#DeleteControllers.Explanation>)
-  - [func \(p \*DeleteControllers\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#DeleteControllers.Prepare>)
+  - [func \(p \*DeleteControllers\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#DeleteControllers.Prepare>)
   - [func \(p \*DeleteControllers\) Run\(ctx context.Context\) error](<#DeleteControllers.Run>)
   - [func \(p \*DeleteControllers\) ShouldRun\(\) bool](<#DeleteControllers.ShouldRun>)
   - [func \(p \*DeleteControllers\) Title\(\) string](<#DeleteControllers.Title>)
 - [type DeleteWorkers](<#DeleteWorkers>)
   - [func \(p \*DeleteWorkers\) Explanation\(\) string](<#DeleteWorkers.Explanation>)
-  - [func \(p \*DeleteWorkers\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#DeleteWorkers.Prepare>)
+  - [func \(p \*DeleteWorkers\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#DeleteWorkers.Prepare>)
   - [func \(p \*DeleteWorkers\) Run\(ctx context.Context\) error](<#DeleteWorkers.Run>)
   - [func \(p \*DeleteWorkers\) ShouldRun\(\) bool](<#DeleteWorkers.ShouldRun>)
   - [func \(p \*DeleteWorkers\) Title\(\) string](<#DeleteWorkers.Title>)
@@ -73,7 +73,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*DetectOS\) Title\(\) string](<#DetectOS.Title>)
 - [type DetectRemovedHosts](<#DetectRemovedHosts>)
   - [func \(p \*DetectRemovedHosts\) Explanation\(\) string](<#DetectRemovedHosts.Explanation>)
-  - [func \(p \*DetectRemovedHosts\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#DetectRemovedHosts.Prepare>)
+  - [func \(p \*DetectRemovedHosts\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#DetectRemovedHosts.Prepare>)
   - [func \(p \*DetectRemovedHosts\) ReadOnly\(\) string](<#DetectRemovedHosts.ReadOnly>)
   - [func \(p \*DetectRemovedHosts\) Run\(ctx context.Context\) error](<#DetectRemovedHosts.Run>)
   - [func \(p \*DetectRemovedHosts\) ShouldRun\(\) bool](<#DetectRemovedHosts.ShouldRun>)
@@ -88,7 +88,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(b DryRunBehavior\) String\(\) string](<#DryRunBehavior.String>)
 - [type EngineConfigSyncController](<#EngineConfigSyncController>)
   - [func \(p \*EngineConfigSyncController\) Explanation\(\) string](<#EngineConfigSyncController.Explanation>)
-  - [func \(p \*EngineConfigSyncController\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#EngineConfigSyncController.Prepare>)
+  - [func \(p \*EngineConfigSyncController\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#EngineConfigSyncController.Prepare>)
   - [func \(p \*EngineConfigSyncController\) Run\(ctx context.Context\) error](<#EngineConfigSyncController.Run>)
   - [func \(p \*EngineConfigSyncController\) Title\(\) string](<#EngineConfigSyncController.Title>)
 - [type EngineConfigSyncHosts](<#EngineConfigSyncHosts>)
@@ -96,7 +96,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*EngineConfigSyncHosts\) ShouldRun\(\) bool](<#EngineConfigSyncHosts.ShouldRun>)
 - [type EngineConfigSyncWorker](<#EngineConfigSyncWorker>)
   - [func \(p \*EngineConfigSyncWorker\) Explanation\(\) string](<#EngineConfigSyncWorker.Explanation>)
-  - [func \(p \*EngineConfigSyncWorker\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#EngineConfigSyncWorker.Prepare>)
+  - [func \(p \*EngineConfigSyncWorker\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#EngineConfigSyncWorker.Prepare>)
   - [func \(p \*EngineConfigSyncWorker\) Run\(ctx context.Context\) error](<#EngineConfigSyncWorker.Run>)
   - [func \(p \*EngineConfigSyncWorker\) Title\(\) string](<#EngineConfigSyncWorker.Title>)
 - [type GatherFacts](<#GatherFacts>)
@@ -106,34 +106,34 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*GatherFacts\) Title\(\) string](<#GatherFacts.Title>)
 - [type GatherFactsDistro](<#GatherFactsDistro>)
   - [func \(p \*GatherFactsDistro\) Explanation\(\) string](<#GatherFactsDistro.Explanation>)
-  - [func \(p \*GatherFactsDistro\) Prepare\(\_ context.Context, \_ \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#GatherFactsDistro.Prepare>)
+  - [func \(p \*GatherFactsDistro\) Prepare\(\_ context.Context, \_ \*cluster.Cluster, d \*distro.Distro\) error](<#GatherFactsDistro.Prepare>)
   - [func \(p \*GatherFactsDistro\) ReadOnly\(\) string](<#GatherFactsDistro.ReadOnly>)
   - [func \(p \*GatherFactsDistro\) Run\(ctx context.Context\) \(err error\)](<#GatherFactsDistro.Run>)
   - [func \(p \*GatherFactsDistro\) Title\(\) string](<#GatherFactsDistro.Title>)
 - [type GenericPhase](<#GenericPhase>)
-  - [func \(p \*GenericPhase\) GetConfig\(\) \*cluster.ZarfCluster](<#GenericPhase.GetConfig>)
-  - [func \(p \*GenericPhase\) GetDistro\(\) \*distro.ZarfDistro](<#GenericPhase.GetDistro>)
-  - [func \(p \*GenericPhase\) Prepare\(c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#GenericPhase.Prepare>)
+  - [func \(p \*GenericPhase\) GetConfig\(\) \*cluster.Cluster](<#GenericPhase.GetConfig>)
+  - [func \(p \*GenericPhase\) GetDistro\(\) \*distro.Distro](<#GenericPhase.GetDistro>)
+  - [func \(p \*GenericPhase\) Prepare\(c \*cluster.Cluster, d \*distro.Distro\) error](<#GenericPhase.Prepare>)
   - [func \(p \*GenericPhase\) SetManager\(m \*Manager\)](<#GenericPhase.SetManager>)
-  - [func \(p \*GenericPhase\) VersionGreater\(host \*cluster.ZarfHost, version string\) bool](<#GenericPhase.VersionGreater>)
-  - [func \(p \*GenericPhase\) VersionLess\(host \*cluster.ZarfHost, version string\) bool](<#GenericPhase.VersionLess>)
-  - [func \(p \*GenericPhase\) VersionSkewTooGreat\(host \*cluster.ZarfHost, target string\) bool](<#GenericPhase.VersionSkewTooGreat>)
+  - [func \(p \*GenericPhase\) VersionGreater\(host \*cluster.Host, version string\) bool](<#GenericPhase.VersionGreater>)
+  - [func \(p \*GenericPhase\) VersionLess\(host \*cluster.Host, version string\) bool](<#GenericPhase.VersionLess>)
+  - [func \(p \*GenericPhase\) VersionSkewTooGreat\(host \*cluster.Host, target string\) bool](<#GenericPhase.VersionSkewTooGreat>)
   - [func \(p \*GenericPhase\) Wet\(host fmt.Stringer, msg string, funcs ...errorfunc\) error](<#GenericPhase.Wet>)
 - [type ImportImages](<#ImportImages>)
   - [func \(p \*ImportImages\) Explanation\(\) string](<#ImportImages.Explanation>)
-  - [func \(p \*ImportImages\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#ImportImages.Prepare>)
+  - [func \(p \*ImportImages\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#ImportImages.Prepare>)
   - [func \(p \*ImportImages\) Run\(ctx context.Context\) error](<#ImportImages.Run>)
   - [func \(p \*ImportImages\) ShouldRun\(\) bool](<#ImportImages.ShouldRun>)
   - [func \(p \*ImportImages\) Title\(\) string](<#ImportImages.Title>)
 - [type InitializeControllers](<#InitializeControllers>)
   - [func \(p \*InitializeControllers\) Explanation\(\) string](<#InitializeControllers.Explanation>)
-  - [func \(p \*InitializeControllers\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InitializeControllers.Prepare>)
+  - [func \(p \*InitializeControllers\) Prepare\(ctx context.Context, c \*cluster.Cluster, \_ \*distro.Distro\) error](<#InitializeControllers.Prepare>)
   - [func \(p \*InitializeControllers\) Run\(ctx context.Context\) error](<#InitializeControllers.Run>)
   - [func \(p \*InitializeControllers\) ShouldRun\(\) bool](<#InitializeControllers.ShouldRun>)
   - [func \(p \*InitializeControllers\) Title\(\) string](<#InitializeControllers.Title>)
 - [type InitializeWorkers](<#InitializeWorkers>)
   - [func \(p \*InitializeWorkers\) Explanation\(\) string](<#InitializeWorkers.Explanation>)
-  - [func \(p \*InitializeWorkers\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InitializeWorkers.Prepare>)
+  - [func \(p \*InitializeWorkers\) Prepare\(ctx context.Context, c \*cluster.Cluster, \_ \*distro.Distro\) error](<#InitializeWorkers.Prepare>)
   - [func \(p \*InitializeWorkers\) Run\(ctx context.Context\) error](<#InitializeWorkers.Run>)
   - [func \(p \*InitializeWorkers\) ShouldRun\(\) bool](<#InitializeWorkers.ShouldRun>)
   - [func \(p \*InitializeWorkers\) Title\(\) string](<#InitializeWorkers.Title>)
@@ -141,13 +141,13 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*KubeConfig\) Bytes\(\) \(\[\]byte, error\)](<#KubeConfig.Bytes>)
   - [func \(p \*KubeConfig\) Config\(\) \*clientcmdapi.Config](<#KubeConfig.Config>)
   - [func \(p \*KubeConfig\) Explanation\(\) string](<#KubeConfig.Explanation>)
-  - [func \(p \*KubeConfig\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#KubeConfig.Prepare>)
+  - [func \(p \*KubeConfig\) Prepare\(ctx context.Context, c \*cluster.Cluster, \_ \*distro.Distro\) error](<#KubeConfig.Prepare>)
   - [func \(p \*KubeConfig\) Run\(\_ context.Context\) error](<#KubeConfig.Run>)
   - [func \(p \*KubeConfig\) ShouldRun\(\) bool](<#KubeConfig.ShouldRun>)
   - [func \(p \*KubeConfig\) Title\(\) string](<#KubeConfig.Title>)
 - [type LabelNodes](<#LabelNodes>)
   - [func \(p \*LabelNodes\) Explanation\(\) string](<#LabelNodes.Explanation>)
-  - [func \(p \*LabelNodes\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#LabelNodes.Prepare>)
+  - [func \(p \*LabelNodes\) Prepare\(ctx context.Context, c \*cluster.Cluster, \_ \*distro.Distro\) error](<#LabelNodes.Prepare>)
   - [func \(p \*LabelNodes\) Run\(ctx context.Context\) error](<#LabelNodes.Run>)
   - [func \(p \*LabelNodes\) ShouldRun\(\) bool](<#LabelNodes.ShouldRun>)
   - [func \(p \*LabelNodes\) Title\(\) string](<#LabelNodes.Title>)
@@ -155,14 +155,14 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*Lock\) Cancel\(\_ context.Context\)](<#Lock.Cancel>)
   - [func \(p \*Lock\) CleanUp\(\)](<#Lock.CleanUp>)
   - [func \(p \*Lock\) Explanation\(\) string](<#Lock.Explanation>)
-  - [func \(p \*Lock\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#Lock.Prepare>)
+  - [func \(p \*Lock\) Prepare\(ctx context.Context, c \*cluster.Cluster, \_ \*distro.Distro\) error](<#Lock.Prepare>)
   - [func \(p \*Lock\) Run\(ctx context.Context\) error](<#Lock.Run>)
   - [func \(p \*Lock\) Title\(\) string](<#Lock.Title>)
   - [func \(p \*Lock\) UnlockPhase\(\) Phase](<#Lock.UnlockPhase>)
 - [type Manager](<#Manager>)
-  - [func NewManager\(config \*cluster.ZarfCluster, distro distrocfg.Distro\) \(\*Manager, error\)](<#NewManager>)
+  - [func NewManager\(config \*cluster.Cluster, distro distrocfg.Distro\) \(\*Manager, error\)](<#NewManager>)
   - [func \(m \*Manager\) AddPhase\(p ...Phase\)](<#Manager.AddPhase>)
-  - [func \(m \*Manager\) GetDistroOSFiles\(\) v1alpha1.ZarfFiles](<#Manager.GetDistroOSFiles>)
+  - [func \(m \*Manager\) GetDistroOSFiles\(\) v1alpha1.Files](<#Manager.GetDistroOSFiles>)
   - [func \(m \*Manager\) RetryTimeout\(ctx context.Context, f func\(ctx context.Context\) error\) error](<#Manager.RetryTimeout>)
   - [func \(m \*Manager\) Run\(ctx context.Context\) error](<#Manager.Run>)
   - [func \(m \*Manager\) SetPhases\(p Phases\)](<#Manager.SetPhases>)
@@ -173,7 +173,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func ParseManifest\(content string\) \[\]ManifestEntry](<#ParseManifest>)
 - [type ModifyHosts](<#ModifyHosts>)
   - [func \(p \*ModifyHosts\) Explanation\(\) string](<#ModifyHosts.Explanation>)
-  - [func \(p \*ModifyHosts\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#ModifyHosts.Prepare>)
+  - [func \(p \*ModifyHosts\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#ModifyHosts.Prepare>)
   - [func \(p \*ModifyHosts\) Run\(ctx context.Context\) error](<#ModifyHosts.Run>)
   - [func \(p \*ModifyHosts\) ShouldRun\(\) bool](<#ModifyHosts.ShouldRun>)
   - [func \(p \*ModifyHosts\) Title\(\) string](<#ModifyHosts.Title>)
@@ -186,47 +186,47 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*Phases\) Replace\(title string, phase Phase\)](<#Phases.Replace>)
 - [type PrepareFapolicy](<#PrepareFapolicy>)
   - [func \(p \*PrepareFapolicy\) Explanation\(\) string](<#PrepareFapolicy.Explanation>)
-  - [func \(p \*PrepareFapolicy\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#PrepareFapolicy.Prepare>)
+  - [func \(p \*PrepareFapolicy\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#PrepareFapolicy.Prepare>)
   - [func \(p \*PrepareFapolicy\) Run\(ctx context.Context\) error](<#PrepareFapolicy.Run>)
   - [func \(p \*PrepareFapolicy\) ShouldRun\(\) bool](<#PrepareFapolicy.ShouldRun>)
   - [func \(p \*PrepareFapolicy\) Title\(\) string](<#PrepareFapolicy.Title>)
 - [type PrepareHosts](<#PrepareHosts>)
   - [func \(p \*PrepareHosts\) Explanation\(\) string](<#PrepareHosts.Explanation>)
-  - [func \(p \*PrepareHosts\) Prepare\(\_ context.Context, \_ \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#PrepareHosts.Prepare>)
+  - [func \(p \*PrepareHosts\) Prepare\(\_ context.Context, \_ \*cluster.Cluster, d \*distro.Distro\) error](<#PrepareHosts.Prepare>)
   - [func \(p \*PrepareHosts\) Run\(ctx context.Context\) error](<#PrepareHosts.Run>)
   - [func \(p \*PrepareHosts\) Title\(\) string](<#PrepareHosts.Title>)
 - [type PrepareKernelModules](<#PrepareKernelModules>)
   - [func \(p \*PrepareKernelModules\) Explanation\(\) string](<#PrepareKernelModules.Explanation>)
-  - [func \(p \*PrepareKernelModules\) Prepare\(\_ context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#PrepareKernelModules.Prepare>)
+  - [func \(p \*PrepareKernelModules\) Prepare\(\_ context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#PrepareKernelModules.Prepare>)
   - [func \(p \*PrepareKernelModules\) Run\(ctx context.Context\) error](<#PrepareKernelModules.Run>)
   - [func \(p \*PrepareKernelModules\) ShouldRun\(\) bool](<#PrepareKernelModules.ShouldRun>)
   - [func \(p \*PrepareKernelModules\) Title\(\) string](<#PrepareKernelModules.Title>)
 - [type PrepareSelinux](<#PrepareSelinux>)
   - [func \(p \*PrepareSelinux\) Explanation\(\) string](<#PrepareSelinux.Explanation>)
-  - [func \(p \*PrepareSelinux\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#PrepareSelinux.Prepare>)
+  - [func \(p \*PrepareSelinux\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#PrepareSelinux.Prepare>)
   - [func \(p \*PrepareSelinux\) Run\(ctx context.Context\) error](<#PrepareSelinux.Run>)
   - [func \(p \*PrepareSelinux\) ShouldRun\(\) bool](<#PrepareSelinux.ShouldRun>)
   - [func \(p \*PrepareSelinux\) Title\(\) string](<#PrepareSelinux.Title>)
 - [type PrepareSelinuxPolicy](<#PrepareSelinuxPolicy>)
   - [func \(p \*PrepareSelinuxPolicy\) Explanation\(\) string](<#PrepareSelinuxPolicy.Explanation>)
-  - [func \(p \*PrepareSelinuxPolicy\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#PrepareSelinuxPolicy.Prepare>)
+  - [func \(p \*PrepareSelinuxPolicy\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#PrepareSelinuxPolicy.Prepare>)
   - [func \(p \*PrepareSelinuxPolicy\) Run\(ctx context.Context\) error](<#PrepareSelinuxPolicy.Run>)
   - [func \(p \*PrepareSelinuxPolicy\) ShouldRun\(\) bool](<#PrepareSelinuxPolicy.ShouldRun>)
   - [func \(p \*PrepareSelinuxPolicy\) Title\(\) string](<#PrepareSelinuxPolicy.Title>)
 - [type RPMUploadFiles](<#RPMUploadFiles>)
   - [func \(p \*RPMUploadFiles\) Explanation\(\) string](<#RPMUploadFiles.Explanation>)
-  - [func \(p \*RPMUploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#RPMUploadFiles.Prepare>)
+  - [func \(p \*RPMUploadFiles\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#RPMUploadFiles.Prepare>)
   - [func \(p \*RPMUploadFiles\) Run\(ctx context.Context\) \(err error\)](<#RPMUploadFiles.Run>)
   - [func \(p \*RPMUploadFiles\) Title\(\) string](<#RPMUploadFiles.Title>)
 - [type ReconfigureSurvivors](<#ReconfigureSurvivors>)
   - [func \(p \*ReconfigureSurvivors\) Explanation\(\) string](<#ReconfigureSurvivors.Explanation>)
-  - [func \(p \*ReconfigureSurvivors\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#ReconfigureSurvivors.Prepare>)
+  - [func \(p \*ReconfigureSurvivors\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#ReconfigureSurvivors.Prepare>)
   - [func \(p \*ReconfigureSurvivors\) Run\(ctx context.Context\) error](<#ReconfigureSurvivors.Run>)
   - [func \(p \*ReconfigureSurvivors\) ShouldRun\(\) bool](<#ReconfigureSurvivors.ShouldRun>)
   - [func \(p \*ReconfigureSurvivors\) Title\(\) string](<#ReconfigureSurvivors.Title>)
 - [type RemoveSelinuxPolicy](<#RemoveSelinuxPolicy>)
   - [func \(p \*RemoveSelinuxPolicy\) Explanation\(\) string](<#RemoveSelinuxPolicy.Explanation>)
-  - [func \(p \*RemoveSelinuxPolicy\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#RemoveSelinuxPolicy.Prepare>)
+  - [func \(p \*RemoveSelinuxPolicy\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#RemoveSelinuxPolicy.Prepare>)
   - [func \(p \*RemoveSelinuxPolicy\) Run\(ctx context.Context\) error](<#RemoveSelinuxPolicy.Run>)
   - [func \(p \*RemoveSelinuxPolicy\) ShouldRun\(\) bool](<#RemoveSelinuxPolicy.ShouldRun>)
   - [func \(p \*RemoveSelinuxPolicy\) Title\(\) string](<#RemoveSelinuxPolicy.Title>)
@@ -241,35 +241,35 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(r RunResult\) Undeclared\(\) \[\]string](<#RunResult.Undeclared>)
 - [type UninstallEngine](<#UninstallEngine>)
   - [func \(p \*UninstallEngine\) Explanation\(\) string](<#UninstallEngine.Explanation>)
-  - [func \(p \*UninstallEngine\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#UninstallEngine.Prepare>)
+  - [func \(p \*UninstallEngine\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#UninstallEngine.Prepare>)
   - [func \(p \*UninstallEngine\) Run\(ctx context.Context\) error](<#UninstallEngine.Run>)
   - [func \(p \*UninstallEngine\) Title\(\) string](<#UninstallEngine.Title>)
 - [type Unlock](<#Unlock>)
   - [func \(p \*Unlock\) Explanation\(\) string](<#Unlock.Explanation>)
-  - [func \(p \*Unlock\) Prepare\(\_ context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#Unlock.Prepare>)
+  - [func \(p \*Unlock\) Prepare\(\_ context.Context, c \*cluster.Cluster, \_ \*distro.Distro\) error](<#Unlock.Prepare>)
   - [func \(p \*Unlock\) Run\(ctx context.Context\) error](<#Unlock.Run>)
   - [func \(p \*Unlock\) Title\(\) string](<#Unlock.Title>)
 - [type UpgradeController](<#UpgradeController>)
   - [func \(p \*UpgradeController\) Explanation\(\) string](<#UpgradeController.Explanation>)
-  - [func \(p \*UpgradeController\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#UpgradeController.Prepare>)
+  - [func \(p \*UpgradeController\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, d \*distro.Distro\) error](<#UpgradeController.Prepare>)
   - [func \(p \*UpgradeController\) Run\(ctx context.Context\) error](<#UpgradeController.Run>)
   - [func \(p \*UpgradeController\) Title\(\) string](<#UpgradeController.Title>)
 - [type UpgradeHosts](<#UpgradeHosts>)
   - [func \(p \*UpgradeHosts\) ShouldRun\(\) bool](<#UpgradeHosts.ShouldRun>)
 - [type UpgradeWorkers](<#UpgradeWorkers>)
   - [func \(p \*UpgradeWorkers\) Explanation\(\) string](<#UpgradeWorkers.Explanation>)
-  - [func \(p \*UpgradeWorkers\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#UpgradeWorkers.Prepare>)
+  - [func \(p \*UpgradeWorkers\) Prepare\(ctx context.Context, \_ \*cluster.Cluster, d \*distro.Distro\) error](<#UpgradeWorkers.Prepare>)
   - [func \(p \*UpgradeWorkers\) Run\(ctx context.Context\) error](<#UpgradeWorkers.Run>)
   - [func \(p \*UpgradeWorkers\) Title\(\) string](<#UpgradeWorkers.Title>)
 - [type UploadFiles](<#UploadFiles>)
   - [func \(p \*UploadFiles\) Explanation\(\) string](<#UploadFiles.Explanation>)
-  - [func \(p \*UploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#UploadFiles.Prepare>)
+  - [func \(p \*UploadFiles\) Prepare\(ctx context.Context, c \*cluster.Cluster, d \*distro.Distro\) error](<#UploadFiles.Prepare>)
   - [func \(p \*UploadFiles\) Run\(ctx context.Context\) error](<#UploadFiles.Run>)
   - [func \(p \*UploadFiles\) ShouldRun\(\) bool](<#UploadFiles.ShouldRun>)
   - [func \(p \*UploadFiles\) Title\(\) string](<#UploadFiles.Title>)
 - [type UploadFilesCommon](<#UploadFilesCommon>)
   - [func \(p \*UploadFilesCommon\) CleanUp\(ctx context.Context\)](<#UploadFilesCommon.CleanUp>)
-  - [func \(p \*UploadFilesCommon\) Prepare\(\_ context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#UploadFilesCommon.Prepare>)
+  - [func \(p \*UploadFilesCommon\) Prepare\(\_ context.Context, \_ \*cluster.Cluster, \_ \*distro.Distro\) error](<#UploadFilesCommon.Prepare>)
   - [func \(p \*UploadFilesCommon\) Run\(ctx context.Context\) \(err error\)](<#UploadFilesCommon.Run>)
   - [func \(p \*UploadFilesCommon\) ShouldRun\(\) bool](<#UploadFilesCommon.ShouldRun>)
 - [type ValidateHosts](<#ValidateHosts>)
@@ -417,7 +417,7 @@ var NoWait bool
 ## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L302>)
 
 ```go
-func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error
+func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
 ```
 
 CheckTargetHosts reports a target that names no host in the configuration.
@@ -466,7 +466,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*APTUploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L43>)
 
 ```go
-func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -515,7 +515,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*ApplyManifests\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L60>)
 
 ```go
-func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -572,7 +572,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*BINUploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/59_bin_install.go#L51>)
 
 ```go
-func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -624,7 +624,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*ConfigureEngine\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/60_configure_engine.go#L45>)
 
 ```go
-func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -674,7 +674,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*ConfigureFirewall\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L61>)
 
 ```go
-func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -819,7 +819,7 @@ type DeleteCommon struct {
 ### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L88>)
 
 ```go
-func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -850,7 +850,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*DeleteControllers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L55>)
 
 ```go
-func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -909,7 +909,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*DeleteWorkers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L55>)
 
 ```go
-func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1024,7 +1024,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*DetectRemovedHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L102>)
 
 ```go
-func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase.
@@ -1183,7 +1183,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*EngineConfigSyncController\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/71_engine_config_sync_controller.go#L42>)
 
 ```go
-func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1266,7 +1266,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*EngineConfigSyncWorker\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/72_engine_config_sync_worker.go#L43>)
 
 ```go
-func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1367,7 +1367,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*GatherFactsDistro\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L70>)
 
 ```go
-func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1414,7 +1414,7 @@ type GenericPhase struct {
 ### func \(\*GenericPhase\) [GetConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L59>)
 
 ```go
-func (p *GenericPhase) GetConfig() *cluster.ZarfCluster
+func (p *GenericPhase) GetConfig() *cluster.Cluster
 ```
 
 GetConfig is an accessor to phase Config
@@ -1423,7 +1423,7 @@ GetConfig is an accessor to phase Config
 ### func \(\*GenericPhase\) [GetDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L64>)
 
 ```go
-func (p *GenericPhase) GetDistro() *distro.ZarfDistro
+func (p *GenericPhase) GetDistro() *distro.Distro
 ```
 
 GetDistro is an accessor to phase Distro
@@ -1432,7 +1432,7 @@ GetDistro is an accessor to phase Distro
 ### func \(\*GenericPhase\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L69>)
 
 ```go
-func (p *GenericPhase) Prepare(c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *GenericPhase) Prepare(c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1450,7 +1450,7 @@ SetManager adds a reference to the phase manager
 ### func \(\*GenericPhase\) [VersionGreater](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L189>)
 
 ```go
-func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool
+func (p *GenericPhase) VersionGreater(host *cluster.Host, version string) bool
 ```
 
 VersionGreater if host version is greater then the distro version
@@ -1459,7 +1459,7 @@ VersionGreater if host version is greater then the distro version
 ### func \(\*GenericPhase\) [VersionLess](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L176>)
 
 ```go
-func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool
+func (p *GenericPhase) VersionLess(host *cluster.Host, version string) bool
 ```
 
 VersionLess if host version is less then the distro version
@@ -1468,7 +1468,7 @@ VersionLess if host version is less then the distro version
 ### func \(\*GenericPhase\) [VersionSkewTooGreat](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L205>)
 
 ```go
-func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool
+func (p *GenericPhase) VersionSkewTooGreat(host *cluster.Host, target string) bool
 ```
 
 VersionSkewTooGreat reports whether host's running version is more than one minor version behind target. kubeadm's own upgrade path refuses to skip a minor version, and a two\-minor jump fails partway through the control plane rather than up front, so this catches it before a real run starts one. UnknownVersion \(no engine detected yet, a fresh install\) never counts as skew.
@@ -1508,7 +1508,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*ImportImages\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L47>)
 
 ```go
-func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *ImportImages) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1566,7 +1566,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*InitializeControllers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L59>)
 
 ```go
-func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1626,7 +1626,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*InitializeWorkers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L69>)
 
 ```go
-func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1714,7 +1714,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*KubeConfig\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L74>)
 
 ```go
-func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1774,7 +1774,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*LabelNodes\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L59>)
 
 ```go
-func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1849,7 +1849,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*Lock\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L47>)
 
 ```go
-func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *Lock) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -1888,8 +1888,8 @@ Manager executes phases to construct the cluster
 
 ```go
 type Manager struct {
-    Config *cluster.ZarfCluster
-    Distro *distro.ZarfDistro
+    Config *cluster.Cluster
+    Distro *distro.Distro
     // Values is the configuration the package ships with, merged with the
     // overrides in the cluster inventory and checked against the package's
     // values schema. Phases read it instead of re-reading either source, so
@@ -1915,7 +1915,7 @@ type Manager struct {
 ### func [NewManager](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L411>)
 
 ```go
-func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error)
+func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)
 ```
 
 NewManager creates a new Manager
@@ -1933,7 +1933,7 @@ AddPhase adds a Phase to Manager
 ### func \(\*Manager\) [GetDistroOSFiles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L446>)
 
 ```go
-func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles
+func (m *Manager) GetDistroOSFiles() v1alpha1.Files
 ```
 
 GetDistroOSFiles returns the ZarfFiles for a distro
@@ -2048,7 +2048,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*ModifyHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L50>)
 
 ```go
-func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2181,7 +2181,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*PrepareFapolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39>)
 
 ```go
-func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2238,7 +2238,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*PrepareHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L62>)
 
 ```go
-func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2287,7 +2287,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*PrepareKernelModules\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L44>)
 
 ```go
-func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2344,7 +2344,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*PrepareSelinux\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L38>)
 
 ```go
-func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2401,7 +2401,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*PrepareSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79>)
 
 ```go
-func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2457,7 +2457,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*RPMUploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L43>)
 
 ```go
-func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2513,7 +2513,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*ReconfigureSurvivors\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L76>)
 
 ```go
-func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2572,7 +2572,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*RemoveSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37>)
 
 ```go
-func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2730,7 +2730,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*UninstallEngine\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L64>)
 
 ```go
-func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2778,7 +2778,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*Unlock\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/92_unlock.go#L38>)
 
 ```go
-func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *Unlock) Prepare(_ context.Context, c *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2825,7 +2825,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*UpgradeController\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L47>)
 
 ```go
-func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2895,7 +2895,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*UpgradeWorkers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L48>)
 
 ```go
-func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -2943,7 +2943,7 @@ Explanation about the current phase, used for documentation generation
 ### func \(\*UploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L85>)
 
 ```go
-func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 ```
 
 Prepare the phase
@@ -3000,7 +3000,7 @@ CleanUp the phase
 ### func \(\*UploadFilesCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L66>)
 
 ```go
-func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 ```
 
 Prepare the phase

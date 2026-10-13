@@ -38,7 +38,7 @@ import (
 type apiVersionHandler struct {
 	version  string
 	priority int
-	decode   func(ctx context.Context, node ast.Node) (distro.ZarfDistro, error)
+	decode   func(ctx context.Context, node ast.Node) (distro.Distro, error)
 }
 
 // knownAPIVersions lists every apiVersion this Cargoship version can decode. To add a
@@ -48,32 +48,32 @@ var knownAPIVersions = []apiVersionHandler{
 }
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
-func Parse(ctx context.Context, b []byte) (distro.ZarfDistro, error) {
+func Parse(ctx context.Context, b []byte) (distro.Distro, error) {
 	docs, err := parseDistroYAMLDocs(b)
 	if err != nil {
-		return distro.ZarfDistro{}, err
+		return distro.Distro{}, err
 	}
 	if len(docs) > 1 {
-		return distro.ZarfDistro{}, errors.New("package definition must contain a single YAML document")
+		return distro.Distro{}, errors.New("package definition must contain a single YAML document")
 	}
 	version, err := apiVersionFromNode(docs[0].Body)
 	if err != nil {
-		return distro.ZarfDistro{}, fmt.Errorf("reading apiVersion: %w", err)
+		return distro.Distro{}, fmt.Errorf("reading apiVersion: %w", err)
 	}
 	handler, known := handlerFor(version)
 	if !known {
-		return distro.ZarfDistro{}, fmt.Errorf("unsupported apiVersion %q", version)
+		return distro.Distro{}, fmt.Errorf("unsupported apiVersion %q", version)
 	}
 	return handler.decode(ctx, docs[0].Body)
 }
 
 // ParseMultiDoc parses a multi doc zarf.yaml file, generally from an already built package.
 // Multi doc definitions may contain one document per apiVersion.
-func ParseMultiDoc(ctx context.Context, b []byte) (distro.ZarfDistro, error) {
+func ParseMultiDoc(ctx context.Context, b []byte) (distro.Distro, error) {
 	l := logger.From(ctx)
 	docs, err := parseDistroYAMLDocs(b)
 	if err != nil {
-		return distro.ZarfDistro{}, err
+		return distro.Distro{}, err
 	}
 
 	var (
@@ -86,7 +86,7 @@ func ParseMultiDoc(ctx context.Context, b []byte) (distro.ZarfDistro, error) {
 	for i, doc := range docs {
 		version, err := apiVersionFromNode(doc.Body)
 		if err != nil {
-			return distro.ZarfDistro{}, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
+			return distro.Distro{}, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
 		}
 		handler, known := handlerFor(version)
 		if !known {
@@ -94,7 +94,7 @@ func ParseMultiDoc(ctx context.Context, b []byte) (distro.ZarfDistro, error) {
 			continue
 		}
 		if seenVersions[handler.version] {
-			return distro.ZarfDistro{}, fmt.Errorf("duplicate apiVersion %q in package definition", handler.version)
+			return distro.Distro{}, fmt.Errorf("duplicate apiVersion %q in package definition", handler.version)
 		}
 		seenVersions[handler.version] = true
 		if !found || handler.priority > chosen.priority {
@@ -105,15 +105,15 @@ func ParseMultiDoc(ctx context.Context, b []byte) (distro.ZarfDistro, error) {
 	}
 
 	if !found {
-		return distro.ZarfDistro{}, errors.New("no supported apiVersion found in package definition")
+		return distro.Distro{}, errors.New("no supported apiVersion found in package definition")
 	}
 	return chosen.decode(ctx, chosenNode)
 }
 
-func decodeV1Alpha1(_ context.Context, node ast.Node) (distro.ZarfDistro, error) {
-	var pkg distro.ZarfDistro
+func decodeV1Alpha1(_ context.Context, node ast.Node) (distro.Distro, error) {
+	var pkg distro.Distro
 	if err := goyaml.NodeToValue(node, &pkg); err != nil {
-		return distro.ZarfDistro{}, err
+		return distro.Distro{}, err
 	}
 	return pkg, nil
 }

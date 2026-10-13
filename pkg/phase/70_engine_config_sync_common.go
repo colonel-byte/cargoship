@@ -49,15 +49,15 @@ type EngineConfigSyncHosts struct {
 	desired           map[string]distrocfg.DesiredFile
 	controllerDesired map[string]distrocfg.DesiredFile
 	service           string
-	hosts             cluster.ZarfHosts
-	leader            *cluster.ZarfHost
+	hosts             cluster.Hosts
+	leader            *cluster.Host
 	// drift records why each host was selected. Prepare fills it while deciding which hosts to
 	// sync, so Run can say what it is draining a node for without reading every file off that
 	// host a second time. It is keyed by host pointer rather than by name: the same pointers
-	// travel from the candidate list into p.hosts, while ZarfHost.Hostname is an optional
+	// travel from the candidate list into p.hosts, while Host.Hostname is an optional
 	// override that is empty on most hosts.
 	driftMu sync.Mutex
-	drift   map[*cluster.ZarfHost][]string
+	drift   map[*cluster.Host][]string
 	// changed records whether this phase altered a host. It shares driftMu because it is
 	// written from the same parallel sweep over the hosts that fills drift.
 	changed bool
@@ -90,7 +90,7 @@ func (p *EngineConfigSyncHosts) ShouldRun() bool {
 }
 
 func (p *EngineConfigSyncHosts) prepareLeader(ctx context.Context) error {
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) == 0 {
@@ -100,19 +100,19 @@ func (p *EngineConfigSyncHosts) prepareLeader(ctx context.Context) error {
 	return nil
 }
 
-func (p *EngineConfigSyncHosts) loadDesiredConfig(ctx context.Context, c *cluster.ZarfCluster, dis distro.ZarfDistro) error {
+func (p *EngineConfigSyncHosts) loadDesiredConfig(ctx context.Context, c *cluster.Cluster, dis distro.Distro) error {
 	if err := clustercfg.DecryptRegistryAuth(c, p.Keyring); err != nil {
 		return err
 	}
-	run := cluster.ZarfRuntimeMeta{Registries: c.Spec.Config.Registries}
+	run := cluster.RuntimeMeta{Registries: c.Spec.Config.Registries}
 
-	desired, err := p.Distro.DesiredFiles(ctx, &cluster.ZarfHost{}, run, dis)
+	desired, err := p.Distro.DesiredFiles(ctx, &cluster.Host{}, run, dis)
 	if err != nil {
 		return err
 	}
 	p.desired = desired
 
-	controllerDesired, err := p.Distro.DesiredFiles(ctx, &cluster.ZarfHost{Role: cluster.RoleController}, run, dis)
+	controllerDesired, err := p.Distro.DesiredFiles(ctx, &cluster.Host{Role: cluster.RoleController}, run, dis)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (p *EngineConfigSyncHosts) loadDesiredConfig(ctx context.Context, c *cluste
 // filesFor is the set of files a host is meant to carry. A controller carries what every host
 // carries and then some, so an agent is never asked for a file that only a controller writes,
 // and a controller is never told a manifest it does have is stale.
-func (p *EngineConfigSyncHosts) filesFor(h *cluster.ZarfHost) map[string]distrocfg.DesiredFile {
+func (p *EngineConfigSyncHosts) filesFor(h *cluster.Host) map[string]distrocfg.DesiredFile {
 	if h.IsController() && p.controllerDesired != nil {
 		return p.controllerDesired
 	}
@@ -135,7 +135,7 @@ func (p *EngineConfigSyncHosts) filesFor(h *cluster.ZarfHost) map[string]distroc
 // unreadable file is reported as such rather than as a content difference, since the two call
 // for different things from whoever reads the log. The list is sorted so that the same drift
 // reads the same way from one run to the next.
-func (p *EngineConfigSyncHosts) driftedFiles(h *cluster.ZarfHost) []string {
+func (p *EngineConfigSyncHosts) driftedFiles(h *cluster.Host) []string {
 	var drifted []string
 	for path, want := range p.filesFor(h) {
 		base := filepath.Base(path)
@@ -161,13 +161,13 @@ func (p *EngineConfigSyncHosts) driftedFiles(h *cluster.ZarfHost) []string {
 	return drifted
 }
 
-func (p *EngineConfigSyncHosts) needsUpdate(ctx context.Context, h *cluster.ZarfHost) bool {
+func (p *EngineConfigSyncHosts) needsUpdate(ctx context.Context, h *cluster.Host) bool {
 	drifted := p.driftedFiles(h)
 
 	p.driftMu.Lock()
 	defer p.driftMu.Unlock()
 	if p.drift == nil {
-		p.drift = map[*cluster.ZarfHost][]string{}
+		p.drift = map[*cluster.Host][]string{}
 	}
 	p.drift[h] = drifted
 
@@ -248,7 +248,7 @@ func (p *EngineConfigSyncHosts) needsUpdate(ctx context.Context, h *cluster.Zarf
 
 // driftReason reports what needsUpdate found on this host, for the log line that precedes a
 // drain. It is empty when the host was never checked.
-func (p *EngineConfigSyncHosts) driftReason(h *cluster.ZarfHost) string {
+func (p *EngineConfigSyncHosts) driftReason(h *cluster.Host) string {
 	p.driftMu.Lock()
 	defer p.driftMu.Unlock()
 	return strings.Join(p.drift[h], ", ")
@@ -262,7 +262,7 @@ func (p *EngineConfigSyncHosts) driftReason(h *cluster.ZarfHost) string {
 // A mode that cannot be parsed, or a file that cannot be stat'd, reports a match: there is
 // nothing to compare against, and content comparison already decides whether the file is
 // rewritten.
-func fileModeMatches(h *cluster.ZarfHost, path, want string) bool {
+func fileModeMatches(h *cluster.Host, path, want string) bool {
 	if want == "" {
 		want = defaultFileMode
 	}
@@ -277,7 +277,7 @@ func fileModeMatches(h *cluster.ZarfHost, path, want string) bool {
 	return info.Mode().Perm() == fs.FileMode(parsed).Perm()
 }
 
-func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.Host) error {
 	for path, file := range p.filesFor(h) {
 		mode := file.Mode
 		if mode == "" {
@@ -292,14 +292,14 @@ func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHos
 	return distrocfg.RemoveStaleFiles(h, p.Distro.ManagedDirs(), p.filesFor(h))
 }
 
-func (p *EngineConfigSyncHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) drainNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("draining node to sync engine config", "node", h, "drifted", p.driftReason(h))
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
 		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
 	})
 }
 
-func (p *EngineConfigSyncHosts) startService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) startService(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the service to start", "service", p.service, "host", h)
 
 	startedAt := time.Now()
@@ -317,7 +317,7 @@ func (p *EngineConfigSyncHosts) startService(ctx context.Context, h *cluster.Zar
 	return h.EnableService(ctx, p.service)
 }
 
-func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
@@ -332,6 +332,6 @@ func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster
 	})
 }
 
-func (p *EngineConfigSyncHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) uncordonNode(_ context.Context, h *cluster.Host) error {
 	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)))
 }

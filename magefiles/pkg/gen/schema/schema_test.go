@@ -31,7 +31,7 @@ import (
 func TestGenerateV1Alpha1Schema(t *testing.T) {
 	t.Chdir("../../../..")
 
-	b, err := schema.GenerateV1Alpha1Schema(&cluster.ZarfCluster{}, []string{"api", "colonel-byte.dev", "v1alpha1", "cluster"}, strcase.LowerCamelCase)
+	b, err := schema.GenerateV1Alpha1Schema(&cluster.Cluster{}, []string{"api", "colonel-byte.dev", "v1alpha1", "cluster"}, strcase.LowerCamelCase)
 	require.NoError(t, err)
 
 	var parsed map[string]any
@@ -119,7 +119,7 @@ func TestSensitivePropertiesAreMarked(t *testing.T) {
 		{
 			name:   "registry credentials",
 			target: "zarf-v1alpha1-cluster-schema.json",
-			def:    "ZarfClusterRegistryAuth",
+			def:    "RegistryAuth",
 			properties: []string{
 				"pass",
 				"token",

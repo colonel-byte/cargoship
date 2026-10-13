@@ -93,7 +93,7 @@ func (p *Phases) Replace(title string, phase Phase) {
 
 type withconfig interface {
 	Title() string
-	Prepare(context.Context, *cluster.ZarfCluster, *distro.ZarfDistro) error
+	Prepare(context.Context, *cluster.Cluster, *distro.Distro) error
 }
 
 type conditional interface {
@@ -376,8 +376,8 @@ type withAfter interface {
 // Manager executes phases to construct the cluster
 type Manager struct {
 	phases Phases
-	Config *cluster.ZarfCluster
-	Distro *distro.ZarfDistro
+	Config *cluster.Cluster
+	Distro *distro.Distro
 	// Values is the configuration the package ships with, merged with the
 	// overrides in the cluster inventory and checked against the package's
 	// values schema. Phases read it instead of re-reading either source, so
@@ -408,7 +408,7 @@ type ManagerDistroConfig struct {
 }
 
 // NewManager creates a new Manager
-func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error) {
+func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config is nil")
 	}
@@ -443,7 +443,7 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 }
 
 // GetDistroOSFiles returns the ZarfFiles for a distro
-func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles {
+func (m *Manager) GetDistroOSFiles() v1alpha1.Files {
 	return m.Distro.Spec.Config.OS.Files
 }
 

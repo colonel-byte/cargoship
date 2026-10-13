@@ -34,14 +34,14 @@ type fakePreUninstallResetterDistro struct {
 	err   error
 }
 
-func (f *fakePreUninstallResetterDistro) PreUninstallReset(_ context.Context, h *cluster.ZarfHost) error {
+func (f *fakePreUninstallResetterDistro) PreUninstallReset(_ context.Context, h *cluster.Host) error {
 	f.calls = append(f.calls, h.Hostname)
 	return f.err
 }
 
 func TestPreUninstallResetNoOpWhenNotImplemented(t *testing.T) {
 	p := &UninstallEngine{Distro: fakeServiceDistro{}}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 
 	require.NoError(t, p.preUninstallReset(context.Background(), h))
 }
@@ -49,7 +49,7 @@ func TestPreUninstallResetNoOpWhenNotImplemented(t *testing.T) {
 func TestPreUninstallResetDispatchesWhenImplemented(t *testing.T) {
 	d := &fakePreUninstallResetterDistro{}
 	p := &UninstallEngine{Distro: d}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 
 	require.NoError(t, p.preUninstallReset(context.Background(), h))
 	require.Equal(t, []string{"node1"}, d.calls)
@@ -59,7 +59,7 @@ func TestPreUninstallResetPropagatesError(t *testing.T) {
 	wantErr := errors.New("kubeadm reset failed")
 	d := &fakePreUninstallResetterDistro{err: wantErr}
 	p := &UninstallEngine{Distro: d}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 
 	err := p.preUninstallReset(context.Background(), h)
 
@@ -89,9 +89,9 @@ func TestUninstallEngineTargetHostsFiltersHosts(t *testing.T) {
 		TargetHosts: []string{"worker1"},
 	}
 	m := &Manager{
-		Config: &cluster.ZarfCluster{
-			Spec: cluster.ZarfClusterSpec{
-				Hosts: cluster.ZarfHosts{
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
+				Hosts: cluster.Hosts{
 					{Hostname: "controller1", Role: cluster.RoleController},
 					{Hostname: "worker1", Role: cluster.RoleWorker},
 					{Hostname: "worker2", Role: cluster.RoleWorker},
@@ -108,21 +108,21 @@ func TestUninstallEngineTargetHostsFiltersHosts(t *testing.T) {
 
 func TestDetectInstalledEnginePackagesNoDistro(t *testing.T) {
 	p := &UninstallEngine{Distro: nil}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 	pkgs := p.detectInstalledEnginePackages(context.Background(), h)
 	require.Nil(t, pkgs)
 }
 
 func TestDetectInstalledEnginePackagesUnknownDistro(t *testing.T) {
 	p := &UninstallEngine{Distro: fakeBinaryDistro{binary: "unknown"}}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 	pkgs := p.detectInstalledEnginePackages(context.Background(), h)
 	require.Nil(t, pkgs)
 }
 
 func TestCleanManagedDirsNoDistro(_ *testing.T) {
 	p := &UninstallEngine{Distro: nil}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 	// Should not panic or error with nil distro
 	p.cleanManagedDirs(context.Background(), h)
 }
@@ -151,7 +151,7 @@ func TestUninstallNodeCleansWhatCargoshipManages(t *testing.T) {
 		},
 		TargetHosts: []string{"worker1"},
 	}
-	h := &cluster.ZarfHost{Hostname: "worker1"}
+	h := &cluster.Host{Hostname: "worker1"}
 
 	require.NoError(t, p.uninstallNode(context.Background(), h))
 	require.Positive(t, asked, "the uninstall never asked the distro what it manages")
@@ -178,7 +178,7 @@ func (d *dirFS) Stat(path string) (fs.FileInfo, error) {
 // TestPathExistsFindsDirectories is the whole of a defect that made an uninstall quietly skip
 // every path it was meant to remove.
 //
-// ZarfHost.FileExist is `test -f`, so it is false for a directory, and every path an uninstall
+// Host.FileExist is `test -f`, so it is false for a directory, and every path an uninstall
 // removes is one: the engine's data directory, its config directory, /etc/cargoship, the
 // package staging directory. Guarding their removal on it meant nothing was attempted, so
 // nothing failed and nothing was logged -- a reset reported success having left 2.3G in
@@ -191,7 +191,7 @@ func TestPathExistsFindsDirectories(t *testing.T) {
 		config  = "/etc/rancher/rke2/config.yaml"
 	)
 
-	h := &cluster.ZarfHost{Hostname: "worker1"}
+	h := &cluster.Host{Hostname: "worker1"}
 	h.SetFS(&dirFS{
 		dirs:  map[string]bool{dataDir: true},
 		files: map[string]bool{config: true},

@@ -84,7 +84,7 @@ func (p *ValidateHosts) Run(ctx context.Context) error {
 	return p.validateClockSkew(ctx)
 }
 
-func (p *ValidateHosts) validateUniqueHostname(_ context.Context, h *cluster.ZarfHost) error {
+func (p *ValidateHosts) validateUniqueHostname(_ context.Context, h *cluster.Host) error {
 	if p.hncount[h.Metadata.Hostname] > 1 {
 		return fmt.Errorf("hostname is not unique: %s", h.Metadata.Hostname)
 	}
@@ -92,7 +92,7 @@ func (p *ValidateHosts) validateUniqueHostname(_ context.Context, h *cluster.Zar
 	return nil
 }
 
-func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *cluster.ZarfHost) error {
+func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *cluster.Host) error {
 	if p.privateaddrcount[h.PrivateAddress] > 1 {
 		return fmt.Errorf("privateAddress %q is not unique: %s", h.PrivateAddress, h.Metadata.Hostname)
 	}
@@ -100,11 +100,11 @@ func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *clust
 	return nil
 }
 
-func (p *ValidateHosts) validateSudo(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *ValidateHosts) validateSudo(ctx context.Context, h *cluster.Host) error {
 	return h.CheckSudo(ctx)
 }
 
-func (p *ValidateHosts) validateFirewallRules(_ context.Context, h *cluster.ZarfHost) error {
+func (p *ValidateHosts) validateFirewallRules(_ context.Context, h *cluster.Host) error {
 	if err := h.Host.Firewall.Validate(); err != nil {
 		return fmt.Errorf("%s: %w", h, err)
 	}
@@ -122,7 +122,7 @@ func (p *ValidateHosts) validateFirewallRules(_ context.Context, h *cluster.Zarf
 // there is nothing to check a host against. Neither is a package that records no build architecture.
 // Nothing cargoship assembles is missing that metadata, so such a package predates it, and refusing
 // to apply it would be a regression rather than a useful check.
-func (p *ValidateHosts) validateHostArch(_ context.Context, h *cluster.ZarfHost) error {
+func (p *ValidateHosts) validateHostArch(_ context.Context, h *cluster.Host) error {
 	if p.manager.Distro == nil {
 		return nil
 	}
@@ -145,7 +145,7 @@ func (p *ValidateHosts) validateHostArch(_ context.Context, h *cluster.ZarfHost)
 	return nil
 }
 
-func (p *ValidateHosts) validateConfigurer(_ context.Context, h *cluster.ZarfHost) error {
+func (p *ValidateHosts) validateConfigurer(_ context.Context, h *cluster.Host) error {
 	validator, ok := h.Configurer.(os.HostValidator)
 	if !ok {
 		return nil
@@ -158,12 +158,12 @@ const maxSkew = 30 * time.Second
 
 func (p *ValidateHosts) validateClockSkew(ctx context.Context) error {
 	logger.From(ctx).Info("validating clock skew")
-	skews := make(map[*cluster.ZarfHost]time.Duration, len(p.manager.Config.Spec.Hosts))
+	skews := make(map[*cluster.Host]time.Duration, len(p.manager.Config.Spec.Hosts))
 	var skewValues []time.Duration
 	var mu sync.Mutex
 
 	// Collect skews relative to local time
-	err := p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+	err := p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.Host) error {
 		remote, err := h.FS().SystemTime()
 		if err != nil {
 			return fmt.Errorf("failed to get time from %s: %w", h, err)

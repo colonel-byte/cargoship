@@ -282,10 +282,10 @@ func credentialIn(t *testing.T, doc []byte) string {
 }
 
 // decode unmarshals doc into the configuration type an apply uses.
-func decode(t *testing.T, doc []byte) cluster.ZarfCluster {
+func decode(t *testing.T, doc []byte) cluster.Cluster {
 	t.Helper()
 
-	var parsed cluster.ZarfCluster
+	var parsed cluster.Cluster
 	require.NoError(t, goyaml.Unmarshal(doc, &parsed), "the rewritten document does not decode:\n%s", doc)
 
 	return parsed

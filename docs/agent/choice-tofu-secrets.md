@@ -8,7 +8,7 @@ That makes this a decision to take before any attribute name exists, which is wh
 
 The resource takes the **path** to an SSH private key. It never takes the key itself, and there is no attribute that would accept one. A path in state names a file; key material in state is the key, distributed.
 
-Nothing has to be invented for this, because it is already the shape of the configuration: a host's connection settings come from rig's `ssh.Config`, which has `KeyPath *string` and no serializable password field at all, and `ZarfHost` embeds that config inline. A passphrase for an encrypted identity is resolved by callback at connection time (`internal/clustercfg/keyring.go`'s `sshPassphrase`), not read from a field. The inventory format the provider renders therefore has nowhere to put a key even if someone wanted to, and the provider schema should not add one.
+Nothing has to be invented for this, because it is already the shape of the configuration: a host's connection settings come from rig's `ssh.Config`, which has `KeyPath *string` and no serializable password field at all, and `Host` embeds that config inline. A passphrase for an encrypted identity is resolved by callback at connection time (`internal/clustercfg/keyring.go`'s `sshPassphrase`), not read from a field. The inventory format the provider renders therefore has nowhere to put a key even if someone wanted to, and the provider schema should not add one.
 
 The cost is real and accepted: a key path is only meaningful on the machine running tofu, so a provider configuration is not portable between operators without each of them staging the key at the same path or overriding the path themselves. That is the ordinary situation for an airgapped management node, and it is better than the alternative.
 
@@ -28,7 +28,7 @@ Encrypted values in the cluster configuration are unaffected. A vault or age cip
 
 ## 3. Everything that can carry a secret is marked sensitive, and the marking is data
 
-Some values can still be a credential, because the configuration format permits plaintext: `ZarfClusterRegistryAuth`'s `user`, `pass` and `token` each accept plaintext as well as the two ciphertext formats, and `signing_key_password` in the cargoship configuration file is a password outright. Every provider attribute that maps onto one of those is declared `Sensitive: true`.
+Some values can still be a credential, because the configuration format permits plaintext: `RegistryAuth`'s `user`, `pass` and `token` each accept plaintext as well as the two ciphertext formats, and `signing_key_password` in the cargoship configuration file is a password outright. Every provider attribute that maps onto one of those is declared `Sensitive: true`.
 
 Which values those are was documented only in prose and in example ciphertext, which is not something a second module can read. So the schema generator now carries the marking as data: `jsonschema_extras:"x-sensitive=true"` on the field puts `"x-sensitive": true` on the property in `schema/*.json`, and the docs renderer leads that property's description with **Sensitive.** in `docs/schema/`. `TestSensitivePropertiesAreMarked` pins the set, because a field losing the tag is a secret landing in state in plaintext and nothing else in the test suite would notice.
 

@@ -59,9 +59,9 @@ type ClusterMeta struct {
 	// LoadBalancer is the hostname clients use to reach the control plane.
 	LoadBalancer string `json:"loadbalancer"`
 	// Profiles maps a profile name to the host and engine overrides a host can select.
-	Profiles map[string]cluster.ZarfClusterProfiles `json:"profiles,omitempty"`
+	Profiles map[string]cluster.Profiles `json:"profiles,omitempty"`
 	// Registries lists the container registries the cluster uses.
-	Registries []cluster.ZarfClusterRegistries `json:"registries,omitempty"`
+	Registries []cluster.Registries `json:"registries,omitempty"`
 	// Values overrides the values the distro package was built with.
 	Values map[string]any `json:"values,omitempty"`
 }
@@ -76,7 +76,7 @@ type ClusterMeta struct {
 // The result is checked against the embedded inventory schema before it is returned, so a
 // translation mistake is reported as the field it landed in rather than as a phase failing
 // against a live host some minutes into an apply.
-func Translate(in Input, meta ClusterMeta) (*cluster.ZarfCluster, error) {
+func Translate(in Input, meta ClusterMeta) (*cluster.Cluster, error) {
 	if meta.Name == "" {
 		return nil, fmt.Errorf("cluster name is required: it becomes metadata.name, and the kubeconfig context")
 	}
@@ -89,7 +89,7 @@ func Translate(in Input, meta ClusterMeta) (*cluster.ZarfCluster, error) {
 		return nil, err
 	}
 
-	hosts := make(cluster.ZarfHosts, 0, len(assignments))
+	hosts := make(cluster.Hosts, 0, len(assignments))
 	for _, a := range assignments {
 		host, err := hostFromVars(a, in.HostVars[a.Host])
 		if err != nil {
@@ -98,12 +98,12 @@ func Translate(in Input, meta ClusterMeta) (*cluster.ZarfCluster, error) {
 		hosts = append(hosts, host)
 	}
 
-	out := &cluster.ZarfCluster{
+	out := &cluster.Cluster{
 		APIVersion: apiVersion,
 		Kind:       documentKind,
-		Metadata:   cluster.ZarfClusterMetadata{Name: meta.Name},
-		Spec: cluster.ZarfClusterSpec{
-			Config: cluster.ZarfClusterConfig{
+		Metadata:   cluster.Metadata{Name: meta.Name},
+		Spec: cluster.Spec{
+			Config: cluster.Config{
 				LoadBalancer: meta.LoadBalancer,
 				Registries:   meta.Registries,
 				Profiles:     meta.Profiles,
@@ -128,7 +128,7 @@ func Translate(in Input, meta ClusterMeta) (*cluster.ZarfCluster, error) {
 // same document: several of the embedded rig types carry omitempty on their JSON tags and not on
 // their YAML tags, so a field absent from the JSON is present and zero in the file. Checking the
 // JSON would pass a document the file then fails.
-func validate(out *cluster.ZarfCluster) error {
+func validate(out *cluster.Cluster) error {
 	encoded, err := goyaml.Marshal(out)
 	if err != nil {
 		return fmt.Errorf("unable to encode the generated inventory: %w", err)

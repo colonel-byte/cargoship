@@ -54,7 +54,7 @@ func TestBuildTimestampNonReproducible(t *testing.T) {
 }
 
 func TestRecordDistroMetadataReproducible(t *testing.T) {
-	d := distro.ZarfDistro{}
+	d := distro.Distro{}
 	d.Metadata.Architecture = "amd64"
 	d.Metadata.Version = "1.2.3"
 
@@ -94,28 +94,28 @@ func TestRecordDistroMetadataReproducible(t *testing.T) {
 func TestRecordDistroMetadataArchitectures(t *testing.T) {
 	tests := []struct {
 		name         string
-		metadata     distro.ZarfDistroMetadata
+		metadata     distro.Metadata
 		wantArches   api.Arches
 		wantScalar   api.Arch
 		scalarReason string
 	}{
 		{
 			name:         "a scalar architecture is recorded in both fields",
-			metadata:     distro.ZarfDistroMetadata{Architecture: api.ArchAMD64},
+			metadata:     distro.Metadata{Architecture: api.ArchAMD64},
 			wantArches:   api.Arches{api.ArchAMD64},
 			wantScalar:   api.ArchAMD64,
 			scalarReason: "a single architecture package keeps the scalar older readers look for",
 		},
 		{
 			name:         "a single entry list is recorded in both fields",
-			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{api.ArchARM64}},
+			metadata:     distro.Metadata{Architectures: api.Arches{api.ArchARM64}},
 			wantArches:   api.Arches{api.ArchARM64},
 			wantScalar:   api.ArchARM64,
 			scalarReason: "a single architecture package keeps the scalar older readers look for",
 		},
 		{
 			name:         "several architectures leave the scalar empty",
-			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
+			metadata:     distro.Metadata{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
 			wantArches:   api.Arches{api.ArchAMD64, api.ArchARM64},
 			wantScalar:   "",
 			scalarReason: "no single architecture describes what the package carries",
@@ -124,7 +124,7 @@ func TestRecordDistroMetadataArchitectures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := recordDistroMetadata(distro.ZarfDistro{Metadata: tt.metadata}, AssembleOptions{}, nil)
+			got := recordDistroMetadata(distro.Distro{Metadata: tt.metadata}, AssembleOptions{}, nil)
 
 			if !slices.Equal(got.Build.Architectures, tt.wantArches) {
 				t.Errorf("Build.Architectures = %v, want %v", got.Build.Architectures, tt.wantArches)
@@ -169,7 +169,7 @@ func TestArchStrings(t *testing.T) {
 }
 
 func TestRecordDistroMetadataNonReproducible(t *testing.T) {
-	d := distro.ZarfDistro{}
+	d := distro.Distro{}
 	d.Metadata.Architecture = "arm64"
 	d.Metadata.Version = "4.5.6"
 
@@ -193,7 +193,7 @@ func TestRecordDistroMetadataNonReproducible(t *testing.T) {
 // FileOverrides is the configuration the build was given, FileSources is what that
 // configuration actually did.
 func TestRecordDistroMetadataFileSources(t *testing.T) {
-	d := distro.ZarfDistro{}
+	d := distro.Distro{}
 	d.Metadata.Architecture = "amd64"
 
 	sources := []distro.FileSource{
@@ -234,7 +234,7 @@ func TestRecordDistroMetadataFileSources(t *testing.T) {
 // TestRecordDistroMetadataNoOverridesRecordsNoSources pins the compatibility promise: a build
 // that used no overrides writes no fileSources key, so its distro.yaml is unchanged.
 func TestRecordDistroMetadataNoOverridesRecordsNoSources(t *testing.T) {
-	d := distro.ZarfDistro{}
+	d := distro.Distro{}
 	d.Metadata.Architecture = "amd64"
 
 	got := recordDistroMetadata(d, AssembleOptions{}, nil)
@@ -252,7 +252,7 @@ func TestRecordDistroMetadataNoOverridesRecordsNoSources(t *testing.T) {
 // Reproducible: true, for otherwise-identical input, must agree on every recorded
 // field -- there's nothing time- or machine-dependent left once Reproducible is set.
 func TestReproducibleAssemblyIsDeterministic(t *testing.T) {
-	d := distro.ZarfDistro{}
+	d := distro.Distro{}
 	d.Metadata.Architecture = "amd64"
 	d.Metadata.Version = "1.0.0"
 	opts := AssembleOptions{Reproducible: true}
@@ -292,8 +292,8 @@ func engineConfigLogContext() (context.Context, *bytes.Buffer) {
 	return logger.WithContext(context.Background(), l), buf
 }
 
-func engineConfigDistro(version string, cfg dig.Mapping) distro.ZarfDistro {
-	d := distro.ZarfDistro{}
+func engineConfigDistro(version string, cfg dig.Mapping) distro.Distro {
+	d := distro.Distro{}
 	d.Spec.Type = "rke2"
 	d.Spec.Version = version
 	d.Spec.Config.Engine = dig.Mapping{config.EngineConfig: cfg}
@@ -358,7 +358,7 @@ func TestLogUnknownEngineConfigLogsOnlyUnknownAddons(t *testing.T) {
 func TestLogUnknownEngineConfigEmptyConfigLogsNothing(t *testing.T) {
 	ctx, buf := engineConfigLogContext()
 
-	logUnknownEngineConfig(ctx, distro.ZarfDistro{})
+	logUnknownEngineConfig(ctx, distro.Distro{})
 
 	if out := buf.String(); out != "" {
 		t.Fatalf("logUnknownEngineConfig logged for a distro with no engine config: %s", out)

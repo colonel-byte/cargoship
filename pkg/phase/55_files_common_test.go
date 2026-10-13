@@ -28,8 +28,8 @@ import (
 
 // newDistroFile is a binary-package file for one architecture. An empty arch leaves the selector
 // open, which is how a file that applies to every architecture is written.
-func newDistroFile(target string, arch api.Arch) *v1alpha1.ZarfFile {
-	f := &v1alpha1.ZarfFile{Target: target}
+func newDistroFile(target string, arch api.Arch) *v1alpha1.File {
+	f := &v1alpha1.File{Target: target}
 	f.Selector.Package = "binary"
 	if arch != "" {
 		f.Selector.Arch = api.Arches{arch}
@@ -40,7 +40,7 @@ func newDistroFile(target string, arch api.Arch) *v1alpha1.ZarfFile {
 // newFileUploader builds an UploadFilesCommon over the given package files. TempDirectory is a
 // scratch directory rather than a real package layout: the selection code only joins paths against
 // it, and the chtimes call on a file that is not there logs rather than fails.
-func newFileUploader(t *testing.T, files ...*v1alpha1.ZarfFile) *UploadFilesCommon {
+func newFileUploader(t *testing.T, files ...*v1alpha1.File) *UploadFilesCommon {
 	t.Helper()
 
 	p := &UploadFilesCommon{}
@@ -97,8 +97,8 @@ func TestGetProfileFilesGroupsByTheArchesInTheCluster(t *testing.T) {
 		newDistroFile("/usr/bin/k3s-amd64", api.ArchAMD64),
 		newDistroFile("/usr/bin/k3s-arm64", api.ArchARM64),
 	)
-	p.control = cluster.ZarfHosts{newDetectedHost(t, "amd64")}
-	p.workers = cluster.ZarfHosts{newDetectedHost(t, "arm64"), newDetectedHost(t, "arm64")}
+	p.control = cluster.Hosts{newDetectedHost(t, "amd64")}
+	p.workers = cluster.Hosts{newDetectedHost(t, "arm64"), newDetectedHost(t, "arm64")}
 
 	got := p.getProfileFiles(context.Background(), "binary", cluster.RoleController)
 
@@ -114,7 +114,7 @@ func TestGetProfileFilesSkipsAnArchNoHostRuns(t *testing.T) {
 		newDistroFile("/usr/bin/k3s-amd64", api.ArchAMD64),
 		newDistroFile("/usr/bin/k3s-arm64", api.ArchARM64),
 	)
-	p.control = cluster.ZarfHosts{newDetectedHost(t, "amd64")}
+	p.control = cluster.Hosts{newDetectedHost(t, "amd64")}
 
 	got := p.getProfileFiles(context.Background(), "binary", cluster.RoleController)
 
@@ -124,7 +124,7 @@ func TestGetProfileFilesSkipsAnArchNoHostRuns(t *testing.T) {
 
 func TestFilesForPicksTheHostArchitecture(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{
+	byArch := map[api.Arch][]v1alpha1.File{
 		api.ArchAMD64: {{Name: "k3s-amd64"}},
 		api.ArchARM64: {{Name: "k3s-arm64"}},
 	}
@@ -141,7 +141,7 @@ func TestFilesForPicksTheHostArchitecture(t *testing.T) {
 // the host is running.
 func TestFilesForWithoutAnArchitectureFails(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64"}}}
 
 	got, err := p.filesFor(byArch, newDetectedHost(t, "sparc64"))
 
@@ -163,7 +163,7 @@ func (c *recordingConfigurer) InstallPackage(_ hostos.Host, pkgs ...string) erro
 	return nil
 }
 
-func newInstallHost(t *testing.T, detected string) (*cluster.ZarfHost, *recordingConfigurer) {
+func newInstallHost(t *testing.T, detected string) (*cluster.Host, *recordingConfigurer) {
 	t.Helper()
 
 	cfg := &recordingConfigurer{}
@@ -175,7 +175,7 @@ func newInstallHost(t *testing.T, detected string) (*cluster.ZarfHost, *recordin
 
 func TestInstallPackagesForInstallsTheHostArchitecturePackages(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{
+	byArch := map[api.Arch][]v1alpha1.File{
 		api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}},
 		api.ArchARM64: {{Name: "k3s-arm64", Target: "/tmp/k3s-arm64.rpm"}},
 	}
@@ -190,7 +190,7 @@ func TestInstallPackagesForInstallsTheHostArchitecturePackages(t *testing.T) {
 // about the architecture the package turned out not to carry.
 func TestInstallPackagesForSkipsAHostWithNoPackages(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
 	h, cfg := newInstallHost(t, "arm64")
 
 	require.NoError(t, p.installPackagesFor(context.Background(), byArch, h))
@@ -199,7 +199,7 @@ func TestInstallPackagesForSkipsAHostWithNoPackages(t *testing.T) {
 
 func TestInstallPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
 	h, cfg := newInstallHost(t, "sparc64")
 
 	require.ErrorIs(t, p.installPackagesFor(context.Background(), byArch, h), api.ErrUnknownArch)
@@ -211,7 +211,7 @@ func TestInstallPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 // rather than being marked populated by an OS-specific phase that uploaded nothing to it.
 func TestBlockOtherInstallsIfUploadedLeavesAHostWithNoFilesOpen(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64"}}}
 	h := newDetectedHost(t, "arm64")
 
 	require.NoError(t, p.blockOtherInstallsIfUploaded(byArch)(context.Background(), h))
@@ -221,7 +221,7 @@ func TestBlockOtherInstallsIfUploadedLeavesAHostWithNoFilesOpen(t *testing.T) {
 
 func TestBlockOtherInstallsIfUploadedMarksAHostThatGotFiles(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64"}}}
 	h := newDetectedHost(t, "amd64")
 
 	require.NoError(t, p.blockOtherInstallsIfUploaded(byArch)(context.Background(), h))
@@ -229,7 +229,7 @@ func TestBlockOtherInstallsIfUploadedMarksAHostThatGotFiles(t *testing.T) {
 	require.True(t, h.Metadata.EngineUploaded)
 }
 
-func fileNames(files []v1alpha1.ZarfFile) []string {
+func fileNames(files []v1alpha1.File) []string {
 	names := make([]string, 0, len(files))
 	for _, f := range files {
 		names = append(names, f.Name)

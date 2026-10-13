@@ -44,8 +44,8 @@ func (p *UpgradeController) Explanation() string {
 }
 
 // Prepare the phase
-func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.Cluster, d *distro.Distro) error {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) > 0 {
@@ -54,7 +54,7 @@ func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 	} else {
 		return ErrNoControllers
 	}
-	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return h.IsController() &&
 			h.Metadata.DistroVersion != UnknownVersion &&
 			p.VersionLess(h, d.Spec.Version)
@@ -83,7 +83,7 @@ func (p *UpgradeController) Run(ctx context.Context) error {
 	)
 }
 
-func (p *UpgradeController) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeController) stopService(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
 	return p.Distro.StopControllerService(h)
 }

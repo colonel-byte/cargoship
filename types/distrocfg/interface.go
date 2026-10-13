@@ -55,7 +55,7 @@ type DesiredFile struct {
 type Distro interface {
 	// AdminCredentials returns the cluster CA certificate and the admin client key pair
 	// for a given controller host and data directory
-	AdminCredentials(*cluster.ZarfHost, string) (AdminCredentials, error)
+	AdminCredentials(*cluster.Host, string) (AdminCredentials, error)
 	// BinaryName returns the engine binary name
 	BinaryName() string
 	// BinaryPath returns the full path to the engine binary
@@ -70,14 +70,14 @@ type Distro interface {
 	// SupervisorURL returns the URL a node joins the cluster through, for the host serving it.
 	SupervisorURL(name string) string
 	// ConfigureEngine does distro specific configuration on a host
-	ConfigureEngine(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
+	ConfigureEngine(context.Context, *cluster.Host, cluster.RuntimeMeta, distro.Distro) error
 	// DataDirPath returns the full path for the data directory used by the engine
 	DataDirPath() string
 	// DesiredFiles returns the full set of engine config files (path -> desired file) this
 	// distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
 	// pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
 	// detect drift on an already-running host.
-	DesiredFiles(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
+	DesiredFiles(context.Context, *cluster.Host, cluster.RuntimeMeta, distro.Distro) (map[string]DesiredFile, error)
 	// ManagedDirs returns the directories on a host cargoship prunes, so that a file in one of
 	// them that DesiredFiles no longer names can be removed rather than left behind. A
 	// directory cargoship shares with the engine names the files that are its own. A distro
@@ -91,7 +91,7 @@ type Distro interface {
 	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 	DistroCmdf(string, ...any) string
 	// GetClusterCIDR returns a string array with the all the known cluster cidr blocks
-	GetClusterCIDR(distro.ZarfDistro) []string
+	GetClusterCIDR(distro.Distro) []string
 	// GetControllerService returns the name of the controller service
 	GetControllerService() string
 	// GetWorkerService returns the name of the worker service
@@ -102,17 +102,17 @@ type Distro interface {
 	// Distro's like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.
 	JoinTokenPathAgent() string
 	// KubeconfigPath returns the path to the admin config for a given
-	KubeconfigPath(*cluster.ZarfHost, string) string
+	KubeconfigPath(*cluster.Host, string) string
 	// KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
-	KubectlCmdf(*cluster.ZarfHost, string, string, ...any) string
+	KubectlCmdf(*cluster.Host, string, string, ...any) string
 	// RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
-	RunningVersion(*cluster.ZarfHost) (string, error)
+	RunningVersion(*cluster.Host) (string, error)
 	// SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
 	SetPath(key string, value string) error
 	// StopControllerService stops the controller service on the host
-	StopControllerService(*cluster.ZarfHost) error
+	StopControllerService(*cluster.Host) error
 	// StopWorkerService stops the controller service on the host
-	StopWorkerService(*cluster.ZarfHost) error
+	StopWorkerService(*cluster.Host) error
 }
 
 // ImageImporter is implemented by a distro whose engine does not import uploaded image tarballs
@@ -121,7 +121,7 @@ type Distro interface {
 // agent to do that -- plain kubeadm's upstream containerd, say -- does.
 type ImageImporter interface {
 	// ImportImages imports every image tarball staged under path into the engine's image store.
-	ImportImages(host *cluster.ZarfHost, path string) error
+	ImportImages(host *cluster.Host, path string) error
 }
 
 // Bootstrapper is implemented by a distro whose cluster formation is a one-shot command rather
@@ -132,9 +132,9 @@ type ImageImporter interface {
 type Bootstrapper interface {
 	// IsBootstrapped reports whether host has already formed or joined the cluster, so a re-run
 	// is a no-op instead of re-running the bootstrap command.
-	IsBootstrapped(host *cluster.ZarfHost) bool
+	IsBootstrapped(host *cluster.Host) bool
 	// Bootstrap forms the cluster (the leader) or joins it (every other host).
-	Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+	Bootstrap(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error
 }
 
 // PreStartUpgrader is implemented by a distro whose upgrade needs a step between the new package
@@ -143,7 +143,7 @@ type Bootstrapper interface {
 // before startService. Same optional-interface pattern as Bootstrapper.
 type PreStartUpgrader interface {
 	// PreStartUpgrade runs after the new packages are staged but before the service restarts.
-	PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
+	PreStartUpgrade(ctx context.Context, host *cluster.Host, dis distro.Distro) error
 }
 
 // PreUninstallResetter is implemented by a distro that must tear down its own cluster membership
@@ -152,7 +152,7 @@ type PreStartUpgrader interface {
 // and removing them. Same optional-interface pattern as PreStartUpgrader.
 type PreUninstallResetter interface {
 	// PreUninstallReset runs before packages are resolved and removed.
-	PreUninstallReset(ctx context.Context, host *cluster.ZarfHost) error
+	PreUninstallReset(ctx context.Context, host *cluster.Host) error
 }
 
 // ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically
@@ -162,5 +162,5 @@ type PreUninstallResetter interface {
 type ManifestApplier interface {
 	// ManifestPaths returns the on-host paths to kubectl apply, in order. Empty when the package
 	// declares none.
-	ManifestPaths(dis distro.ZarfDistro) []string
+	ManifestPaths(dis distro.Distro) []string
 }

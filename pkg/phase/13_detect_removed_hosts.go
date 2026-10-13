@@ -75,7 +75,7 @@ type DetectRemovedHosts struct {
 	// never joined, and refusing on those would block every apply on a working setup, so the
 	// operator needs a way to say the extra nodes are deliberate.
 	AllowUnmanaged bool
-	leader         *cluster.ZarfHost
+	leader         *cluster.Host
 }
 
 // Title for the phase
@@ -99,8 +99,8 @@ func (p *DetectRemovedHosts) ReadOnly() string {
 // way the label and delete phases find one. Nothing is running on a first install, so there is no
 // leader, and ShouldRun turns the phase off: a cluster that does not exist yet cannot have had a
 // host removed from it.
-func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return h.IsController() && h.ServiceIsRunning(ctx, p.Distro.GetControllerService())
 	})
 	if len(control) > 0 {
@@ -179,7 +179,7 @@ func (p *DetectRemovedHosts) listNodes() ([]corev1.Node, error) {
 //
 // The comparison is case-insensitive: a node name is always lowercase, while a config hostname
 // need not be.
-func unmanagedNodes(hosts cluster.ZarfHosts, nodes []corev1.Node) []string {
+func unmanagedNodes(hosts cluster.Hosts, nodes []corev1.Node) []string {
 	known := make(map[string]struct{}, len(hosts)*4)
 	for _, h := range hosts {
 		for _, id := range []string{h.Metadata.Hostname, h.Hostname, h.PrivateAddress, h.Address()} {

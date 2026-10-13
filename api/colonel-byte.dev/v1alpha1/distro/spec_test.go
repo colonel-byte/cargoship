@@ -50,7 +50,7 @@ func TestTarballSuffix(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ZarfDistroImageConfig{Compression: tt.compression}.TarballSuffix()
+			got, err := ImageConfig{Compression: tt.compression}.TarballSuffix()
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
 		})
@@ -58,29 +58,29 @@ func TestTarballSuffix(t *testing.T) {
 }
 
 func TestTarballSuffixUnsupported(t *testing.T) {
-	_, err := ZarfDistroImageConfig{Compression: "bzip2"}.TarballSuffix()
+	_, err := ImageConfig{Compression: "bzip2"}.TarballSuffix()
 	require.ErrorContains(t, err, `unsupported image compression "bzip2"`)
 }
 
 func TestMetadataArches(t *testing.T) {
 	tests := []struct {
 		name string
-		meta ZarfDistroMetadata
+		meta Metadata
 		want api.Arches
 	}{
 		{
 			name: "list wins over scalar",
-			meta: ZarfDistroMetadata{Architecture: "amd64", Architectures: api.Arches{"arm64"}},
+			meta: Metadata{Architecture: "amd64", Architectures: api.Arches{"arm64"}},
 			want: api.Arches{"arm64"},
 		},
 		{
 			name: "falls back to scalar",
-			meta: ZarfDistroMetadata{Architecture: "amd64"},
+			meta: Metadata{Architecture: "amd64"},
 			want: api.Arches{"amd64"},
 		},
 		{
 			name: "empty when neither is set",
-			meta: ZarfDistroMetadata{},
+			meta: Metadata{},
 			want: nil,
 		},
 	}
@@ -97,22 +97,22 @@ func TestMetadataArches(t *testing.T) {
 func TestBuildDataArches(t *testing.T) {
 	tests := []struct {
 		name  string
-		build ZarfDistroBuildData
+		build BuildData
 		want  api.Arches
 	}{
 		{
 			name:  "list wins over scalar",
-			build: ZarfDistroBuildData{Architecture: "amd64", Architectures: api.Arches{"amd64", "arm64"}},
+			build: BuildData{Architecture: "amd64", Architectures: api.Arches{"amd64", "arm64"}},
 			want:  api.Arches{"amd64", "arm64"},
 		},
 		{
 			name:  "falls back to scalar",
-			build: ZarfDistroBuildData{Architecture: "arm64"},
+			build: BuildData{Architecture: "arm64"},
 			want:  api.Arches{"arm64"},
 		},
 		{
 			name:  "empty when neither is set",
-			build: ZarfDistroBuildData{},
+			build: BuildData{},
 			want:  nil,
 		},
 	}
@@ -129,25 +129,25 @@ func TestBuildDataArches(t *testing.T) {
 func TestDistroArches(t *testing.T) {
 	tests := []struct {
 		name   string
-		distro ZarfDistro
+		distro Distro
 		want   api.Arches
 	}{
 		{
 			name: "build wins over metadata",
-			distro: ZarfDistro{
-				Metadata: ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
-				Build:    ZarfDistroBuildData{Architectures: api.Arches{"arm64"}},
+			distro: Distro{
+				Metadata: Metadata{Architectures: api.Arches{"amd64", "arm64"}},
+				Build:    BuildData{Architectures: api.Arches{"arm64"}},
 			},
 			want: api.Arches{"arm64"},
 		},
 		{
 			name:   "falls back to metadata when the package is not built yet",
-			distro: ZarfDistro{Metadata: ZarfDistroMetadata{Architecture: "amd64"}},
+			distro: Distro{Metadata: Metadata{Architecture: "amd64"}},
 			want:   api.Arches{"amd64"},
 		},
 		{
 			name:   "empty when neither is set",
-			distro: ZarfDistro{},
+			distro: Distro{},
 			want:   nil,
 		},
 	}
@@ -166,18 +166,18 @@ func TestDistroArches(t *testing.T) {
 func TestZarfDistroSELinuxIsZero(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
-		selinux ZarfDistroSELinux
+		selinux SELinux
 		want    bool
 	}{
 		{
 			name:    "nothing configured",
-			selinux: ZarfDistroSELinux{},
+			selinux: SELinux{},
 			want:    true,
 		},
 		{
 			name: "a module",
-			selinux: ZarfDistroSELinux{
-				Modules: []ZarfDistroSELinuxModule{
+			selinux: SELinux{
+				Modules: []SELinuxModule{
 					{
 						Name: "cargoship-engine",
 						CIL:  "(allow kernel_t self (capability (sys_admin)))",
@@ -188,15 +188,15 @@ func TestZarfDistroSELinuxIsZero(t *testing.T) {
 		},
 		{
 			name: "a boolean",
-			selinux: ZarfDistroSELinux{
+			selinux: SELinux{
 				Booleans: map[string]bool{"container_manage_cgroup": true},
 			},
 			want: false,
 		},
 		{
 			name: "a file context",
-			selinux: ZarfDistroSELinux{
-				FileContexts: []ZarfDistroSELinuxFileContext{
+			selinux: SELinux{
+				FileContexts: []SELinuxFileContext{
 					{
 						Path: "/var/lib/rancher(/.*)?",
 						Type: "container_var_lib_t",

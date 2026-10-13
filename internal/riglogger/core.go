@@ -16,10 +16,10 @@
 // slog-based logging. rig v2 removed the v0.x global rig.SetLogger(l)
 // setter -- logging is now configured per client via the rig.WithLogger
 // client option. Since rig clients are constructed deep inside the phase
-// pipeline (via ZarfHost.Connect, see
+// pipeline (via Host.Connect, see
 // api/colonel-byte.dev/v1alpha1/cluster/host.go) rather than at a single call
 // site with easy access to the request context, this package stores the
-// most recently configured logger so that ZarfHost.Connect can pass it to
+// most recently configured logger so that Host.Connect can pass it to
 // rig.WithLogger without threading a logger argument through every phase.
 package riglogger
 
@@ -82,7 +82,7 @@ func (h rigSlogHandler) WithGroup(_ string) slog.Handler {
 var current atomic.Pointer[slog.Logger]
 
 // RigLogger overrides rig's logger with our custom logger, bound to ctx. The
-// resulting logger is retrieved by ZarfHost.Connect (via Logger) and passed
+// resulting logger is retrieved by Host.Connect (via Logger) and passed
 // to rig.WithLogger when the underlying rig client is constructed.
 func RigLogger(ctx context.Context) error {
 	current.Store(slog.New(rigSlogHandler{ctx: ctx}))

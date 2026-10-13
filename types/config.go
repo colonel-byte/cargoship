@@ -23,7 +23,7 @@ import (
 // CommonRegistries are suggested, non-exhaustive registry names used in generated
 // schemas -- editors with YAML/JSON schema support (e.g. the redhat.vscode-yaml
 // extension) offer them as autocomplete, for RegistryOverrideMap's registry_override
-// keys here and for ZarfClusterRegistrieName's registry name field in the cluster API.
+// keys here and for RegistryName's registry name field in the cluster API.
 var CommonRegistries = []string{
 	"docker.io",
 	"ghcr.io",

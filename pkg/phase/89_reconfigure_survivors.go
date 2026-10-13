@@ -54,9 +54,9 @@ type ReconfigureSurvivors struct {
 
 	// removed are the controllers this run is taking out, and survivors the controllers it is
 	// keeping. leader is the survivor that becomes the first controller.
-	removed   cluster.ZarfHosts
-	survivors cluster.ZarfHosts
-	leader    *cluster.ZarfHost
+	removed   cluster.Hosts
+	survivors cluster.Hosts
+	leader    *cluster.Host
 	// leaderURL is what the other survivors should name, resolved once rather than per host:
 	// it needs the leader's configurer, which only exists after the OS has been detected.
 	leaderURL string
@@ -73,9 +73,9 @@ func (p *ReconfigureSurvivors) Explanation() string {
 }
 
 // Prepare the phase
-func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	hosts := p.manager.Config.Spec.Hosts
-	controllers := hosts.Filter(func(h *cluster.ZarfHost) bool { return h.IsController() })
+	controllers := hosts.Filter(func(h *cluster.Host) bool { return h.IsController() })
 
 	for _, h := range controllers {
 		if matchesTargetHost(h, p.TargetHosts) {
@@ -114,7 +114,7 @@ func (p *ReconfigureSurvivors) Run(ctx context.Context) error {
 //
 // The leader carries no `server:` at all -- that is how ConfigureEngine writes it, and what
 // makes it the first controller -- so on the leader the key is removed rather than rewritten.
-func (p *ReconfigureSurvivors) repoint(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *ReconfigureSurvivors) repoint(ctx context.Context, h *cluster.Host) error {
 	path := p.Distro.ConfigPath()
 
 	content, err := h.ReadFile(path)
@@ -161,8 +161,8 @@ func (p *ReconfigureSurvivors) repoint(ctx context.Context, h *cluster.ZarfHost)
 
 // serverFor is the `server:` value a surviving controller should carry, and whether it should
 // carry one at all.
-func (p *ReconfigureSurvivors) serverFor(h *cluster.ZarfHost) (string, bool) {
-	// Pointer identity, not ZarfHost.String(): the leader is an element of p.survivors, so
+func (p *ReconfigureSurvivors) serverFor(h *cluster.Host) (string, bool) {
+	// Pointer identity, not Host.String(): the leader is an element of p.survivors, so
 	// this is exact. String() is the connection address, which is the same for two hosts that
 	// have not been dialled and would make one of them look like the leader.
 	if p.leader == nil || h == p.leader {

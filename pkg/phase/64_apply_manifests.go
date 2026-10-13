@@ -32,14 +32,14 @@ const applyManifestCmd = `apply -f %s`
 type ApplyManifests struct {
 	GenericPhase
 	Distro distrocfg.Distro
-	leader *cluster.ZarfHost
+	leader *cluster.Host
 	paths  []string
 }
 
 // manifestsToApply returns the manifest paths d wants applied, or nil when d does not implement
 // ManifestApplier -- rke2/k3s render engine.manifest into a HelmChartConfig instead and never
 // declare any.
-func manifestsToApply(d distrocfg.Distro, dis distro.ZarfDistro) []string {
+func manifestsToApply(d distrocfg.Distro, dis distro.Distro) []string {
 	if a, ok := d.(distrocfg.ManifestApplier); ok {
 		return a.ManifestPaths(dis)
 	}
@@ -57,11 +57,11 @@ func (p *ApplyManifests) Explanation() string {
 }
 
 // Prepare the phase
-func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.GenericPhase.Prepare(c, d); err != nil {
 		logger.From(ctx).Warn("got", "error", err)
 	}
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool { return h.IsController() })
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool { return h.IsController() })
 	if len(control) > 0 {
 		p.leader = control[0]
 	}

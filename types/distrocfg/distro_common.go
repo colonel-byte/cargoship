@@ -38,7 +38,7 @@ const StateDir = "/etc/cargoship"
 const DistroReleaseFile = "/etc/cargoship/distro-release.json"
 
 // DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.
-func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error) {
+func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error) {
 	if dis.Metadata.Name == "" && dis.Spec.Version == "" {
 		return "", DesiredFile{}, false, nil
 	}
@@ -335,7 +335,7 @@ func marshalTOML(config dig.Mapping) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (r *Common) writeYAML(ctx context.Context, host *cluster.ZarfHost, config dig.Mapping, path string) error {
+func (r *Common) writeYAML(ctx context.Context, host *cluster.Host, config dig.Mapping, path string) error {
 	out, err := marshalYAML(config)
 	if err != nil {
 		logger.From(ctx).Warn("failed to marshal yaml", "host", host)

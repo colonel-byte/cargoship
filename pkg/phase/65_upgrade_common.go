@@ -38,9 +38,9 @@ type UpgradeHosts struct {
 	GenericPhase
 	Distro  distrocfg.Distro
 	service string
-	hosts   cluster.ZarfHosts
-	leader  *cluster.ZarfHost
-	dis     *distro.ZarfDistro
+	hosts   cluster.Hosts
+	leader  *cluster.Host
+	dis     *distro.Distro
 }
 
 // ShouldRun is true when there are workers
@@ -48,14 +48,14 @@ func (p *UpgradeHosts) ShouldRun() bool {
 	return len(p.hosts) > 0
 }
 
-func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("draining nodes", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
 		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
 	})
 }
 
-func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("installing distro packages", "host", h)
 	if h.Metadata.Install != nil {
 		return h.Metadata.Install(ctx, h)
@@ -66,7 +66,7 @@ func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.ZarfHost) e
 // preStartUpgrade runs the distro's kubeadm-style upgrade step, when it implements one, after the
 // new packages are staged but before the service restarts. A no-op for rke2/k3s, whose plain
 // restart on the new binary needs nothing in between.
-func (p *UpgradeHosts) preStartUpgrade(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) preStartUpgrade(ctx context.Context, h *cluster.Host) error {
 	u, ok := p.Distro.(distrocfg.PreStartUpgrader)
 	if !ok {
 		return nil
@@ -75,7 +75,7 @@ func (p *UpgradeHosts) preStartUpgrade(ctx context.Context, h *cluster.ZarfHost)
 	return u.PreStartUpgrade(ctx, h, *p.dis)
 }
 
-func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the service to start", "service", p.service, "host", h)
 
 	startedAt := time.Now()
@@ -93,7 +93,7 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 	return h.EnableService(ctx, p.service)
 }
 
-func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
@@ -108,6 +108,6 @@ func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost
 	})
 }
 
-func (p *UpgradeHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) uncordonNode(_ context.Context, h *cluster.Host) error {
 	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)))
 }

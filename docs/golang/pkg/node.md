@@ -11,9 +11,9 @@ Package node is used for status related functions
 ## Index
 
 - [type RetryFunc](<#RetryFunc>)
-  - [func HTTPStatusFunc\(h \*cluster.ZarfHost, url string, expected ...int\) RetryFunc](<#HTTPStatusFunc>)
-  - [func ServiceRunningFunc\(h \*cluster.ZarfHost, service string\) RetryFunc](<#ServiceRunningFunc>)
-  - [func ServiceStoppedFunc\(h \*cluster.ZarfHost, service string\) RetryFunc](<#ServiceStoppedFunc>)
+  - [func HTTPStatusFunc\(h \*cluster.Host, url string, expected ...int\) RetryFunc](<#HTTPStatusFunc>)
+  - [func ServiceRunningFunc\(h \*cluster.Host, service string\) RetryFunc](<#ServiceRunningFunc>)
+  - [func ServiceStoppedFunc\(h \*cluster.Host, service string\) RetryFunc](<#ServiceStoppedFunc>)
 
 
 <a name="RetryFunc"></a>
@@ -29,7 +29,7 @@ type RetryFunc func(context.Context) error
 ### func [HTTPStatusFunc](<https://github.com/colonel-byte/cargoship/blob/main/pkg/node/statusfunc.go#L45>)
 
 ```go
-func HTTPStatusFunc(h *cluster.ZarfHost, url string, expected ...int) RetryFunc
+func HTTPStatusFunc(h *cluster.Host, url string, expected ...int) RetryFunc
 ```
 
 HTTPStatusFunc returns a function that returns an error unless the expected status code is returned for a HTTP get to the url
@@ -38,7 +38,7 @@ HTTPStatusFunc returns a function that returns an error unless the expected stat
 ### func [ServiceRunningFunc](<https://github.com/colonel-byte/cargoship/blob/main/pkg/node/statusfunc.go#L35>)
 
 ```go
-func ServiceRunningFunc(h *cluster.ZarfHost, service string) RetryFunc
+func ServiceRunningFunc(h *cluster.Host, service string) RetryFunc
 ```
 
 ServiceRunningFunc returns a function that returns an error until the service is running on the host
@@ -47,7 +47,7 @@ ServiceRunningFunc returns a function that returns an error until the service is
 ### func [ServiceStoppedFunc](<https://github.com/colonel-byte/cargoship/blob/main/pkg/node/statusfunc.go#L52>)
 
 ```go
-func ServiceStoppedFunc(h *cluster.ZarfHost, service string) RetryFunc
+func ServiceStoppedFunc(h *cluster.Host, service string) RetryFunc
 ```
 
 ServiceStoppedFunc returns a function that returns an error if the service is not running on the host

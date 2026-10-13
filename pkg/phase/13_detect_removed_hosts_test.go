@@ -35,8 +35,8 @@ func joinedNode(name string, controller bool) corev1.Node {
 }
 
 // configHost is a host still in the config, with the hostname the facts phase read off it.
-func configHost(name string) *cluster.ZarfHost {
-	h := &cluster.ZarfHost{Hostname: name}
+func configHost(name string) *cluster.Host {
+	h := &cluster.Host{Hostname: name}
 	h.Metadata.Hostname = name
 	return h
 }
@@ -44,7 +44,7 @@ func configHost(name string) *cluster.ZarfHost {
 // TestUnmanagedNodesFindsARemovedWorker is one half of what #306 asks for: an apply run after a
 // worker's host block was deleted from the config must see the node that is still joined.
 func TestUnmanagedNodesFindsARemovedWorker(t *testing.T) {
-	hosts := cluster.ZarfHosts{configHost("control1"), configHost("worker1")}
+	hosts := cluster.Hosts{configHost("control1"), configHost("worker1")}
 	nodes := []corev1.Node{joinedNode("control1", true), joinedNode("worker1", false), joinedNode("worker2", false)}
 
 	require.Equal(t, []string{"worker2 (worker)"}, unmanagedNodes(hosts, nodes))
@@ -54,7 +54,7 @@ func TestUnmanagedNodesFindsARemovedWorker(t *testing.T) {
 // the message is what tells the operator that the leftover node is still an etcd member, so the
 // quorum arithmetic already moved against them.
 func TestUnmanagedNodesFindsARemovedController(t *testing.T) {
-	hosts := cluster.ZarfHosts{configHost("control1"), configHost("worker1")}
+	hosts := cluster.Hosts{configHost("control1"), configHost("worker1")}
 	nodes := []corev1.Node{joinedNode("control1", true), joinedNode("control2", true), joinedNode("worker1", false)}
 
 	require.Equal(t, []string{"control2 (controller)"}, unmanagedNodes(hosts, nodes))
@@ -74,7 +74,7 @@ func TestUnmanagedNodesUsesTheMasterLabel(t *testing.T) {
 // TestUnmanagedNodesIsEmptyWhenTheConfigMatches pins the case that must stay silent, since this
 // phase runs on every apply against an existing cluster.
 func TestUnmanagedNodesIsEmptyWhenTheConfigMatches(t *testing.T) {
-	hosts := cluster.ZarfHosts{configHost("control1"), configHost("worker1")}
+	hosts := cluster.Hosts{configHost("control1"), configHost("worker1")}
 	nodes := []corev1.Node{joinedNode("control1", true), joinedNode("worker1", false)}
 
 	require.Empty(t, unmanagedNodes(hosts, nodes))
@@ -83,7 +83,7 @@ func TestUnmanagedNodesIsEmptyWhenTheConfigMatches(t *testing.T) {
 // TestUnmanagedNodesMatchesCaseInsensitively guards a false positive that would stop every apply
 // on a cluster whose config spells a hostname with capitals. Node names are always lowercase.
 func TestUnmanagedNodesMatchesCaseInsensitively(t *testing.T) {
-	hosts := cluster.ZarfHosts{configHost("Control1.EXAMPLE.com")}
+	hosts := cluster.Hosts{configHost("Control1.EXAMPLE.com")}
 
 	require.Empty(t, unmanagedNodes(hosts, []corev1.Node{joinedNode("control1.example.com", true)}))
 }
@@ -91,7 +91,7 @@ func TestUnmanagedNodesMatchesCaseInsensitively(t *testing.T) {
 // TestUnmanagedNodesFallsBackToTheConfigHostname covers a host the facts phase has not visited, so
 // Metadata.Hostname is empty. Without the fallback every such host would look removed.
 func TestUnmanagedNodesFallsBackToTheConfigHostname(t *testing.T) {
-	hosts := cluster.ZarfHosts{{Hostname: "worker1"}}
+	hosts := cluster.Hosts{{Hostname: "worker1"}}
 
 	require.Empty(t, unmanagedNodes(hosts, []corev1.Node{joinedNode("worker1", false)}))
 }
@@ -113,7 +113,7 @@ func TestUnmanagedNodesSortsAndReportsAll(t *testing.T) {
 // hostname anywhere, and matching on names alone would report every node in the cluster as removed
 // and stop every apply. The address the node reports is what still ties it to its host.
 func TestUnmanagedNodesMatchesOnAddressWhenTheNameWasOverridden(t *testing.T) {
-	h := &cluster.ZarfHost{Hostname: "worker1", PrivateAddress: "10.0.0.7"}
+	h := &cluster.Host{Hostname: "worker1", PrivateAddress: "10.0.0.7"}
 	h.Metadata.Hostname = "worker1"
 
 	renamed := joinedNode("custom-node-name", false)
@@ -121,13 +121,13 @@ func TestUnmanagedNodesMatchesOnAddressWhenTheNameWasOverridden(t *testing.T) {
 		{Type: corev1.NodeInternalIP, Address: "10.0.0.7"},
 	}
 
-	require.Empty(t, unmanagedNodes(cluster.ZarfHosts{h}, []corev1.Node{renamed}))
+	require.Empty(t, unmanagedNodes(cluster.Hosts{h}, []corev1.Node{renamed}))
 }
 
 // TestUnmanagedNodesStillCatchesARemovalWithAddresses guards the other direction: the address
 // matching must not be so loose that a genuinely removed node looks managed.
 func TestUnmanagedNodesStillCatchesARemovalWithAddresses(t *testing.T) {
-	h := &cluster.ZarfHost{Hostname: "worker1", PrivateAddress: "10.0.0.7"}
+	h := &cluster.Host{Hostname: "worker1", PrivateAddress: "10.0.0.7"}
 	h.Metadata.Hostname = "worker1"
 
 	gone := joinedNode("worker2", false)
@@ -136,7 +136,7 @@ func TestUnmanagedNodesStillCatchesARemovalWithAddresses(t *testing.T) {
 		{Type: corev1.NodeHostName, Address: "worker2"},
 	}
 
-	require.Equal(t, []string{"worker2 (worker)"}, unmanagedNodes(cluster.ZarfHosts{h}, []corev1.Node{gone}))
+	require.Equal(t, []string{"worker2 (worker)"}, unmanagedNodes(cluster.Hosts{h}, []corev1.Node{gone}))
 }
 
 // TestUnmanagedNodesIgnoresEmptyIdentifiers pins that a host with no private address yet, and a
@@ -146,7 +146,7 @@ func TestUnmanagedNodesIgnoresEmptyIdentifiers(t *testing.T) {
 	blank.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: ""}}
 
 	require.Equal(t, []string{"worker2 (worker)"},
-		unmanagedNodes(cluster.ZarfHosts{{Hostname: "worker1"}}, []corev1.Node{blank}))
+		unmanagedNodes(cluster.Hosts{{Hostname: "worker1"}}, []corev1.Node{blank}))
 }
 
 // TestDetectRemovedHostsSkipsWithoutARunningController is the first-install case. Nothing is
@@ -154,8 +154,8 @@ func TestUnmanagedNodesIgnoresEmptyIdentifiers(t *testing.T) {
 // host. Prepare must not fail on the way to that, since it runs before ShouldRun is consulted.
 func TestDetectRemovedHostsSkipsWithoutARunningController(t *testing.T) {
 	p := &DetectRemovedHosts{}
-	m := &Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{
-		Hosts: cluster.ZarfHosts{{Hostname: "node1", Configurer: &stoppedConfigurer{}}},
+	m := &Manager{Config: &cluster.Cluster{Spec: cluster.Spec{
+		Hosts: cluster.Hosts{{Hostname: "node1", Configurer: &stoppedConfigurer{}}},
 	}}}
 	p.SetManager(m)
 

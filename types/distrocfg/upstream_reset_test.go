@@ -27,7 +27,7 @@ import (
 // issue #288/#289 hit), so this is as far as dispatch can be observed without a real host.
 func TestPreUninstallResetReachesKubeadmReset(t *testing.T) {
 	d := &Upstream{}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 
 	err := d.PreUninstallReset(context.Background(), h)
 

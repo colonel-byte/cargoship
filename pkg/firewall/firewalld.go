@@ -56,9 +56,9 @@ type ipSetConfig struct {
 
 // portServiceConfig is a firewalld service definition holding a set of ports.
 type portServiceConfig struct {
-	XMLName xml.Name               `xml:"service"`
-	Short   string                 `xml:"short"`
-	Ports   []cluster.ZarfHostPort `xml:"port"`
+	XMLName xml.Name           `xml:"service"`
+	Short   string             `xml:"short"`
+	Ports   []cluster.HostPort `xml:"port"`
 }
 
 // Firewalld applies a Plan to a node running firewalld.
@@ -72,7 +72,7 @@ func (f *Firewalld) Name() string {
 }
 
 // Detect is true when firewalld is running on h.
-func (f *Firewalld) Detect(ctx context.Context, h *cluster.ZarfHost) bool {
+func (f *Firewalld) Detect(ctx context.Context, h *cluster.Host) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
@@ -81,7 +81,7 @@ func (f *Firewalld) Detect(ctx context.Context, h *cluster.ZarfHost) bool {
 }
 
 // Installed is true when firewalld is present on h, running or not.
-func (f *Firewalld) Installed(_ context.Context, h *cluster.ZarfHost) bool {
+func (f *Firewalld) Installed(_ context.Context, h *cluster.Host) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
@@ -91,7 +91,7 @@ func (f *Firewalld) Installed(_ context.Context, h *cluster.ZarfHost) bool {
 
 // Apply writes the ipsets, service, and policy files for p, enables them, and restarts
 // firewalld.
-func (f *Firewalld) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {
+func (f *Firewalld) Apply(ctx context.Context, h *cluster.Host, p Plan) error {
 	if err := f.applyClusterTrust(h, p); err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (f *Firewalld) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) erro
 }
 
 // applyClusterTrust trusts every node address and cluster CIDR.
-func (f *Firewalld) applyClusterTrust(h *cluster.ZarfHost, p Plan) error {
+func (f *Firewalld) applyClusterTrust(h *cluster.Host, p Plan) error {
 	sets := []struct {
 		name    string
 		kind    string
@@ -151,7 +151,7 @@ func (f *Firewalld) applyClusterTrust(h *cluster.ZarfHost, p Plan) error {
 }
 
 // applyPorts opens the inventory ports on the public zone.
-func (f *Firewalld) applyPorts(h *cluster.ZarfHost, p Plan) error {
+func (f *Firewalld) applyPorts(h *cluster.Host, p Plan) error {
 	if len(p.Ports) == 0 {
 		return nil
 	}
@@ -175,7 +175,7 @@ func (f *Firewalld) applyPorts(h *cluster.ZarfHost, p Plan) error {
 }
 
 // applyPolicies writes the legacy `.host.policy` files.
-func (f *Firewalld) applyPolicies(h *cluster.ZarfHost, p Plan) error {
+func (f *Firewalld) applyPolicies(h *cluster.Host, p Plan) error {
 	for _, name := range sortedKeys(p.Policies) {
 		policy := p.Policies[name]
 		policy.Short = firewalldPolicyShort
@@ -189,7 +189,7 @@ func (f *Firewalld) applyPolicies(h *cluster.ZarfHost, p Plan) error {
 
 // applyRules renders the backend-neutral rules. Forward rules become firewalld policies;
 // in and out rules become ports or rich rules on the public zone.
-func (f *Firewalld) applyRules(_ context.Context, h *cluster.ZarfHost, p Plan) error {
+func (f *Firewalld) applyRules(_ context.Context, h *cluster.Host, p Plan) error {
 	for _, rule := range p.Rules {
 		if rule.NormalizedDirection() == cluster.FirewallDirectionForward {
 			policy, err := firewalldPolicy(rule)
@@ -216,7 +216,7 @@ func (f *Firewalld) applyRules(_ context.Context, h *cluster.ZarfHost, p Plan) e
 }
 
 // writePolicy marshals a policy to firewalld's XML and writes it under /etc/firewalld/policies.
-func writePolicy(h *cluster.ZarfHost, name string, policy cluster.ZarfFirewallPolicyConfig) error {
+func writePolicy(h *cluster.Host, name string, policy cluster.FirewallPolicyConfig) error {
 	output, err := xml.MarshalIndent(policy, "", "  ")
 	if err != nil {
 		return err
@@ -228,20 +228,20 @@ func writePolicy(h *cluster.ZarfHost, name string, policy cluster.ZarfFirewallPo
 }
 
 // firewalldPolicy converts a neutral forward rule into a firewalld policy.
-func firewalldPolicy(rule cluster.ZarfFirewallRule) (cluster.ZarfFirewallPolicyConfig, error) {
+func firewalldPolicy(rule cluster.FirewallRule) (cluster.FirewallPolicyConfig, error) {
 	target, err := firewalldTarget(rule.NormalizedAction())
 	if err != nil {
-		return cluster.ZarfFirewallPolicyConfig{}, err
+		return cluster.FirewallPolicyConfig{}, err
 	}
 
-	policy := cluster.ZarfFirewallPolicyConfig{
+	policy := cluster.FirewallPolicyConfig{
 		Short:   firewalldPolicyShort,
 		Target:  target,
-		Ingress: cluster.ZarfFirewallZone{Name: rule.Ingress},
-		Egress:  cluster.ZarfFirewallZone{Name: rule.Egress},
+		Ingress: cluster.FirewallZone{Name: rule.Ingress},
+		Egress:  cluster.FirewallZone{Name: rule.Egress},
 	}
 	if rule.Port != "" {
-		policy.Ports = []cluster.ZarfFirewallPort{{
+		policy.Ports = []cluster.FirewallPort{{
 			Port:     rule.Port,
 			Protocol: rule.NormalizedProtocol(),
 		}}
@@ -253,7 +253,7 @@ func firewalldPolicy(rule cluster.ZarfFirewallRule) (cluster.ZarfFirewallPolicyC
 // firewalldZoneCmd converts a neutral in or out rule into a firewall-cmd invocation on the
 // public zone. A rule that only names a port becomes an --add-port; anything that matches on
 // an address becomes a rich rule.
-func firewalldZoneCmd(rule cluster.ZarfFirewallRule) (string, error) {
+func firewalldZoneCmd(rule cluster.FirewallRule) (string, error) {
 	target, err := firewalldTarget(rule.NormalizedAction())
 	if err != nil {
 		return "", err
@@ -308,7 +308,7 @@ func firewalldTarget(action string) (string, error) {
 }
 
 // firewalldFamily picks the rich rule address family for a rule.
-func firewalldFamily(rule cluster.ZarfFirewallRule) string {
+func firewalldFamily(rule cluster.FirewallRule) string {
 	if strings.Contains(rule.Source, ":") || strings.Contains(rule.Destination, ":") {
 		return "ipv6"
 	}

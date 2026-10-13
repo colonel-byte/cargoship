@@ -31,21 +31,21 @@ func newArchValidator(t *testing.T, carried api.Arches) *ValidateHosts {
 
 	p := &ValidateHosts{}
 	p.SetManager(&Manager{
-		Distro: &distro.ZarfDistro{
-			Build: distro.ZarfDistroBuildData{Architectures: carried},
+		Distro: &distro.Distro{
+			Build: distro.BuildData{Architectures: carried},
 		},
 	})
 
 	return p
 }
 
-// newDetectedHost builds a host whose architecture has already been detected. ZarfHost.Arch returns
+// newDetectedHost builds a host whose architecture has already been detected. Host.Arch returns
 // the cached value without touching a configurer, which is what the gather-facts phase leaves
 // behind by the time validation runs.
-func newDetectedHost(t *testing.T, detected string) *cluster.ZarfHost {
+func newDetectedHost(t *testing.T, detected string) *cluster.Host {
 	t.Helper()
 
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 	h.Metadata.Arch = detected
 
 	return h
@@ -112,8 +112,8 @@ func TestValidateHostArchSkipsAPackageWithoutBuildArches(t *testing.T) {
 func TestValidateHostArchFallsBackToTheScalarArchitecture(t *testing.T) {
 	p := &ValidateHosts{}
 	p.SetManager(&Manager{
-		Distro: &distro.ZarfDistro{
-			Build: distro.ZarfDistroBuildData{Architecture: api.ArchAMD64},
+		Distro: &distro.Distro{
+			Build: distro.BuildData{Architecture: api.ArchAMD64},
 		},
 	})
 

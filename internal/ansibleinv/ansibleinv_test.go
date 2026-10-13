@@ -29,7 +29,7 @@ func meta() ClusterMeta {
 
 // hostNames returns the generated hosts in document order, which is the order the leader is
 // chosen from.
-func hostNames(t *testing.T, out *cluster.ZarfCluster) []string {
+func hostNames(t *testing.T, out *cluster.Cluster) []string {
 	t.Helper()
 	names := make([]string, 0, len(out.Spec.Hosts))
 	for _, h := range out.Spec.Hosts {
@@ -238,8 +238,8 @@ func TestTranslateCarriesClusterMetaThrough(t *testing.T) {
 		ClusterMeta{
 			Name:         "bubbles",
 			LoadBalancer: "bubbles-kc.test.com",
-			Profiles: map[string]cluster.ZarfClusterProfiles{
-				"control": {Engine: cluster.ZarfHostEngine{NodeLabels: map[string]string{"adrp.xyz/purpose-control": "true"}}},
+			Profiles: map[string]cluster.Profiles{
+				"control": {Engine: cluster.HostEngine{NodeLabels: map[string]string{"adrp.xyz/purpose-control": "true"}}},
 			},
 			Values: map[string]any{"addons": map[string]any{"disabled": []any{"rke2-ingress-nginx"}}},
 		},

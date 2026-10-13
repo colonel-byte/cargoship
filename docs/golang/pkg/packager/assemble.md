@@ -10,7 +10,7 @@ Package assemble builds a Cargoship package on disk
 
 ## Index
 
-- [func AssembleDistro\(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions\) \(\*layout.DistroLayout, error\)](<#AssembleDistro>)
+- [func AssembleDistro\(ctx context.Context, d distro.Distro, distroPath string, opts AssembleOptions\) \(\*layout.DistroLayout, error\)](<#AssembleDistro>)
 - [type AssembleOptions](<#AssembleOptions>)
 
 
@@ -18,7 +18,7 @@ Package assemble builds a Cargoship package on disk
 ## func [AssembleDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L176>)
 
 ```go
-func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error)
+func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error)
 ```
 
 AssembleDistro creates the actual tarballs

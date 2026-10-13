@@ -13,17 +13,17 @@ Package v1alpha1 defines file types shared by the cluster and distro APIs.
 - [Constants](<#constants>)
 - [type BinarySelector](<#BinarySelector>)
   - [func \(s BinarySelector\) MatchesArch\(arch api.Arch\) bool](<#BinarySelector.MatchesArch>)
+- [type File](<#File>)
+  - [func \(u \*File\) HasData\(\) bool](<#File.HasData>)
+  - [func \(u \*File\) IsTemplate\(\) bool](<#File.IsTemplate>)
+  - [func \(u \*File\) Owner\(\) string](<#File.Owner>)
+  - [func \(u \*File\) String\(\) string](<#File.String>)
+  - [func \(u \*File\) TargetDirectory\(\) string](<#File.TargetDirectory>)
+  - [func \(u \*File\) UnmarshalYAML\(unmarshal func\(any\) error\) error](<#File.UnmarshalYAML>)
+- [type Files](<#Files>)
+  - [func \(files Files\) Filter\(filter func\(f \*File\) bool\) Files](<#Files.Filter>)
+- [type Kind](<#Kind>)
 - [type LocalFile](<#LocalFile>)
-- [type ZarfDistroKind](<#ZarfDistroKind>)
-- [type ZarfFile](<#ZarfFile>)
-  - [func \(u \*ZarfFile\) HasData\(\) bool](<#ZarfFile.HasData>)
-  - [func \(u \*ZarfFile\) IsTemplate\(\) bool](<#ZarfFile.IsTemplate>)
-  - [func \(u \*ZarfFile\) Owner\(\) string](<#ZarfFile.Owner>)
-  - [func \(u \*ZarfFile\) String\(\) string](<#ZarfFile.String>)
-  - [func \(u \*ZarfFile\) TargetDirectory\(\) string](<#ZarfFile.TargetDirectory>)
-  - [func \(u \*ZarfFile\) UnmarshalYAML\(unmarshal func\(any\) error\) error](<#ZarfFile.UnmarshalYAML>)
-- [type ZarfFiles](<#ZarfFiles>)
-  - [func \(files ZarfFiles\) Filter\(filter func\(f \*ZarfFile\) bool\) ZarfFiles](<#ZarfFiles.Filter>)
 
 
 ## Constants
@@ -64,36 +64,13 @@ func (s BinarySelector) MatchesArch(arch api.Arch) bool
 
 MatchesArch reports whether this selector applies to arch. An empty Arch list matches every architecture, mirroring how an empty Profile matches every profile.
 
-<a name="LocalFile"></a>
-## type [LocalFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L79-L84>)
+<a name="File"></a>
+## type [File](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L35-L76>)
 
-LocalFile holds the local path and permission cargoship resolves for uploading a file.
-
-```go
-type LocalFile struct {
-    // Path is the local path to the file cargoship uploads.
-    Path string
-    // PermMode is the octal permission string cargoship applies to the file.
-    PermMode string
-}
-```
-
-<a name="ZarfDistroKind"></a>
-## type [ZarfDistroKind](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/common.go#L18>)
-
-ZarfDistroKind identifies the kind of a zarf.dev v1alpha1 document, for example ZarfCluster or ZarfDistro.
+File defines a file shared by the distro and cluster APIs.
 
 ```go
-type ZarfDistroKind string
-```
-
-<a name="ZarfFile"></a>
-## type [ZarfFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L35-L76>)
-
-ZarfFile defines a file shared by the distro and cluster APIs.
-
-```go
-type ZarfFile struct {
+type File struct {
     // Data holds the inline file content.
     Data string `json:"data,omitempty"`
     // Executable sets executable permissions on the file when true.
@@ -137,76 +114,99 @@ type ZarfFile struct {
 }
 ```
 
-<a name="ZarfFile.HasData"></a>
-### func \(\*ZarfFile\) [HasData](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L146>)
+<a name="File.HasData"></a>
+### func \(\*File\) [HasData](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L146>)
 
 ```go
-func (u *ZarfFile) HasData() bool
+func (u *File) HasData() bool
 ```
 
 HasData reports whether Data holds non\-blank content.
 
-<a name="ZarfFile.IsTemplate"></a>
-### func \(\*ZarfFile\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L110>)
+<a name="File.IsTemplate"></a>
+### func \(\*File\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L110>)
 
 ```go
-func (u *ZarfFile) IsTemplate() bool
+func (u *File) IsTemplate() bool
 ```
 
 IsTemplate reports whether this file's contents are rendered against the package's values before upload. Unset means no, so a package that says nothing about templating ships the bytes it was built with.
 
-<a name="ZarfFile.Owner"></a>
-### func \(\*ZarfFile\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L123>)
+<a name="File.Owner"></a>
+### func \(\*File\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L123>)
 
 ```go
-func (u *ZarfFile) Owner() string
+func (u *File) Owner() string
 ```
 
 Owner returns a chown\-compatible "user:group" string built from User and Group. It returns an empty string when both are empty.
 
-<a name="ZarfFile.String"></a>
-### func \(\*ZarfFile\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L115>)
+<a name="File.String"></a>
+### func \(\*File\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L115>)
 
 ```go
-func (u *ZarfFile) String() string
+func (u *File) String() string
 ```
 
 String returns Name. If Name is empty, it returns Source instead.
 
-<a name="ZarfFile.TargetDirectory"></a>
-### func \(\*ZarfFile\) [TargetDirectory](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L151>)
+<a name="File.TargetDirectory"></a>
+### func \(\*File\) [TargetDirectory](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L151>)
 
 ```go
-func (u *ZarfFile) TargetDirectory() string
+func (u *File) TargetDirectory() string
 ```
 
 TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.
 
-<a name="ZarfFile.UnmarshalYAML"></a>
-### func \(\*ZarfFile\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L128>)
+<a name="File.UnmarshalYAML"></a>
+### func \(\*File\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L128>)
 
 ```go
-func (u *ZarfFile) UnmarshalYAML(unmarshal func(any) error) error
+func (u *File) UnmarshalYAML(unmarshal func(any) error) error
 ```
 
 UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.
 
-<a name="ZarfFiles"></a>
-## type [ZarfFiles](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/files.go#L18>)
+<a name="Files"></a>
+## type [Files](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/files.go#L18>)
 
-ZarfFiles is an ordered list of files.
+Files is an ordered list of files.
 
 ```go
-type ZarfFiles []*ZarfFile
+type Files []*File
 ```
 
-<a name="ZarfFiles.Filter"></a>
-### func \(ZarfFiles\) [Filter](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/files.go#L21>)
+<a name="Files.Filter"></a>
+### func \(Files\) [Filter](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/files.go#L21>)
 
 ```go
-func (files ZarfFiles) Filter(filter func(f *ZarfFile) bool) ZarfFiles
+func (files Files) Filter(filter func(f *File) bool) Files
 ```
 
 Filter returns the files for which filter returns true.
+
+<a name="Kind"></a>
+## type [Kind](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/common.go#L18>)
+
+Kind identifies the kind of a zarf.dev v1alpha1 document, for example ZarfCluster or ZarfDistro.
+
+```go
+type Kind string
+```
+
+<a name="LocalFile"></a>
+## type [LocalFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L79-L84>)
+
+LocalFile holds the local path and permission cargoship resolves for uploading a file.
+
+```go
+type LocalFile struct {
+    // Path is the local path to the file cargoship uploads.
+    Path string
+    // PermMode is the octal permission string cargoship applies to the file.
+    PermMode string
+}
+```
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

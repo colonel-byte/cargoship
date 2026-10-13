@@ -39,7 +39,7 @@ func (p *EngineConfigSyncController) Explanation() string {
 }
 
 // Prepare the phase
-func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.loadDesiredConfig(ctx, c, *d); err != nil {
 		return err
 	}
@@ -49,8 +49,8 @@ func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.Zar
 
 	candidates := p.manager.Config.Spec.Hosts.Controllers()
 	var mu sync.Mutex
-	var matched cluster.ZarfHosts
-	if err := p.parallelDo(ctx, candidates, func(ctx context.Context, h *cluster.ZarfHost) error {
+	var matched cluster.Hosts
+	if err := p.parallelDo(ctx, candidates, func(ctx context.Context, h *cluster.Host) error {
 		if p.needsUpdate(ctx, h) {
 			mu.Lock()
 			matched = append(matched, h)
@@ -88,7 +88,7 @@ func (p *EngineConfigSyncController) Run(ctx context.Context) error {
 	)
 }
 
-func (p *EngineConfigSyncController) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncController) stopService(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
 	return p.Distro.StopControllerService(h)
 }

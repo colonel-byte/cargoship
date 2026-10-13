@@ -28,7 +28,7 @@ func TestWorkersNeedingInitFallsBackToServiceCheck(t *testing.T) {
 	stopped := newServiceHost("worker-stopped", false, false)
 	controller := newServiceHost("controller-1", true, false)
 
-	got := workersNeedingInit(context.Background(), cluster.ZarfHosts{running, stopped, controller}, d)
+	got := workersNeedingInit(context.Background(), cluster.Hosts{running, stopped, controller}, d)
 
 	require.Len(t, got, 1)
 	require.Equal(t, "worker-stopped", got[0].Hostname)
@@ -36,11 +36,11 @@ func TestWorkersNeedingInitFallsBackToServiceCheck(t *testing.T) {
 
 func TestWorkersNeedingInitUsesBootstrapperWhenImplemented(t *testing.T) {
 	d := &fakeBootstrapperDistro{bootstrapped: map[string]bool{"worker-done": true}}
-	done := &cluster.ZarfHost{Hostname: "worker-done", Role: cluster.RoleWorker}
-	pending := &cluster.ZarfHost{Hostname: "worker-pending", Role: cluster.RoleWorker}
-	controller := &cluster.ZarfHost{Hostname: "controller-1", Role: cluster.RoleController}
+	done := &cluster.Host{Hostname: "worker-done", Role: cluster.RoleWorker}
+	pending := &cluster.Host{Hostname: "worker-pending", Role: cluster.RoleWorker}
+	controller := &cluster.Host{Hostname: "controller-1", Role: cluster.RoleController}
 
-	got := workersNeedingInit(context.Background(), cluster.ZarfHosts{done, pending, controller}, d)
+	got := workersNeedingInit(context.Background(), cluster.Hosts{done, pending, controller}, d)
 
 	require.Len(t, got, 1)
 	require.Equal(t, "worker-pending", got[0].Hostname)

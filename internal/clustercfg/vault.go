@@ -78,7 +78,7 @@ func missingKeyHint(format Format) string {
 // encrypted means a document can be encrypted as a whole without cargoship
 // rejecting the parts that did not have to be. The decrypted TLS settings are
 // validated here, since load time saw only ciphertext.
-func DecryptRegistryAuth(dis *cluster.ZarfCluster, k *Keyring) error {
+func DecryptRegistryAuth(dis *cluster.Cluster, k *Keyring) error {
 	registries := dis.Spec.Config.Registries
 	for i := range registries {
 		auth := &registries[i].Authentication
@@ -135,7 +135,7 @@ func DecryptRegistryAuth(dis *cluster.ZarfCluster, k *Keyring) error {
 // It matters more for age than it did for vault. An age value does not record which recipients it
 // was encrypted to, so this pre-flight is the only thing that catches a document encrypted to a key
 // nobody on this machine holds.
-func VerifyRegistryAuth(dis *cluster.ZarfCluster, k *Keyring) error {
+func VerifyRegistryAuth(dis *cluster.Cluster, k *Keyring) error {
 	if dis == nil {
 		return nil
 	}
@@ -143,8 +143,8 @@ func VerifyRegistryAuth(dis *cluster.ZarfCluster, k *Keyring) error {
 	// Decryption writes the plaintext back over the ciphertext, so it runs against a copy here.
 	// Only the fields DecryptRegistryAuth writes need copying: the TLS block, because it holds
 	// the inline CA, and the registry structs holding the credentials themselves.
-	probe := &cluster.ZarfCluster{}
-	probe.Spec.Config.Registries = make([]cluster.ZarfClusterRegistries, len(dis.Spec.Config.Registries))
+	probe := &cluster.Cluster{}
+	probe.Spec.Config.Registries = make([]cluster.Registries, len(dis.Spec.Config.Registries))
 	copy(probe.Spec.Config.Registries, dis.Spec.Config.Registries)
 	for i := range probe.Spec.Config.Registries {
 		if tls := probe.Spec.Config.Registries[i].TLS; tls != nil {

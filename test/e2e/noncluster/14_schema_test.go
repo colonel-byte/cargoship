@@ -126,7 +126,7 @@ func schemaValuesNode(t *testing.T, out string) map[string]any {
 	require.NoError(t, json.Unmarshal([]byte(out), &doc))
 
 	cur := doc
-	for _, k := range []string{"$defs", "ZarfClusterConfig", "properties", "values"} {
+	for _, k := range []string{"$defs", "Config", "properties", "values"} {
 		next, ok := cur[k].(map[string]any)
 		require.Truef(t, ok, "expected a map at %q", k)
 		cur = next

@@ -78,14 +78,14 @@ func (s Target) Namer() func(string) string {
 func Targets() []Target {
 	return []Target{
 		{
-			SchemaStruct: &distro.ZarfDistro{},
+			SchemaStruct: &distro.Distro{},
 			SchemaPath:   "zarf-v1alpha1-distro-package-schema.json",
 			StructPath:   []string{"api", "colonel-byte.dev", "v1alpha1", "distro"},
 			DocTitle:     "Distro package",
 			DocFile:      "distro.md",
 		},
 		{
-			SchemaStruct: &cluster.ZarfCluster{},
+			SchemaStruct: &cluster.Cluster{},
 			SchemaPath:   "zarf-v1alpha1-cluster-schema.json",
 			StructPath:   []string{"api", "colonel-byte.dev", "v1alpha1", "cluster"},
 			KeyNamer: func(s string) string {
@@ -193,8 +193,8 @@ func GenerateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 	addYAMLExtensions(schemaMap)
 
 	if defObj, ok := schemaMap["$defs"].(map[string]any); ok {
-		if zarfHost, ok := defObj["ZarfHost"].(map[string]any); ok {
-			if hostProps, ok := zarfHost[propertiesKey].(map[string]any); ok {
+		if hostDef, ok := defObj["Host"].(map[string]any); ok {
+			if hostProps, ok := hostDef[propertiesKey].(map[string]any); ok {
 				if compositeConfig, ok := defObj["CompositeConfig"].(map[string]any); ok {
 					if ccProps, ok := compositeConfig[propertiesKey].(map[string]any); ok {
 						for k, val := range ccProps {
@@ -205,7 +205,7 @@ func GenerateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 				delete(hostProps, "connectionConfig")
 				delete(hostProps, "runner")
 			}
-			zarfHost["required"] = []string{"role"}
+			hostDef["required"] = []string{"role"}
 			delete(defObj, "CompositeConfig")
 		}
 	}

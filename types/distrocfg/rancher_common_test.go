@@ -156,10 +156,10 @@ func TestValidateEngineConfigSkipsAddonCheckOnAgents(t *testing.T) {
 }
 
 func TestBuildRegistriesConfigNoAuth(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name: "docker.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.RegistryProxy{
 				URL: "mirror-docker-hub.example.com",
 			},
 		},
@@ -180,13 +180,13 @@ func TestBuildRegistriesConfigNoAuth(t *testing.T) {
 }
 
 func TestBuildRegistriesConfigWithAuth(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name: "ghcr.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.RegistryProxy{
 				URL: "mirror-ghcr.example.com",
 			},
-			Authentication: cluster.ZarfClusterRegistryAuth{
+			Authentication: cluster.RegistryAuth{
 				Token: "tok",
 			},
 		},
@@ -216,13 +216,13 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 // A username and password are encoded into one base64 credential rather than written as two
 // keys, so the node never carries the password in plain text.
 func TestBuildRegistriesConfigWithUserPass(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name: "quay.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.RegistryProxy{
 				URL: "mirror-quay.example.com",
 			},
-			Authentication: cluster.ZarfClusterRegistryAuth{
+			Authentication: cluster.RegistryAuth{
 				Username: "robot",
 				Password: "secretpassword",
 			},
@@ -265,27 +265,27 @@ func TestRegistryAuthKeyNames(t *testing.T) {
 
 func TestRegistryAuth(t *testing.T) {
 	cases := map[string]struct {
-		auth cluster.ZarfClusterRegistryAuth
+		auth cluster.RegistryAuth
 		want dig.Mapping
 	}{
 		"user and password become one base64 credential under auth": {
-			auth: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"},
+			auth: cluster.RegistryAuth{Username: "robot", Password: "secretpassword"},
 			want: dig.Mapping{keyAuth: base64.StdEncoding.EncodeToString([]byte("robot:secretpassword"))},
 		},
 		"a token is passed through as given, under identity_token": {
-			auth: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+			auth: cluster.RegistryAuth{Token: "tok"},
 			want: dig.Mapping{keyIdentityToken: "tok"},
 		},
 		"a token wins over a user and password": {
-			auth: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword", Token: "tok"},
+			auth: cluster.RegistryAuth{Username: "robot", Password: "secretpassword", Token: "tok"},
 			want: dig.Mapping{keyIdentityToken: "tok"},
 		},
 		"half a credential cannot be encoded, so it is written as it is": {
-			auth: cluster.ZarfClusterRegistryAuth{Username: "robot"},
+			auth: cluster.RegistryAuth{Username: "robot"},
 			want: dig.Mapping{keyUsername: "robot"},
 		},
 		"no credentials produce no auth entry": {
-			auth: cluster.ZarfClusterRegistryAuth{},
+			auth: cluster.RegistryAuth{},
 			want: dig.Mapping{},
 		},
 	}
@@ -298,10 +298,10 @@ func TestRegistryAuth(t *testing.T) {
 }
 
 func TestBuildRegistriesConfigWithRewrite(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name: "docker.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.RegistryProxy{
 				URL: "mirror-docker-hub.example.com",
 				Rewrite: map[string]string{
 					"^rancher/(.*)": "mirrorproject/rancher-images/$1",
@@ -328,15 +328,15 @@ func TestBuildRegistriesConfigWithRewrite(t *testing.T) {
 }
 
 func TestBuildRegistriesConfigMultiple(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name:  "docker.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-docker-hub.example.com"},
+			Proxy: &cluster.RegistryProxy{URL: "mirror-docker-hub.example.com"},
 		},
 		{
 			Name:  "quay.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
-			Authentication: cluster.ZarfClusterRegistryAuth{
+			Proxy: &cluster.RegistryProxy{URL: "mirror-quay.example.com"},
+			Authentication: cluster.RegistryAuth{
 				Username: "user",
 			},
 		},
@@ -392,7 +392,7 @@ type fakeHost struct {
 
 // attach wires h to f and returns it, so a test can set the host fields it cares about in the
 // literal and still get a host whose file and service operations land in f.
-func (f *fakeHost) attach(h *cluster.ZarfHost) *cluster.ZarfHost {
+func (f *fakeHost) attach(h *cluster.Host) *cluster.Host {
 	h.Configurer = &fakeConfigurer{fake: f}
 	h.SetFS(&fakeFS{fake: f})
 	h.SetServices(&fakeServices{fake: f})
@@ -518,15 +518,15 @@ func parseWrittenYAML(t *testing.T, files map[string]string, path string) dig.Ma
 
 func TestConfigureEngineControllerLeaderNoTokenFiles(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
-	run := cluster.ZarfRuntimeMeta{
+	dis := distro.Distro{}
+	run := cluster.RuntimeMeta{
 		ControllerTLS:   []string{"10.0.0.1"},
 		ControllerToken: "ctoken",
 		AgentToken:      "atoken",
 		LoadBalancer:    "lb.example.com",
 	}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleController, Hostname: "node1"})
 	host.Metadata.IsLeader = true
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
@@ -561,18 +561,18 @@ func TestConfigureEngineControllerLeaderNoTokenFiles(t *testing.T) {
 
 func TestConfigureEngineControllerFollowerExistingTokenFile(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
-	run := cluster.ZarfRuntimeMeta{LoadBalancer: "lb.example.com"}
+	dis := distro.Distro{}
+	run := cluster.RuntimeMeta{LoadBalancer: "lb.example.com"}
 
 	leaderCfg := &fakeHost{longHostname: "leader.example.com"}
-	leaderHost := leaderCfg.attach(&cluster.ZarfHost{})
+	leaderHost := leaderCfg.attach(&cluster.Host{})
 	run.Leader = leaderHost
 
 	cfg := &fakeHost{
 		fileExist: map[string]bool{d.JoinTokenPath(): true},
 		files:     map[string]string{d.JoinTokenPath(): "existing-token"},
 	}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node2"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleController, Hostname: "node2"})
 	host.Metadata.IsLeader = false
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
@@ -591,7 +591,7 @@ func TestConfigureEngineControllerFollowerExistingTokenFile(t *testing.T) {
 
 func TestConfigureEngineWorkerStripsControllerArgs(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EngineConfig: dig.Mapping{
 			keyKubeAPI:       "foo",
@@ -600,9 +600,9 @@ func TestConfigureEngineWorkerStripsControllerArgs(t *testing.T) {
 			keyETCD:          "qux",
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{LoadBalancer: "lb.example.com", AgentToken: "atoken"}
+	run := cluster.RuntimeMeta{LoadBalancer: "lb.example.com", AgentToken: "atoken"}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node3"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleWorker, Hostname: "node3"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -628,15 +628,15 @@ func TestConfigureEngineWorkerStripsControllerArgs(t *testing.T) {
 
 func TestConfigureEngineWritesManifests(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EngineManifest: dig.Mapping{
 			"my-chart": "foo: bar",
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{}
+	run := cluster.RuntimeMeta{}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleController, Hostname: "node1"})
 	host.Metadata.IsLeader = true
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
@@ -661,15 +661,15 @@ func TestConfigureEngineWritesManifests(t *testing.T) {
 
 func TestConfigureEngineWritesAudit(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EngineAudit: dig.Mapping{
 			"rules": []string{"foo"},
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{}
+	run := cluster.RuntimeMeta{}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -692,15 +692,15 @@ func TestConfigureEngineWritesAudit(t *testing.T) {
 
 func TestConfigureEngineWritesPSS(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EnginePSS: dig.Mapping{
 			"defaults": dig.Mapping{"enforce": "restricted"},
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{}
+	run := cluster.RuntimeMeta{}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -723,17 +723,17 @@ func TestConfigureEngineWritesPSS(t *testing.T) {
 
 func TestConfigureEngineWritesRegistries(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	dis := distro.Distro{}
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name:  "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				Proxy: &cluster.RegistryProxy{URL: "mirror.example.com"},
 			},
 		},
 	}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -757,10 +757,10 @@ func TestConfigureEngineWritesRegistries(t *testing.T) {
 
 func TestConfigureEngineNoRegistriesSkipsFile(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
-	run := cluster.ZarfRuntimeMeta{}
+	dis := distro.Distro{}
+	run := cluster.RuntimeMeta{}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -779,12 +779,12 @@ func TestConfigureEngineNoRegistriesSkipsFile(t *testing.T) {
 // output shape is made.
 func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	dis := distro.Distro{}
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name: "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{
+				Proxy: &cluster.RegistryProxy{
 					URL: "mirror-docker-hub.example.com",
 					Rewrite: map[string]string{
 						"^rancher/(.*)": "mirrorproject/rancher-images/$1",
@@ -793,15 +793,15 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 			},
 			{
 				Name:  "ghcr.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-ghcr.example.com"},
-				Authentication: cluster.ZarfClusterRegistryAuth{
+				Proxy: &cluster.RegistryProxy{URL: "mirror-ghcr.example.com"},
+				Authentication: cluster.RegistryAuth{
 					Token: "tok",
 				},
 			},
 			{
 				Name:  "quay.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
-				Authentication: cluster.ZarfClusterRegistryAuth{
+				Proxy: &cluster.RegistryProxy{URL: "mirror-quay.example.com"},
+				Authentication: cluster.RegistryAuth{
 					Username: "robot",
 					Password: "secretpassword",
 				},
@@ -809,7 +809,7 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 		},
 	}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -833,10 +833,10 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 
 func TestDesiredFilesEmpty(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
-	run := cluster.ZarfRuntimeMeta{}
+	dis := distro.Distro{}
+	run := cluster.RuntimeMeta{}
 
-	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{}, run, dis)
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v", err)
 	}
@@ -847,17 +847,17 @@ func TestDesiredFilesEmpty(t *testing.T) {
 
 func TestDesiredFilesIncludesDistroReleaseMetadata(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{
-		Metadata: distro.ZarfDistroMetadata{
+	dis := distro.Distro{
+		Metadata: distro.Metadata{
 			Name:              "rancher-rke2-v1.31.0",
 			Version:           "v1.31.0",
 			AggregateChecksum: "abc123hash",
 		},
-		Spec: distro.ZarfDistroSpec{
+		Spec: distro.Spec{
 			Type:    "rke2",
 			Version: "v1.31.0+rke2r1",
-			Config: distro.ZarfDistroConfig{
-				ImagesConfig: distro.ZarfDistroImageConfig{
+			Config: distro.Config{
+				ImagesConfig: distro.ImageConfig{
 					Images: []string{"rancher/rke2-runtime:v1.31.0", "rancher/pause:3.9"},
 				},
 				Engine: dig.Mapping{
@@ -866,9 +866,9 @@ func TestDesiredFilesIncludesDistroReleaseMetadata(t *testing.T) {
 			},
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{}
+	run := cluster.RuntimeMeta{}
 
-	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{}, run, dis)
 	require.NoError(t, err)
 
 	metaFile, ok := got[DistroReleaseFile]
@@ -893,7 +893,7 @@ func TestDesiredFilesIncludesDistroReleaseMetadata(t *testing.T) {
 
 func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EngineAudit: dig.Mapping{
 			"rules": []string{"foo"},
@@ -902,16 +902,16 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 			"defaults": dig.Mapping{"enforce": "restricted"},
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name:  "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				Proxy: &cluster.RegistryProxy{URL: "mirror.example.com"},
 			},
 		},
 	}
 
-	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{}, run, dis)
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v", err)
 	}
@@ -950,7 +950,7 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 
 func TestGetClusterCIDRDefaults(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 
 	got := d.GetClusterCIDR(dis)
 
@@ -962,7 +962,7 @@ func TestGetClusterCIDRDefaults(t *testing.T) {
 
 func TestGetClusterCIDROverridden(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EngineConfig: dig.Mapping{
 			keyCIDRPod: "192.168.0.0/16",
@@ -1003,7 +1003,7 @@ func TestDistroCmdf(t *testing.T) {
 func TestRunningVersionLookPathError(t *testing.T) {
 	d := newTestRancher()
 	cfg := &fakeHost{lookPathErr: errors.New("not found")}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	_, err := d.RunningVersion(host)
 
@@ -1015,7 +1015,7 @@ func TestRunningVersionLookPathError(t *testing.T) {
 func TestRunningVersionExecNotConnected(t *testing.T) {
 	d := newTestRancher()
 	cfg := &fakeHost{lookPathResult: "/usr/local/bin/k3s"}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	_, err := d.RunningVersion(host)
 
@@ -1027,7 +1027,7 @@ func TestRunningVersionExecNotConnected(t *testing.T) {
 func TestStopServiceNotRunningNoCacheNoKillall(t *testing.T) {
 	d := newTestRancher()
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	if err := d.stopService(host, "k3s", "k3s-killall.sh"); err != nil {
 		t.Fatalf("stopService() error = %v", err)
@@ -1041,7 +1041,7 @@ func TestStopServiceStopServiceError(t *testing.T) {
 	d := newTestRancher()
 	wantErr := errors.New("stop failed")
 	cfg := &fakeHost{fileExist: map[string]bool{}, serviceRunning: true, stopServiceErr: wantErr}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	err := d.stopService(host, "k3s", "k3s-killall.sh")
 
@@ -1058,7 +1058,7 @@ func TestStopServiceDeleteFileError(t *testing.T) {
 		fileExist:     map[string]bool{cacheFile: true},
 		deleteFileErr: wantErr,
 	}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	err := d.stopService(host, "k3s", "k3s-killall.sh")
 
@@ -1074,7 +1074,7 @@ func TestStopServiceCacheDeletedNoKillallTouches(t *testing.T) {
 		fileExist: map[string]bool{cacheFile: true},
 		files:     map[string]string{cacheFile: "{}"},
 	}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	if err := d.stopService(host, "k3s", "k3s-killall.sh"); err != nil {
 		t.Fatalf("stopService() error = %v", err)
@@ -1087,7 +1087,7 @@ func TestStopServiceCacheDeletedNoKillallTouches(t *testing.T) {
 func TestStopServiceKillallExistsPropagatesExecError(t *testing.T) {
 	d := newTestRancher()
 	cfg := &fakeHost{fileExist: map[string]bool{}, commandExist: true}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	err := d.stopService(host, "k3s", "k3s-killall.sh")
 
@@ -1153,14 +1153,14 @@ func TestCleanupPaths(t *testing.T) {
 // The mirror and configs keys are registry names and hosts, which can look like numbers,
 // booleans, or the "*" wildcard, so they are written quoted.
 func TestMarshalRegistriesYAMLQuotesKeys(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name: "*",
-			Proxy: &cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.RegistryProxy{
 				URL:     "mirror.example.com:5000",
 				Rewrite: map[string]string{"^rancher/(.*)": "mirrorproject/rancher-images/$1"},
 			},
-			Authentication: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+			Authentication: cluster.RegistryAuth{Token: "tok"},
 		},
 	}
 
@@ -1189,11 +1189,11 @@ func TestMarshalRegistriesYAMLQuotesKeys(t *testing.T) {
 }
 
 func TestBuildRegistriesConfigKeysConfigsByHost(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name:           "docker.io",
-			Proxy:          &cluster.ZarfClusterRegistryProxy{URL: "https://mirror.example.com:5000/v2"},
-			Authentication: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"},
+			Proxy:          &cluster.RegistryProxy{URL: "https://mirror.example.com:5000/v2"},
+			Authentication: cluster.RegistryAuth{Username: "robot", Password: "secretpassword"},
 		},
 	}
 
@@ -1224,10 +1224,10 @@ func TestBuildRegistriesConfigKeysConfigsByHost(t *testing.T) {
 // A registry can carry credentials without a mirror -- they authenticate a direct pull. The
 // entry is keyed by the registry itself then, since that is where the pull goes.
 func TestBuildRegistriesConfigWithoutProxy(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name:           "registry.example.com",
-			Authentication: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+			Authentication: cluster.RegistryAuth{Token: "tok"},
 		},
 	}
 
@@ -1244,13 +1244,13 @@ func TestBuildRegistriesConfigWithoutProxy(t *testing.T) {
 
 func TestBuildRegistriesConfigWithTLS(t *testing.T) {
 	insecure := true
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name: "private.registry.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.RegistryProxy{
 				URL: "mirror-private.example.com",
 			},
-			TLS: &cluster.ZarfClusterRegistryTLS{
+			TLS: &cluster.RegistryTLS{
 				CAFile:             "/etc/ssl/certs/ca.pem",
 				CertFile:           "/etc/ssl/certs/client.pem",
 				KeyFile:            "/etc/ssl/certs/client-key.pem",
@@ -1291,11 +1291,11 @@ dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
 // An inline CA is written to its own file, and ca_file points at that file rather than at the
 // certificate itself.
 func TestBuildRegistriesConfigInlineCA(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name:  "docker.io",
-			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com:5000"},
-			TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+			Proxy: &cluster.RegistryProxy{URL: "mirror.example.com:5000"},
+			TLS:   &cluster.RegistryTLS{CA: testCAPEM},
 		},
 	}
 
@@ -1317,10 +1317,10 @@ func TestBuildRegistriesConfigInlineCA(t *testing.T) {
 
 // A CA path already on the host is used as given, and nothing extra is written.
 func TestBuildRegistriesConfigCAFile(t *testing.T) {
-	registries := []cluster.ZarfClusterRegistries{
+	registries := []cluster.Registries{
 		{
 			Name: "nexus.example.com",
-			TLS:  &cluster.ZarfClusterRegistryTLS{CAFile: "/etc/pki/ca.crt"},
+			TLS:  &cluster.RegistryTLS{CAFile: "/etc/pki/ca.crt"},
 		},
 	}
 
@@ -1355,21 +1355,21 @@ func TestRegistryCAPath(t *testing.T) {
 // is made.
 func TestConfigureEngineWritesRegistriesTLSGolden(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	dis := distro.Distro{}
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name:  "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com:5000"},
-				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+				Proxy: &cluster.RegistryProxy{URL: "mirror.example.com:5000"},
+				TLS:   &cluster.RegistryTLS{CA: testCAPEM},
 			},
 			{
 				Name: "nexus.example.com",
-				Authentication: cluster.ZarfClusterRegistryAuth{
+				Authentication: cluster.RegistryAuth{
 					Username: "robot",
 					Password: "secretpassword",
 				},
-				TLS: &cluster.ZarfClusterRegistryTLS{
+				TLS: &cluster.RegistryTLS{
 					CAFile:   "/etc/pki/ca-trust/source/anchors/nexus-ca.pem",
 					CertFile: "/etc/ssl/certs/nexus-client.pem",
 					KeyFile:  "/etc/ssl/private/nexus-client-key.pem",
@@ -1377,13 +1377,13 @@ func TestConfigureEngineWritesRegistriesTLSGolden(t *testing.T) {
 			},
 			{
 				Name:  "quay.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "http://mirror-quay.example.com"},
-				TLS:   &cluster.ZarfClusterRegistryTLS{InsecureSkipVerify: true},
+				Proxy: &cluster.RegistryProxy{URL: "http://mirror-quay.example.com"},
+				TLS:   &cluster.RegistryTLS{InsecureSkipVerify: true},
 			},
 		},
 	}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -1413,17 +1413,17 @@ func TestConfigureEngineWritesRegistriesTLSGolden(t *testing.T) {
 
 func TestDesiredFilesWritesInlineCA(t *testing.T) {
 	d := newTestRancher()
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name:  "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
-				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+				Proxy: &cluster.RegistryProxy{URL: "mirror.example.com"},
+				TLS:   &cluster.RegistryTLS{CA: testCAPEM},
 			},
 		},
 	}
 
-	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.Host{}, run, distro.Distro{})
 	require.NoError(t, err)
 	require.Equal(t, []byte(testCAPEM), files["/etc/cargoship/tls/mirror.example.com.crt"].Content)
 	require.Contains(t, files, filepath.Join(filepath.Dir(d.Config), "registries.yaml"))
@@ -1433,22 +1433,22 @@ func TestDesiredFilesWritesInlineCA(t *testing.T) {
 // mirror list. Every other file cargoship writes stays root-only.
 func TestDesiredFilesModes(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EngineAudit: dig.Mapping{"rules": []string{"foo"}},
 		config.EnginePSS:   dig.Mapping{"defaults": dig.Mapping{"enforce": "restricted"}},
 	}
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name:  "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
-				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+				Proxy: &cluster.RegistryProxy{URL: "mirror.example.com"},
+				TLS:   &cluster.RegistryTLS{CA: testCAPEM},
 			},
 		},
 	}
 
-	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
+	files, err := d.DesiredFiles(context.Background(), &cluster.Host{}, run, dis)
 	require.NoError(t, err)
 
 	dir := filepath.Dir(d.Config)
@@ -1462,7 +1462,7 @@ func TestDesiredFilesModes(t *testing.T) {
 // same, so it lands in valuesContent as YAML, not as a Go-formatted map.
 func TestConfigureEngineWritesManifestsFromMapping(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		config.EngineManifest: dig.Mapping{
 			"my-chart": dig.Mapping{
@@ -1472,9 +1472,9 @@ func TestConfigureEngineWritesManifestsFromMapping(t *testing.T) {
 			},
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{}
+	run := cluster.RuntimeMeta{}
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1"})
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleController, Hostname: "node1"})
 	host.Metadata.IsLeader = true
 
 	require.NoError(t, d.ConfigureEngine(context.Background(), host, run, dis))
@@ -1525,10 +1525,10 @@ func manifestEngine() dig.Mapping {
 // and pruned the way every other file cargoship puts on a host is.
 func TestDesiredFilesHelmChartConfigs(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = manifestEngine()
 
-	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{Role: cluster.RoleController}, cluster.RuntimeMeta{}, dis)
 	require.NoError(t, err)
 
 	manifests := filepath.Join(d.Data, "server", "manifests")
@@ -1561,10 +1561,10 @@ func TestDesiredFilesHelmChartConfigs(t *testing.T) {
 // in it.
 func TestDesiredFilesHelmChartConfigsControllerOnly(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = manifestEngine()
 
-	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{Role: cluster.RoleWorker}, cluster.RuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Empty(t, got, "an agent carries no chart configuration")
 }
@@ -1609,11 +1609,11 @@ func TestDesiredFilesHelmChartConfigsSkipsDisabledCharts(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			d := newTestRancher()
-			dis := distro.ZarfDistro{}
+			dis := distro.Distro{}
 			dis.Spec.Config.Engine = manifestEngine()
 			dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyDisable: tt.disable}
 
-			got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+			got, err := d.DesiredFiles(context.Background(), &cluster.Host{Role: cluster.RoleController}, cluster.RuntimeMeta{}, dis)
 			require.NoError(t, err)
 
 			paths := slices.Collect(maps.Keys(got))
@@ -1629,11 +1629,11 @@ func TestDesiredFilesHelmChartConfigsSkipsDisabledCharts(t *testing.T) {
 // it was before disabling a chart was something values could ask for.
 func TestDesiredFilesHelmChartConfigsWithoutDisable(t *testing.T) {
 	d := newTestRancher()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = manifestEngine()
 	dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyNodeLabel: []string{"role=worker"}}
 
-	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{Role: cluster.RoleController}, cluster.RuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 }
@@ -1651,14 +1651,14 @@ func TestSetNodeIP(t *testing.T) {
 	tests := []struct {
 		name string
 		cfg  dig.Mapping
-		host *cluster.ZarfHost
+		host *cluster.Host
 		want any
 		why  string
 	}{
 		{
 			name: "written from the host's private address",
 			cfg:  dig.Mapping{},
-			host: &cluster.ZarfHost{
+			host: &cluster.Host{
 				PrivateAddress: "10.73.0.11",
 			},
 			want: []string{"10.73.0.11"},
@@ -1667,7 +1667,7 @@ func TestSetNodeIP(t *testing.T) {
 		{
 			name: "a host with no private address is left to the engine's own choice",
 			cfg:  dig.Mapping{},
-			host: &cluster.ZarfHost{},
+			host: &cluster.Host{},
 			want: nil,
 			why:  "writing an empty value would be worse than writing nothing",
 		},
@@ -1676,7 +1676,7 @@ func TestSetNodeIP(t *testing.T) {
 			cfg: dig.Mapping{
 				"node-ip": []string{"192.0.2.50"},
 			},
-			host: &cluster.ZarfHost{
+			host: &cluster.Host{
 				PrivateAddress: "10.73.0.11",
 			},
 			want: []string{"192.0.2.50"},
@@ -1687,7 +1687,7 @@ func TestSetNodeIP(t *testing.T) {
 			cfg: dig.Mapping{
 				"node-ip": "192.0.2.50",
 			},
-			host: &cluster.ZarfHost{
+			host: &cluster.Host{
 				PrivateAddress: "10.73.0.11",
 			},
 			want: "192.0.2.50",

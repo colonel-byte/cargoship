@@ -46,19 +46,19 @@ const lanInterface = "enp0s4"
 // so fact gathering would discover 10.0.2.15 -- the same address on every node, and reachable
 // from none of them. Every phase that distributes peer addresses, which is the firewall and
 // the hosts file, would then distribute addresses that do not work.
-func Inventory(f Fleet) apicluster.ZarfCluster {
-	hosts := make(apicluster.ZarfHosts, 0, len(f.Nodes))
+func Inventory(f Fleet) apicluster.Cluster {
+	hosts := make(apicluster.Hosts, 0, len(f.Nodes))
 	for _, n := range f.Nodes {
 		hosts = append(hosts, hostFromNode(n, f.KeyPath))
 	}
 
-	return apicluster.ZarfCluster{
+	return apicluster.Cluster{
 		Kind: "ZarfCluster",
-		Metadata: apicluster.ZarfClusterMetadata{
+		Metadata: apicluster.Metadata{
 			Name: "microvm-" + f.Name,
 		},
-		Spec: apicluster.ZarfClusterSpec{
-			Config: apicluster.ZarfClusterConfig{
+		Spec: apicluster.Spec{
+			Config: apicluster.Config{
 				// The leader's address on the private segment, not its forwarded loopback
 				// port: this is the address the other nodes join through, and they reach each
 				// other over that segment and not through the host.
@@ -70,8 +70,8 @@ func Inventory(f Fleet) apicluster.ZarfCluster {
 }
 
 // hostFromNode maps one node onto an inventory host.
-func hostFromNode(n Node, keyPath string) *apicluster.ZarfHost {
-	return &apicluster.ZarfHost{
+func hostFromNode(n Node, keyPath string) *apicluster.Host {
+	return &apicluster.Host{
 		Hostname:         n.Name,
 		PrivateAddress:   n.PrivateAddress,
 		PrivateInterface: lanInterface,

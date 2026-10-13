@@ -244,10 +244,10 @@ func TestExportImagesForArchWritesPerArchTarballs(t *testing.T) {
 	p := &UploadFiles{}
 	p.SetManager(&Manager{
 		TempDirectory: tempDir,
-		Distro: &distro.ZarfDistro{
-			Spec: distro.ZarfDistroSpec{
-				Config: distro.ZarfDistroConfig{
-					ImagesConfig: distro.ZarfDistroImageConfig{
+		Distro: &distro.Distro{
+			Spec: distro.Spec{
+				Config: distro.Config{
+					ImagesConfig: distro.ImageConfig{
 						Images: []string{ref},
 						Path:   "/var/lib/rancher/k3s/agent/images",
 					},
@@ -255,7 +255,7 @@ func TestExportImagesForArchWritesPerArchTarballs(t *testing.T) {
 			},
 		},
 	})
-	p.imgFiles = map[api.Arch][]v1alpha1.ZarfFile{}
+	p.imgFiles = map[api.Arch][]v1alpha1.File{}
 
 	archiveStore := &carch.OciArchiveStore{Root: imagesPath, Src: store}
 	for _, arch := range []api.Arch{api.ArchAMD64, api.ArchARM64} {
@@ -308,15 +308,15 @@ func TestExportImagesForArchWithoutAMatchingManifest(t *testing.T) {
 	p := &UploadFiles{}
 	p.SetManager(&Manager{
 		TempDirectory: tempDir,
-		Distro: &distro.ZarfDistro{
-			Spec: distro.ZarfDistroSpec{
-				Config: distro.ZarfDistroConfig{
-					ImagesConfig: distro.ZarfDistroImageConfig{Images: []string{ref}},
+		Distro: &distro.Distro{
+			Spec: distro.Spec{
+				Config: distro.Config{
+					ImagesConfig: distro.ImageConfig{Images: []string{ref}},
 				},
 			},
 		},
 	})
-	p.imgFiles = map[api.Arch][]v1alpha1.ZarfFile{}
+	p.imgFiles = map[api.Arch][]v1alpha1.File{}
 
 	err = p.exportImagesForArch(ctx, store, &carch.OciArchiveStore{Root: imagesPath, Src: store}, api.ArchARM64)
 	if err == nil {
@@ -329,7 +329,7 @@ func TestExportImagesForArchWithoutAMatchingManifest(t *testing.T) {
 
 // newFileUploadPhase builds an UploadFiles over the given package files. TempDirectory is a scratch
 // directory rather than a real package layout: distroFilesFor only joins paths against it.
-func newFileUploadPhase(t *testing.T, files ...*v1alpha1.ZarfFile) *UploadFiles {
+func newFileUploadPhase(t *testing.T, files ...*v1alpha1.File) *UploadFiles {
 	t.Helper()
 
 	p := &UploadFiles{}

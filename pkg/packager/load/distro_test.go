@@ -28,7 +28,7 @@ import (
 func TestResolveArchitectures(t *testing.T) {
 	tests := []struct {
 		name      string
-		metadata  distro.ZarfDistroMetadata
+		metadata  distro.Metadata
 		requested string
 		want      api.Arches
 		// wantDeclared is what the definition listed before narrowing. Cases that leave it empty
@@ -38,59 +38,59 @@ func TestResolveArchitectures(t *testing.T) {
 	}{
 		{
 			name:     "scalar architecture is left alone",
-			metadata: distro.ZarfDistroMetadata{Architecture: "arm64"},
+			metadata: distro.Metadata{Architecture: "arm64"},
 			want:     api.Arches{"arm64"},
 		},
 		{
 			name:     "unset architecture falls back to the host",
-			metadata: distro.ZarfDistroMetadata{},
+			metadata: distro.Metadata{},
 			want:     api.Arches{api.Arch(runtime.GOARCH)},
 		},
 		{
 			name:      "a request fills in an unset architecture",
-			metadata:  distro.ZarfDistroMetadata{},
+			metadata:  distro.Metadata{},
 			requested: "arm64",
 			want:      api.Arches{"arm64"},
 		},
 		{
 			name:      "a request matching the scalar architecture is accepted",
-			metadata:  distro.ZarfDistroMetadata{Architecture: "arm64"},
+			metadata:  distro.Metadata{Architecture: "arm64"},
 			requested: "arm64",
 			want:      api.Arches{"arm64"},
 		},
 		{
 			name:      "a request conflicting with the scalar architecture is an error",
-			metadata:  distro.ZarfDistroMetadata{Architecture: "amd64"},
+			metadata:  distro.Metadata{Architecture: "amd64"},
 			requested: "arm64",
 			wantErr:   "not targeted by this package, which targets amd64",
 		},
 		{
 			name:      "an unsupported request is rejected for a scalar architecture",
-			metadata:  distro.ZarfDistroMetadata{Architecture: "amd64"},
+			metadata:  distro.Metadata{Architecture: "amd64"},
 			requested: "x86_64",
 			wantErr:   "invalid platform operating system architecture",
 		},
 		{
 			name:     "a list is taken at its word",
-			metadata: distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
+			metadata: distro.Metadata{Architectures: api.Arches{"amd64", "arm64"}},
 			want:     api.Arches{"amd64", "arm64"},
 		},
 		{
 			name:         "a request narrows a list but keeps what was declared",
-			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
+			metadata:     distro.Metadata{Architectures: api.Arches{"amd64", "arm64"}},
 			requested:    "arm64",
 			want:         api.Arches{"arm64"},
 			wantDeclared: api.Arches{"amd64", "arm64"},
 		},
 		{
 			name:      "an unsupported request is rejected",
-			metadata:  distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
+			metadata:  distro.Metadata{Architectures: api.Arches{"amd64", "arm64"}},
 			requested: "x86_64",
 			wantErr:   "invalid platform operating system architecture",
 		},
 		{
 			name:      "a request outside the list is an error",
-			metadata:  distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64"}},
+			metadata:  distro.Metadata{Architectures: api.Arches{"amd64"}},
 			requested: "arm64",
 			wantErr:   "not targeted by this package",
 		},
@@ -98,7 +98,7 @@ func TestResolveArchitectures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, declared, err := resolveArchitectures(distro.ZarfDistro{Metadata: tt.metadata}, tt.requested)
+			got, declared, err := resolveArchitectures(distro.Distro{Metadata: tt.metadata}, tt.requested)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatalf("resolveArchitectures() = nil error, want one containing %q", tt.wantErr)
@@ -122,19 +122,19 @@ func TestResolveArchitectures(t *testing.T) {
 }
 
 func TestValidateArchitectures(t *testing.T) {
-	withFiles := func(metadata distro.ZarfDistroMetadata, files, osFiles v1alpha1.ZarfFiles) distro.ZarfDistro {
-		return distro.ZarfDistro{
+	withFiles := func(metadata distro.Metadata, files, osFiles v1alpha1.Files) distro.Distro {
+		return distro.Distro{
 			Metadata: metadata,
-			Spec: distro.ZarfDistroSpec{
-				Config: distro.ZarfDistroConfig{
+			Spec: distro.Spec{
+				Config: distro.Config{
 					Files: files,
-					OS:    distro.ZarfDistroOS{Files: osFiles},
+					OS:    distro.OS{Files: osFiles},
 				},
 			},
 		}
 	}
-	archFile := func(target string, arch ...api.Arch) *v1alpha1.ZarfFile {
-		return &v1alpha1.ZarfFile{Target: target, Selector: v1alpha1.BinarySelector{Arch: arch}}
+	archFile := func(target string, arch ...api.Arch) *v1alpha1.File {
+		return &v1alpha1.File{Target: target, Selector: v1alpha1.BinarySelector{Arch: arch}}
 	}
 
 	tests := []struct {
@@ -142,41 +142,41 @@ func TestValidateArchitectures(t *testing.T) {
 		// declared is what the definition listed before any narrowing. It defaults to what the
 		// distro itself targets when a case leaves it empty.
 		declared api.Arches
-		distro   distro.ZarfDistro
+		distro   distro.Distro
 		wantErr  string
 	}{
 		{
 			name: "a multi architecture package with matching selectors",
 			distro: withFiles(
-				distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
-				v1alpha1.ZarfFiles{archFile("/opt/a", "amd64"), archFile("/opt/b")},
-				v1alpha1.ZarfFiles{archFile("/opt/c", "arm64")},
+				distro.Metadata{Architectures: api.Arches{"amd64", "arm64"}},
+				v1alpha1.Files{archFile("/opt/a", "amd64"), archFile("/opt/b")},
+				v1alpha1.Files{archFile("/opt/c", "arm64")},
 			),
 		},
 		{
 			name:   "a single architecture package",
-			distro: withFiles(distro.ZarfDistroMetadata{Architecture: "amd64"}, nil, nil),
+			distro: withFiles(distro.Metadata{Architecture: "amd64"}, nil, nil),
 		},
 		{
 			name:    "no architecture at all",
-			distro:  withFiles(distro.ZarfDistroMetadata{}, nil, nil),
+			distro:  withFiles(distro.Metadata{}, nil, nil),
 			wantErr: "at least one architecture",
 		},
 		{
 			name:    "an unsupported architecture",
-			distro:  withFiles(distro.ZarfDistroMetadata{Architectures: api.Arches{"x86_64"}}, nil, nil),
+			distro:  withFiles(distro.Metadata{Architectures: api.Arches{"x86_64"}}, nil, nil),
 			wantErr: "invalid platform operating system architecture",
 		},
 		{
 			name:    "a duplicated architecture",
-			distro:  withFiles(distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64", "amd64"}}, nil, nil),
+			distro:  withFiles(distro.Metadata{Architectures: api.Arches{"amd64", "amd64"}}, nil, nil),
 			wantErr: "listed more than once",
 		},
 		{
 			name: "a file selecting an architecture the package does not target",
 			distro: withFiles(
-				distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64"}},
-				v1alpha1.ZarfFiles{archFile("/opt/a", "aarch64")},
+				distro.Metadata{Architectures: api.Arches{"amd64"}},
+				v1alpha1.Files{archFile("/opt/a", "aarch64")},
 				nil,
 			),
 			wantErr: "but the package declares amd64",
@@ -184,8 +184,8 @@ func TestValidateArchitectures(t *testing.T) {
 		{
 			name: "a package narrowed to one architecture keeps the other's selectors",
 			distro: withFiles(
-				distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64"}},
-				v1alpha1.ZarfFiles{archFile("/opt/a", "amd64"), archFile("/opt/b", "arm64")},
+				distro.Metadata{Architectures: api.Arches{"amd64"}},
+				v1alpha1.Files{archFile("/opt/a", "amd64"), archFile("/opt/b", "arm64")},
 				nil,
 			),
 			declared: api.Arches{"amd64", "arm64"},
@@ -193,9 +193,9 @@ func TestValidateArchitectures(t *testing.T) {
 		{
 			name: "an os file selecting an architecture the package does not target",
 			distro: withFiles(
-				distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64"}},
+				distro.Metadata{Architectures: api.Arches{"amd64"}},
 				nil,
-				v1alpha1.ZarfFiles{archFile("/opt/c", "arm64")},
+				v1alpha1.Files{archFile("/opt/c", "arm64")},
 			),
 			wantErr: "but the package declares amd64",
 		},

@@ -43,9 +43,9 @@ func writeValuesFile(t *testing.T, dir string, name string, content string) {
 }
 
 // valuesDistro builds a distro whose only interesting content is its values.
-func valuesDistro(files []string, schema string) distro.ZarfDistro {
-	d := distro.ZarfDistro{}
-	d.Spec.Values = distro.ZarfDistroValues{Files: files, Schema: schema}
+func valuesDistro(files []string, schema string) distro.Distro {
+	d := distro.Distro{}
+	d.Spec.Values = distro.Values{Files: files, Schema: schema}
 	return d
 }
 
@@ -165,7 +165,7 @@ func TestPackageValuesWarnsOnAMappingItCannotApply(t *testing.T) {
 	writeValuesFile(t, src, "values.yaml", "replicas: 2\n")
 
 	d := valuesDistro([]string{"values.yaml"}, "")
-	d.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+	d.Spec.Values.Mappings = []distro.ValueMapping{
 		// No leading dot, so the path is not a value path at all.
 		{Source: ".replicas", Target: "manifest.rke2-cilium.replicas"},
 	}
@@ -190,7 +190,7 @@ func TestPackageValuesAcceptsAMappingItCanApply(t *testing.T) {
 
 	d := valuesDistro([]string{"values.yaml"}, "")
 	d.Spec.Config.Engine = dig.Mapping{"manifest": dig.Mapping{"rke2-cilium": dig.Mapping{}}}
-	d.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+	d.Spec.Values.Mappings = []distro.ValueMapping{
 		{Source: ".replicas", Target: ".manifest.rke2-cilium.replicas"},
 	}
 

@@ -155,7 +155,7 @@ func TestEncryptAtPathDecryptsAtApplyTime(t *testing.T) {
 		}
 	}
 
-	dis := &cluster.ZarfCluster{}
+	dis := &cluster.Cluster{}
 	if err := goyaml.Unmarshal(got, dis); err != nil {
 		t.Fatalf("goyaml.Unmarshal() error = %v", err)
 	}
@@ -1045,7 +1045,7 @@ func TestEncryptConfigResolvesAnchors(t *testing.T) {
 	}
 
 	// All registries read the credentials back, which is what sharing is for.
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}
@@ -1286,7 +1286,7 @@ func TestEncryptConfigDecryptsAtApplyTime(t *testing.T) {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}
@@ -1486,7 +1486,7 @@ func TestEncryptConfigRotatesOneCredential(t *testing.T) {
 		t.Errorf("the untouched username was rewritten")
 	}
 
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}

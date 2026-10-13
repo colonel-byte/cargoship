@@ -33,97 +33,97 @@ import (
 
 func TestHostsFirst(t *testing.T) {
 	t.Run("returns first host", func(t *testing.T) {
-		first := &ZarfHost{Role: "controller"}
-		hosts := ZarfHosts{first, &ZarfHost{Role: "worker"}}
+		first := &Host{Role: "controller"}
+		hosts := Hosts{first, &Host{Role: "worker"}}
 		require.Same(t, first, hosts.First())
 	})
 
 	t.Run("empty hosts returns nil", func(t *testing.T) {
-		var hosts ZarfHosts
+		var hosts Hosts
 		require.Nil(t, hosts.First())
 	})
 }
 
 func TestHostsLast(t *testing.T) {
 	t.Run("returns last host", func(t *testing.T) {
-		last := &ZarfHost{Role: "worker"}
-		hosts := ZarfHosts{&ZarfHost{Role: "controller"}, last}
+		last := &Host{Role: "worker"}
+		hosts := Hosts{&Host{Role: "controller"}, last}
 		require.Same(t, last, hosts.Last())
 	})
 
 	t.Run("empty hosts returns nil", func(t *testing.T) {
-		var hosts ZarfHosts
+		var hosts Hosts
 		require.Nil(t, hosts.Last())
 	})
 }
 
 func TestHostsFind(t *testing.T) {
-	worker := &ZarfHost{Role: "worker"}
-	hosts := ZarfHosts{&ZarfHost{Role: "controller"}, worker}
+	worker := &Host{Role: "worker"}
+	hosts := Hosts{&Host{Role: "controller"}, worker}
 
 	t.Run("returns first match", func(t *testing.T) {
-		found := hosts.Find(func(h *ZarfHost) bool { return h.Role == "worker" })
+		found := hosts.Find(func(h *Host) bool { return h.Role == "worker" })
 		require.Same(t, worker, found)
 	})
 
 	t.Run("no match returns nil", func(t *testing.T) {
-		found := hosts.Find(func(h *ZarfHost) bool { return h.Role == "missing" })
+		found := hosts.Find(func(h *Host) bool { return h.Role == "missing" })
 		require.Nil(t, found)
 	})
 }
 
 func TestHostsFilter(t *testing.T) {
-	controller := &ZarfHost{Role: "controller"}
-	worker1 := &ZarfHost{Role: "worker"}
-	worker2 := &ZarfHost{Role: "worker"}
-	hosts := ZarfHosts{controller, worker1, worker2}
+	controller := &Host{Role: "controller"}
+	worker1 := &Host{Role: "worker"}
+	worker2 := &Host{Role: "worker"}
+	hosts := Hosts{controller, worker1, worker2}
 
-	filtered := hosts.Filter(func(h *ZarfHost) bool { return h.Role == "worker" })
-	require.Equal(t, ZarfHosts{worker1, worker2}, filtered)
+	filtered := hosts.Filter(func(h *Host) bool { return h.Role == "worker" })
+	require.Equal(t, Hosts{worker1, worker2}, filtered)
 
 	t.Run("no matches returns empty, not nil", func(t *testing.T) {
-		filtered := hosts.Filter(func(_ *ZarfHost) bool { return false })
+		filtered := hosts.Filter(func(_ *Host) bool { return false })
 		require.NotNil(t, filtered)
 		require.Empty(t, filtered)
 	})
 }
 
 func TestHostsWithRole(t *testing.T) {
-	controller := &ZarfHost{Role: RoleController}
-	worker := &ZarfHost{Role: RoleWorker}
-	hosts := ZarfHosts{controller, worker}
+	controller := &Host{Role: RoleController}
+	worker := &Host{Role: RoleWorker}
+	hosts := Hosts{controller, worker}
 
-	require.Equal(t, ZarfHosts{worker}, hosts.WithRole(RoleWorker))
-	require.Equal(t, ZarfHosts{controller}, hosts.WithRole(RoleController))
+	require.Equal(t, Hosts{worker}, hosts.WithRole(RoleWorker))
+	require.Equal(t, Hosts{controller}, hosts.WithRole(RoleController))
 }
 
 func TestHostsControllers(t *testing.T) {
-	controller := &ZarfHost{Role: RoleController}
-	controllerWorker := &ZarfHost{Role: RoleControllerWorker}
-	single := &ZarfHost{Role: RoleSingle}
-	worker := &ZarfHost{Role: RoleWorker}
-	hosts := ZarfHosts{controller, controllerWorker, single, worker}
+	controller := &Host{Role: RoleController}
+	controllerWorker := &Host{Role: RoleControllerWorker}
+	single := &Host{Role: RoleSingle}
+	worker := &Host{Role: RoleWorker}
+	hosts := Hosts{controller, controllerWorker, single, worker}
 
-	require.Equal(t, ZarfHosts{controller, controllerWorker, single}, hosts.Controllers())
+	require.Equal(t, Hosts{controller, controllerWorker, single}, hosts.Controllers())
 }
 
 func TestHostsWorkers(t *testing.T) {
-	controller := &ZarfHost{Role: RoleController}
-	worker := &ZarfHost{Role: RoleWorker}
-	hosts := ZarfHosts{controller, worker}
+	controller := &Host{Role: RoleController}
+	worker := &Host{Role: RoleWorker}
+	hosts := Hosts{controller, worker}
 
-	require.Equal(t, ZarfHosts{worker}, hosts.Workers())
+	require.Equal(t, Hosts{worker}, hosts.Workers())
 }
 
 func TestHostsParallelEach(t *testing.T) {
-	hosts := ZarfHosts{
-		&ZarfHost{Role: "controller"},
-		&ZarfHost{Role: "worker"},
+	hosts := Hosts{
+		&Host{Role: "controller"},
+		&Host{Role: "worker"},
 	}
 
 	t.Run("success", func(t *testing.T) {
 		var count atomic.Int32
-		fn := func(_ context.Context, _ *ZarfHost) error {
+		fn := func(_ context.Context, _ *Host) error {
 			count.Add(1)
 			return nil
 		}
@@ -133,7 +133,7 @@ func TestHostsParallelEach(t *testing.T) {
 	})
 
 	t.Run("collects errors from every host", func(t *testing.T) {
-		fn := func(_ context.Context, h *ZarfHost) error {
+		fn := func(_ context.Context, h *Host) error {
 			return fmt.Errorf("failed on %s", h.Role)
 		}
 		err := hosts.ParallelEach(context.Background(), fn)
@@ -147,7 +147,7 @@ func TestHostsParallelEach(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		fn := func(_ context.Context, _ *ZarfHost) error {
+		fn := func(_ context.Context, _ *Host) error {
 			return nil
 		}
 		err := hosts.ParallelEach(ctx, fn)
@@ -159,13 +159,13 @@ func TestHostsParallelEach(t *testing.T) {
 		var mu sync.Mutex
 		var order []string
 
-		first := func(_ context.Context, h *ZarfHost) error {
+		first := func(_ context.Context, h *Host) error {
 			mu.Lock()
 			order = append(order, "first:"+h.Role)
 			mu.Unlock()
 			return nil
 		}
-		second := func(_ context.Context, h *ZarfHost) error {
+		second := func(_ context.Context, h *Host) error {
 			mu.Lock()
 			order = append(order, "second:"+h.Role)
 			mu.Unlock()
@@ -184,19 +184,19 @@ func TestHostsParallelEach(t *testing.T) {
 }
 
 func TestHostsBatchedParallelEach(t *testing.T) {
-	hosts := ZarfHosts{
-		&ZarfHost{Role: "h1"},
-		&ZarfHost{Role: "h2"},
-		&ZarfHost{Role: "h3"},
-		&ZarfHost{Role: "h4"},
-		&ZarfHost{Role: "h5"},
+	hosts := Hosts{
+		&Host{Role: "h1"},
+		&Host{Role: "h2"},
+		&Host{Role: "h3"},
+		&Host{Role: "h4"},
+		&Host{Role: "h5"},
 	}
 
 	t.Run("processes all hosts across batches", func(t *testing.T) {
 		var mu sync.Mutex
 		var seen []string
 
-		fn := func(_ context.Context, h *ZarfHost) error {
+		fn := func(_ context.Context, h *Host) error {
 			mu.Lock()
 			seen = append(seen, h.Role)
 			mu.Unlock()
@@ -209,7 +209,7 @@ func TestHostsBatchedParallelEach(t *testing.T) {
 	})
 
 	t.Run("stops at first batch error", func(t *testing.T) {
-		fn := func(_ context.Context, h *ZarfHost) error {
+		fn := func(_ context.Context, h *Host) error {
 			if h.Role == "h1" {
 				return errors.New("boom")
 			}
@@ -224,7 +224,7 @@ func TestHostsBatchedParallelEach(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		fn := func(_ context.Context, _ *ZarfHost) error {
+		fn := func(_ context.Context, _ *Host) error {
 			return nil
 		}
 		err := hosts.BatchedParallelEach(ctx, 2, fn)
@@ -233,8 +233,8 @@ func TestHostsBatchedParallelEach(t *testing.T) {
 	})
 
 	t.Run("empty hosts is a no-op", func(t *testing.T) {
-		var hosts ZarfHosts
-		fn := func(_ context.Context, _ *ZarfHost) error {
+		var hosts Hosts
+		fn := func(_ context.Context, _ *Host) error {
 			t.Fatal("filter should not be called")
 			return nil
 		}
@@ -243,14 +243,14 @@ func TestHostsBatchedParallelEach(t *testing.T) {
 }
 
 func TestHostsEach(t *testing.T) {
-	hosts := ZarfHosts{
-		&ZarfHost{Role: "controller"},
-		&ZarfHost{Role: "worker"},
+	hosts := Hosts{
+		&Host{Role: "controller"},
+		&Host{Role: "worker"},
 	}
 
 	t.Run("success", func(t *testing.T) {
 		var roles []string
-		fn := func(_ context.Context, h *ZarfHost) error {
+		fn := func(_ context.Context, h *Host) error {
 			roles = append(roles, h.Role)
 			return nil
 		}
@@ -264,7 +264,7 @@ func TestHostsEach(t *testing.T) {
 		var count int
 		ctx, cancel := context.WithCancel(context.Background())
 
-		fn := func(_ context.Context, _ *ZarfHost) error {
+		fn := func(_ context.Context, _ *Host) error {
 			count++
 			cancel()
 			return nil
@@ -276,7 +276,7 @@ func TestHostsEach(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
-		fn := func(_ context.Context, _ *ZarfHost) error {
+		fn := func(_ context.Context, _ *Host) error {
 			return errors.New("test")
 		}
 		err := hosts.Each(context.Background(), fn)
@@ -287,29 +287,29 @@ func TestHostsEach(t *testing.T) {
 
 func TestGroupByProfile(t *testing.T) {
 	t.Run("groups by profile in first-appearance order", func(t *testing.T) {
-		infra1 := &ZarfHost{Role: "worker", Profile: "infra"}
-		worker1 := &ZarfHost{Role: "worker", Profile: "worker"}
-		infra2 := &ZarfHost{Role: "worker", Profile: "infra"}
-		none := &ZarfHost{Role: "worker"}
-		worker2 := &ZarfHost{Role: "worker", Profile: "worker"}
+		infra1 := &Host{Role: "worker", Profile: "infra"}
+		worker1 := &Host{Role: "worker", Profile: "worker"}
+		infra2 := &Host{Role: "worker", Profile: "infra"}
+		none := &Host{Role: "worker"}
+		worker2 := &Host{Role: "worker", Profile: "worker"}
 
-		hosts := ZarfHosts{infra1, worker1, infra2, none, worker2}
+		hosts := Hosts{infra1, worker1, infra2, none, worker2}
 		groups := hosts.GroupByProfile()
 
 		require.Len(t, groups, 3)
 
 		require.Equal(t, "infra", groups[0].Profile)
-		require.Equal(t, ZarfHosts{infra1, infra2}, groups[0].Hosts)
+		require.Equal(t, Hosts{infra1, infra2}, groups[0].Hosts)
 
 		require.Equal(t, "worker", groups[1].Profile)
-		require.Equal(t, ZarfHosts{worker1, worker2}, groups[1].Hosts)
+		require.Equal(t, Hosts{worker1, worker2}, groups[1].Hosts)
 
 		require.Empty(t, groups[2].Profile)
-		require.Equal(t, ZarfHosts{none}, groups[2].Hosts)
+		require.Equal(t, Hosts{none}, groups[2].Hosts)
 	})
 
 	t.Run("empty hosts returns no groups", func(t *testing.T) {
-		var hosts ZarfHosts
+		var hosts Hosts
 		require.Empty(t, hosts.GroupByProfile())
 	})
 }
