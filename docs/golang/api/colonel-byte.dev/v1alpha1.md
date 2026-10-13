@@ -32,8 +32,13 @@ Package v1alpha1 defines file types shared by the cluster and distro APIs.
 
 ```go
 const (
-    // APIVersion is the API version string for the zarf.dev v1alpha1 package.
-    APIVersion string = "zarf.dev/v1alpha1"
+    // APIVersion is the API version string for the colonel-byte.dev v1alpha1 package.
+    APIVersion string = "colonel-byte.dev/v1alpha1"
+    // DeprecatedAPIVersion is the API group these documents used before the move to
+    // colonel-byte.dev. It is still accepted so that documents written against an older
+    // cargoship keep parsing, and it names an API group this project does not own: upstream
+    // Zarf defines its own kinds under colonel-byte.dev/v1alpha1, which is why the move happened.
+    DeprecatedAPIVersion string = "zarf.dev/v1alpha1"
 )
 ```
 
@@ -189,7 +194,7 @@ Filter returns the files for which filter returns true.
 <a name="Kind"></a>
 ## type [Kind](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/common.go#L18>)
 
-Kind identifies the kind of a zarf.dev v1alpha1 document, for example ZarfCluster or ZarfDistro.
+Kind identifies the kind of a colonel\-byte.dev v1alpha1 document, for example Cluster or Distro.
 
 ```go
 type Kind string

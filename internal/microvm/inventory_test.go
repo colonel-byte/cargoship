@@ -54,7 +54,7 @@ func TestInventoryHosts(t *testing.T) {
 	f := fleetFixture(t)
 	inv := Inventory(f)
 
-	require.Equal(t, v1alpha1.Kind("ZarfCluster"), inv.Kind)
+	require.Equal(t, v1alpha1.Kind("Cluster"), inv.Kind)
 	require.Equal(t, "microvm-dev", inv.Metadata.Name)
 	require.Len(t, inv.Spec.Hosts, len(f.Nodes))
 

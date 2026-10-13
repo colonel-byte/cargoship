@@ -13,8 +13,8 @@ func TestEncryptConfig(t *testing.T) {
 
 ```go
 // No.
-const configTestDoc = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+const configTestDoc = `apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 ...
 `
 ```
@@ -38,8 +38,8 @@ Add the document to the `testdata/` directory of the suite that uses it, with a 
 # What this document covers and why a test needs that shape.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 ```
 
 Then read it through a helper that fails the test rather than returning an error:

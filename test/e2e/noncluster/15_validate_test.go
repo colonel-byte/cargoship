@@ -61,8 +61,8 @@ func TestCargoshipValidate(t *testing.T) {
 		// this file parses cleanly today and installs with no load balancer address.
 		path := filepath.Join(t.TempDir(), "inventory.yaml")
 		require.NoError(t, os.WriteFile(path, []byte(`
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: demo
 spec:
@@ -97,8 +97,8 @@ spec:
 
 		path := filepath.Join(t.TempDir(), "inventory.yaml")
 		require.NoError(t, os.WriteFile(path, []byte(`
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: demo
 spec:

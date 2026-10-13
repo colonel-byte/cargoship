@@ -53,7 +53,7 @@ func Inventory(f Fleet) apicluster.Cluster {
 	}
 
 	return apicluster.Cluster{
-		Kind: "ZarfCluster",
+		Kind: "Cluster",
 		Metadata: apicluster.Metadata{
 			Name: "microvm-" + f.Name,
 		},

@@ -19,8 +19,8 @@ That is what makes the suite usable as an acceptance test for an environment car
 The same `ZarfCluster` document `cargoship apply --config` takes. It is read through the loader the CLI uses, so anything cargoship accepts is accepted here and anything it rejects fails before a host is touched.
 
 ```yaml
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: my-fleet
 spec:

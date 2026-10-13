@@ -32,8 +32,8 @@ import (
 // value being replaced, and a sequence after that.
 const passPath = "$.spec.config.registries[0].auth.pass"
 
-const docTemplate = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+const docTemplate = `apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: fuzz
 spec:

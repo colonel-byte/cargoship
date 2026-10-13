@@ -232,8 +232,8 @@ func (s documentShape) documentHolding(value string) []byte {
 	item := strings.Repeat(unit, 3) + "  "
 
 	var b strings.Builder
-	b.WriteString("apiVersion: zarf.dev/v1alpha1\n")
-	b.WriteString("kind: ZarfCluster\n")
+	b.WriteString("apiVersion: colonel-byte.dev/v1alpha1\n")
+	b.WriteString("kind: Cluster\n")
 	b.WriteString("metadata:\n")
 	b.WriteString(unit + "name: fuzz\n")
 	b.WriteString("spec:\n")

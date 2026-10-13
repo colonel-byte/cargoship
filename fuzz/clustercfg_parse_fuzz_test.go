@@ -33,7 +33,7 @@ func FuzzClustercfgParseNoPanic(f *testing.F) {
 	f.Add([]byte(docTemplate))
 	f.Add([]byte(""))
 	f.Add([]byte("not yaml: [unterminated"))
-	f.Add([]byte("apiVersion: zarf.dev/v1alpha1\nkind: ZarfCluster\n"))
+	f.Add([]byte("apiVersion: colonel-byte.dev/v1alpha1\nkind: Cluster\n"))
 	f.Add([]byte("- just\n- a\n- list\n"))
 	f.Add([]byte("just a scalar"))
 	f.Add([]byte("hosts: not-a-list\n"))

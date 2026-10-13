@@ -11,8 +11,8 @@
 # wants, and what differs per host or per registry is written beside the merge.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: e2e-anchors
 spec:

@@ -257,8 +257,8 @@ func TestComputeManifestCreatedAnnotation(t *testing.T) {
 	// with the same constant the code under test reads, so that changing the constant
 	// fails here instead of moving both sides together.
 	t.Run("a build timestamp becomes the created annotation", func(t *testing.T) {
-		d := writeManifestablePackage(t, []byte(`apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+		d := writeManifestablePackage(t, []byte(`apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: timestamped
   version: 0.0.1
@@ -293,8 +293,8 @@ build:
 		},
 	} {
 		t.Run("a timestamp "+tt.name+" falls back to the epoch", func(t *testing.T) {
-			d := writeManifestablePackage(t, []byte(`apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+			d := writeManifestablePackage(t, []byte(`apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: untimestamped
   version: 0.0.1

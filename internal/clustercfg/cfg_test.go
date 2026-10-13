@@ -21,8 +21,8 @@ import (
 )
 
 func TestParseValues(t *testing.T) {
-	inventory := []byte(`apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+	inventory := []byte(`apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: test
 spec:
@@ -60,8 +60,8 @@ spec:
 }
 
 func TestParseNoValues(t *testing.T) {
-	inventory := []byte(`apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+	inventory := []byte(`apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: test
 spec:

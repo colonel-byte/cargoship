@@ -6,8 +6,8 @@
 # rather than one per registry, and the alias is still an alias afterwards.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: shared-auth
 spec:

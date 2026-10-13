@@ -44,7 +44,7 @@ func TestParseDefinition(t *testing.T) {
 		{
 			name: "omitted apiVersion parses as v1alpha1",
 			yaml: `
-kind: ZarfDistro
+kind: Distro
 metadata:
   name: no-api-version
 `,
@@ -53,8 +53,8 @@ metadata:
 		{
 			name: "explicit v1alpha1 apiVersion parses",
 			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: explicit-v1alpha1
 `,
@@ -64,7 +64,7 @@ metadata:
 			name: "unknown apiVersion errors without silent fallback",
 			yaml: `
 apiVersion: ` + newer + `
-kind: ZarfDistro
+kind: Distro
 metadata:
   name: from-future
 `,
@@ -73,13 +73,13 @@ metadata:
 		{
 			name: "multi-document input errors",
 			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: first
 ---
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: second
 `,
@@ -88,8 +88,8 @@ metadata:
 		{
 			name: "leading document separator is accepted",
 			yaml: `---
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: leading-sep
 `,
@@ -98,8 +98,8 @@ metadata:
 		{
 			name: "leading and trailing separators are accepted",
 			yaml: `---
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: both-sep
 ---
@@ -151,8 +151,8 @@ func TestParseBuiltPackageDefinition(t *testing.T) {
 		{
 			name: "single v1alpha1 doc parses",
 			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: single
 `,
@@ -161,13 +161,13 @@ metadata:
 		{
 			name: "picks v1alpha1 when newer doc is unrecognized",
 			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: from-v1alpha1
 ---
 apiVersion: ` + newer + `
-kind: ZarfDistro
+kind: Distro
 metadata:
   name: from-future
 `,
@@ -177,12 +177,12 @@ metadata:
 			name: "tolerates reverse order",
 			yaml: `
 apiVersion: ` + newer + `
-kind: ZarfDistro
+kind: Distro
 metadata:
   name: from-future
 ---
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: from-v1alpha1
 `,
@@ -192,7 +192,7 @@ metadata:
 			name: "errors when no known version present",
 			yaml: `
 apiVersion: ` + newer + `
-kind: ZarfDistro
+kind: Distro
 metadata:
   name: from-future
 `,
@@ -201,23 +201,23 @@ metadata:
 		{
 			name: "errors on duplicate same-version docs",
 			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: first
 ---
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: second
 `,
-			wantErr: `duplicate apiVersion "zarf.dev/v1alpha1"`,
+			wantErr: `duplicate apiVersion "colonel-byte.dev/v1alpha1"`,
 		},
 		{
 			name: "trailing document separator is ignored",
 			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: trailing
 ---
@@ -269,4 +269,81 @@ func TestHandlerFor(t *testing.T) {
 		}
 		priorities[h.priority] = h.version
 	}
+}
+
+// TestDeprecatedAPIVersionStillParses pins the transition window: a distro package written
+// against the zarf.dev group keeps parsing after the move to colonel-byte.dev. The decode is
+// shared, so the only thing that can break this is the handler table losing its entry.
+func TestDeprecatedAPIVersionStillParses(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		yaml     string
+		wantName string
+	}{
+		{
+			name: "deprecated group and kind",
+			yaml: `
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfDistro
+metadata:
+  name: legacy
+`,
+			wantName: "legacy",
+		},
+		{
+			name: "current group and kind",
+			yaml: `
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
+metadata:
+  name: current
+`,
+			wantName: "current",
+		},
+		{
+			name: "deprecated group with the new kind",
+			yaml: `
+apiVersion: zarf.dev/v1alpha1
+kind: Distro
+metadata:
+  name: mixed
+`,
+			wantName: "mixed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			pkg, err := Parse(context.Background(), []byte(tt.yaml))
+			require.NoError(t, err)
+			require.Equal(t, tt.wantName, pkg.Metadata.Name)
+		})
+	}
+}
+
+// TestMultiDocPrefersCurrentAPIVersion pins the priority ordering. A package carrying one
+// document per group must be read as the colonel-byte.dev one, because that is the newer
+// spelling and priority is what ParseMultiDoc sorts on.
+func TestMultiDocPrefersCurrentAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	const doc = `
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfDistro
+metadata:
+  name: deprecated
+---
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
+metadata:
+  name: current
+`
+
+	pkg, err := ParseMultiDoc(context.Background(), []byte(doc))
+	require.NoError(t, err)
+	require.Equal(t, "current", pkg.Metadata.Name)
 }

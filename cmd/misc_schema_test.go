@@ -121,7 +121,7 @@ func TestSchemaPackageWithoutValuesSchema(t *testing.T) {
 	writeTestPackage(t, dir)
 	// A package that declares no schema is not an error: it accepts values without describing
 	// them, and the plain inventory schema is the honest answer.
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: ZarfDistro
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: Distro
 metadata:
   name: test-package
   version: "1.0.0"
@@ -153,7 +153,7 @@ func TestSchemaTakesExactlyOneKind(t *testing.T) {
 func writeTestPackage(t *testing.T, dir string) {
 	t.Helper()
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: ZarfDistro
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: Distro
 metadata:
   name: test-package
   version: "1.0.0"

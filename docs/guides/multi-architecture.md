@@ -7,8 +7,8 @@ A distro package normally targets one CPU architecture. A package can instead ta
 `metadata.architectures` lists every architecture the package targets:
 
 ```yaml
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: rancher-k3s-multi
   version: 1.36.4-k3s1

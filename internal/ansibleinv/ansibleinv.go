@@ -28,16 +28,18 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/schema"
 	goyaml "github.com/goccy/go-yaml"
 )
 
-// apiVersion is the API group and version the generated document declares.
-const apiVersion = "zarf.dev/v1alpha1"
+// apiVersion is the API group and version the generated document declares. It tracks the
+// shared constant so a future group move does not have to find this copy of the string.
+const apiVersion = v1alpha1.APIVersion
 
 // documentKind is the kind the generated document declares.
-const documentKind = "ZarfCluster"
+const documentKind = "Cluster"
 
 // Input is the inventory as Ansible resolved it. Groups and HostVars are Ansible's own `groups`
 // and `hostvars`, projected by the action plugin; RoleGroups is the operator's mapping from a

@@ -44,7 +44,7 @@ Values are resolved from three sources, each winning over the one before it:
 The inventory carries the values a cluster always wants:
 
 ```yaml
-kind: ZarfCluster
+kind: Cluster
 spec:
   config:
     values:
