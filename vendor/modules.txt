@@ -2326,8 +2326,8 @@ github.com/ulikunitz/xz/lzma
 ## explicit; go 1.24
 github.com/valyala/fastjson
 github.com/valyala/fastjson/fastfloat
-# github.com/vektah/gqlparser/v2 v2.5.58
-## explicit; go 1.22
+# github.com/vektah/gqlparser/v2 v2.5.62
+## explicit; go 1.25
 github.com/vektah/gqlparser/v2/ast
 github.com/vektah/gqlparser/v2/gqlerror
 github.com/vektah/gqlparser/v2/lexer
