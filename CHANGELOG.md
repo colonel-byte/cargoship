@@ -1,5 +1,64 @@
 # Changelog
 
+## [0.32.1](https://github.com/colonel-byte/cargoship/compare/v0.32.0...v0.32.1) (2026-10-13)
+
+
+### Documentation
+
+* **agent:** prefer prek over pre-commit ([#731](https://github.com/colonel-byte/cargoship/issues/731)) ([154af7d](https://github.com/colonel-byte/cargoship/commit/154af7d20e01796ee2c45f8f674e1602e8a44859))
+* **agent:** require an updater or dependabot entry for every pin ([#745](https://github.com/colonel-byte/cargoship/issues/745)) ([3594775](https://github.com/colonel-byte/cargoship/commit/359477530efe011a7cb2206bc908768e37284702))
+
+
+### CI/CD
+
+* **actions:** exempt dependabot pull request titles from the 100-char cap ([#730](https://github.com/colonel-byte/cargoship/issues/730)) ([9edcc87](https://github.com/colonel-byte/cargoship/commit/9edcc87e57edf10d514a66f7036d2453c0ab9ee8))
+* **bot:** raise the dependabot open pull request limit for gomod ([#739](https://github.com/colonel-byte/cargoship/issues/739)) ([2762460](https://github.com/colonel-byte/cargoship/commit/27624607e5d6da29ab2437fe2eeb75b00ed5ce95))
+
+
+### Build
+
+* **deps:** bump cloud.google.com/go/auth from 0.24.1-0.20261001053825-dbc26066f70a to 0.24.1 ([#761](https://github.com/colonel-byte/cargoship/issues/761)) ([911c84b](https://github.com/colonel-byte/cargoship/commit/911c84b3870e1225b7d28214f3283d4262ed8d47))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/.../accept-encoding from 1.13.19 to 1.13.20 ([#722](https://github.com/colonel-byte/cargoship/issues/722)) ([9a0471c](https://github.com/colonel-byte/cargoship/commit/9a0471c153a77ae02e099ea367c110780041040c))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/config from 1.33.6 to 1.33.9 ([#760](https://github.com/colonel-byte/cargoship/issues/760)) ([276cd89](https://github.com/colonel-byte/cargoship/commit/276cd896b941ca2e135ecd1936bbf2fc4c69f7a5))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds from 1.20.1 to 1.20.2 ([#725](https://github.com/colonel-byte/cargoship/issues/725)) ([277295e](https://github.com/colonel-byte/cargoship/commit/277295e62b944c801b3626bb685a7efe9bfee6f7))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/internal/v4a from 1.5.4 to 1.5.5 ([#752](https://github.com/colonel-byte/cargoship/issues/752)) ([3288f6c](https://github.com/colonel-byte/cargoship/commit/3288f6c193a1390c3049ac59d7b9690058fa1c59))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/ecr from 1.66.1 to 1.66.4 ([#753](https://github.com/colonel-byte/cargoship/issues/753)) ([b959d02](https://github.com/colonel-byte/cargoship/commit/b959d02ff956cab2552f4ba41020d8e5eceb56a7))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/ecrpublic from 1.47.1 to 1.47.3 ([#724](https://github.com/colonel-byte/cargoship/issues/724)) ([78d7da3](https://github.com/colonel-byte/cargoship/commit/78d7da359dff22cbdefe28bfbd6591de6b6379e4))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/internal/presigned-url from 1.14.4 to 1.14.5 ([#741](https://github.com/colonel-byte/cargoship/issues/741)) ([f3e4180](https://github.com/colonel-byte/cargoship/commit/f3e4180e9379321654dd1f8f810c9e7364f9a6ec))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/kms from 1.61.1 to 1.61.3 ([#727](https://github.com/colonel-byte/cargoship/issues/727)) ([cd857c8](https://github.com/colonel-byte/cargoship/commit/cd857c84a80e7be04f3d2043e380b5148b47d682))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/signin from 1.10.1 to 1.10.4 ([#764](https://github.com/colonel-byte/cargoship/issues/764)) ([f2dc08e](https://github.com/colonel-byte/cargoship/commit/f2dc08e720ff4f6e1384b8ca07a79c26f77645fd))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/sso from 1.38.1 to 1.38.3 ([#772](https://github.com/colonel-byte/cargoship/issues/772)) ([bcfb114](https://github.com/colonel-byte/cargoship/commit/bcfb114838c601589ddbfc8a7049502e613a9e53))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/ssooidc from 1.43.1 to 1.43.4 ([#746](https://github.com/colonel-byte/cargoship/issues/746)) ([6a4953f](https://github.com/colonel-byte/cargoship/commit/6a4953ffac818c01be27619fe1df9aeb24f9d12b))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/sts from 1.51.1 to 1.51.3 ([#775](https://github.com/colonel-byte/cargoship/issues/775)) ([fbbe552](https://github.com/colonel-byte/cargoship/commit/fbbe552108d2e70f2112440a00dccc91921b8b77))
+* **deps:** bump github.com/Azure/azure-sdk-for-go/sdk/azcore from 1.23.2 to 1.23.3 ([#749](https://github.com/colonel-byte/cargoship/issues/749)) ([5600d98](https://github.com/colonel-byte/cargoship/commit/5600d98d30034edd7b1ce9f3b9a97aa6cd47a8b1))
+* **deps:** bump github.com/docker/cli from 29.8.2+incompatible to 29.9.0+incompatible ([#743](https://github.com/colonel-byte/cargoship/issues/743)) ([c2684ab](https://github.com/colonel-byte/cargoship/commit/c2684abad19d38e78d414c44705f783e70501e05))
+* **deps:** bump github.com/docker/docker-credential-helpers from 0.9.9 to 0.9.10 ([#766](https://github.com/colonel-byte/cargoship/issues/766)) ([41070d9](https://github.com/colonel-byte/cargoship/commit/41070d954aa62a2a833903a4554e593df4faf750))
+* **deps:** bump github.com/emicklei/go-restful/v3 from 3.13.0 to 3.14.0 ([#755](https://github.com/colonel-byte/cargoship/issues/755)) ([f8d0c6a](https://github.com/colonel-byte/cargoship/commit/f8d0c6a6766a71a418d7c065eb38df5be0dfdfb4))
+* **deps:** bump github.com/fxamacker/cbor/v2 from 2.9.4 to 2.9.6 ([#771](https://github.com/colonel-byte/cargoship/issues/771)) ([f3eb304](https://github.com/colonel-byte/cargoship/commit/f3eb3041c6cbcd981f6cf5beb581071895907655))
+* **deps:** bump github.com/go-git/go-git/v5 from 5.19.2 to 5.19.3 ([#770](https://github.com/colonel-byte/cargoship/issues/770)) ([cac2936](https://github.com/colonel-byte/cargoship/commit/cac2936e4382299cc91a168f1d9af5807ddd98d6))
+* **deps:** bump github.com/go-openapi/runtime from 0.33.2 to 0.33.3 ([#728](https://github.com/colonel-byte/cargoship/issues/728)) ([1478337](https://github.com/colonel-byte/cargoship/commit/1478337fc0e2db4758715da40f23d612bb0f0d9a))
+* **deps:** bump github.com/googleapis/enterprise-certificate-proxy from 0.3.22 to 0.3.23 ([#776](https://github.com/colonel-byte/cargoship/issues/776)) ([0344bae](https://github.com/colonel-byte/cargoship/commit/0344bae819c34d150f5e0fe079825bac373ec96e))
+* **deps:** bump github.com/hashicorp/go-plugin from 1.7.0 to 1.8.0 ([#765](https://github.com/colonel-byte/cargoship/issues/765)) ([98217cb](https://github.com/colonel-byte/cargoship/commit/98217cb5b7ed7fcbb7adae9b9bc8170944b98696))
+* **deps:** bump github.com/hashicorp/terraform-registry-address from 0.4.0 to 0.5.0 ([#756](https://github.com/colonel-byte/cargoship/issues/756)) ([028e75f](https://github.com/colonel-byte/cargoship/commit/028e75fd3afe2e7c7980db16cc7fc94529b6a6d7))
+* **deps:** bump github.com/hashicorp/terraform-svchost from 0.1.1 to 0.2.1 ([#773](https://github.com/colonel-byte/cargoship/issues/773)) ([63fa042](https://github.com/colonel-byte/cargoship/commit/63fa042bf2d0dd6a0ae3fa42e2471a6206aef43b))
+* **deps:** bump github.com/klauspost/pgzip from 1.2.6 to 1.2.7 ([#758](https://github.com/colonel-byte/cargoship/issues/758)) ([55c7846](https://github.com/colonel-byte/cargoship/commit/55c78460bb13ca9c45a89c99d1b5967f4292c7db))
+* **deps:** bump github.com/mattn/go-colorable from 0.1.15 to 0.1.16 ([#768](https://github.com/colonel-byte/cargoship/issues/768)) ([82b9154](https://github.com/colonel-byte/cargoship/commit/82b9154dd8d122e2425e57c1342aad525d466549))
+* **deps:** bump github.com/mattn/go-runewidth from 0.0.30 to 0.0.31 ([#769](https://github.com/colonel-byte/cargoship/issues/769)) ([4d7b347](https://github.com/colonel-byte/cargoship/commit/4d7b347f0c8b0866d7d9d3f6953a18abca5f430a))
+* **deps:** bump github.com/moby/moby/client from 0.6.0 to 0.6.2 ([#723](https://github.com/colonel-byte/cargoship/issues/723)) ([32bbcc6](https://github.com/colonel-byte/cargoship/commit/32bbcc6faa1787033e48102824178f13fca8dff5))
+* **deps:** bump github.com/nwaples/rardecode/v2 from 2.4.1 to 2.4.2 ([#744](https://github.com/colonel-byte/cargoship/issues/744)) ([791bb33](https://github.com/colonel-byte/cargoship/commit/791bb334de7f03cd83ec48b6d0a22a93391dae77))
+* **deps:** bump github.com/olekukonko/ll from 0.1.8 to 0.1.9 ([#762](https://github.com/colonel-byte/cargoship/issues/762)) ([8a53e55](https://github.com/colonel-byte/cargoship/commit/8a53e557065c25c50b7390d672eefdff0674707f))
+* **deps:** bump github.com/open-policy-agent/opa from 1.21.0 to 1.21.1 ([#777](https://github.com/colonel-byte/cargoship/issues/777)) ([dcdb2df](https://github.com/colonel-byte/cargoship/commit/dcdb2df52112c390733a64b37b654f7840c48709))
+* **deps:** bump github.com/pjbgf/sha1cd from 0.6.0 to 0.7.0 ([#747](https://github.com/colonel-byte/cargoship/issues/747)) ([fc26850](https://github.com/colonel-byte/cargoship/commit/fc2685063e4d06bb998e093569595e42ca5d7d25))
+* **deps:** bump github.com/shopspring/decimal from 1.4.0 to 1.5.0 ([#754](https://github.com/colonel-byte/cargoship/issues/754)) ([1ae2caa](https://github.com/colonel-byte/cargoship/commit/1ae2caa2da5d1179857f714486fdd3610838fa60))
+* **deps:** bump github.com/sigstore/timestamp-authority/v2 from 2.1.3 to 2.1.4 ([#751](https://github.com/colonel-byte/cargoship/issues/751)) ([cebb46a](https://github.com/colonel-byte/cargoship/commit/cebb46a0f13dd0de0fec33e7ca0a55d849d97d92))
+* **deps:** bump github.com/vektah/gqlparser/v2 from 2.5.58 to 2.5.62 ([#774](https://github.com/colonel-byte/cargoship/issues/774)) ([72ef884](https://github.com/colonel-byte/cargoship/commit/72ef884b3476b8b21d88b288f4b6d1a1835b04cd))
+* **deps:** bump go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc from 0.71.0 to 0.72.0 ([#759](https://github.com/colonel-byte/cargoship/issues/759)) ([4881a09](https://github.com/colonel-byte/cargoship/commit/4881a09a5a6a4e9820bc507102553c06a1da4b25))
+* **deps:** bump golang.org/x/mod from 0.41.0 to 0.42.0 ([#778](https://github.com/colonel-byte/cargoship/issues/778)) ([1955983](https://github.com/colonel-byte/cargoship/commit/195598325ce95a366916cc55c823553b569d9c9a))
+* **deps:** bump google.golang.org/api from 0.299.0 to 0.301.0 ([#721](https://github.com/colonel-byte/cargoship/issues/721)) ([e723ad4](https://github.com/colonel-byte/cargoship/commit/e723ad4e896ebff3477bbd7b8cb591de7e0d3b71))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit from v0.16.10 to 0.17.0 ([#740](https://github.com/colonel-byte/cargoship/issues/740)) ([13ffece](https://github.com/colonel-byte/cargoship/commit/13ffeceebe9f36d132442f733fd1516dcd0f24b4))
+* **deps:** bump sigs.k8s.io/controller-runtime from 0.25.1 to 0.25.2 ([#767](https://github.com/colonel-byte/cargoship/issues/767)) ([37efa93](https://github.com/colonel-byte/cargoship/commit/37efa9322caab7efe2c5775ef4fd09866d3bedd4))
+* **deps:** bump the core group with 6 updates ([#750](https://github.com/colonel-byte/cargoship/issues/750)) ([de03019](https://github.com/colonel-byte/cargoship/commit/de0301962e3529e0624ce38b5d06066d14d7b6dc))
+
 ## [0.32.0](https://github.com/colonel-byte/cargoship/compare/v0.31.0...v0.32.0) (2026-10-12)
 
 
