@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-284a317a.js"></script>
+        <script src="../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -192,8 +192,8 @@
 <li><a href="#constants">Constants</a></li>
 <li><a href="#variables">Variables</a></li>
 <li><a href="#NodeLabelsMapToList">func NodeLabelsMapToList(m map[string]string) []string</a></li>
-<li><a href="#RemoveStaleFiles">func RemoveStaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) error</a></li>
-<li><a href="#StaleFiles">func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) []string</a></li>
+<li><a href="#RemoveStaleFiles">func RemoveStaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) error</a></li>
+<li><a href="#StaleFiles">func StaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) []string</a></li>
 <li><a href="#AdminCredentials">type AdminCredentials</a></li>
 <li><a href="#Bootstrapper">type Bootstrapper</a></li>
 <li><a href="#Common">type Common</a>
@@ -213,18 +213,18 @@
 </li>
 <li><a href="#DesiredFile">type DesiredFile</a>
 <ul>
-<li><a href="#DistroReleaseDesiredFile">func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error)</a></li>
+<li><a href="#DistroReleaseDesiredFile">func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error)</a></li>
 </ul>
 </li>
 <li><a href="#Distro">type Distro</a></li>
 <li><a href="#ImageImporter">type ImageImporter</a></li>
 <li><a href="#K3S">type K3S</a>
 <ul>
-<li><a href="#K3S.AdminCredentials">func (d *K3S) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)</a></li>
-<li><a href="#K3S.KubeconfigPath">func (d *K3S) KubeconfigPath(_ *cluster.ZarfHost, _ string) string</a></li>
-<li><a href="#K3S.KubectlCmdf">func (d *K3S) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args …any) string</a></li>
-<li><a href="#K3S.StopControllerService">func (d *K3S) StopControllerService(h *cluster.ZarfHost) error</a></li>
-<li><a href="#K3S.StopWorkerService">func (d *K3S) StopWorkerService(h *cluster.ZarfHost) error</a></li>
+<li><a href="#K3S.AdminCredentials">func (d *K3S) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)</a></li>
+<li><a href="#K3S.KubeconfigPath">func (d *K3S) KubeconfigPath(_ *cluster.Host, _ string) string</a></li>
+<li><a href="#K3S.KubectlCmdf">func (d *K3S) KubectlCmdf(host *cluster.Host, dataDir string, s string, args …any) string</a></li>
+<li><a href="#K3S.StopControllerService">func (d *K3S) StopControllerService(h *cluster.Host) error</a></li>
+<li><a href="#K3S.StopWorkerService">func (d *K3S) StopWorkerService(h *cluster.Host) error</a></li>
 </ul>
 </li>
 <li><a href="#ManagedDir">type ManagedDir</a></li>
@@ -233,46 +233,46 @@
 <li><a href="#PreUninstallResetter">type PreUninstallResetter</a></li>
 <li><a href="#RKE2">type RKE2</a>
 <ul>
-<li><a href="#RKE2.AdminCredentials">func (d *RKE2) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)</a></li>
-<li><a href="#RKE2.KubeconfigPath">func (d *RKE2) KubeconfigPath(_ *cluster.ZarfHost, _ string) string</a></li>
-<li><a href="#RKE2.KubectlCmdf">func (d *RKE2) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args …any) string</a></li>
-<li><a href="#RKE2.StopControllerService">func (d *RKE2) StopControllerService(h *cluster.ZarfHost) error</a></li>
-<li><a href="#RKE2.StopWorkerService">func (d *RKE2) StopWorkerService(h *cluster.ZarfHost) error</a></li>
+<li><a href="#RKE2.AdminCredentials">func (d *RKE2) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)</a></li>
+<li><a href="#RKE2.KubeconfigPath">func (d *RKE2) KubeconfigPath(_ *cluster.Host, _ string) string</a></li>
+<li><a href="#RKE2.KubectlCmdf">func (d *RKE2) KubectlCmdf(host *cluster.Host, dataDir string, s string, args …any) string</a></li>
+<li><a href="#RKE2.StopControllerService">func (d *RKE2) StopControllerService(h *cluster.Host) error</a></li>
+<li><a href="#RKE2.StopWorkerService">func (d *RKE2) StopWorkerService(h *cluster.Host) error</a></li>
 </ul>
 </li>
 <li><a href="#RancherCommon">type RancherCommon</a>
 <ul>
 <li><a href="#RancherCommon.CleanupPaths">func (d *RancherCommon) CleanupPaths() []string</a></li>
-<li><a href="#RancherCommon.ConfigureEngine">func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error</a></li>
-<li><a href="#RancherCommon.DesiredFiles">func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
+<li><a href="#RancherCommon.ConfigureEngine">func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error</a></li>
+<li><a href="#RancherCommon.DesiredFiles">func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)</a></li>
 <li><a href="#RancherCommon.DistroCmdf">func (d *RancherCommon) DistroCmdf(template string, args …any) string</a></li>
-<li><a href="#RancherCommon.GetClusterCIDR">func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string</a></li>
+<li><a href="#RancherCommon.GetClusterCIDR">func (d *RancherCommon) GetClusterCIDR(dis distro.Distro) []string</a></li>
 <li><a href="#RancherCommon.JoinTokenPathAgent">func (d *RancherCommon) JoinTokenPathAgent() string</a></li>
 <li><a href="#RancherCommon.ManagedDirs">func (d *RancherCommon) ManagedDirs() []ManagedDir</a></li>
-<li><a href="#RancherCommon.RunningVersion">func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error)</a></li>
+<li><a href="#RancherCommon.RunningVersion">func (d *RancherCommon) RunningVersion(host *cluster.Host) (string, error)</a></li>
 </ul>
 </li>
 <li><a href="#Upstream">type Upstream</a>
 <ul>
-<li><a href="#Upstream.AdminCredentials">func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)</a></li>
-<li><a href="#Upstream.Bootstrap">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error</a></li>
+<li><a href="#Upstream.AdminCredentials">func (d *Upstream) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)</a></li>
+<li><a href="#Upstream.Bootstrap">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error</a></li>
 <li><a href="#Upstream.CleanupPaths">func (d *Upstream) CleanupPaths() []string</a></li>
-<li><a href="#Upstream.ConfigureEngine">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error</a></li>
-<li><a href="#Upstream.DesiredFiles">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
+<li><a href="#Upstream.ConfigureEngine">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error</a></li>
+<li><a href="#Upstream.DesiredFiles">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)</a></li>
 <li><a href="#Upstream.DistroCmdf">func (d *Upstream) DistroCmdf(template string, args …any) string</a></li>
-<li><a href="#Upstream.GetClusterCIDR">func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string</a></li>
-<li><a href="#Upstream.ImportImages">func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error</a></li>
-<li><a href="#Upstream.IsBootstrapped">func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool</a></li>
+<li><a href="#Upstream.GetClusterCIDR">func (d *Upstream) GetClusterCIDR(dis distro.Distro) []string</a></li>
+<li><a href="#Upstream.ImportImages">func (d *Upstream) ImportImages(host *cluster.Host, path string) error</a></li>
+<li><a href="#Upstream.IsBootstrapped">func (d *Upstream) IsBootstrapped(host *cluster.Host) bool</a></li>
 <li><a href="#Upstream.JoinTokenPathAgent">func (d *Upstream) JoinTokenPathAgent() string</a></li>
-<li><a href="#Upstream.KubeconfigPath">func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string</a></li>
-<li><a href="#Upstream.KubectlCmdf">func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args …any) string</a></li>
+<li><a href="#Upstream.KubeconfigPath">func (d *Upstream) KubeconfigPath(_ *cluster.Host, _ string) string</a></li>
+<li><a href="#Upstream.KubectlCmdf">func (d *Upstream) KubectlCmdf(host *cluster.Host, dataDir string, s string, args …any) string</a></li>
 <li><a href="#Upstream.ManagedDirs">func (d *Upstream) ManagedDirs() []ManagedDir</a></li>
-<li><a href="#Upstream.ManifestPaths">func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string</a></li>
-<li><a href="#Upstream.PreStartUpgrade">func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error</a></li>
-<li><a href="#Upstream.PreUninstallReset">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) error</a></li>
-<li><a href="#Upstream.RunningVersion">func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)</a></li>
-<li><a href="#Upstream.StopControllerService">func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error</a></li>
-<li><a href="#Upstream.StopWorkerService">func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error</a></li>
+<li><a href="#Upstream.ManifestPaths">func (d *Upstream) ManifestPaths(dis distro.Distro) []string</a></li>
+<li><a href="#Upstream.PreStartUpgrade">func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.Host, dis distro.Distro) error</a></li>
+<li><a href="#Upstream.PreUninstallReset">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) error</a></li>
+<li><a href="#Upstream.RunningVersion">func (d *Upstream) RunningVersion(host *cluster.Host) (string, error)</a></li>
+<li><a href="#Upstream.StopControllerService">func (d *Upstream) StopControllerService(h *cluster.Host) error</a></li>
+<li><a href="#Upstream.StopWorkerService">func (d *Upstream) StopWorkerService(h *cluster.Host) error</a></li>
 </ul>
 </li>
 </ul>
@@ -344,12 +344,12 @@
 <p>NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels</p>
 <p><a name="RemoveStaleFiles"></a></p>
 <h2 id="func-removestalefiles"><a class="header" href="#func-removestalefiles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/managed_files.go#L79">RemoveStaleFiles</a></a></h2>
-<pre><code class="language-go">func RemoveStaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) error
+<pre><code class="language-go">func RemoveStaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) error
 </code></pre>
 <p>RemoveStaleFiles deletes the files StaleFiles finds. It reports the first deletion error, so a file that cannot be removed is surfaced rather than left to be rediscovered on every run.</p>
 <p><a name="StaleFiles"></a></p>
 <h2 id="func-stalefiles"><a class="header" href="#func-stalefiles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/managed_files.go#L61">StaleFiles</a></a></h2>
-<pre><code class="language-go">func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) []string
+<pre><code class="language-go">func StaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) []string
 </code></pre>
 <p>StaleFiles returns the files under dirs that desired no longer names, sorted by path.</p>
 <p>A managed directory holds only files cargoship put there, so a file in one that is not in the desired set was written for something the cluster configuration has since dropped -- a registry that no longer has an inline CA, say. Such a file is harmless while it sits there, since nothing references it, but it also never goes away on its own, and a certificate left behind on every node long after the registry is gone is the kind of thing that turns up in an audit rather than in a log.</p>
@@ -372,9 +372,9 @@
 <pre><code class="language-go">type Bootstrapper interface {
     // IsBootstrapped reports whether host has already formed or joined the cluster, so a re-run
     // is a no-op instead of re-running the bootstrap command.
-    IsBootstrapped(host *cluster.ZarfHost) bool
+    IsBootstrapped(host *cluster.Host) bool
     // Bootstrap forms the cluster (the leader) or joins it (every other host).
-    Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+    Bootstrap(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error
 }
 </code></pre>
 <p><a name="Common"></a></p>
@@ -476,7 +476,7 @@
 </code></pre>
 <p><a name="DistroReleaseDesiredFile"></a></p>
 <h3 id="func-distroreleasedesiredfile"><a class="header" href="#func-distroreleasedesiredfile">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L41">DistroReleaseDesiredFile</a></a></h3>
-<pre><code class="language-go">func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error)
+<pre><code class="language-go">func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error)
 </code></pre>
 <p>DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.</p>
 <p><a name="Distro"></a></p>
@@ -485,7 +485,7 @@
 <pre><code class="language-go">type Distro interface {
     // AdminCredentials returns the cluster CA certificate and the admin client key pair
     // for a given controller host and data directory
-    AdminCredentials(*cluster.ZarfHost, string) (AdminCredentials, error)
+    AdminCredentials(*cluster.Host, string) (AdminCredentials, error)
     // BinaryName returns the engine binary name
     BinaryName() string
     // BinaryPath returns the full path to the engine binary
@@ -500,14 +500,14 @@
     // SupervisorURL returns the URL a node joins the cluster through, for the host serving it.
     SupervisorURL(name string) string
     // ConfigureEngine does distro specific configuration on a host
-    ConfigureEngine(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
+    ConfigureEngine(context.Context, *cluster.Host, cluster.RuntimeMeta, distro.Distro) error
     // DataDirPath returns the full path for the data directory used by the engine
     DataDirPath() string
     // DesiredFiles returns the full set of engine config files (path -&gt; desired file) this
     // distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
     // pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
     // detect drift on an already-running host.
-    DesiredFiles(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
+    DesiredFiles(context.Context, *cluster.Host, cluster.RuntimeMeta, distro.Distro) (map[string]DesiredFile, error)
     // ManagedDirs returns the directories on a host cargoship prunes, so that a file in one of
     // them that DesiredFiles no longer names can be removed rather than left behind. A
     // directory cargoship shares with the engine names the files that are its own. A distro
@@ -521,7 +521,7 @@
     // DistroCmdf returns a string that can be used to execute commands on the core engine binary
     DistroCmdf(string, ...any) string
     // GetClusterCIDR returns a string array with the all the known cluster cidr blocks
-    GetClusterCIDR(distro.ZarfDistro) []string
+    GetClusterCIDR(distro.Distro) []string
     // GetControllerService returns the name of the controller service
     GetControllerService() string
     // GetWorkerService returns the name of the worker service
@@ -532,17 +532,17 @@
     // Distro's like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.
     JoinTokenPathAgent() string
     // KubeconfigPath returns the path to the admin config for a given
-    KubeconfigPath(*cluster.ZarfHost, string) string
+    KubeconfigPath(*cluster.Host, string) string
     // KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
-    KubectlCmdf(*cluster.ZarfHost, string, string, ...any) string
+    KubectlCmdf(*cluster.Host, string, string, ...any) string
     // RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
-    RunningVersion(*cluster.ZarfHost) (string, error)
+    RunningVersion(*cluster.Host) (string, error)
     // SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
     SetPath(key string, value string) error
     // StopControllerService stops the controller service on the host
-    StopControllerService(*cluster.ZarfHost) error
+    StopControllerService(*cluster.Host) error
     // StopWorkerService stops the controller service on the host
-    StopWorkerService(*cluster.ZarfHost) error
+    StopWorkerService(*cluster.Host) error
 }
 </code></pre>
 <p><a name="ImageImporter"></a></p>
@@ -550,7 +550,7 @@
 <p>ImageImporter is implemented by a distro whose engine does not import uploaded image tarballs on its own, so cargoship must trigger the import itself. rke2 and k3s’s own agents import automatically outside cargoship’s control and do not implement this; a distro without an agent to do that -- plain kubeadm’s upstream containerd, say -- does.</p>
 <pre><code class="language-go">type ImageImporter interface {
     // ImportImages imports every image tarball staged under path into the engine's image store.
-    ImportImages(host *cluster.ZarfHost, path string) error
+    ImportImages(host *cluster.Host, path string) error
 }
 </code></pre>
 <p><a name="K3S"></a></p>
@@ -562,27 +562,27 @@
 </code></pre>
 <p><a name="K3S.AdminCredentials"></a></p>
 <h3 id="func-k3s-admincredentials"><a class="header" href="#func-k3s-admincredentials">func (*K3S) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L64">AdminCredentials</a></a></h3>
-<pre><code class="language-go">func (d *K3S) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
+<pre><code class="language-go">func (d *K3S) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)
 </code></pre>
 <p>AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig k3s writes on a controller host.</p>
 <p><a name="K3S.KubeconfigPath"></a></p>
 <h3 id="func-k3s-kubeconfigpath"><a class="header" href="#func-k3s-kubeconfigpath">func (*K3S) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L69">KubeconfigPath</a></a></h3>
-<pre><code class="language-go">func (d *K3S) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
+<pre><code class="language-go">func (d *K3S) KubeconfigPath(_ *cluster.Host, _ string) string
 </code></pre>
 <p>KubeconfigPath returns the path to the admin config for a given</p>
 <p><a name="K3S.KubectlCmdf"></a></p>
 <h3 id="func-k3s-kubectlcmdf"><a class="header" href="#func-k3s-kubectlcmdf">func (*K3S) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L74">KubectlCmdf</a></a></h3>
-<pre><code class="language-go">func (d *K3S) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
+<pre><code class="language-go">func (d *K3S) KubectlCmdf(host *cluster.Host, dataDir string, s string, args ...any) string
 </code></pre>
 <p>KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster</p>
 <p><a name="K3S.StopControllerService"></a></p>
 <h3 id="func-k3s-stopcontrollerservice"><a class="header" href="#func-k3s-stopcontrollerservice">func (*K3S) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L79">StopControllerService</a></a></h3>
-<pre><code class="language-go">func (d *K3S) StopControllerService(h *cluster.ZarfHost) error
+<pre><code class="language-go">func (d *K3S) StopControllerService(h *cluster.Host) error
 </code></pre>
 <p>StopControllerService stops the controller service on the host</p>
 <p><a name="K3S.StopWorkerService"></a></p>
 <h3 id="func-k3s-stopworkerservice"><a class="header" href="#func-k3s-stopworkerservice">func (*K3S) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L84">StopWorkerService</a></a></h3>
-<pre><code class="language-go">func (d *K3S) StopWorkerService(h *cluster.ZarfHost) error
+<pre><code class="language-go">func (d *K3S) StopWorkerService(h *cluster.Host) error
 </code></pre>
 <p>StopWorkerService stops the controller service on the host</p>
 <p><a name="ManagedDir"></a></p>
@@ -606,7 +606,7 @@
 <pre><code class="language-go">type ManifestApplier interface {
     // ManifestPaths returns the on-host paths to kubectl apply, in order. Empty when the package
     // declares none.
-    ManifestPaths(dis distro.ZarfDistro) []string
+    ManifestPaths(dis distro.Distro) []string
 }
 </code></pre>
 <p><a name="PreStartUpgrader"></a></p>
@@ -614,7 +614,7 @@
 <p>PreStartUpgrader is implemented by a distro whose upgrade needs a step between the new package install and the service restart -- kubeadm upgrade, unlike rke2/k3s where a plain restart on the new binary is enough. UpgradeHosts calls it, when implemented, right after installDistro and before startService. Same optional-interface pattern as Bootstrapper.</p>
 <pre><code class="language-go">type PreStartUpgrader interface {
     // PreStartUpgrade runs after the new packages are staged but before the service restarts.
-    PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
+    PreStartUpgrade(ctx context.Context, host *cluster.Host, dis distro.Distro) error
 }
 </code></pre>
 <p><a name="PreUninstallResetter"></a></p>
@@ -622,7 +622,7 @@
 <p>PreUninstallResetter is implemented by a distro that must tear down its own cluster membership before its packages are removed -- kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. UninstallEngine calls it, when implemented, before resolving package names and removing them. Same optional-interface pattern as PreStartUpgrader.</p>
 <pre><code class="language-go">type PreUninstallResetter interface {
     // PreUninstallReset runs before packages are resolved and removed.
-    PreUninstallReset(ctx context.Context, host *cluster.ZarfHost) error
+    PreUninstallReset(ctx context.Context, host *cluster.Host) error
 }
 </code></pre>
 <p><a name="RKE2"></a></p>
@@ -634,27 +634,27 @@
 </code></pre>
 <p><a name="RKE2.AdminCredentials"></a></p>
 <h3 id="func-rke2-admincredentials"><a class="header" href="#func-rke2-admincredentials">func (*RKE2) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L64">AdminCredentials</a></a></h3>
-<pre><code class="language-go">func (d *RKE2) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
+<pre><code class="language-go">func (d *RKE2) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)
 </code></pre>
 <p>AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig rke2 writes on a controller host.</p>
 <p><a name="RKE2.KubeconfigPath"></a></p>
 <h3 id="func-rke2-kubeconfigpath"><a class="header" href="#func-rke2-kubeconfigpath">func (*RKE2) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L69">KubeconfigPath</a></a></h3>
-<pre><code class="language-go">func (d *RKE2) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
+<pre><code class="language-go">func (d *RKE2) KubeconfigPath(_ *cluster.Host, _ string) string
 </code></pre>
 <p>KubeconfigPath returns the path to the admin config for a given distro</p>
 <p><a name="RKE2.KubectlCmdf"></a></p>
 <h3 id="func-rke2-kubectlcmdf"><a class="header" href="#func-rke2-kubectlcmdf">func (*RKE2) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L74">KubectlCmdf</a></a></h3>
-<pre><code class="language-go">func (d *RKE2) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
+<pre><code class="language-go">func (d *RKE2) KubectlCmdf(host *cluster.Host, dataDir string, s string, args ...any) string
 </code></pre>
 <p>KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster</p>
 <p><a name="RKE2.StopControllerService"></a></p>
 <h3 id="func-rke2-stopcontrollerservice"><a class="header" href="#func-rke2-stopcontrollerservice">func (*RKE2) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L79">StopControllerService</a></a></h3>
-<pre><code class="language-go">func (d *RKE2) StopControllerService(h *cluster.ZarfHost) error
+<pre><code class="language-go">func (d *RKE2) StopControllerService(h *cluster.Host) error
 </code></pre>
 <p>StopControllerService implements Distro.</p>
 <p><a name="RKE2.StopWorkerService"></a></p>
 <h3 id="func-rke2-stopworkerservice"><a class="header" href="#func-rke2-stopworkerservice">func (*RKE2) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L84">StopWorkerService</a></a></h3>
-<pre><code class="language-go">func (d *RKE2) StopWorkerService(h *cluster.ZarfHost) error
+<pre><code class="language-go">func (d *RKE2) StopWorkerService(h *cluster.Host) error
 </code></pre>
 <p>StopWorkerService implements Distro.</p>
 <p><a name="RancherCommon"></a></p>
@@ -671,12 +671,12 @@
 <p>CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright.</p>
 <p><a name="RancherCommon.ConfigureEngine"></a></p>
 <h3 id="func-ranchercommon-configureengine"><a class="header" href="#func-ranchercommon-configureengine">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L188">ConfigureEngine</a></a></h3>
-<pre><code class="language-go">func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+<pre><code class="language-go">func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error
 </code></pre>
 <p>ConfigureEngine does distro specific configuration on a host</p>
 <p><a name="RancherCommon.DesiredFiles"></a></p>
 <h3 id="func-ranchercommon-desiredfiles"><a class="header" href="#func-ranchercommon-desiredfiles">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L359">DesiredFiles</a></a></h3>
-<pre><code class="language-go">func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
+<pre><code class="language-go">func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)
 </code></pre>
 <p>DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for the given host/run/dis, keyed by their full destination path. Content is identical across hosts of the same run (no host-varying fields are involved), unlike config.yaml.</p>
 <p><a name="RancherCommon.DistroCmdf"></a></p>
@@ -686,7 +686,7 @@
 <p>DistroCmdf returns a string that can be used to execute commands on the core engine binary</p>
 <p><a name="RancherCommon.GetClusterCIDR"></a></p>
 <h3 id="func-ranchercommon-getclustercidr"><a class="header" href="#func-ranchercommon-getclustercidr">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L649">GetClusterCIDR</a></a></h3>
-<pre><code class="language-go">func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string
+<pre><code class="language-go">func (d *RancherCommon) GetClusterCIDR(dis distro.Distro) []string
 </code></pre>
 <p>GetClusterCIDR returns a string array with the all the known cluster cidr blocks</p>
 <p><a name="RancherCommon.JoinTokenPathAgent"></a></p>
@@ -701,7 +701,7 @@
 <p>ManagedDirs returns the directories on a host cargoship prunes. For rke2 and k3s that is the directory holding CA certificates, the one holding state metadata -- every file in both was put there by cargoship, so a file with no entry left behind it can go -- and the engine’s manifest directory, which cargoship shares with the engine and where it prunes only the HelmChartConfig files it writes itself.</p>
 <p><a name="RancherCommon.RunningVersion"></a></p>
 <h3 id="func-ranchercommon-runningversion"><a class="header" href="#func-ranchercommon-runningversion">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L730">RunningVersion</a></a></h3>
-<pre><code class="language-go">func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error)
+<pre><code class="language-go">func (d *RancherCommon) RunningVersion(host *cluster.Host) (string, error)
 </code></pre>
 <p>RunningVersion returns the version of the distro being ran, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream"></a></p>
@@ -713,12 +713,12 @@
 </code></pre>
 <p><a name="Upstream.AdminCredentials"></a></p>
 <h3 id="func-upstream-admincredentials"><a class="header" href="#func-upstream-admincredentials">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L94">AdminCredentials</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
+<pre><code class="language-go">func (d *Upstream) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)
 </code></pre>
 <p>AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.</p>
 <p><a name="Upstream.Bootstrap"></a></p>
 <h3 id="func-upstream-bootstrap"><a class="header" href="#func-upstream-bootstrap">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L63">Bootstrap</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error
+<pre><code class="language-go">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error
 </code></pre>
 <p>Bootstrap forms the cluster on the leader with `kubeadm init`, joins an additional controller onto it with kubeadm’s HA control-plane path, or joins a worker with a plain `kubeadm join`, against the kubeadm-config.yaml ConfigureEngine already wrote to host.</p>
 <p><a name="Upstream.CleanupPaths"></a></p>
@@ -728,12 +728,12 @@
 <p>CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config directory, the kubelet data directory, and the staged package directory, all of which upstream owns outright.</p>
 <p><a name="Upstream.ConfigureEngine"></a></p>
 <h3 id="func-upstream-configureengine"><a class="header" href="#func-upstream-configureengine">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L159">ConfigureEngine</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+<pre><code class="language-go">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error
 </code></pre>
 <p>ConfigureEngine writes DesiredFiles’ output to host: containerd’s config, crictl.yaml, registry hosts.toml, and the kubeadm-config.yaml this host’s role needs. Unlike RancherCommon.ConfigureEngine there is no already-running guard -- kubeadm-config.yaml is meant to be rewritten every run (Bootstrap rewrites it again with the real join token right before `kubeadm join`), so an unconditional overwrite is correct here, not a gap.</p>
 <p><a name="Upstream.DesiredFiles"></a></p>
 <h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L175">DesiredFiles</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
+<pre><code class="language-go">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)
 </code></pre>
 <p>DesiredFiles returns the full set of engine config files this distro would write: containerd’s config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.</p>
 <p><a name="Upstream.DistroCmdf"></a></p>
@@ -743,17 +743,17 @@
 <p>DistroCmdf returns a string that can be used to execute a command directly. Upstream has no single engine binary to wrap a command through -- kubeadm, kubelet, and kubectl are three separate packages -- so the template is formatted as-is.</p>
 <p><a name="Upstream.GetClusterCIDR"></a></p>
 <h3 id="func-upstream-getclustercidr"><a class="header" href="#func-upstream-getclustercidr">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L139">GetClusterCIDR</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string
+<pre><code class="language-go">func (d *Upstream) GetClusterCIDR(dis distro.Distro) []string
 </code></pre>
 <p>GetClusterCIDR returns the known cluster CIDR blocks. kubeadm’s service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default -- that is entirely CNI dependent -- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.</p>
 <p><a name="Upstream.ImportImages"></a></p>
 <h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L259">ImportImages</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error
+<pre><code class="language-go">func (d *Upstream) ImportImages(host *cluster.Host, path string) error
 </code></pre>
 <p>ImportImages imports every image tarball staged under path into containerd’s k8s.io image store. Unlike rke2/k3s, upstream’s containerd has no agent watching that directory on its own, so cargoship has to trigger the import itself.</p>
 <p><a name="Upstream.IsBootstrapped"></a></p>
 <h3 id="func-upstream-isbootstrapped"><a class="header" href="#func-upstream-isbootstrapped">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L56">IsBootstrapped</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool
+<pre><code class="language-go">func (d *Upstream) IsBootstrapped(host *cluster.Host) bool
 </code></pre>
 <p>IsBootstrapped reports whether host has already run `kubeadm init` or `kubeadm join`.</p>
 <p><a name="Upstream.JoinTokenPathAgent"></a></p>
@@ -763,12 +763,12 @@
 <p>JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has no static agent-join-token file -- tokens are short-lived and minted on demand with `kubeadm token create` -- so there is nothing to point at yet.</p>
 <p><a name="Upstream.KubeconfigPath"></a></p>
 <h3 id="func-upstream-kubeconfigpath"><a class="header" href="#func-upstream-kubeconfigpath">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L100">KubeconfigPath</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
+<pre><code class="language-go">func (d *Upstream) KubeconfigPath(_ *cluster.Host, _ string) string
 </code></pre>
 <p>KubeconfigPath returns the path to the admin config kubeadm writes. Unlike rke2/k3s, this path does not vary by host or data directory.</p>
 <p><a name="Upstream.KubectlCmdf"></a></p>
 <h3 id="func-upstream-kubectlcmdf"><a class="header" href="#func-upstream-kubectlcmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L106">KubectlCmdf</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
+<pre><code class="language-go">func (d *Upstream) KubectlCmdf(host *cluster.Host, dataDir string, s string, args ...any) string
 </code></pre>
 <p>KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.</p>
 <p><a name="Upstream.ManagedDirs"></a></p>
@@ -778,32 +778,32 @@
 <p>ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per-registry hosts.toml directories under containerdCertsDir are not included -- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry’s own subdirectory, so a removed registry’s hosts.toml is left behind rather than risk pruning the wrong thing.</p>
 <p><a name="Upstream.ManifestPaths"></a></p>
 <h3 id="func-upstream-manifestpaths"><a class="header" href="#func-upstream-manifestpaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L282">ManifestPaths</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string
+<pre><code class="language-go">func (d *Upstream) ManifestPaths(dis distro.Distro) []string
 </code></pre>
 <p>ManifestPaths returns the on-host manifest paths the package declares for cargoship to kubectl apply, e.g. a CNI. Delivery of those files is Config.Files’ job; this is only the list of what to apply.</p>
 <p><a name="Upstream.PreStartUpgrade"></a></p>
 <h3 id="func-upstream-prestartupgrade"><a class="header" href="#func-upstream-prestartupgrade">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_upgrade.go#L95">PreStartUpgrade</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
+<pre><code class="language-go">func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.Host, dis distro.Distro) error
 </code></pre>
 <p>PreStartUpgrade runs kubeadm’s own upgrade sequence between the shared upgrade phase’s package install and service restart steps. kubeadm, unlike rke2/k3s, refuses to move the control plane forward on a plain kubelet restart -- it must install the new kubeadm binary and run its own upgrade command first, and the first controller runs a different command than every other node.</p>
 <p><a name="Upstream.PreUninstallReset"></a></p>
 <h3 id="func-upstream-preuninstallreset"><a class="header" href="#func-upstream-preuninstallreset">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L29">PreUninstallReset</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) error
+<pre><code class="language-go">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) error
 </code></pre>
 <p>PreUninstallReset runs kubeadm’s own teardown before packages are removed, then cleans up what kubeadm reset deliberately leaves behind: it prints a reminder about CNI state and iptables/ipvs rules rather than removing them itself. Each post-reset command is best-effort -- a link that does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected common case, not a failure worth reporting.</p>
 <p><a name="Upstream.RunningVersion"></a></p>
 <h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L119">RunningVersion</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)
+<pre><code class="language-go">func (d *Upstream) RunningVersion(host *cluster.Host) (string, error)
 </code></pre>
 <p>RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream.StopControllerService"></a></p>
 <h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L303">StopControllerService</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error
+<pre><code class="language-go">func (d *Upstream) StopControllerService(h *cluster.Host) error
 </code></pre>
 <p>StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.</p>
 <p><a name="Upstream.StopWorkerService"></a></p>
 <h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L308">StopWorkerService</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error
+<pre><code class="language-go">func (d *Upstream) StopWorkerService(h *cluster.Host) error
 </code></pre>
 <p>StopWorkerService stops the worker service on the host.</p>
 <p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>

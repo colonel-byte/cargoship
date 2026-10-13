@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -263,7 +263,7 @@
 <p>The install walk already installs and starts k3s on five nodes; the upgrade imports a second complete set of engine images into every containerd store on top of that, so it roughly doubles the disk and adds tens of minutes. Making it unconditional would mean every run of <code>mage test:endToEndCluster</code> pays for it, including the runs that only want to know the install still works. A single environment variable, read in <code>SetupSuite</code>, is checked in one place and skips with a message naming the variable.</p>
 <h2 id="profiles-on-the-generated-inventory"><a class="header" href="#profiles-on-the-generated-inventory">Profiles on the generated inventory</a></h2>
 <p>The generated bootloose inventory set no <code>Profile</code>, which makes <code>LabelNodes</code> a no-op: it iterates hosts, skips those with an empty profile, and would have labelled nothing. Each host now gets a profile equal to its role.</p>
-<p>This was checked against every other consumer of <code>Profile</code> before making the change. <code>GatherFacts.setupProfileOverrides</code> looks the profile up in <code>Spec.Config.Profiles</code> and does nothing when it is absent. The per-profile concurrency grouping resolves through <code>ZarfClusterProfiles.ResolveConcurrency</code>, which falls back to the caller’s value for an unmapped profile. The file selectors in <code>55_files_common.go</code> compare against the <em>role</em> constants passed by the RPM/APT/BIN phases, never against <code>h.Profile</code>. So the profile is inert everywhere except the phase under test, which is what makes it safe to set purely to make that phase observable.</p>
+<p>This was checked against every other consumer of <code>Profile</code> before making the change. <code>GatherFacts.setupProfileOverrides</code> looks the profile up in <code>Spec.Config.Profiles</code> and does nothing when it is absent. The per-profile concurrency grouping resolves through <code>Profiles.ResolveConcurrency</code>, which falls back to the caller’s value for an unmapped profile. The file selectors in <code>55_files_common.go</code> compare against the <em>role</em> constants passed by the RPM/APT/BIN phases, never against <code>h.Profile</code>. So the profile is inert everywhere except the phase under test, which is what makes it safe to set purely to make that phase observable.</p>
 
                     </main>
 

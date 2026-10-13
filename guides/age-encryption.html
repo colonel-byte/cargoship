@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -436,8 +436,8 @@ INF nothing to encrypt: every registry credential is encrypted already, or there
 <p><code>docs/agent/choice-age-encryption.md</code> records the reasoning in full.</p>
 <h2 id="what-the-file-records"><a class="header" href="#what-the-file-records">What the File Records</a></h2>
 <p>Because the ciphertext cannot say who it was encrypted to, the document says it instead. After an age encryption, <code>metadata</code> carries the recipient set the run used:</p>
-<pre><code class="language-yaml">apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+<pre><code class="language-yaml">apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: e72
   encryption:

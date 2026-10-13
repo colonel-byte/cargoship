@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-284a317a.js"></script>
+        <script src="toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -369,8 +369,30 @@ cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
 <li><strong>Distro Package Definitions:</strong> Map out the required binaries, OCI images, and layout settings.</li>
 <li><strong>Distro Runtime Configs:</strong> Configure the underlying distribution engine.</li>
 </ul>
+<p>Inventories and package definitions are Kubernetes-style documents under cargoship’s own API group:</p>
+<pre><code class="language-yaml">apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster      # or Distro, for a package definition
+metadata:
+  name: fleet-cluster
+</code></pre>
 <p>The corresponding JSON schemas are automatically generated from Go structs into <code>schema/</code>, and <code>cargoship schema</code> writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; <code>cargoship validate</code> checks a file against the right one without an editor.</p>
 <p>An inventory authoring guide is available in <a href="guides/setup-inv.html">Setting up an inventory</a>.</p>
+<h3 id="the-zarfdev-group-is-deprecated"><a class="header" href="#the-zarfdev-group-is-deprecated">The <code>zarf.dev</code> group is deprecated</a></h3>
+<p>These documents used to declare <code>apiVersion: zarf.dev/v1alpha1</code> with <code>kind: ZarfCluster</code> and <code>kind: ZarfDistro</code>. That group belongs to the upstream Zarf project, which defines its own kinds under it, so cargoship moved to a group it owns.</p>
+<p>Both spellings are accepted, in any combination, and a document using the old one needs no change today:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>Old</th><th>New</th></tr>
+</thead>
+<tbody>
+<tr><td>API group</td><td><code>zarf.dev/v1alpha1</code></td><td><code>colonel-byte.dev/v1alpha1</code></td></tr>
+<tr><td>Inventory kind</td><td><code>ZarfCluster</code></td><td><code>Cluster</code></td></tr>
+<tr><td>Package kind</td><td><code>ZarfDistro</code></td><td><code>Distro</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Everything cargoship writes itself - <code>cargoship inventory from-ansible</code>, the Ansible collection, the OpenTofu provider, the generated example packages - now emits the new spelling. No removal date is set for the old one; when one is, it will be announced in a release before it lands.</p>
 <hr>
 <h2 id="development-and-build-workflows"><a class="header" href="#development-and-build-workflows">Development and Build Workflows</a></h2>
 <p>Task automation is built using <strong>Mage</strong>, which drives builds, tests and code generation with the host Go toolchain.</p>

@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-284a317a.js"></script>
+        <script src="../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -222,7 +222,7 @@
 <p>note is appended to the grafted node’s description - the package name and version, so a generated file left lying around says which package it came from.</p>
 <p>The result describes the override subtree on its own, while cargoship validates the package’s values merged with the overrides. It therefore catches the mistakes that are wrong in either reading - an unknown key, a wrong type, a name outside an enum or pattern - and does not attempt to reproduce install-time validation.</p>
 <p><a name="Decode"></a></p>
-<h2 id="func-decode"><a class="header" href="#func-decode">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L42">Decode</a></a></h2>
+<h2 id="func-decode"><a class="header" href="#func-decode">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L46">Decode</a></a></h2>
 <pre><code class="language-go">func Decode(b []byte) (any, error)
 </code></pre>
 <p>Decode reads a YAML document into the shape a JSON Schema validator expects.</p>
@@ -263,12 +263,12 @@
 )
 </code></pre>
 <p><a name="DetectKind"></a></p>
-<h3 id="func-detectkind"><a class="header" href="#func-detectkind">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L60">DetectKind</a></a></h3>
+<h3 id="func-detectkind"><a class="header" href="#func-detectkind">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L64">DetectKind</a></a></h3>
 <pre><code class="language-go">func DetectKind(doc any) (Kind, error)
 </code></pre>
 <p>DetectKind reads the schema kind out of a decoded document’s own kind field, so that a file says what it is rather than the operator having to.</p>
 <p><a name="ValidationError"></a></p>
-<h2 id="type-validationerror"><a class="header" href="#type-validationerror">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L145-L149">ValidationError</a></a></h2>
+<h2 id="type-validationerror"><a class="header" href="#type-validationerror">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L149-L153">ValidationError</a></a></h2>
 <p>ValidationError reports every way one document failed its schema.</p>
 <pre><code class="language-go">type ValidationError struct {
     Source   string
@@ -277,33 +277,33 @@
 }
 </code></pre>
 <p><a name="ValidationError.Error"></a></p>
-<h3 id="func-validationerror-error"><a class="header" href="#func-validationerror-error">func (*ValidationError) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L151">Error</a></a></h3>
+<h3 id="func-validationerror-error"><a class="header" href="#func-validationerror-error">func (*ValidationError) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L155">Error</a></a></h3>
 <pre><code class="language-go">func (e *ValidationError) Error() string
 </code></pre>
 <p><a name="Validator"></a></p>
-<h2 id="type-validator"><a class="header" href="#type-validator">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L78-L81">Validator</a></a></h2>
+<h2 id="type-validator"><a class="header" href="#type-validator">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L82-L85">Validator</a></a></h2>
 <p>Validator checks documents against one schema. The schema is compiled once and reused, which is what makes checking a directory of packages worth doing in a single process.</p>
 <pre><code class="language-go">type Validator struct {
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="NewValidator"></a></p>
-<h3 id="func-newvalidator"><a class="header" href="#func-newvalidator">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L85">NewValidator</a></a></h3>
+<h3 id="func-newvalidator"><a class="header" href="#func-newvalidator">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L89">NewValidator</a></a></h3>
 <pre><code class="language-go">func NewValidator(kind Kind, doc map[string]any) (*Validator, error)
 </code></pre>
 <p>NewValidator compiles a schema document for repeated use. Pass the document rather than the kind, so that a composed inventory schema is checked exactly as an editor would check it.</p>
 <p><a name="NewValidatorFor"></a></p>
-<h3 id="func-newvalidatorfor"><a class="header" href="#func-newvalidatorfor">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L94">NewValidatorFor</a></a></h3>
+<h3 id="func-newvalidatorfor"><a class="header" href="#func-newvalidatorfor">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L98">NewValidatorFor</a></a></h3>
 <pre><code class="language-go">func NewValidatorFor(kind Kind) (*Validator, error)
 </code></pre>
 <p>NewValidatorFor compiles the generated schema for a kind, for callers with nothing to compose.</p>
 <p><a name="Validator.Kind"></a></p>
-<h3 id="func-validator-kind"><a class="header" href="#func-validator-kind">func (*Validator) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L103">Kind</a></a></h3>
+<h3 id="func-validator-kind"><a class="header" href="#func-validator-kind">func (*Validator) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L107">Kind</a></a></h3>
 <pre><code class="language-go">func (v *Validator) Kind() Kind
 </code></pre>
 <p>Kind returns the schema this validator checks against.</p>
 <p><a name="Validator.Validate"></a></p>
-<h3 id="func-validator-validate"><a class="header" href="#func-validator-validate">func (*Validator) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L109">Validate</a></a></h3>
+<h3 id="func-validator-validate"><a class="header" href="#func-validator-validate">func (*Validator) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L113">Validate</a></a></h3>
 <pre><code class="language-go">func (v *Validator) Validate(source string, doc any) error
 </code></pre>
 <p>Validate checks a decoded document and returns a ValidationError listing every problem, not just the first: a file with four mistakes in it should take one run to fix, not four.</p>

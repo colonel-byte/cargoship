@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,7 +191,7 @@
 <p>Settled by the answers to the design questions:</p>
 <ul>
 <li><strong>In-process via <code>pkg/action</code>.</strong> The provider module requires <code>github.com/colonel-byte/cargoship</code> and calls <code>action.NewApply</code> / <code>action.NewReset</code> directly, so it gets <code>phase.RunResult</code> and typed errors rather than an exit code.</li>
-<li><strong>Hosts as HCL blocks</strong>, rendered into a <code>cluster.ZarfCluster</code> the way <code>internal/ansibleinv.Translate</code> renders one for Ansible.</li>
+<li><strong>Hosts as HCL blocks</strong>, rendered into a <code>cluster.Cluster</code> the way <code>internal/ansibleinv.Translate</code> renders one for Ansible.</li>
 <li><strong>Destroy runs reset, with an opt-out.</strong> Both “destroy runs reset” and “destroy is a no-op” were chosen; they are reconciled as a default plus a flag, since one has to be the default. <code>tofu destroy</code> resets, because that is what destroy means everywhere else in tofu, and <code>retain_on_destroy = true</code> downgrades it to dropping state with a warning. Say so in the schema description, not only here.</li>
 <li><strong><code>kubeconfig</code> output, opt-in</strong> per <code>choice-tofu-secrets.md</code> rule 4.</li>
 <li><strong>A separate <code>cargoship_prepared_hosts</code> resource</strong> for the disruptive prepare phases.</li>
@@ -218,7 +218,7 @@ internal/tofuprovider/
   provider.go                  # provider schema: vault/age env passthrough, cache path, log level
   cluster_resource.go          # cargoship_cluster: Schema, Create, Read, Update, Delete, ImportState
   prepared_hosts_resource.go   # cargoship_prepared_hosts
-  translate.go                 # HCL model -&gt; cluster.ZarfCluster
+  translate.go                 # HCL model -&gt; cluster.Cluster
   translate_test.go
   logging.go                   # zarf logger + Manager.Writer -&gt; tflog
   plan.go                      # plan-time checks (downgrade, removed hosts)
@@ -233,7 +233,7 @@ internal/tofuprovider/
 <p><code>kubeconfig</code> is computed and sensitive, populated only when <code>export_kubeconfig = true</code>.</p>
 <h3 id="create"><a class="header" href="#create">Create</a></h3>
 <ol>
-<li><code>translate.go</code> turns the model into a <code>cluster.ZarfCluster</code>. It renders the YAML and parses it back through <code>clustercfg.Parse</code>, rather than building the struct, so the provider gets the same schema validation and the same defaults a file gets – <code>load.ClusterDefinition</code> only adds file reading on top of that.</li>
+<li><code>translate.go</code> turns the model into a <code>cluster.Cluster</code>. It renders the YAML and parses it back through <code>clustercfg.Parse</code>, rather than building the struct, so the provider gets the same schema validation and the same defaults a file gets – <code>load.ClusterDefinition</code> only adds file reading on top of that.</li>
 <li><code>distro.Load</code> extracts the package into the provider’s cache directory.</li>
 <li>Build the <code>phase.Manager</code>: <code>Config</code>, <code>Distro</code>, <code>DistroID</code>, <code>TempDirectory</code>, <code>Concurrency</code>, <code>ConcurrentUploads</code>, <code>Writer</code> (the tflog adapter), <code>SetTimeout</code>.</li>
 <li><code>action.NewApply(...).Run(ctx)</code> with a <code>phase.WithResultSink</code> context, so what the phases did comes back.</li>

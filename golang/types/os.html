@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-284a317a.js"></script>
+        <script src="../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -287,7 +287,7 @@
 </code></pre>
 <p><a name="Host"></a></p>
 <h2 id="type-host"><a class="header" href="#type-host">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L34-L41">Host</a></a></h2>
-<p>Host is the interface that Configurer methods use to interact with a remote host. It is satisfied by *rig.Client, and therefore by any type that embeds rig.ClientWithConfig (such as cluster.ZarfHost), since those methods are promoted.</p>
+<p>Host is the interface that Configurer methods use to interact with a remote host. It is satisfied by *rig.Client, and therefore by any type that embeds rig.ClientWithConfig (such as cluster.Host), since those methods are promoted.</p>
 <pre><code class="language-go">type Host interface {
     cmd.SimpleRunner
     // Sudo returns a memoized clone of the client whose runner wraps every

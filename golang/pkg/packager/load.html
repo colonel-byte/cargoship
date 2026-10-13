@@ -37,10 +37,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-284a317a.js"></script>
+        <script src="../../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -189,19 +189,19 @@
 <p>Package load for loading a given package</p>
 <h2 id="index"><a class="header" href="#index">Index</a></h2>
 <ul>
-<li><a href="#ClusterDefinition">func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error)</a></li>
-<li><a href="#DistroDefinition">func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error)</a></li>
+<li><a href="#ClusterDefinition">func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.Cluster, error)</a></li>
+<li><a href="#DistroDefinition">func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.Distro, error)</a></li>
 <li><a href="#ClusterOptions">type ClusterOptions</a></li>
 <li><a href="#DefinitionOptions">type DefinitionOptions</a></li>
 </ul>
 <p><a name="ClusterDefinition"></a></p>
 <h2 id="func-clusterdefinition"><a class="header" href="#func-clusterdefinition">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/cluster.go#L40">ClusterDefinition</a></a></h2>
-<pre><code class="language-go">func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error)
+<pre><code class="language-go">func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.Cluster, error)
 </code></pre>
 <p>ClusterDefinition loads a package from the filesystem</p>
 <p><a name="DistroDefinition"></a></p>
 <h2 id="func-distrodefinition"><a class="header" href="#func-distrodefinition">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/distro.go#L51">DistroDefinition</a></a></h2>
-<pre><code class="language-go">func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error)
+<pre><code class="language-go">func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.Distro, error)
 </code></pre>
 <p>DistroDefinition returns a ZarfDistro object</p>
 <p><a name="ClusterOptions"></a></p>

@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-284a317a.js"></script>
+        <script src="../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,19 +193,19 @@
 <li><a href="#variables">Variables</a></li>
 <li><a href="#AssembleLayers">func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, include …layers.LayerType) ([]ocispec.Descriptor, error)</a></li>
 <li><a href="#CopyPackage">func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOptions) (err error)</a></li>
-<li><a href="#FetchDistroYAML">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.ZarfDistro, error)</a></li>
+<li><a href="#FetchDistroYAML">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.Distro, error)</a></li>
 <li><a href="#GetOCICacheModifier">func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, error)</a></li>
-<li><a href="#LayersFromFiles">func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.ZarfFiles, folder string) ([]ocispec.Descriptor, error)</a></li>
+<li><a href="#LayersFromFiles">func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.Files, folder string) ([]ocispec.Descriptor, error)</a></li>
 <li><a href="#LayersFromImages">func LayersFromImages(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, imageList []string) ([]ocispec.Descriptor, error)</a></li>
-<li><a href="#ReferenceFromMetadata">func ReferenceFromMetadata(registryLocation string, pkg distro.ZarfDistro) (registry.Reference, error)</a></li>
-<li><a href="#ReferenceFromMetadataWithOptions">func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.ZarfDistro, opts ReferenceFromMetadataOptions) (registry.Reference, error)</a></li>
+<li><a href="#ReferenceFromMetadata">func ReferenceFromMetadata(registryLocation string, pkg distro.Distro) (registry.Reference, error)</a></li>
+<li><a href="#ReferenceFromMetadataWithOptions">func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions) (registry.Reference, error)</a></li>
 <li><a href="#PublishOptions">type PublishOptions</a></li>
 <li><a href="#ReferenceFromMetadataOptions">type ReferenceFromMetadataOptions</a></li>
 <li><a href="#Remote">type Remote</a>
 <ul>
 <li><a href="#NewRemote">func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods …oci.Modifier) (*Remote, error)</a></li>
 <li><a href="#Remote.AssembleLayers">func (r *Remote) AssembleLayers(ctx context.Context, include …layers.LayerType) ([]ocispec.Descriptor, error)</a></li>
-<li><a href="#Remote.FetchDistroYAML">func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.ZarfDistro, error)</a></li>
+<li><a href="#Remote.FetchDistroYAML">func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.Distro, error)</a></li>
 <li><a href="#Remote.FetchImagesIndex">func (r *Remote) FetchImagesIndex(ctx context.Context) (*ocispec.Index, error)</a></li>
 <li><a href="#Remote.PullDistro">func (r *Remote) PullDistro(ctx context.Context, destinationDir string, concurrency int, layersToPull …ocispec.Descriptor) (_ []ocispec.Descriptor, err error)</a></li>
 <li><a href="#Remote.PushPackage">func (r *Remote) PushPackage(ctx context.Context, disLayout *layout.DistroLayout, opts PublishOptions) (_ ocispec.Descriptor, err error)</a></li>
@@ -252,7 +252,7 @@
 <p>CopyPackage copies a zarf package from one OCI registry to another using ORAS with retry.</p>
 <p><a name="FetchDistroYAML"></a></p>
 <h2 id="func-fetchdistroyaml"><a class="header" href="#func-fetchdistroyaml">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L38">FetchDistroYAML</a></a></h2>
-<pre><code class="language-go">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.ZarfDistro, error)
+<pre><code class="language-go">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.Distro, error)
 </code></pre>
 <p>FetchDistroYAML fetches the distro.yaml file from the remote repository.</p>
 <p><a name="GetOCICacheModifier"></a></p>
@@ -262,7 +262,7 @@
 <p>GetOCICacheModifier takes in a Cargoship cachePath and uses it to return an oci.WithCache modifier</p>
 <p><a name="LayersFromFiles"></a></p>
 <h2 id="func-layersfromfiles"><a class="header" href="#func-layersfromfiles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/pull.go#L154">LayersFromFiles</a></a></h2>
-<pre><code class="language-go">func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.ZarfFiles, folder string) ([]ocispec.Descriptor, error)
+<pre><code class="language-go">func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.Files, folder string) ([]ocispec.Descriptor, error)
 </code></pre>
 <p>LayersFromFiles returns the file oci blob layers referenced by annotation.</p>
 <p><a name="LayersFromImages"></a></p>
@@ -272,12 +272,12 @@
 <p>LayersFromImages returns the image blob layers referenced by imageList, selecting from root. fetcher reads image manifests/indexes to walk multi-arch children.</p>
 <p><a name="ReferenceFromMetadata"></a></p>
 <h2 id="func-referencefrommetadata"><a class="header" href="#func-referencefrommetadata">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L34">ReferenceFromMetadata</a></a></h2>
-<pre><code class="language-go">func ReferenceFromMetadata(registryLocation string, pkg distro.ZarfDistro) (registry.Reference, error)
+<pre><code class="language-go">func ReferenceFromMetadata(registryLocation string, pkg distro.Distro) (registry.Reference, error)
 </code></pre>
 <p>ReferenceFromMetadata returns a reference for the given metadata.</p>
 <p><a name="ReferenceFromMetadataWithOptions"></a></p>
 <h2 id="func-referencefrommetadatawithoptions"><a class="header" href="#func-referencefrommetadatawithoptions">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L45">ReferenceFromMetadataWithOptions</a></a></h2>
-<pre><code class="language-go">func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.ZarfDistro, opts ReferenceFromMetadataOptions) (registry.Reference, error)
+<pre><code class="language-go">func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions) (registry.Reference, error)
 </code></pre>
 <p>ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides</p>
 <p><a name="PublishOptions"></a></p>
@@ -319,7 +319,7 @@
 <p>AssembleLayers returns the OCI layer descriptors for the requested components. The include parameter specifies which layer types to return. All layers are included if include is empty and Metadata layers are always included</p>
 <p><a name="Remote.FetchDistroYAML"></a></p>
 <h3 id="func-remote-fetchdistroyaml"><a class="header" href="#func-remote-fetchdistroyaml">func (*Remote) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L51">FetchDistroYAML</a></a></h3>
-<pre><code class="language-go">func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.ZarfDistro, error)
+<pre><code class="language-go">func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.Distro, error)
 </code></pre>
 <p>FetchDistroYAML fetches the distro.yaml file from the remote repository.</p>
 <p><a name="Remote.FetchImagesIndex"></a></p>

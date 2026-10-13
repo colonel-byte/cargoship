@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -192,7 +192,7 @@
 <p>It works offline. The management node is inside the airlock and reaches nothing. A source that needs an API call from the management node is a source that needs a script on the outside anyway, and if a script is being written the script may as well emit the contract.</p>
 <p>The owner of the truth resolves it. Cargoship should read a resolved answer, not reproduce someone else’s resolution. This is the same argument <a href="choice-ansible-module.html">choice-ansible-module</a> makes for letting Ansible resolve its own inventory rather than parsing inventory files in Go: reproducing group_vars, <code>children</code> and precedence would reproduce them wrongly, and the symptom is a node installed in the wrong plane with nothing in between to say so.</p>
 <p>The format is documented and stable. A format that changes under us turns a silent misread into an install against the wrong machines.</p>
-<p>Roles are stated, not guessed. A host’s role has to come from something the operator wrote – a group, a column, a tag, a flag. Inferring it from a hostname pattern is guessing, and <code>ZarfHost.Role</code> is read verbatim everywhere else in this repository precisely because it is not inferable.</p>
+<p>Roles are stated, not guessed. A host’s role has to come from something the operator wrote – a group, a column, a tag, a flag. Inferring it from a hostname pattern is guessing, and <code>Host.Role</code> is read verbatim everywhere else in this repository precisely because it is not inferable.</p>
 <h2 id="the-list-ranked"><a class="header" href="#the-list-ranked">The list, ranked</a></h2>
 <h3 id="1-from-json--the-contract-rather-than-a-source"><a class="header" href="#1-from-json--the-contract-rather-than-a-source">1. <code>from-json</code> – the contract rather than a source</a></h3>
 <p>Publish <code>{groups, hostvars, roleGroups, cluster}</code> as a documented, versioned input shape, read from a file or from stdin. Every other item on this list collapses into “emit this JSON”, which is what keeps the command group at three or four members instead of fifteen. It is also the cheapest thing here: the shape already exists as <code>ansibleinv.Request</code>, and the work is documenting it as an interface other people may target, plus a version field so it can change later without breaking the scripts that targeted it.</p>

@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-284a317a.js"></script>
+        <script src="../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,13 +191,13 @@
 <ul>
 <li><a href="#constants">Constants</a></li>
 <li><a href="#variables">Variables</a></li>
-<li><a href="#CheckTargetHosts">func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error</a></li>
+<li><a href="#CheckTargetHosts">func CheckTargetHosts(hosts cluster.Hosts, targets []string) error</a></li>
 <li><a href="#DryRunNote">func DryRunNote(p Phase) string</a></li>
 <li><a href="#Titles">func Titles(results []PhaseResult) []string</a></li>
 <li><a href="#APTUploadFiles">type APTUploadFiles</a>
 <ul>
 <li><a href="#APTUploadFiles.Explanation">func (p *APTUploadFiles) Explanation() string</a></li>
-<li><a href="#APTUploadFiles.Prepare">func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#APTUploadFiles.Prepare">func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#APTUploadFiles.Run">func (p *APTUploadFiles) Run(ctx context.Context) (err error)</a></li>
 <li><a href="#APTUploadFiles.Title">func (p *APTUploadFiles) Title() string</a></li>
 </ul>
@@ -205,7 +205,7 @@
 <li><a href="#ApplyManifests">type ApplyManifests</a>
 <ul>
 <li><a href="#ApplyManifests.Explanation">func (p *ApplyManifests) Explanation() string</a></li>
-<li><a href="#ApplyManifests.Prepare">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ApplyManifests.Prepare">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#ApplyManifests.Run">func (p *ApplyManifests) Run(ctx context.Context) error</a></li>
 <li><a href="#ApplyManifests.ShouldRun">func (p *ApplyManifests) ShouldRun() bool</a></li>
 <li><a href="#ApplyManifests.Title">func (p *ApplyManifests) Title() string</a></li>
@@ -214,7 +214,7 @@
 <li><a href="#BINUploadFiles">type BINUploadFiles</a>
 <ul>
 <li><a href="#BINUploadFiles.Explanation">func (p *BINUploadFiles) Explanation() string</a></li>
-<li><a href="#BINUploadFiles.Prepare">func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#BINUploadFiles.Prepare">func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#BINUploadFiles.Run">func (p *BINUploadFiles) Run(ctx context.Context) (err error)</a></li>
 <li><a href="#BINUploadFiles.Title">func (p *BINUploadFiles) Title() string</a></li>
 </ul>
@@ -222,7 +222,7 @@
 <li><a href="#ConfigureEngine">type ConfigureEngine</a>
 <ul>
 <li><a href="#ConfigureEngine.Explanation">func (p *ConfigureEngine) Explanation() string</a></li>
-<li><a href="#ConfigureEngine.Prepare">func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ConfigureEngine.Prepare">func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#ConfigureEngine.Run">func (p *ConfigureEngine) Run(ctx context.Context) error</a></li>
 <li><a href="#ConfigureEngine.Title">func (p *ConfigureEngine) Title() string</a></li>
 </ul>
@@ -230,7 +230,7 @@
 <li><a href="#ConfigureFirewall">type ConfigureFirewall</a>
 <ul>
 <li><a href="#ConfigureFirewall.Explanation">func (p *ConfigureFirewall) Explanation() string</a></li>
-<li><a href="#ConfigureFirewall.Prepare">func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#ConfigureFirewall.Prepare">func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#ConfigureFirewall.Run">func (p *ConfigureFirewall) Run(ctx context.Context) error</a></li>
 <li><a href="#ConfigureFirewall.ShouldRun">func (p *ConfigureFirewall) ShouldRun() bool</a></li>
 <li><a href="#ConfigureFirewall.Title">func (p *ConfigureFirewall) Title() string</a></li>
@@ -254,13 +254,13 @@
 </li>
 <li><a href="#DeleteCommon">type DeleteCommon</a>
 <ul>
-<li><a href="#DeleteCommon.Prepare">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#DeleteCommon.Prepare">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 </ul>
 </li>
 <li><a href="#DeleteControllers">type DeleteControllers</a>
 <ul>
 <li><a href="#DeleteControllers.Explanation">func (p *DeleteControllers) Explanation() string</a></li>
-<li><a href="#DeleteControllers.Prepare">func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#DeleteControllers.Prepare">func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#DeleteControllers.Run">func (p *DeleteControllers) Run(ctx context.Context) error</a></li>
 <li><a href="#DeleteControllers.ShouldRun">func (p *DeleteControllers) ShouldRun() bool</a></li>
 <li><a href="#DeleteControllers.Title">func (p *DeleteControllers) Title() string</a></li>
@@ -269,7 +269,7 @@
 <li><a href="#DeleteWorkers">type DeleteWorkers</a>
 <ul>
 <li><a href="#DeleteWorkers.Explanation">func (p *DeleteWorkers) Explanation() string</a></li>
-<li><a href="#DeleteWorkers.Prepare">func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#DeleteWorkers.Prepare">func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#DeleteWorkers.Run">func (p *DeleteWorkers) Run(ctx context.Context) error</a></li>
 <li><a href="#DeleteWorkers.ShouldRun">func (p *DeleteWorkers) ShouldRun() bool</a></li>
 <li><a href="#DeleteWorkers.Title">func (p *DeleteWorkers) Title() string</a></li>
@@ -286,7 +286,7 @@
 <li><a href="#DetectRemovedHosts">type DetectRemovedHosts</a>
 <ul>
 <li><a href="#DetectRemovedHosts.Explanation">func (p *DetectRemovedHosts) Explanation() string</a></li>
-<li><a href="#DetectRemovedHosts.Prepare">func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#DetectRemovedHosts.Prepare">func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#DetectRemovedHosts.ReadOnly">func (p *DetectRemovedHosts) ReadOnly() string</a></li>
 <li><a href="#DetectRemovedHosts.Run">func (p *DetectRemovedHosts) Run(ctx context.Context) error</a></li>
 <li><a href="#DetectRemovedHosts.ShouldRun">func (p *DetectRemovedHosts) ShouldRun() bool</a></li>
@@ -310,7 +310,7 @@
 <li><a href="#EngineConfigSyncController">type EngineConfigSyncController</a>
 <ul>
 <li><a href="#EngineConfigSyncController.Explanation">func (p *EngineConfigSyncController) Explanation() string</a></li>
-<li><a href="#EngineConfigSyncController.Prepare">func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#EngineConfigSyncController.Prepare">func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#EngineConfigSyncController.Run">func (p *EngineConfigSyncController) Run(ctx context.Context) error</a></li>
 <li><a href="#EngineConfigSyncController.Title">func (p *EngineConfigSyncController) Title() string</a></li>
 </ul>
@@ -324,7 +324,7 @@
 <li><a href="#EngineConfigSyncWorker">type EngineConfigSyncWorker</a>
 <ul>
 <li><a href="#EngineConfigSyncWorker.Explanation">func (p *EngineConfigSyncWorker) Explanation() string</a></li>
-<li><a href="#EngineConfigSyncWorker.Prepare">func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#EngineConfigSyncWorker.Prepare">func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#EngineConfigSyncWorker.Run">func (p *EngineConfigSyncWorker) Run(ctx context.Context) error</a></li>
 <li><a href="#EngineConfigSyncWorker.Title">func (p *EngineConfigSyncWorker) Title() string</a></li>
 </ul>
@@ -340,7 +340,7 @@
 <li><a href="#GatherFactsDistro">type GatherFactsDistro</a>
 <ul>
 <li><a href="#GatherFactsDistro.Explanation">func (p *GatherFactsDistro) Explanation() string</a></li>
-<li><a href="#GatherFactsDistro.Prepare">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#GatherFactsDistro.Prepare">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#GatherFactsDistro.ReadOnly">func (p *GatherFactsDistro) ReadOnly() string</a></li>
 <li><a href="#GatherFactsDistro.Run">func (p *GatherFactsDistro) Run(ctx context.Context) (err error)</a></li>
 <li><a href="#GatherFactsDistro.Title">func (p *GatherFactsDistro) Title() string</a></li>
@@ -348,20 +348,20 @@
 </li>
 <li><a href="#GenericPhase">type GenericPhase</a>
 <ul>
-<li><a href="#GenericPhase.GetConfig">func (p *GenericPhase) GetConfig() *cluster.ZarfCluster</a></li>
-<li><a href="#GenericPhase.GetDistro">func (p *GenericPhase) GetDistro() *distro.ZarfDistro</a></li>
-<li><a href="#GenericPhase.Prepare">func (p *GenericPhase) Prepare(c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#GenericPhase.GetConfig">func (p *GenericPhase) GetConfig() *cluster.Cluster</a></li>
+<li><a href="#GenericPhase.GetDistro">func (p *GenericPhase) GetDistro() *distro.Distro</a></li>
+<li><a href="#GenericPhase.Prepare">func (p *GenericPhase) Prepare(c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#GenericPhase.SetManager">func (p *GenericPhase) SetManager(m *Manager)</a></li>
-<li><a href="#GenericPhase.VersionGreater">func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool</a></li>
-<li><a href="#GenericPhase.VersionLess">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool</a></li>
-<li><a href="#GenericPhase.VersionSkewTooGreat">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool</a></li>
+<li><a href="#GenericPhase.VersionGreater">func (p *GenericPhase) VersionGreater(host *cluster.Host, version string) bool</a></li>
+<li><a href="#GenericPhase.VersionLess">func (p *GenericPhase) VersionLess(host *cluster.Host, version string) bool</a></li>
+<li><a href="#GenericPhase.VersionSkewTooGreat">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.Host, target string) bool</a></li>
 <li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
 </ul>
 </li>
 <li><a href="#ImportImages">type ImportImages</a>
 <ul>
 <li><a href="#ImportImages.Explanation">func (p *ImportImages) Explanation() string</a></li>
-<li><a href="#ImportImages.Prepare">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ImportImages.Prepare">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#ImportImages.Run">func (p *ImportImages) Run(ctx context.Context) error</a></li>
 <li><a href="#ImportImages.ShouldRun">func (p *ImportImages) ShouldRun() bool</a></li>
 <li><a href="#ImportImages.Title">func (p *ImportImages) Title() string</a></li>
@@ -370,7 +370,7 @@
 <li><a href="#InitializeControllers">type InitializeControllers</a>
 <ul>
 <li><a href="#InitializeControllers.Explanation">func (p *InitializeControllers) Explanation() string</a></li>
-<li><a href="#InitializeControllers.Prepare">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeControllers.Prepare">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#InitializeControllers.Run">func (p *InitializeControllers) Run(ctx context.Context) error</a></li>
 <li><a href="#InitializeControllers.ShouldRun">func (p *InitializeControllers) ShouldRun() bool</a></li>
 <li><a href="#InitializeControllers.Title">func (p *InitializeControllers) Title() string</a></li>
@@ -379,7 +379,7 @@
 <li><a href="#InitializeWorkers">type InitializeWorkers</a>
 <ul>
 <li><a href="#InitializeWorkers.Explanation">func (p *InitializeWorkers) Explanation() string</a></li>
-<li><a href="#InitializeWorkers.Prepare">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeWorkers.Prepare">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#InitializeWorkers.Run">func (p *InitializeWorkers) Run(ctx context.Context) error</a></li>
 <li><a href="#InitializeWorkers.ShouldRun">func (p *InitializeWorkers) ShouldRun() bool</a></li>
 <li><a href="#InitializeWorkers.Title">func (p *InitializeWorkers) Title() string</a></li>
@@ -390,7 +390,7 @@
 <li><a href="#KubeConfig.Bytes">func (p *KubeConfig) Bytes() ([]byte, error)</a></li>
 <li><a href="#KubeConfig.Config">func (p *KubeConfig) Config() *clientcmdapi.Config</a></li>
 <li><a href="#KubeConfig.Explanation">func (p *KubeConfig) Explanation() string</a></li>
-<li><a href="#KubeConfig.Prepare">func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#KubeConfig.Prepare">func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#KubeConfig.Run">func (p *KubeConfig) Run(_ context.Context) error</a></li>
 <li><a href="#KubeConfig.ShouldRun">func (p *KubeConfig) ShouldRun() bool</a></li>
 <li><a href="#KubeConfig.Title">func (p *KubeConfig) Title() string</a></li>
@@ -399,7 +399,7 @@
 <li><a href="#LabelNodes">type LabelNodes</a>
 <ul>
 <li><a href="#LabelNodes.Explanation">func (p *LabelNodes) Explanation() string</a></li>
-<li><a href="#LabelNodes.Prepare">func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#LabelNodes.Prepare">func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#LabelNodes.Run">func (p *LabelNodes) Run(ctx context.Context) error</a></li>
 <li><a href="#LabelNodes.ShouldRun">func (p *LabelNodes) ShouldRun() bool</a></li>
 <li><a href="#LabelNodes.Title">func (p *LabelNodes) Title() string</a></li>
@@ -410,7 +410,7 @@
 <li><a href="#Lock.Cancel">func (p *Lock) Cancel(_ context.Context)</a></li>
 <li><a href="#Lock.CleanUp">func (p *Lock) CleanUp()</a></li>
 <li><a href="#Lock.Explanation">func (p *Lock) Explanation() string</a></li>
-<li><a href="#Lock.Prepare">func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#Lock.Prepare">func (p *Lock) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#Lock.Run">func (p *Lock) Run(ctx context.Context) error</a></li>
 <li><a href="#Lock.Title">func (p *Lock) Title() string</a></li>
 <li><a href="#Lock.UnlockPhase">func (p *Lock) UnlockPhase() Phase</a></li>
@@ -418,9 +418,9 @@
 </li>
 <li><a href="#Manager">type Manager</a>
 <ul>
-<li><a href="#NewManager">func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error)</a></li>
+<li><a href="#NewManager">func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)</a></li>
 <li><a href="#Manager.AddPhase">func (m *Manager) AddPhase(p …Phase)</a></li>
-<li><a href="#Manager.GetDistroOSFiles">func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles</a></li>
+<li><a href="#Manager.GetDistroOSFiles">func (m *Manager) GetDistroOSFiles() v1alpha1.Files</a></li>
 <li><a href="#Manager.RetryTimeout">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Manager.Run">func (m *Manager) Run(ctx context.Context) error</a></li>
 <li><a href="#Manager.SetPhases">func (m *Manager) SetPhases(p Phases)</a></li>
@@ -437,7 +437,7 @@
 <li><a href="#ModifyHosts">type ModifyHosts</a>
 <ul>
 <li><a href="#ModifyHosts.Explanation">func (p *ModifyHosts) Explanation() string</a></li>
-<li><a href="#ModifyHosts.Prepare">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#ModifyHosts.Prepare">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#ModifyHosts.Run">func (p *ModifyHosts) Run(ctx context.Context) error</a></li>
 <li><a href="#ModifyHosts.ShouldRun">func (p *ModifyHosts) ShouldRun() bool</a></li>
 <li><a href="#ModifyHosts.Title">func (p *ModifyHosts) Title() string</a></li>
@@ -456,7 +456,7 @@
 <li><a href="#PrepareFapolicy">type PrepareFapolicy</a>
 <ul>
 <li><a href="#PrepareFapolicy.Explanation">func (p *PrepareFapolicy) Explanation() string</a></li>
-<li><a href="#PrepareFapolicy.Prepare">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareFapolicy.Prepare">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#PrepareFapolicy.Run">func (p *PrepareFapolicy) Run(ctx context.Context) error</a></li>
 <li><a href="#PrepareFapolicy.ShouldRun">func (p *PrepareFapolicy) ShouldRun() bool</a></li>
 <li><a href="#PrepareFapolicy.Title">func (p *PrepareFapolicy) Title() string</a></li>
@@ -465,7 +465,7 @@
 <li><a href="#PrepareHosts">type PrepareHosts</a>
 <ul>
 <li><a href="#PrepareHosts.Explanation">func (p *PrepareHosts) Explanation() string</a></li>
-<li><a href="#PrepareHosts.Prepare">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareHosts.Prepare">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#PrepareHosts.Run">func (p *PrepareHosts) Run(ctx context.Context) error</a></li>
 <li><a href="#PrepareHosts.Title">func (p *PrepareHosts) Title() string</a></li>
 </ul>
@@ -473,7 +473,7 @@
 <li><a href="#PrepareKernelModules">type PrepareKernelModules</a>
 <ul>
 <li><a href="#PrepareKernelModules.Explanation">func (p *PrepareKernelModules) Explanation() string</a></li>
-<li><a href="#PrepareKernelModules.Prepare">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareKernelModules.Prepare">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#PrepareKernelModules.Run">func (p *PrepareKernelModules) Run(ctx context.Context) error</a></li>
 <li><a href="#PrepareKernelModules.ShouldRun">func (p *PrepareKernelModules) ShouldRun() bool</a></li>
 <li><a href="#PrepareKernelModules.Title">func (p *PrepareKernelModules) Title() string</a></li>
@@ -482,7 +482,7 @@
 <li><a href="#PrepareSelinux">type PrepareSelinux</a>
 <ul>
 <li><a href="#PrepareSelinux.Explanation">func (p *PrepareSelinux) Explanation() string</a></li>
-<li><a href="#PrepareSelinux.Prepare">func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareSelinux.Prepare">func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#PrepareSelinux.Run">func (p *PrepareSelinux) Run(ctx context.Context) error</a></li>
 <li><a href="#PrepareSelinux.ShouldRun">func (p *PrepareSelinux) ShouldRun() bool</a></li>
 <li><a href="#PrepareSelinux.Title">func (p *PrepareSelinux) Title() string</a></li>
@@ -491,7 +491,7 @@
 <li><a href="#PrepareSelinuxPolicy">type PrepareSelinuxPolicy</a>
 <ul>
 <li><a href="#PrepareSelinuxPolicy.Explanation">func (p *PrepareSelinuxPolicy) Explanation() string</a></li>
-<li><a href="#PrepareSelinuxPolicy.Prepare">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareSelinuxPolicy.Prepare">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#PrepareSelinuxPolicy.Run">func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error</a></li>
 <li><a href="#PrepareSelinuxPolicy.ShouldRun">func (p *PrepareSelinuxPolicy) ShouldRun() bool</a></li>
 <li><a href="#PrepareSelinuxPolicy.Title">func (p *PrepareSelinuxPolicy) Title() string</a></li>
@@ -500,7 +500,7 @@
 <li><a href="#RPMUploadFiles">type RPMUploadFiles</a>
 <ul>
 <li><a href="#RPMUploadFiles.Explanation">func (p *RPMUploadFiles) Explanation() string</a></li>
-<li><a href="#RPMUploadFiles.Prepare">func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#RPMUploadFiles.Prepare">func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#RPMUploadFiles.Run">func (p *RPMUploadFiles) Run(ctx context.Context) (err error)</a></li>
 <li><a href="#RPMUploadFiles.Title">func (p *RPMUploadFiles) Title() string</a></li>
 </ul>
@@ -508,7 +508,7 @@
 <li><a href="#ReconfigureSurvivors">type ReconfigureSurvivors</a>
 <ul>
 <li><a href="#ReconfigureSurvivors.Explanation">func (p *ReconfigureSurvivors) Explanation() string</a></li>
-<li><a href="#ReconfigureSurvivors.Prepare">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#ReconfigureSurvivors.Prepare">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#ReconfigureSurvivors.Run">func (p *ReconfigureSurvivors) Run(ctx context.Context) error</a></li>
 <li><a href="#ReconfigureSurvivors.ShouldRun">func (p *ReconfigureSurvivors) ShouldRun() bool</a></li>
 <li><a href="#ReconfigureSurvivors.Title">func (p *ReconfigureSurvivors) Title() string</a></li>
@@ -517,7 +517,7 @@
 <li><a href="#RemoveSelinuxPolicy">type RemoveSelinuxPolicy</a>
 <ul>
 <li><a href="#RemoveSelinuxPolicy.Explanation">func (p *RemoveSelinuxPolicy) Explanation() string</a></li>
-<li><a href="#RemoveSelinuxPolicy.Prepare">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#RemoveSelinuxPolicy.Prepare">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#RemoveSelinuxPolicy.Run">func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error</a></li>
 <li><a href="#RemoveSelinuxPolicy.ShouldRun">func (p *RemoveSelinuxPolicy) ShouldRun() bool</a></li>
 <li><a href="#RemoveSelinuxPolicy.Title">func (p *RemoveSelinuxPolicy) Title() string</a></li>
@@ -541,7 +541,7 @@
 <li><a href="#UninstallEngine">type UninstallEngine</a>
 <ul>
 <li><a href="#UninstallEngine.Explanation">func (p *UninstallEngine) Explanation() string</a></li>
-<li><a href="#UninstallEngine.Prepare">func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#UninstallEngine.Prepare">func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#UninstallEngine.Run">func (p *UninstallEngine) Run(ctx context.Context) error</a></li>
 <li><a href="#UninstallEngine.Title">func (p *UninstallEngine) Title() string</a></li>
 </ul>
@@ -549,7 +549,7 @@
 <li><a href="#Unlock">type Unlock</a>
 <ul>
 <li><a href="#Unlock.Explanation">func (p *Unlock) Explanation() string</a></li>
-<li><a href="#Unlock.Prepare">func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#Unlock.Prepare">func (p *Unlock) Prepare(_ context.Context, c *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#Unlock.Run">func (p *Unlock) Run(ctx context.Context) error</a></li>
 <li><a href="#Unlock.Title">func (p *Unlock) Title() string</a></li>
 </ul>
@@ -557,7 +557,7 @@
 <li><a href="#UpgradeController">type UpgradeController</a>
 <ul>
 <li><a href="#UpgradeController.Explanation">func (p *UpgradeController) Explanation() string</a></li>
-<li><a href="#UpgradeController.Prepare">func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#UpgradeController.Prepare">func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#UpgradeController.Run">func (p *UpgradeController) Run(ctx context.Context) error</a></li>
 <li><a href="#UpgradeController.Title">func (p *UpgradeController) Title() string</a></li>
 </ul>
@@ -570,7 +570,7 @@
 <li><a href="#UpgradeWorkers">type UpgradeWorkers</a>
 <ul>
 <li><a href="#UpgradeWorkers.Explanation">func (p *UpgradeWorkers) Explanation() string</a></li>
-<li><a href="#UpgradeWorkers.Prepare">func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#UpgradeWorkers.Prepare">func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#UpgradeWorkers.Run">func (p *UpgradeWorkers) Run(ctx context.Context) error</a></li>
 <li><a href="#UpgradeWorkers.Title">func (p *UpgradeWorkers) Title() string</a></li>
 </ul>
@@ -578,7 +578,7 @@
 <li><a href="#UploadFiles">type UploadFiles</a>
 <ul>
 <li><a href="#UploadFiles.Explanation">func (p *UploadFiles) Explanation() string</a></li>
-<li><a href="#UploadFiles.Prepare">func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#UploadFiles.Prepare">func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#UploadFiles.Run">func (p *UploadFiles) Run(ctx context.Context) error</a></li>
 <li><a href="#UploadFiles.ShouldRun">func (p *UploadFiles) ShouldRun() bool</a></li>
 <li><a href="#UploadFiles.Title">func (p *UploadFiles) Title() string</a></li>
@@ -587,7 +587,7 @@
 <li><a href="#UploadFilesCommon">type UploadFilesCommon</a>
 <ul>
 <li><a href="#UploadFilesCommon.CleanUp">func (p *UploadFilesCommon) CleanUp(ctx context.Context)</a></li>
-<li><a href="#UploadFilesCommon.Prepare">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#UploadFilesCommon.Prepare">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error</a></li>
 <li><a href="#UploadFilesCommon.Run">func (p *UploadFilesCommon) Run(ctx context.Context) (err error)</a></li>
 <li><a href="#UploadFilesCommon.ShouldRun">func (p *UploadFilesCommon) ShouldRun() bool</a></li>
 </ul>
@@ -687,7 +687,7 @@
 </code></pre>
 <p><a name="CheckTargetHosts"></a></p>
 <h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L302">CheckTargetHosts</a></a></h2>
-<pre><code class="language-go">func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error
+<pre><code class="language-go">func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
 </code></pre>
 <p>CheckTargetHosts reports a target that names no host in the configuration.</p>
 <p>A target nobody matches is the quiet failure this whole feature could have: the filter returns an empty set, every phase reports nothing to do, and the run succeeds having removed nothing. A typo in a hostname is the ordinary way to get there.</p>
@@ -715,7 +715,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="APTUploadFiles.Prepare"></a></p>
 <h3 id="func-aptuploadfiles-prepare"><a class="header" href="#func-aptuploadfiles-prepare">func (*APTUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L43">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="APTUploadFiles.Run"></a></p>
@@ -744,7 +744,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ApplyManifests.Prepare"></a></p>
 <h3 id="func-applymanifests-prepare"><a class="header" href="#func-applymanifests-prepare">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L60">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ApplyManifests.Run"></a></p>
@@ -777,7 +777,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="BINUploadFiles.Prepare"></a></p>
 <h3 id="func-binuploadfiles-prepare"><a class="header" href="#func-binuploadfiles-prepare">func (*BINUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/59_bin_install.go#L51">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="BINUploadFiles.Run"></a></p>
@@ -809,7 +809,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ConfigureEngine.Prepare"></a></p>
 <h3 id="func-configureengine-prepare"><a class="header" href="#func-configureengine-prepare">func (*ConfigureEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/60_configure_engine.go#L45">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ConfigureEngine.Run"></a></p>
@@ -839,7 +839,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ConfigureFirewall.Prepare"></a></p>
 <h3 id="func-configurefirewall-prepare"><a class="header" href="#func-configurefirewall-prepare">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L61">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ConfigureFirewall.Run"></a></p>
@@ -924,7 +924,7 @@
 </code></pre>
 <p><a name="DeleteCommon.Prepare"></a></p>
 <h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L88">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteControllers"></a></p>
@@ -943,7 +943,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="DeleteControllers.Prepare"></a></p>
 <h3 id="func-deletecontrollers-prepare"><a class="header" href="#func-deletecontrollers-prepare">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L55">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteControllers.Run"></a></p>
@@ -978,7 +978,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="DeleteWorkers.Prepare"></a></p>
 <h3 id="func-deleteworkers-prepare"><a class="header" href="#func-deleteworkers-prepare">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L55">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteWorkers.Run"></a></p>
@@ -1046,7 +1046,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="DetectRemovedHosts.Prepare"></a></p>
 <h3 id="func-detectremovedhosts-prepare"><a class="header" href="#func-detectremovedhosts-prepare">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L102">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase.</p>
 <p>The leader is any host in the config already running the controller service, which is the same way the label and delete phases find one. Nothing is running on a first install, so there is no leader, and ShouldRun turns the phase off: a cluster that does not exist yet cannot have had a host removed from it.</p>
@@ -1140,7 +1140,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="EngineConfigSyncController.Prepare"></a></p>
 <h3 id="func-engineconfigsynccontroller-prepare"><a class="header" href="#func-engineconfigsynccontroller-prepare">func (*EngineConfigSyncController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/71_engine_config_sync_controller.go#L42">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="EngineConfigSyncController.Run"></a></p>
@@ -1190,7 +1190,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="EngineConfigSyncWorker.Prepare"></a></p>
 <h3 id="func-engineconfigsyncworker-prepare"><a class="header" href="#func-engineconfigsyncworker-prepare">func (*EngineConfigSyncWorker) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/72_engine_config_sync_worker.go#L43">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="EngineConfigSyncWorker.Run"></a></p>
@@ -1251,7 +1251,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="GatherFactsDistro.Prepare"></a></p>
 <h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L70">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="GatherFactsDistro.ReadOnly"></a></p>
@@ -1278,17 +1278,17 @@
 </code></pre>
 <p><a name="GenericPhase.GetConfig"></a></p>
 <h3 id="func-genericphase-getconfig"><a class="header" href="#func-genericphase-getconfig">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L59">GetConfig</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) GetConfig() *cluster.ZarfCluster
+<pre><code class="language-go">func (p *GenericPhase) GetConfig() *cluster.Cluster
 </code></pre>
 <p>GetConfig is an accessor to phase Config</p>
 <p><a name="GenericPhase.GetDistro"></a></p>
 <h3 id="func-genericphase-getdistro"><a class="header" href="#func-genericphase-getdistro">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L64">GetDistro</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) GetDistro() *distro.ZarfDistro
+<pre><code class="language-go">func (p *GenericPhase) GetDistro() *distro.Distro
 </code></pre>
 <p>GetDistro is an accessor to phase Distro</p>
 <p><a name="GenericPhase.Prepare"></a></p>
 <h3 id="func-genericphase-prepare"><a class="header" href="#func-genericphase-prepare">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L69">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) Prepare(c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *GenericPhase) Prepare(c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="GenericPhase.SetManager"></a></p>
@@ -1298,17 +1298,17 @@
 <p>SetManager adds a reference to the phase manager</p>
 <p><a name="GenericPhase.VersionGreater"></a></p>
 <h3 id="func-genericphase-versiongreater"><a class="header" href="#func-genericphase-versiongreater">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L189">VersionGreater</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool
+<pre><code class="language-go">func (p *GenericPhase) VersionGreater(host *cluster.Host, version string) bool
 </code></pre>
 <p>VersionGreater if host version is greater then the distro version</p>
 <p><a name="GenericPhase.VersionLess"></a></p>
 <h3 id="func-genericphase-versionless"><a class="header" href="#func-genericphase-versionless">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L176">VersionLess</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool
+<pre><code class="language-go">func (p *GenericPhase) VersionLess(host *cluster.Host, version string) bool
 </code></pre>
 <p>VersionLess if host version is less then the distro version</p>
 <p><a name="GenericPhase.VersionSkewTooGreat"></a></p>
 <h3 id="func-genericphase-versionskewtoogreat"><a class="header" href="#func-genericphase-versionskewtoogreat">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L205">VersionSkewTooGreat</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool
+<pre><code class="language-go">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.Host, target string) bool
 </code></pre>
 <p>VersionSkewTooGreat reports whether host’s running version is more than one minor version behind target. kubeadm’s own upgrade path refuses to skip a minor version, and a two-minor jump fails partway through the control plane rather than up front, so this catches it before a real run starts one. UnknownVersion (no engine detected yet, a fresh install) never counts as skew.</p>
 <p><a name="GenericPhase.Wet"></a></p>
@@ -1332,7 +1332,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ImportImages.Prepare"></a></p>
 <h3 id="func-importimages-prepare"><a class="header" href="#func-importimages-prepare">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L47">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ImportImages.Run"></a></p>
@@ -1366,7 +1366,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeControllers.Prepare"></a></p>
 <h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L59">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeControllers.Run"></a></p>
@@ -1402,7 +1402,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeWorkers.Prepare"></a></p>
 <h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L69">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeWorkers.Run"></a></p>
@@ -1458,7 +1458,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="KubeConfig.Prepare"></a></p>
 <h3 id="func-kubeconfig-prepare"><a class="header" href="#func-kubeconfig-prepare">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L74">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="KubeConfig.Run"></a></p>
@@ -1494,7 +1494,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="LabelNodes.Prepare"></a></p>
 <h3 id="func-labelnodes-prepare"><a class="header" href="#func-labelnodes-prepare">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L59">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="LabelNodes.Run"></a></p>
@@ -1537,7 +1537,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="Lock.Prepare"></a></p>
 <h3 id="func-lock-prepare"><a class="header" href="#func-lock-prepare">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L47">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *Lock) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="Lock.Run"></a></p>
@@ -1559,8 +1559,8 @@
 <h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L377-L398">Manager</a></a></h2>
 <p>Manager executes phases to construct the cluster</p>
 <pre><code class="language-go">type Manager struct {
-    Config *cluster.ZarfCluster
-    Distro *distro.ZarfDistro
+    Config *cluster.Cluster
+    Distro *distro.Distro
     // Values is the configuration the package ships with, merged with the
     // overrides in the cluster inventory and checked against the package's
     // values schema. Phases read it instead of re-reading either source, so
@@ -1583,7 +1583,7 @@
 </code></pre>
 <p><a name="NewManager"></a></p>
 <h3 id="func-newmanager"><a class="header" href="#func-newmanager">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L411">NewManager</a></a></h3>
-<pre><code class="language-go">func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error)
+<pre><code class="language-go">func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)
 </code></pre>
 <p>NewManager creates a new Manager</p>
 <p><a name="Manager.AddPhase"></a></p>
@@ -1593,7 +1593,7 @@
 <p>AddPhase adds a Phase to Manager</p>
 <p><a name="Manager.GetDistroOSFiles"></a></p>
 <h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L446">GetDistroOSFiles</a></a></h3>
-<pre><code class="language-go">func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles
+<pre><code class="language-go">func (m *Manager) GetDistroOSFiles() v1alpha1.Files
 </code></pre>
 <p>GetDistroOSFiles returns the ZarfFiles for a distro</p>
 <p><a name="Manager.RetryTimeout"></a></p>
@@ -1664,7 +1664,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ModifyHosts.Prepare"></a></p>
 <h3 id="func-modifyhosts-prepare"><a class="header" href="#func-modifyhosts-prepare">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L50">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ModifyHosts.Run"></a></p>
@@ -1745,7 +1745,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareFapolicy.Prepare"></a></p>
 <h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareFapolicy.Run"></a></p>
@@ -1778,7 +1778,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareHosts.Prepare"></a></p>
 <h3 id="func-preparehosts-prepare"><a class="header" href="#func-preparehosts-prepare">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L62">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareHosts.Run"></a></p>
@@ -1807,7 +1807,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareKernelModules.Prepare"></a></p>
 <h3 id="func-preparekernelmodules-prepare"><a class="header" href="#func-preparekernelmodules-prepare">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L44">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareKernelModules.Run"></a></p>
@@ -1840,7 +1840,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareSelinux.Prepare"></a></p>
 <h3 id="func-prepareselinux-prepare"><a class="header" href="#func-prepareselinux-prepare">func (*PrepareSelinux) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L38">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareSelinux.Run"></a></p>
@@ -1873,7 +1873,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareSelinuxPolicy.Prepare"></a></p>
 <h3 id="func-prepareselinuxpolicy-prepare"><a class="header" href="#func-prepareselinuxpolicy-prepare">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareSelinuxPolicy.Run"></a></p>
@@ -1905,7 +1905,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="RPMUploadFiles.Prepare"></a></p>
 <h3 id="func-rpmuploadfiles-prepare"><a class="header" href="#func-rpmuploadfiles-prepare">func (*RPMUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L43">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="RPMUploadFiles.Run"></a></p>
@@ -1938,7 +1938,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ReconfigureSurvivors.Prepare"></a></p>
 <h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L76">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ReconfigureSurvivors.Run"></a></p>
@@ -1972,7 +1972,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="RemoveSelinuxPolicy.Prepare"></a></p>
 <h3 id="func-removeselinuxpolicy-prepare"><a class="header" href="#func-removeselinuxpolicy-prepare">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="RemoveSelinuxPolicy.Run"></a></p>
@@ -2069,7 +2069,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="UninstallEngine.Prepare"></a></p>
 <h3 id="func-uninstallengine-prepare"><a class="header" href="#func-uninstallengine-prepare">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L64">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UninstallEngine.Run"></a></p>
@@ -2097,7 +2097,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="Unlock.Prepare"></a></p>
 <h3 id="func-unlock-prepare"><a class="header" href="#func-unlock-prepare">func (*Unlock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/92_unlock.go#L38">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *Unlock) Prepare(_ context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="Unlock.Run"></a></p>
@@ -2124,7 +2124,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="UpgradeController.Prepare"></a></p>
 <h3 id="func-upgradecontroller-prepare"><a class="header" href="#func-upgradecontroller-prepare">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L47">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UpgradeController.Run"></a></p>
@@ -2166,7 +2166,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="UpgradeWorkers.Prepare"></a></p>
 <h3 id="func-upgradeworkers-prepare"><a class="header" href="#func-upgradeworkers-prepare">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L48">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UpgradeWorkers.Run"></a></p>
@@ -2194,7 +2194,7 @@
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="UploadFiles.Prepare"></a></p>
 <h3 id="func-uploadfiles-prepare"><a class="header" href="#func-uploadfiles-prepare">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L85">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UploadFiles.Run"></a></p>
@@ -2227,7 +2227,7 @@
 <p>CleanUp the phase</p>
 <p><a name="UploadFilesCommon.Prepare"></a></p>
 <h3 id="func-uploadfilescommon-prepare"><a class="header" href="#func-uploadfilescommon-prepare">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L66">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<pre><code class="language-go">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UploadFilesCommon.Run"></a></p>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,7 +193,7 @@ func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponent
 func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOptions) error
 </code></pre>
 <p>The v1alpha1 types still exist, so nothing in cargoship stopped compiling for lack of a type. What broke is the handoff: cargoship holds v1alpha1 actions and <code>Run</code> now takes <code>api.Action</code>.</p>
-<p>cargoship holds v1alpha1 actions because its own package schema embeds them. <code>ZarfDistroActions.OnCreate</code> in <a href="../golang/api/zarf.dev/v1alpha1/distro.html"><code>api/zarf.dev/v1alpha1/distro/spec.go</code></a> is a <code>zarf.ZarfComponentActionSet</code>, which is what puts <code>mute</code>, <code>maxRetries</code>, <code>setVariable</code> and the rest into <code>schema/zarf-v1alpha1-distro-package-schema.json</code>. Retyping that field onto <code>api.Action</code> would convert the problem into a schema change – <code>mute</code> becomes <code>silent</code>, <code>maxRetries</code> becomes <code>retries</code>, <code>wait.cluster.condition</code> stops being a string – and every <code>distro.yaml</code> an operator has written would need rewriting. A dependency bump is not where that happens.</p>
+<p>cargoship holds v1alpha1 actions because its own package schema embeds them. <code>Actions.OnCreate</code> in <a href="../golang/api/colonel-byte.dev/v1alpha1/distro.html"><code>api/colonel-byte.dev/v1alpha1/distro/spec.go</code></a> is a <code>zarf.ZarfComponentActionSet</code>, which is what puts <code>mute</code>, <code>maxRetries</code>, <code>setVariable</code> and the rest into <code>schema/distro-v1alpha1-schema.json</code>. Retyping that field onto <code>api.Action</code> would convert the problem into a schema change – <code>mute</code> becomes <code>silent</code>, <code>maxRetries</code> becomes <code>retries</code>, <code>wait.cluster.condition</code> stops being a string – and every <code>distro.yaml</code> an operator has written would need rewriting. A dependency bump is not where that happens.</p>
 <p>So the conversion has to live at the call site, and it has to be the same conversion zarf performs on a package it loaded itself. Anything else means cargoship’s actions behave differently from zarf’s for the same YAML.</p>
 <h2 id="why-a-whole-package-for-one-action-set"><a class="header" href="#why-a-whole-package-for-one-action-set">Why a whole package, for one action set</a></h2>
 <p>zarf’s action converters are in <code>src/internal/api/v1alpha1</code>. <code>actionSetToGeneric</code>, <code>actionToGeneric</code> and <code>waitToGeneric</code> are exactly what is needed here and none of them are reachable: Go’s internal-package rule is enforced by the compiler, not by convention. The only exported door through that boundary is <a href="https://github.com/zarf-dev/zarf/blob/main/src/api/convert/convert.go"><code>src/api/convert</code></a>, and it converts packages.</p>

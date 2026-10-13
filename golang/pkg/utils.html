@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-284a317a.js"></script>
+        <script src="../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,9 +195,9 @@
 <li><a href="#DownloadToCache">func DownloadToCache(ctx context.Context, url, relPath string, expectedSha256 …string) (string, error)</a></li>
 <li><a href="#DownloadToFile">func DownloadToFile(ctx context.Context, src, dst string) (err error)</a></li>
 <li><a href="#DownloadToFileWithChecksum">func DownloadToFileWithChecksum(ctx context.Context, src, dst, checksum, cacheBaseName string) (err error)</a></li>
-<li><a href="#FilterDebianLinux">func FilterDebianLinux(h *cluster.ZarfHost) bool</a></li>
-<li><a href="#FilterEngineAlreadyPopulated">func FilterEngineAlreadyPopulated(h *cluster.ZarfHost) bool</a></li>
-<li><a href="#FilterEnterpriseLinux">func FilterEnterpriseLinux(h *cluster.ZarfHost) bool</a></li>
+<li><a href="#FilterDebianLinux">func FilterDebianLinux(h *cluster.Host) bool</a></li>
+<li><a href="#FilterEngineAlreadyPopulated">func FilterEngineAlreadyPopulated(h *cluster.Host) bool</a></li>
+<li><a href="#FilterEnterpriseLinux">func FilterEnterpriseLinux(h *cluster.Host) bool</a></li>
 <li><a href="#IdentifySource">func IdentifySource(src string) (string, error)</a></li>
 <li><a href="#InvalidPath">func InvalidPath(path string) bool</a></li>
 <li><a href="#IsDebianLinux">func IsDebianLinux(con os.Configurer) bool</a></li>
@@ -246,17 +246,17 @@
 <p>DownloadToFileWithChecksum downloads src to dst, using checksum (if non-empty) for validation and caching. checksum SHOULD come from structured config (e.g. ZarfFile.Shasum) rather than being encoded into src.</p>
 <p><a name="FilterDebianLinux"></a></p>
 <h2 id="func-filterdebianlinux"><a class="header" href="#func-filterdebianlinux">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L40">FilterDebianLinux</a></a></h2>
-<pre><code class="language-go">func FilterDebianLinux(h *cluster.ZarfHost) bool
+<pre><code class="language-go">func FilterDebianLinux(h *cluster.Host) bool
 </code></pre>
 <p>FilterDebianLinux is a function used to filter whether a host is a Debian based OS</p>
 <p><a name="FilterEngineAlreadyPopulated"></a></p>
 <h2 id="func-filterenginealreadypopulated"><a class="header" href="#func-filterenginealreadypopulated">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L25">FilterEngineAlreadyPopulated</a></a></h2>
-<pre><code class="language-go">func FilterEngineAlreadyPopulated(h *cluster.ZarfHost) bool
+<pre><code class="language-go">func FilterEngineAlreadyPopulated(h *cluster.Host) bool
 </code></pre>
 <p>FilterEngineAlreadyPopulated is a function used to filter whether a host already has distro files populated</p>
 <p><a name="FilterEnterpriseLinux"></a></p>
 <h2 id="func-filterenterpriselinux"><a class="header" href="#func-filterenterpriselinux">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L55">FilterEnterpriseLinux</a></a></h2>
-<pre><code class="language-go">func FilterEnterpriseLinux(h *cluster.ZarfHost) bool
+<pre><code class="language-go">func FilterEnterpriseLinux(h *cluster.Host) bool
 </code></pre>
 <p>FilterEnterpriseLinux is a function used to filter whether a host is an Enterprise Linux OS</p>
 <p><a name="IdentifySource"></a></p>

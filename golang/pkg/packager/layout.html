@@ -37,10 +37,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-284a317a.js"></script>
+        <script src="../../../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,10 +191,10 @@
 <ul>
 <li><a href="#constants">Constants</a></li>
 <li><a href="#variables">Variables</a></li>
-<li><a href="#AnnotationsFromMetadata">func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string</a></li>
+<li><a href="#AnnotationsFromMetadata">func AnnotationsFromMetadata(metadata distro.Metadata) map[string]string</a></li>
 <li><a href="#IsCleanPath">func IsCleanPath(s string) bool</a></li>
 <li><a href="#IsContainedPath">func IsContainedPath(s string) bool</a></li>
-<li><a href="#LoadValues">func LoadValues(ctx context.Context, dirPath string, vals distro.ZarfDistroValues, overrides …map[string]any) (map[string]any, error)</a></li>
+<li><a href="#LoadValues">func LoadValues(ctx context.Context, dirPath string, vals distro.Values, overrides …map[string]any) (map[string]any, error)</a></li>
 <li><a href="#ClusterPath">type ClusterPath</a>
 <ul>
 <li><a href="#ResolveClusterPath">func ResolveClusterPath(path string) (ClusterPath, error)</a></li>
@@ -209,7 +209,7 @@
 <ul>
 <li><a href="#LoadFromDir">func LoadFromDir(ctx context.Context, dirPath string, opts DistroLayoutOptions) (*DistroLayout, error)</a></li>
 <li><a href="#LoadFromTar">func LoadFromTar(ctx context.Context, tarPath string, opts DistroLayoutOptions) (*DistroLayout, error)</a></li>
-<li><a href="#NewDistroLayout">func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout</a></li>
+<li><a href="#NewDistroLayout">func NewDistroLayout(dir string, distro v1alpha1.Distro) *DistroLayout</a></li>
 <li><a href="#DistroLayout.ApplyValues">func (d *DistroLayout) ApplyValues(values map[string]any) error</a></li>
 <li><a href="#DistroLayout.Archive">func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (string, error)</a></li>
 <li><a href="#DistroLayout.Cleanup">func (d *DistroLayout) Cleanup() error</a></li>
@@ -261,7 +261,7 @@
 </code></pre>
 <p><a name="AnnotationsFromMetadata"></a></p>
 <h2 id="func-annotationsfrommetadata"><a class="header" href="#func-annotationsfrommetadata">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/oci.go#L71">AnnotationsFromMetadata</a></a></h2>
-<pre><code class="language-go">func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string
+<pre><code class="language-go">func AnnotationsFromMetadata(metadata distro.Metadata) map[string]string
 </code></pre>
 <p>AnnotationsFromMetadata extracts OCI manifest annotations from Zarf package metadata.</p>
 <p><a name="IsCleanPath"></a></p>
@@ -276,7 +276,7 @@
 <p>IsContainedPath returns true if s is a relative path that stays inside the directory it is resolved against. Unlike IsCleanPath it allows separators, since the paths it guards name files in nested package directories.</p>
 <p><a name="LoadValues"></a></p>
 <h2 id="func-loadvalues"><a class="header" href="#func-loadvalues">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L268">LoadValues</a></a></h2>
-<pre><code class="language-go">func LoadValues(ctx context.Context, dirPath string, vals distro.ZarfDistroValues, overrides ...map[string]any) (map[string]any, error)
+<pre><code class="language-go">func LoadValues(ctx context.Context, dirPath string, vals distro.Values, overrides ...map[string]any) (map[string]any, error)
 </code></pre>
 <p>LoadValues merges the values files a package ships with, in order, then the given overrides, and checks the result against the package’s values schema.</p>
 <p>The file paths are taken from the package’s own distro.yaml, so they are resolved against dirPath and validated by validateDistroPaths before they get here. Overrides come from outside the package - a cluster inventory, say - so they are merged before the schema check, not after: an override that breaks the schema has to fail as loudly as a bad values file would.</p>
@@ -309,7 +309,7 @@
 <h2 id="type-distrolayout"><a class="header" href="#type-distrolayout">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L40-L45">DistroLayout</a></a></h2>
 <p>DistroLayout struct</p>
 <pre><code class="language-go">type DistroLayout struct {
-    Distro distro.ZarfDistro
+    Distro distro.Distro
     // contains filtered or unexported fields
 }
 </code></pre>
@@ -325,7 +325,7 @@
 <p>LoadFromTar unpacks the given archive (any compress/format) and loads it.</p>
 <p><a name="NewDistroLayout"></a></p>
 <h3 id="func-newdistrolayout"><a class="header" href="#func-newdistrolayout">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/distro.go#L40">NewDistroLayout</a></a></h3>
-<pre><code class="language-go">func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout
+<pre><code class="language-go">func NewDistroLayout(dir string, distro v1alpha1.Distro) *DistroLayout
 </code></pre>
 <p>NewDistroLayout returns an DistroLayout object</p>
 <p><a name="DistroLayout.ApplyValues"></a></p>

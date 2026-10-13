@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -304,7 +304,7 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <h2 id="gotchas"><a class="header" href="#gotchas">Gotchas</a></h2>
 <ul>
 <li><strong>A target whose oracle is regenerated per run will disagree with the cached corpus.</strong> Vault ciphertext is salted, so a value encrypted now does not equal the same value encrypted in the run that produced the corpus entry. State the property (<code>cluster.IsVaultEncrypted(blob)</code>) rather than comparing against a freshly computed ciphertext.</li>
-<li><strong>Reading a single YAML path is not the same as decoding the document.</strong> <code>goyaml.Path.Read</code> drops the trailing newline of a clipped block scalar where <code>goyaml.Unmarshal</code> keeps it, which fails a PEM round trip for a reason that has nothing to do with the code under test. Decode into <code>cluster.ZarfCluster</code>, which is also what an apply does.</li>
+<li><strong>Reading a single YAML path is not the same as decoding the document.</strong> <code>goyaml.Path.Read</code> drops the trailing newline of a clipped block scalar where <code>goyaml.Unmarshal</code> keeps it, which fails a PEM round trip for a reason that has nothing to do with the code under test. Decode into <code>cluster.Cluster</code>, which is also what an apply does.</li>
 <li><strong>A failing seed stops the run before the fuzzing starts.</strong> <code>failure while testing seed corpus entry</code> means the target is red on input it was given, not on input it found. Fix that first; until it is fixed the target is not fuzzing at all.</li>
 <li><strong>A target that varies the document shape has to vary it the way a real file does.</strong> <code>blockScalar</code> in <code>vault_document_fuzz_test.go</code> takes a chomp indicator because the TLS CA neighbour is a PEM block that keeps its trailing newline; rendering it with <code>|-</code> strips that newline and fails the neighbour assertion for a reason that has nothing to do with the splice.</li>
 <li><strong>Line endings are deliberately not one of the shape knobs.</strong> A document saved with CRLF is one the splice mishandles today: <code>DecryptAtPath</code> refuses a multi-line value in such a document, and <code>spliceScalar</code> writes bare line feeds into it when it does splice one. Fuzzing that axis reports the same known defect on every input rather than finding a new one. Put the knob back once the splice carries the document’s own line ending.</li>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,8 +193,8 @@ CARGOSHIP_E2E_INVENTORY=$PWD/my-fleet.yaml \
 <p><strong>It changes the hosts it is given, and it does not change them back.</strong> The walk installs an engine, rewrites <code>/etc/hosts</code>, configures the firewall, writes sysctl and fapolicyd files, and installs packages. Nothing is torn down on the way out – the suite did not create these machines, so it will not destroy them, and that cuts both ways. Use hosts you are willing to lose.</p>
 <h2 id="the-document"><a class="header" href="#the-document">The document</a></h2>
 <p>The same <code>ZarfCluster</code> document <code>cargoship apply --config</code> takes. It is read through the loader the CLI uses, so anything cargoship accepts is accepted here and anything it rejects fails before a host is touched.</p>
-<pre><code class="language-yaml">apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+<pre><code class="language-yaml">apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: my-fleet
 spec:

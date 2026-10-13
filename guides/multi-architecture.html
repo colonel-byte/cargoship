@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,8 +186,8 @@
 <p>A distro package normally targets one CPU architecture. A package can instead target several, so that one artifact installs a cluster whose control-plane and worker hosts do not all run the same architecture. This guide covers declaring the architectures, selecting files per architecture, and how such a package is built, published, pulled, and applied.</p>
 <h2 id="declaring-architectures"><a class="header" href="#declaring-architectures">Declaring Architectures</a></h2>
 <p><code>metadata.architectures</code> lists every architecture the package targets:</p>
-<pre><code class="language-yaml">apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+<pre><code class="language-yaml">apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: rancher-k3s-multi
   version: 1.36.4-k3s1

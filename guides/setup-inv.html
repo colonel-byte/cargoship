@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a6a3d2f8.js";
+            window.path_to_searchindex_js = "../searchindex-717151c9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-284a317a.js"></script>
+        <script src="../toc-7fc8444f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,8 +187,8 @@
 <h2 id="basic-structure"><a class="header" href="#basic-structure">Basic Structure</a></h2>
 <p>A basic inventory file defines the cluster’s metadata, global configuration, profiles, and individual target hosts. Start with the following template:</p>
 <pre><code class="language-yaml">---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-cluster-schema.json
-kind: ZarfCluster
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/cluster-v1alpha1-schema.json
+kind: Cluster
 metadata:
   name: bubbles
 </code></pre>
@@ -196,12 +196,12 @@ metadata:
 <h2 id="editor-support"><a class="header" href="#editor-support">Editor Support</a></h2>
 <p>The <code>yaml-language-server</code> comment on the first line is what makes an editor complete and check the file as you write it. The URL above reads the schema from GitHub’s default branch, which is convenient and wrong in two situations: an air-gapped machine cannot fetch it at all, and <code>yaml-language-server</code> says nothing when a fetch fails, so the file silently stops being checked; and a machine that can fetch it is checking against unreleased <code>main</code> rather than the release it is running.</p>
 <p><code>cargoship schema</code> writes the schema out of the binary, so it is the schema that build validates against and it needs no network:</p>
-<pre><code class="language-sh">cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+<pre><code class="language-sh">cargoship schema inventory -o ./cluster-v1alpha1-schema.json
 </code></pre>
 <p>Then point the inventory at the local copy:</p>
 <pre><code class="language-yaml">---
-# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
-kind: ZarfCluster
+# yaml-language-server: $schema=./cluster-v1alpha1-schema.json
+kind: Cluster
 metadata:
   name: bubbles
 </code></pre>
