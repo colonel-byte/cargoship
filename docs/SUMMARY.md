@@ -107,9 +107,9 @@
 # Golang
 
 - [api](golang/api.md)
-  - [v1alpha1](golang/api/zarf.dev/v1alpha1.md)
-    - [cluster](golang/api/zarf.dev/v1alpha1/cluster.md)
-    - [distro](golang/api/zarf.dev/v1alpha1/distro.md)
+  - [v1alpha1](golang/api/colonel-byte.dev/v1alpha1.md)
+    - [cluster](golang/api/colonel-byte.dev/v1alpha1/cluster.md)
+    - [distro](golang/api/colonel-byte.dev/v1alpha1/distro.md)
 - [action](golang/pkg/action.md)
 - [coci](golang/pkg/coci.md)
   - [layers](golang/pkg/coci/layers.md)

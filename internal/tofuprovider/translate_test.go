@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 )
 
 // threeHosts is a configuration whose controller is not written first, which is what the ordering

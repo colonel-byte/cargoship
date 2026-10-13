@@ -969,7 +969,7 @@
       "type": "array"
     }
   },
-  "$id": "https://github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro/zarf-distro",
+  "$id": "https://github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro/zarf-distro",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "is the root object of a distro package configuration document.",

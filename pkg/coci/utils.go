@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"oras.land/oras-go/v2/registry"
 )

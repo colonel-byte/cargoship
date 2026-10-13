@@ -3,7 +3,7 @@
 # cluster
 
 ```go
-import "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+import "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 ```
 
 Package cluster defines the API types for a cluster configuration.
@@ -175,7 +175,7 @@ var ErrNotConnected = errors.New("host is not connected")
 ```
 
 <a name="IsAgeEncrypted"></a>
-## func [IsAgeEncrypted](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L387>)
+## func [IsAgeEncrypted](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L387>)
 
 ```go
 func IsAgeEncrypted(value string) bool
@@ -184,7 +184,7 @@ func IsAgeEncrypted(value string) bool
 IsAgeEncrypted reports whether value is age ciphertext rather than a plain value.
 
 <a name="IsEncrypted"></a>
-## func [IsEncrypted](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L396>)
+## func [IsEncrypted](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L396>)
 
 ```go
 func IsEncrypted(value string) bool
@@ -195,7 +195,7 @@ IsEncrypted reports whether value is ciphertext in either of the formats cargosh
 A configuration can hold both: the two headers tell them apart, so nothing has to be told which format a document uses, and a document part\-way through a migration between them applies the same as one that is not.
 
 <a name="IsVaultEncrypted"></a>
-## func [IsVaultEncrypted](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L373>)
+## func [IsVaultEncrypted](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L373>)
 
 ```go
 func IsVaultEncrypted(value string) bool
@@ -204,7 +204,7 @@ func IsVaultEncrypted(value string) bool
 IsVaultEncrypted reports whether value is Ansible Vault ciphertext rather than a plain value.
 
 <a name="ParseConcurrency"></a>
-## func [ParseConcurrency](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L154>)
+## func [ParseConcurrency](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L154>)
 
 ```go
 func ParseConcurrency(value string, total int) (int, error)
@@ -213,7 +213,7 @@ func ParseConcurrency(value string, total int) (int, error)
 ParseConcurrency parses a concurrency spec \(a fixed count like "1", or a percentage like "25%"\) against total, the number of hosts in the batch being sized. A fixed count is used as\-is; 0 or empty means unlimited. A percentage is scaled against total, rounded up, and clamped to a minimum of 1 so a low percentage never collapses to 0, which would otherwise be indistinguishable from "unlimited".
 
 <a name="ValidateRegistries"></a>
-## func [ValidateRegistries](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L323>)
+## func [ValidateRegistries](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L323>)
 
 ```go
 func ValidateRegistries(registries []ZarfClusterRegistries) error
@@ -224,7 +224,7 @@ ValidateRegistries validates every registry entry, and rejects a set of entries 
 Two entries naming the same registry collide on the mirror they define for it, and two entries resolving to the same host \-\- which several registries proxied through one mirror legitimately do \-\- collide on the credentials and TLS settings written for that host. In both cases the last entry wins and the earlier one silently does nothing, so the conflict is reported here instead. Entries that resolve to the same host with identical settings are left alone: there is nothing to lose between them.
 
 <a name="HostServices"></a>
-## type [HostServices](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L360-L366>)
+## type [HostServices](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L360-L366>)
 
 HostServices is the init system surface a host exposes. A real host satisfies it through its rig connection; SetServices substitutes another implementation, which is how the distro modules and phases are exercised without a machine to run against.
 
@@ -239,7 +239,7 @@ type HostServices interface {
 ```
 
 <a name="ZarfCluster"></a>
-## type [ZarfCluster](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L39-L50>)
+## type [ZarfCluster](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L39-L50>)
 
 ZarfCluster is the root object of a cluster configuration document.
 
@@ -259,7 +259,7 @@ type ZarfCluster struct {
 ```
 
 <a name="ZarfClusterAgeEncryption"></a>
-## type [ZarfClusterAgeEncryption](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L77-L82>)
+## type [ZarfClusterAgeEncryption](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L77-L82>)
 
 ZarfClusterAgeEncryption records the age recipients a document's credentials were encrypted to.
 
@@ -275,7 +275,7 @@ type ZarfClusterAgeEncryption struct {
 ```
 
 <a name="ZarfClusterConfig"></a>
-## type [ZarfClusterConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L109-L121>)
+## type [ZarfClusterConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L109-L121>)
 
 ZarfClusterConfig holds cluster\-wide configuration.
 
@@ -296,7 +296,7 @@ type ZarfClusterConfig struct {
 ```
 
 <a name="ZarfClusterEncryption"></a>
-## type [ZarfClusterEncryption](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L65-L68>)
+## type [ZarfClusterEncryption](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L65-L68>)
 
 ZarfClusterEncryption records how the credentials in a document were encrypted.
 
@@ -310,7 +310,7 @@ type ZarfClusterEncryption struct {
 ```
 
 <a name="ZarfClusterFiles"></a>
-## type [ZarfClusterFiles](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L528-L545>)
+## type [ZarfClusterFiles](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L528-L545>)
 
 ZarfClusterFiles defines a file to write to a host.
 
@@ -336,7 +336,7 @@ type ZarfClusterFiles struct {
 ```
 
 <a name="ZarfClusterMetadata"></a>
-## type [ZarfClusterMetadata](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L53-L58>)
+## type [ZarfClusterMetadata](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L53-L58>)
 
 ZarfClusterMetadata holds identifying information for a cluster.
 
@@ -350,7 +350,7 @@ type ZarfClusterMetadata struct {
 ```
 
 <a name="ZarfClusterProfiles"></a>
-## type [ZarfClusterProfiles](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L124-L134>)
+## type [ZarfClusterProfiles](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L124-L134>)
 
 ZarfClusterProfiles holds the host and engine overrides for one profile.
 
@@ -369,7 +369,7 @@ type ZarfClusterProfiles struct {
 ```
 
 <a name="ZarfClusterProfiles.ResolveConcurrency"></a>
-### func \(ZarfClusterProfiles\) [ResolveConcurrency](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L141>)
+### func \(ZarfClusterProfiles\) [ResolveConcurrency](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L141>)
 
 ```go
 func (p ZarfClusterProfiles) ResolveConcurrency(total int, fallback string) (int, error)
@@ -378,7 +378,7 @@ func (p ZarfClusterProfiles) ResolveConcurrency(total int, fallback string) (int
 ResolveConcurrency returns the batch size cargoship should use for total hosts sharing this profile. A fixed count is used as\-is. A percentage \(e.g. "25%"\) is scaled against total, rounded up, and clamped to a minimum of 1 so a low percentage never collapses to 0, which would otherwise be indistinguishable from "unlimited". An empty Concurrency falls back to fallback, parsed the same way against total.
 
 <a name="ZarfClusterRegistrieName"></a>
-## type [ZarfClusterRegistrieName](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L188>)
+## type [ZarfClusterRegistrieName](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L188>)
 
 ZarfClusterRegistrieName is the registry name in ZarfClusterRegistries. It's a named type \(rather than a bare string\) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.
 
@@ -387,7 +387,7 @@ type ZarfClusterRegistrieName string
 ```
 
 <a name="ZarfClusterRegistrieName.JSONSchemaExtend"></a>
-### func \(ZarfClusterRegistrieName\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L192>)
+### func \(ZarfClusterRegistrieName\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L192>)
 
 ```go
 func (ZarfClusterRegistrieName) JSONSchemaExtend(s *jsonschema.Schema)
@@ -396,7 +396,7 @@ func (ZarfClusterRegistrieName) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonRegistries to the schema as examples, so editors can suggest them for this string field without restricting it to just those values.
 
 <a name="ZarfClusterRegistries"></a>
-## type [ZarfClusterRegistries](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L204-L215>)
+## type [ZarfClusterRegistries](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L204-L215>)
 
 ZarfClusterRegistries holds the credentials and pull proxy for one container registry. The proxy and the credentials are independent: an entry with both redirects pulls to a mirror and authenticates to that mirror, while an entry with credentials alone authenticates a direct pull from the registry itself. Upstream Kubernetes keeps the two in separate files entirely \-\- mirrors in containerd's hosts.toml, which holds no credentials, and credentials in a node docker config \-\- so an entry must be able to carry either one on its own.
 
@@ -416,7 +416,7 @@ type ZarfClusterRegistries struct {
 ```
 
 <a name="ZarfClusterRegistries.ConfigHost"></a>
-### func \(ZarfClusterRegistries\) [ConfigHost](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L274>)
+### func \(ZarfClusterRegistries\) [ConfigHost](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L274>)
 
 ```go
 func (r ZarfClusterRegistries) ConfigHost() string
@@ -425,7 +425,7 @@ func (r ZarfClusterRegistries) ConfigHost() string
 ConfigHost returns the host this registry's credentials and TLS settings belong to: the mirror when pulls are redirected to one, and the registry itself when they are not. The proxy address may carry a scheme and a path \-\- "https://mirror.example.com:5000/v2" \-\- but an engine matches its per\-registry configuration on the host alone, so the host is what comes back here.
 
 <a name="ZarfClusterRegistries.MirrorEndpoint"></a>
-### func \(ZarfClusterRegistries\) [MirrorEndpoint](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L258>)
+### func \(ZarfClusterRegistries\) [MirrorEndpoint](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L258>)
 
 ```go
 func (r ZarfClusterRegistries) MirrorEndpoint() string
@@ -434,7 +434,7 @@ func (r ZarfClusterRegistries) MirrorEndpoint() string
 MirrorEndpoint returns the proxy address as an engine mirror endpoint: the configured URL, completed to https when it was given without a scheme, since that is both what a registry serves by default and what the engine would otherwise have to guess at. It is empty when the registry has no proxy.
 
 <a name="ZarfClusterRegistries.ProxyURL"></a>
-### func \(ZarfClusterRegistries\) [ProxyURL](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L247>)
+### func \(ZarfClusterRegistries\) [ProxyURL](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L247>)
 
 ```go
 func (r ZarfClusterRegistries) ProxyURL() string
@@ -443,7 +443,7 @@ func (r ZarfClusterRegistries) ProxyURL() string
 ProxyURL returns the address pulls for this registry are redirected to, or an empty string when the registry has no proxy and is pulled from directly. Proxy is a pointer \-\- so that a proxy left out of a document is distinguishable from one written out empty, and so that omitempty applies to it at all, which encoding/json does not do for a struct value \-\- and this saves every caller a nil check to ask the only question most of them have.
 
 <a name="ZarfClusterRegistries.Validate"></a>
-### func \(ZarfClusterRegistries\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L220>)
+### func \(ZarfClusterRegistries\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L220>)
 
 ```go
 func (r ZarfClusterRegistries) Validate() error
@@ -452,7 +452,7 @@ func (r ZarfClusterRegistries) Validate() error
 Validate returns an error when the registry entry configures nothing. An entry has to carry a proxy, credentials, or TLS settings to have any effect, and one that carries none of them is more likely a mistyped document than an intentional no\-op.
 
 <a name="ZarfClusterRegistryAuth"></a>
-## type [ZarfClusterRegistryAuth](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L430-L437>)
+## type [ZarfClusterRegistryAuth](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L430-L437>)
 
 ZarfClusterRegistryAuth holds the credentials for a container registry. Username, Password, and Token may each be given in plaintext, or encrypted in either of the two formats cargoship reads: an Ansible Vault string \(the output of \`ansible\-vault encrypt\_string\`, starting with "$ANSIBLE\_VAULT"\), or armored age ciphertext \(starting with "\-\-\-\-\-BEGIN AGE ENCRYPTED FILE\-\-\-\-\-"\). Cargoship decrypts either at apply time, using the vault password given via \-\-vault\-password\-file or the age identity given via \-\-age\-identity\-file.
 
@@ -468,7 +468,7 @@ type ZarfClusterRegistryAuth struct {
 ```
 
 <a name="ZarfClusterRegistryAuth.Validate"></a>
-### func \(ZarfClusterRegistryAuth\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L515>)
+### func \(ZarfClusterRegistryAuth\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L515>)
 
 ```go
 func (a ZarfClusterRegistryAuth) Validate(name ZarfClusterRegistrieName) error
@@ -477,7 +477,7 @@ func (a ZarfClusterRegistryAuth) Validate(name ZarfClusterRegistrieName) error
 Validate returns an error when the credentials cannot be used as given. name identifies the registry in the error.
 
 <a name="ZarfClusterRegistryProxy"></a>
-## type [ZarfClusterRegistryProxy](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L443-L449>)
+## type [ZarfClusterRegistryProxy](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L443-L449>)
 
 ZarfClusterRegistryProxy redirects pulls for a registry to a different URL.
 
@@ -492,7 +492,7 @@ type ZarfClusterRegistryProxy struct {
 ```
 
 <a name="ZarfClusterRegistryProxy.Validate"></a>
-### func \(\*ZarfClusterRegistryProxy\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L476>)
+### func \(\*ZarfClusterRegistryProxy\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L476>)
 
 ```go
 func (p *ZarfClusterRegistryProxy) Validate(name ZarfClusterRegistrieName) error
@@ -501,7 +501,7 @@ func (p *ZarfClusterRegistryProxy) Validate(name ZarfClusterRegistrieName) error
 Validate returns an error when the proxy settings cannot be applied. A nil receiver is valid: a registry may be configured without redirecting pulls away from it. name identifies the registry in the error.
 
 <a name="ZarfClusterRegistryTLS"></a>
-## type [ZarfClusterRegistryTLS](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L350-L365>)
+## type [ZarfClusterRegistryTLS](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L350-L365>)
 
 ZarfClusterRegistryTLS holds the TLS connection settings for a container registry. The field names are cargoship's own, in the camelCase the rest of this file uses; distrocfg maps them onto whatever spelling each engine's registry configuration expects.
 
@@ -525,7 +525,7 @@ type ZarfClusterRegistryTLS struct {
 ```
 
 <a name="ZarfClusterRegistryTLS.Validate"></a>
-### func \(\*ZarfClusterRegistryTLS\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L402>)
+### func \(\*ZarfClusterRegistryTLS\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L402>)
 
 ```go
 func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error
@@ -534,7 +534,7 @@ func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error
 Validate returns an error when the TLS settings cannot be applied. A nil receiver is valid: TLS is optional. name identifies the registry in the error.
 
 <a name="ZarfClusterSpec"></a>
-## type [ZarfClusterSpec](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L101-L106>)
+## type [ZarfClusterSpec](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L101-L106>)
 
 ZarfClusterSpec holds the configuration and hosts for a cluster.
 
@@ -548,7 +548,7 @@ type ZarfClusterSpec struct {
 ```
 
 <a name="ZarfFirewallConfig"></a>
-## type [ZarfFirewallConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L48-L51>)
+## type [ZarfFirewallConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L48-L51>)
 
 ZarfFirewallConfig is the backend\-neutral firewall configuration for a node. Cargoship renders these rules onto whichever firewall backend the node runs, so a single inventory can target firewalld, ufw, and nftables hosts alike.
 
@@ -560,7 +560,7 @@ type ZarfFirewallConfig struct {
 ```
 
 <a name="ZarfFirewallConfig.Merge"></a>
-### func \(\*ZarfFirewallConfig\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L167>)
+### func \(\*ZarfFirewallConfig\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L167>)
 
 ```go
 func (c *ZarfFirewallConfig) Merge(update ZarfFirewallConfig)
@@ -569,7 +569,7 @@ func (c *ZarfFirewallConfig) Merge(update ZarfFirewallConfig)
 Merge adds every rule from update that c does not already define, matching rules by Key. A host that names a rule the same as its profile does keeps its own; every other profile rule is added. Unlike the rest of ZarfHostConfig, firewall rules union rather than replace, so a host can add one rule of its own without giving up the baseline its profile sets.
 
 <a name="ZarfFirewallConfig.Validate"></a>
-### func \(ZarfFirewallConfig\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L188>)
+### func \(ZarfFirewallConfig\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L188>)
 
 ```go
 func (c ZarfFirewallConfig) Validate() error
@@ -578,7 +578,7 @@ func (c ZarfFirewallConfig) Validate() error
 Validate returns an error when any rule in the config is unusable.
 
 <a name="ZarfFirewallPolicyConfig"></a>
-## type [ZarfFirewallPolicyConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L207-L220>)
+## type [ZarfFirewallPolicyConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L207-L220>)
 
 ZarfFirewallPolicyConfig configures a firewalld policy that opens ports from one zone to another.
 
@@ -600,7 +600,7 @@ type ZarfFirewallPolicyConfig struct {
 ```
 
 <a name="ZarfFirewallPort"></a>
-## type [ZarfFirewallPort](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L229-L234>)
+## type [ZarfFirewallPort](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L229-L234>)
 
 ZarfFirewallPort defines a port allowed through the firewalld policy.
 
@@ -614,7 +614,7 @@ type ZarfFirewallPort struct {
 ```
 
 <a name="ZarfFirewallRule"></a>
-## type [ZarfFirewallRule](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L56-L78>)
+## type [ZarfFirewallRule](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L56-L78>)
 
 ZarfFirewallRule is a single backend\-neutral firewall rule. Every field except Action is optional; an omitted match field means "any". Backends translate a rule into their own dialect, so not every combination is expressible everywhere \-\- see the firewall package.
 
@@ -645,7 +645,7 @@ type ZarfFirewallRule struct {
 ```
 
 <a name="ZarfFirewallRule.Key"></a>
-### func \(ZarfFirewallRule\) [Key](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L102>)
+### func \(ZarfFirewallRule\) [Key](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L102>)
 
 ```go
 func (r ZarfFirewallRule) Key() string
@@ -654,7 +654,7 @@ func (r ZarfFirewallRule) Key() string
 Key returns the rule's Name, or a stable name derived from the rule's fields when Name is empty. Backends use it to name the files and comments that tie an applied rule back to this configuration.
 
 <a name="ZarfFirewallRule.NormalizedAction"></a>
-### func \(ZarfFirewallRule\) [NormalizedAction](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L81>)
+### func \(ZarfFirewallRule\) [NormalizedAction](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L81>)
 
 ```go
 func (r ZarfFirewallRule) NormalizedAction() string
@@ -663,7 +663,7 @@ func (r ZarfFirewallRule) NormalizedAction() string
 NormalizedAction returns the rule's action, lowercased.
 
 <a name="ZarfFirewallRule.NormalizedDirection"></a>
-### func \(ZarfFirewallRule\) [NormalizedDirection](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L86>)
+### func \(ZarfFirewallRule\) [NormalizedDirection](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L86>)
 
 ```go
 func (r ZarfFirewallRule) NormalizedDirection() string
@@ -672,7 +672,7 @@ func (r ZarfFirewallRule) NormalizedDirection() string
 NormalizedDirection returns the rule's direction, lowercased, defaulting to in.
 
 <a name="ZarfFirewallRule.NormalizedProtocol"></a>
-### func \(ZarfFirewallRule\) [NormalizedProtocol](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L95>)
+### func \(ZarfFirewallRule\) [NormalizedProtocol](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L95>)
 
 ```go
 func (r ZarfFirewallRule) NormalizedProtocol() string
@@ -681,7 +681,7 @@ func (r ZarfFirewallRule) NormalizedProtocol() string
 NormalizedProtocol returns the rule's protocol, lowercased.
 
 <a name="ZarfFirewallRule.Validate"></a>
-### func \(ZarfFirewallRule\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/firewall.go#L118>)
+### func \(ZarfFirewallRule\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/firewall.go#L118>)
 
 ```go
 func (r ZarfFirewallRule) Validate() error
@@ -690,7 +690,7 @@ func (r ZarfFirewallRule) Validate() error
 Validate returns an error when the rule cannot be applied by any backend.
 
 <a name="ZarfFirewallZone"></a>
-## type [ZarfFirewallZone](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L223-L226>)
+## type [ZarfFirewallZone](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L223-L226>)
 
 ZarfFirewallZone is the name of either the ingress or egress zone for a policy.
 
@@ -702,7 +702,7 @@ type ZarfFirewallZone struct {
 ```
 
 <a name="ZarfHost"></a>
-## type [ZarfHost](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L64-L96>)
+## type [ZarfHost](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L64-L96>)
 
 ZarfHost is a remote connection to a node
 
@@ -740,7 +740,7 @@ type ZarfHost struct {
 ```
 
 <a name="ZarfHost.Address"></a>
-### func \(\*ZarfHost\) [Address](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L546>)
+### func \(\*ZarfHost\) [Address](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L546>)
 
 ```go
 func (h *ZarfHost) Address() string
@@ -751,7 +751,7 @@ Address returns the address rig is connected to for this host, or the empty stri
 The promoted rig.Client.Address panics on a host in that state: ClientWithConfig defers creating its embedded \*Client until Setup or Connect runs, so a host built directly \(as tests do, or as a host removed from the config and never dialed this run\) has a nil Client, and Address dereferences it unconditionally.
 
 <a name="ZarfHost.Arch"></a>
-### func \(\*ZarfHost\) [Arch](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L327>)
+### func \(\*ZarfHost\) [Arch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L327>)
 
 ```go
 func (h *ZarfHost) Arch() (string, error)
@@ -760,7 +760,7 @@ func (h *ZarfHost) Arch() (string, error)
 Arch returns the host architecture, caching the result in metadata
 
 <a name="ZarfHost.CheckHTTPStatus"></a>
-### func \(\*ZarfHost\) [CheckHTTPStatus](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L666>)
+### func \(\*ZarfHost\) [CheckHTTPStatus](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L666>)
 
 ```go
 func (h *ZarfHost) CheckHTTPStatus(ctx context.Context, url string, expected ...int) error
@@ -769,7 +769,7 @@ func (h *ZarfHost) CheckHTTPStatus(ctx context.Context, url string, expected ...
 CheckHTTPStatus requests url and returns an error if the response status is not one of expected.
 
 <a name="ZarfHost.Connect"></a>
-### func \(\*ZarfHost\) [Connect](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L292>)
+### func \(\*ZarfHost\) [Connect](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L292>)
 
 ```go
 func (h *ZarfHost) Connect(ctx context.Context) error
@@ -778,7 +778,7 @@ func (h *ZarfHost) Connect(ctx context.Context) error
 Connect establishes the connection to the host, injecting cargoship's configured logger so that rig's internal logging is routed through the same logger as the rest of the run. rig v2 has no global logger setter; the logger is injected per\-client via rig.WithLogger, which is only honored at client construction \(the first Connect call\) or via ClientWithConfig.Connect's own options \-\- see riglogger.RigLogger.
 
 <a name="ZarfHost.DeleteFile"></a>
-### func \(\*ZarfHost\) [DeleteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L349>)
+### func \(\*ZarfHost\) [DeleteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L349>)
 
 ```go
 func (h *ZarfHost) DeleteFile(path string) error
@@ -787,7 +787,7 @@ func (h *ZarfHost) DeleteFile(path string) error
 DeleteFile removes a file from the host. Always runs with privilege escalation.
 
 <a name="ZarfHost.Dir"></a>
-### func \(\*ZarfHost\) [Dir](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L313>)
+### func \(\*ZarfHost\) [Dir](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L313>)
 
 ```go
 func (h *ZarfHost) Dir(path string) (string, error)
@@ -796,7 +796,7 @@ func (h *ZarfHost) Dir(path string) (string, error)
 Dir returns the directory name for the given path using the remote filesystem.
 
 <a name="ZarfHost.EnableService"></a>
-### func \(\*ZarfHost\) [EnableService](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L513>)
+### func \(\*ZarfHost\) [EnableService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L513>)
 
 ```go
 func (h *ZarfHost) EnableService(ctx context.Context, name string) error
@@ -805,7 +805,7 @@ func (h *ZarfHost) EnableService(ctx context.Context, name string) error
 EnableService enables the named service on the host.
 
 <a name="ZarfHost.Exec"></a>
-### func \(\*ZarfHost\) [Exec](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L421>)
+### func \(\*ZarfHost\) [Exec](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L421>)
 
 ```go
 func (h *ZarfHost) Exec(command string, opts ...cmd.ExecOption) error
@@ -814,7 +814,7 @@ func (h *ZarfHost) Exec(command string, opts ...cmd.ExecOption) error
 Exec runs a command on the host. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.
 
 <a name="ZarfHost.ExecOutput"></a>
-### func \(\*ZarfHost\) [ExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L430>)
+### func \(\*ZarfHost\) [ExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L430>)
 
 ```go
 func (h *ZarfHost) ExecOutput(command string, opts ...cmd.ExecOption) (string, error)
@@ -823,7 +823,7 @@ func (h *ZarfHost) ExecOutput(command string, opts ...cmd.ExecOption) (string, e
 ExecOutput runs a command on the host and returns its output. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.
 
 <a name="ZarfHost.FS"></a>
-### func \(\*ZarfHost\) [FS](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L397>)
+### func \(\*ZarfHost\) [FS](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L397>)
 
 ```go
 func (h *ZarfHost) FS() remotefs.FS
@@ -832,7 +832,7 @@ func (h *ZarfHost) FS() remotefs.FS
 FS returns the host's filesystem. It shadows the promoted rig client method so that a host with a substituted filesystem uses that one, and an unconnected host returns a filesystem that fails rather than one that panics.
 
 <a name="ZarfHost.FileChanged"></a>
-### func \(\*ZarfHost\) [FileChanged](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L598>)
+### func \(\*ZarfHost\) [FileChanged](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L598>)
 
 ```go
 func (h *ZarfHost) FileChanged(lpath, rpath string) bool
@@ -841,7 +841,7 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool
 FileChanged compares the local file at lpath to the remote file at rpath by sha256 checksum. It returns true if the checksums differ or if either checksum cannot be computed.
 
 <a name="ZarfHost.FileExist"></a>
-### func \(\*ZarfHost\) [FileExist](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L661>)
+### func \(\*ZarfHost\) [FileExist](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L661>)
 
 ```go
 func (h *ZarfHost) FileExist(path string) bool
@@ -850,7 +850,7 @@ func (h *ZarfHost) FileExist(path string) bool
 FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the behavior of the v0.x Configurer.FileExist implementation this replaces.
 
 <a name="ZarfHost.IsController"></a>
-### func \(\*ZarfHost\) [IsController](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L535>)
+### func \(\*ZarfHost\) [IsController](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L535>)
 
 ```go
 func (h *ZarfHost) IsController() bool
@@ -859,7 +859,7 @@ func (h *ZarfHost) IsController() bool
 IsController returns true for the controller, controller\+worker, and single roles.
 
 <a name="ZarfHost.KubeRole"></a>
-### func \(\*ZarfHost\) [KubeRole](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L525>)
+### func \(\*ZarfHost\) [KubeRole](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L525>)
 
 ```go
 func (h *ZarfHost) KubeRole() string
@@ -868,7 +868,7 @@ func (h *ZarfHost) KubeRole() string
 KubeRole returns the Kubernetes role for this host. It maps controller\+worker and single to controller.
 
 <a name="ZarfHost.OSKind"></a>
-### func \(\*ZarfHost\) [OSKind](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L318>)
+### func \(\*ZarfHost\) [OSKind](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L318>)
 
 ```go
 func (h *ZarfHost) OSKind() (string, error)
@@ -877,7 +877,7 @@ func (h *ZarfHost) OSKind() (string, error)
 OSKind returns the host OS kind via the resolved configurer.
 
 <a name="ZarfHost.ReadFile"></a>
-### func \(\*ZarfHost\) [ReadFile](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L645>)
+### func \(\*ZarfHost\) [ReadFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L645>)
 
 ```go
 func (h *ZarfHost) ReadFile(path string) (string, error)
@@ -886,7 +886,7 @@ func (h *ZarfHost) ReadFile(path string) (string, error)
 ReadFile returns the contents of path on the host, or an error if the file does not exist. Always runs with privilege escalation.
 
 <a name="ZarfHost.ResolveConfigurer"></a>
-### func \(\*ZarfHost\) [ResolveConfigurer](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L572>)
+### func \(\*ZarfHost\) [ResolveConfigurer](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L572>)
 
 ```go
 func (h *ZarfHost) ResolveConfigurer() error
@@ -895,7 +895,7 @@ func (h *ZarfHost) ResolveConfigurer() error
 ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.
 
 <a name="ZarfHost.RestartService"></a>
-### func \(\*ZarfHost\) [RestartService](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L501>)
+### func \(\*ZarfHost\) [RestartService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L501>)
 
 ```go
 func (h *ZarfHost) RestartService(ctx context.Context, name string) error
@@ -904,7 +904,7 @@ func (h *ZarfHost) RestartService(ctx context.Context, name string) error
 RestartService restarts the named service on the host.
 
 <a name="ZarfHost.ServiceIsRunning"></a>
-### func \(\*ZarfHost\) [ServiceIsRunning](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L465>)
+### func \(\*ZarfHost\) [ServiceIsRunning](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L465>)
 
 ```go
 func (h *ZarfHost) ServiceIsRunning(ctx context.Context, name string) bool
@@ -913,7 +913,7 @@ func (h *ZarfHost) ServiceIsRunning(ctx context.Context, name string) bool
 ServiceIsRunning returns true if the named service is running on the host.
 
 <a name="ZarfHost.ServiceName"></a>
-### func \(\*ZarfHost\) [ServiceName](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L554>)
+### func \(\*ZarfHost\) [ServiceName](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L554>)
 
 ```go
 func (h *ZarfHost) ServiceName() string
@@ -922,7 +922,7 @@ func (h *ZarfHost) ServiceName() string
 ServiceName returns the name of the distro service that runs on this host.
 
 <a name="ZarfHost.SetFS"></a>
-### func \(\*ZarfHost\) [SetFS](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L370>)
+### func \(\*ZarfHost\) [SetFS](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L370>)
 
 ```go
 func (h *ZarfHost) SetFS(fs remotefs.FS)
@@ -931,7 +931,7 @@ func (h *ZarfHost) SetFS(fs remotefs.FS)
 SetFS substitutes the filesystem this host's file operations act through, in place of the one its rig connection provides.
 
 <a name="ZarfHost.SetServices"></a>
-### func \(\*ZarfHost\) [SetServices](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L376>)
+### func \(\*ZarfHost\) [SetServices](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L376>)
 
 ```go
 func (h *ZarfHost) SetServices(services HostServices)
@@ -940,7 +940,7 @@ func (h *ZarfHost) SetServices(services HostServices)
 SetServices substitutes the init system this host's service operations act through, in place of the one its rig connection provides.
 
 <a name="ZarfHost.StartService"></a>
-### func \(\*ZarfHost\) [StartService](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L477>)
+### func \(\*ZarfHost\) [StartService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L477>)
 
 ```go
 func (h *ZarfHost) StartService(ctx context.Context, name string) error
@@ -949,7 +949,7 @@ func (h *ZarfHost) StartService(ctx context.Context, name string) error
 StartService starts the named service on the host.
 
 <a name="ZarfHost.Stat"></a>
-### func \(\*ZarfHost\) [Stat](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L655>)
+### func \(\*ZarfHost\) [Stat](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L655>)
 
 ```go
 func (h *ZarfHost) Stat(path string) (fs.FileInfo, error)
@@ -958,7 +958,7 @@ func (h *ZarfHost) Stat(path string) (fs.FileInfo, error)
 Stat returns file information for path on the host. Always runs with privilege escalation, matching the rest of this host's file operations.
 
 <a name="ZarfHost.StopService"></a>
-### func \(\*ZarfHost\) [StopService](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L489>)
+### func \(\*ZarfHost\) [StopService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L489>)
 
 ```go
 func (h *ZarfHost) StopService(ctx context.Context, name string) error
@@ -967,7 +967,7 @@ func (h *ZarfHost) StopService(ctx context.Context, name string) error
 StopService stops the named service on the host.
 
 <a name="ZarfHost.String"></a>
-### func \(\*ZarfHost\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L297>)
+### func \(\*ZarfHost\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L297>)
 
 ```go
 func (h *ZarfHost) String() string
@@ -976,7 +976,7 @@ func (h *ZarfHost) String() string
 String returns the connection string. Safe to call before Connect.
 
 <a name="ZarfHost.SudoExec"></a>
-### func \(\*ZarfHost\) [SudoExec](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L439>)
+### func \(\*ZarfHost\) [SudoExec](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L439>)
 
 ```go
 func (h *ZarfHost) SudoExec(command string, opts ...cmd.ExecOption) error
@@ -985,7 +985,7 @@ func (h *ZarfHost) SudoExec(command string, opts ...cmd.ExecOption) error
 SudoExec runs a command on the host with privilege escalation. Like Exec, it returns an error rather than panicking on a host that was never connected.
 
 <a name="ZarfHost.SudoExecOutput"></a>
-### func \(\*ZarfHost\) [SudoExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L448>)
+### func \(\*ZarfHost\) [SudoExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L448>)
 
 ```go
 func (h *ZarfHost) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, error)
@@ -994,7 +994,7 @@ func (h *ZarfHost) SudoExecOutput(command string, opts ...cmd.ExecOption) (strin
 SudoExecOutput runs a command on the host with privilege escalation and returns its output. Like ExecOutput, it returns an error rather than panicking on a host that was never connected.
 
 <a name="ZarfHost.Touch"></a>
-### func \(\*ZarfHost\) [Touch](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L344>)
+### func \(\*ZarfHost\) [Touch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L344>)
 
 ```go
 func (h *ZarfHost) Touch(path string, modTime time.Time) error
@@ -1003,7 +1003,7 @@ func (h *ZarfHost) Touch(path string, modTime time.Time) error
 Touch updates file modification timestamps, creating the file if needed. Always runs with privilege escalation.
 
 <a name="ZarfHost.UnmarshalYAML"></a>
-### func \(\*ZarfHost\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L108>)
+### func \(\*ZarfHost\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L108>)
 
 ```go
 func (h *ZarfHost) UnmarshalYAML(unmarshal func(any) error) error
@@ -1014,7 +1014,7 @@ UnmarshalYAML decodes a host document into both ZarfHost's own fields and the em
 rig.ClientWithConfig implements UnmarshalYAML itself, and since it is embedded anonymously that method is promoted onto \*ZarfHost. Left alone, goccy/go\-yaml would treat \*ZarfHost as an InterfaceUnmarshaler and call the promoted method for the whole host document \-\- which decodes only ClientWithConfig's own fields and silently leaves every field ZarfHost declares \(Hostname, Role, Profile, ...\) zeroed. Decoding into a shadow type with no embedded ClientWithConfig avoids triggering that promoted method, and a second explicit decode through ClientWithConfig's own UnmarshalYAML fills in the connection config the same way it always did.
 
 <a name="ZarfHost.WriteFile"></a>
-### func \(\*ZarfHost\) [WriteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L636>)
+### func \(\*ZarfHost\) [WriteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L636>)
 
 ```go
 func (h *ZarfHost) WriteFile(path string, data string, permissions string) error
@@ -1023,7 +1023,7 @@ func (h *ZarfHost) WriteFile(path string, data string, permissions string) error
 WriteFile writes data to path on the host. Do not use this for large files. Always runs with privilege escalation.
 
 <a name="ZarfHostConfig"></a>
-## type [ZarfHostConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L144-L153>)
+## type [ZarfHostConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L144-L153>)
 
 ZarfHostConfig defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.
 
@@ -1041,7 +1041,7 @@ type ZarfHostConfig struct {
 ```
 
 <a name="ZarfHostConfig.Merge"></a>
-### func \(\*ZarfHostConfig\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L157>)
+### func \(\*ZarfHostConfig\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L157>)
 
 ```go
 func (c *ZarfHostConfig) Merge(update ZarfHostConfig)
@@ -1050,7 +1050,7 @@ func (c *ZarfHostConfig) Merge(update ZarfHostConfig)
 Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c, and unions update's firewall rules into c's.
 
 <a name="ZarfHostEngine"></a>
-## type [ZarfHostEngine](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L175-L180>)
+## type [ZarfHostEngine](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L175-L180>)
 
 ZarfHostEngine defines configuration options for node\-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.
 
@@ -1064,7 +1064,7 @@ type ZarfHostEngine struct {
 ```
 
 <a name="ZarfHostEngine.Merge"></a>
-### func \(\*ZarfHostEngine\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L183>)
+### func \(\*ZarfHostEngine\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L183>)
 
 ```go
 func (c *ZarfHostEngine) Merge(update ZarfHostEngine)
@@ -1073,7 +1073,7 @@ func (c *ZarfHostEngine) Merge(update ZarfHostEngine)
 Merge copies NodeLabels and NodeTaints from update into c, for whichever of those fields are empty in c.
 
 <a name="ZarfHostGroup"></a>
-## type [ZarfHostGroup](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L93-L98>)
+## type [ZarfHostGroup](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L93-L98>)
 
 ZarfHostGroup is a set of hosts that share the same profile.
 
@@ -1087,7 +1087,7 @@ type ZarfHostGroup struct {
 ```
 
 <a name="ZarfHostMetadata"></a>
-## type [ZarfHostMetadata](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L237-L270>)
+## type [ZarfHostMetadata](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L237-L270>)
 
 ZarfHostMetadata holds values cargoship discovers about a host at runtime.
 
@@ -1129,7 +1129,7 @@ type ZarfHostMetadata struct {
 ```
 
 <a name="ZarfHostPort"></a>
-## type [ZarfHostPort](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/host.go#L199-L204>)
+## type [ZarfHostPort](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L199-L204>)
 
 ZarfHostPort is a port cargoship opens on the public side of the firewall.
 
@@ -1143,7 +1143,7 @@ type ZarfHostPort struct {
 ```
 
 <a name="ZarfHosts"></a>
-## type [ZarfHosts](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L31>)
+## type [ZarfHosts](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L31>)
 
 ZarfHosts is an ordered list of hosts that cargoship manages together.
 
@@ -1152,7 +1152,7 @@ type ZarfHosts []*ZarfHost
 ```
 
 <a name="ZarfHosts.BatchedParallelEach"></a>
-### func \(ZarfHosts\) [BatchedParallelEach](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L173>)
+### func \(ZarfHosts\) [BatchedParallelEach](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L173>)
 
 ```go
 func (hosts ZarfHosts) BatchedParallelEach(ctx context.Context, batchSize int, filter ...func(context.Context, *ZarfHost) error) error
@@ -1161,7 +1161,7 @@ func (hosts ZarfHosts) BatchedParallelEach(ctx context.Context, batchSize int, f
 BatchedParallelEach runs each filter on every host in parallel, in groups of batchSize hosts. It completes one group before it starts the next. It stops and returns the error if ctx is canceled or a group returns an error.
 
 <a name="ZarfHosts.Controllers"></a>
-### func \(ZarfHosts\) [Controllers](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L83>)
+### func \(ZarfHosts\) [Controllers](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L83>)
 
 ```go
 func (hosts ZarfHosts) Controllers() ZarfHosts
@@ -1170,7 +1170,7 @@ func (hosts ZarfHosts) Controllers() ZarfHosts
 Controllers returns the hosts that act as a controller. This includes hosts with role controller, controller\+worker, or single.
 
 <a name="ZarfHosts.Each"></a>
-### func \(ZarfHosts\) [Each](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L121>)
+### func \(ZarfHosts\) [Each](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L121>)
 
 ```go
 func (hosts ZarfHosts) Each(ctx context.Context, filters ...func(context.Context, *ZarfHost) error) error
@@ -1179,7 +1179,7 @@ func (hosts ZarfHosts) Each(ctx context.Context, filters ...func(context.Context
 Each runs each filter on every host, in the order given. It stops and returns the error if ctx is canceled or a filter returns an error.
 
 <a name="ZarfHosts.Filter"></a>
-### func \(ZarfHosts\) [Filter](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L63>)
+### func \(ZarfHosts\) [Filter](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L63>)
 
 ```go
 func (hosts ZarfHosts) Filter(filter func(h *ZarfHost) bool) ZarfHosts
@@ -1188,7 +1188,7 @@ func (hosts ZarfHosts) Filter(filter func(h *ZarfHost) bool) ZarfHosts
 Filter returns the hosts for which filter returns true.
 
 <a name="ZarfHosts.Find"></a>
-### func \(ZarfHosts\) [Find](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L53>)
+### func \(ZarfHosts\) [Find](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L53>)
 
 ```go
 func (hosts ZarfHosts) Find(filter func(h *ZarfHost) bool) *ZarfHost
@@ -1197,7 +1197,7 @@ func (hosts ZarfHosts) Find(filter func(h *ZarfHost) bool) *ZarfHost
 Find returns the first host for which filter returns true. It returns nil if no host matches.
 
 <a name="ZarfHosts.First"></a>
-### func \(ZarfHosts\) [First](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L34>)
+### func \(ZarfHosts\) [First](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L34>)
 
 ```go
 func (hosts ZarfHosts) First() *ZarfHost
@@ -1206,7 +1206,7 @@ func (hosts ZarfHosts) First() *ZarfHost
 First returns the first host. It returns nil if there are no hosts.
 
 <a name="ZarfHosts.GroupByProfile"></a>
-### func \(ZarfHosts\) [GroupByProfile](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L103>)
+### func \(ZarfHosts\) [GroupByProfile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L103>)
 
 ```go
 func (hosts ZarfHosts) GroupByProfile() []ZarfHostGroup
@@ -1215,7 +1215,7 @@ func (hosts ZarfHosts) GroupByProfile() []ZarfHostGroup
 GroupByProfile splits hosts into groups by their Profile field, preserving each host's relative order within its group. Groups are ordered by each profile's first appearance in hosts, so the result is deterministic.
 
 <a name="ZarfHosts.Last"></a>
-### func \(ZarfHosts\) [Last](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L42>)
+### func \(ZarfHosts\) [Last](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L42>)
 
 ```go
 func (hosts ZarfHosts) Last() *ZarfHost
@@ -1224,7 +1224,7 @@ func (hosts ZarfHosts) Last() *ZarfHost
 Last returns the last host. It returns nil if there are no hosts.
 
 <a name="ZarfHosts.ParallelEach"></a>
-### func \(ZarfHosts\) [ParallelEach](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L138>)
+### func \(ZarfHosts\) [ParallelEach](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L138>)
 
 ```go
 func (hosts ZarfHosts) ParallelEach(ctx context.Context, filters ...func(context.Context, *ZarfHost) error) error
@@ -1233,7 +1233,7 @@ func (hosts ZarfHosts) ParallelEach(ctx context.Context, filters ...func(context
 ParallelEach runs each filter on every host in parallel. It runs the filters in the order given, completing one filter across all hosts before it starts the next. It collects every error and returns them combined.
 
 <a name="ZarfHosts.WithRole"></a>
-### func \(ZarfHosts\) [WithRole](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L76>)
+### func \(ZarfHosts\) [WithRole](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L76>)
 
 ```go
 func (hosts ZarfHosts) WithRole(s string) ZarfHosts
@@ -1242,7 +1242,7 @@ func (hosts ZarfHosts) WithRole(s string) ZarfHosts
 WithRole returns the hosts that have the given role.
 
 <a name="ZarfHosts.Workers"></a>
-### func \(ZarfHosts\) [Workers](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/hosts.go#L88>)
+### func \(ZarfHosts\) [Workers](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/hosts.go#L88>)
 
 ```go
 func (hosts ZarfHosts) Workers() ZarfHosts
@@ -1251,7 +1251,7 @@ func (hosts ZarfHosts) Workers() ZarfHosts
 Workers returns the hosts with role worker.
 
 <a name="ZarfRuntimeMeta"></a>
-## type [ZarfRuntimeMeta](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/cluster/spec.go#L85-L98>)
+## type [ZarfRuntimeMeta](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L85-L98>)
 
 ZarfRuntimeMeta stores data gathered while the phases run.
 
