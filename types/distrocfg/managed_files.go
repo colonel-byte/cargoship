@@ -20,7 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 )
 
 // ManagedDir is a directory cargoship prunes, and how much of it it is allowed to prune.

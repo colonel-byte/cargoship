@@ -24,8 +24,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/types"
 	"github.com/invopop/jsonschema"
 	strcase "github.com/stoewer/go-strcase"
@@ -53,7 +53,7 @@ var (
 	SchemaDir         = "schema"
 	SchemaEmbedDir    = filepath.Join("pkg", "schema", "embedded")
 	SchemaDocsDir     = "docs/schema"
-	sharedV1Alpha1Dir = filepath.Join("api", "zarf.dev", "v1alpha1")
+	sharedV1Alpha1Dir = filepath.Join("api", "colonel-byte.dev", "v1alpha1")
 )
 
 // Target describes a schema generation target.
@@ -80,14 +80,14 @@ func Targets() []Target {
 		{
 			SchemaStruct: &distro.ZarfDistro{},
 			SchemaPath:   "zarf-v1alpha1-distro-package-schema.json",
-			StructPath:   []string{"api", "zarf.dev", "v1alpha1", "distro"},
+			StructPath:   []string{"api", "colonel-byte.dev", "v1alpha1", "distro"},
 			DocTitle:     "Distro package",
 			DocFile:      "distro.md",
 		},
 		{
 			SchemaStruct: &cluster.ZarfCluster{},
 			SchemaPath:   "zarf-v1alpha1-cluster-schema.json",
-			StructPath:   []string{"api", "zarf.dev", "v1alpha1", "cluster"},
+			StructPath:   []string{"api", "colonel-byte.dev", "v1alpha1", "cluster"},
 			KeyNamer: func(s string) string {
 				switch strings.ToLower(s) {
 				case "openssh":

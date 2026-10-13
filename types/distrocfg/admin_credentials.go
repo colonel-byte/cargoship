@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"k8s.io/client-go/tools/clientcmd"
 )
 

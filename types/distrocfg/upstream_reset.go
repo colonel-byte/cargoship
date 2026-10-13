@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 )
 
 // PreUninstallReset runs kubeadm's own teardown before packages are removed, then cleans up what

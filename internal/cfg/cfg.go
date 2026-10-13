@@ -26,8 +26,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"

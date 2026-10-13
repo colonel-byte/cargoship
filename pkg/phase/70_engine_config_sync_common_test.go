@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"

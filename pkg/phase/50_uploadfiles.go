@@ -35,9 +35,9 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/api"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	carch "github.com/colonel-byte/cargoship/pkg/oci/archive"
 	"github.com/containerd/containerd/v2/core/images/archive"

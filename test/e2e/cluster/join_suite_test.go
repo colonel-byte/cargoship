@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/test"

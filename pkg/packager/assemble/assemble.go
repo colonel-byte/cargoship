@@ -37,8 +37,8 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/api"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"

@@ -28,7 +28,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/coci/layers"
 	"github.com/colonel-byte/cargoship/pkg/helpers"

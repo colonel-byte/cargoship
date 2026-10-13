@@ -17,7 +17,7 @@
 // setter -- logging is now configured per client via the rig.WithLogger
 // client option. Since rig clients are constructed deep inside the phase
 // pipeline (via ZarfHost.Connect, see
-// src/api/zarf.dev/v1alpha1/cluster/host.go) rather than at a single call
+// api/colonel-byte.dev/v1alpha1/cluster/host.go) rather than at a single call
 // site with easy access to the request context, this package stores the
 // most recently configured logger so that ZarfHost.Connect can pass it to
 // rig.WithLogger without threading a logger argument through every phase.

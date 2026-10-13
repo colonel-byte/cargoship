@@ -30,7 +30,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/types"
 	"github.com/invopop/jsonschema"
 )

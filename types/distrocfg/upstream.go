@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/k0sproject/dig"

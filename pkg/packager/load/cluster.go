@@ -27,7 +27,7 @@ import (
 	"os"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	v1alpha1 "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"

@@ -3,7 +3,7 @@
 # v1alpha1
 
 ```go
-import "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
+import "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 ```
 
 Package v1alpha1 defines file types shared by the cluster and distro APIs.
@@ -38,7 +38,7 @@ const (
 ```
 
 <a name="BinarySelector"></a>
-## type [BinarySelector](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L87-L96>)
+## type [BinarySelector](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L96>)
 
 BinarySelector selects which files to upload to a host, based on host role and install method.
 
@@ -56,7 +56,7 @@ type BinarySelector struct {
 ```
 
 <a name="BinarySelector.MatchesArch"></a>
-### func \(BinarySelector\) [MatchesArch](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L100>)
+### func \(BinarySelector\) [MatchesArch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L100>)
 
 ```go
 func (s BinarySelector) MatchesArch(arch api.Arch) bool
@@ -65,7 +65,7 @@ func (s BinarySelector) MatchesArch(arch api.Arch) bool
 MatchesArch reports whether this selector applies to arch. An empty Arch list matches every architecture, mirroring how an empty Profile matches every profile.
 
 <a name="LocalFile"></a>
-## type [LocalFile](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L79-L84>)
+## type [LocalFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L79-L84>)
 
 LocalFile holds the local path and permission cargoship resolves for uploading a file.
 
@@ -79,7 +79,7 @@ type LocalFile struct {
 ```
 
 <a name="ZarfDistroKind"></a>
-## type [ZarfDistroKind](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/common.go#L18>)
+## type [ZarfDistroKind](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/common.go#L18>)
 
 ZarfDistroKind identifies the kind of a zarf.dev v1alpha1 document, for example ZarfCluster or ZarfDistro.
 
@@ -88,7 +88,7 @@ type ZarfDistroKind string
 ```
 
 <a name="ZarfFile"></a>
-## type [ZarfFile](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L35-L76>)
+## type [ZarfFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L35-L76>)
 
 ZarfFile defines a file shared by the distro and cluster APIs.
 
@@ -138,7 +138,7 @@ type ZarfFile struct {
 ```
 
 <a name="ZarfFile.HasData"></a>
-### func \(\*ZarfFile\) [HasData](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L146>)
+### func \(\*ZarfFile\) [HasData](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L146>)
 
 ```go
 func (u *ZarfFile) HasData() bool
@@ -147,7 +147,7 @@ func (u *ZarfFile) HasData() bool
 HasData reports whether Data holds non\-blank content.
 
 <a name="ZarfFile.IsTemplate"></a>
-### func \(\*ZarfFile\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L110>)
+### func \(\*ZarfFile\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L110>)
 
 ```go
 func (u *ZarfFile) IsTemplate() bool
@@ -156,7 +156,7 @@ func (u *ZarfFile) IsTemplate() bool
 IsTemplate reports whether this file's contents are rendered against the package's values before upload. Unset means no, so a package that says nothing about templating ships the bytes it was built with.
 
 <a name="ZarfFile.Owner"></a>
-### func \(\*ZarfFile\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L123>)
+### func \(\*ZarfFile\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L123>)
 
 ```go
 func (u *ZarfFile) Owner() string
@@ -165,7 +165,7 @@ func (u *ZarfFile) Owner() string
 Owner returns a chown\-compatible "user:group" string built from User and Group. It returns an empty string when both are empty.
 
 <a name="ZarfFile.String"></a>
-### func \(\*ZarfFile\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L115>)
+### func \(\*ZarfFile\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L115>)
 
 ```go
 func (u *ZarfFile) String() string
@@ -174,7 +174,7 @@ func (u *ZarfFile) String() string
 String returns Name. If Name is empty, it returns Source instead.
 
 <a name="ZarfFile.TargetDirectory"></a>
-### func \(\*ZarfFile\) [TargetDirectory](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L151>)
+### func \(\*ZarfFile\) [TargetDirectory](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L151>)
 
 ```go
 func (u *ZarfFile) TargetDirectory() string
@@ -183,7 +183,7 @@ func (u *ZarfFile) TargetDirectory() string
 TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.
 
 <a name="ZarfFile.UnmarshalYAML"></a>
-### func \(\*ZarfFile\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/file.go#L128>)
+### func \(\*ZarfFile\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L128>)
 
 ```go
 func (u *ZarfFile) UnmarshalYAML(unmarshal func(any) error) error
@@ -192,7 +192,7 @@ func (u *ZarfFile) UnmarshalYAML(unmarshal func(any) error) error
 UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.
 
 <a name="ZarfFiles"></a>
-## type [ZarfFiles](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/files.go#L18>)
+## type [ZarfFiles](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/files.go#L18>)
 
 ZarfFiles is an ordered list of files.
 
@@ -201,7 +201,7 @@ type ZarfFiles []*ZarfFile
 ```
 
 <a name="ZarfFiles.Filter"></a>
-### func \(ZarfFiles\) [Filter](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/files.go#L21>)
+### func \(ZarfFiles\) [Filter](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/files.go#L21>)
 
 ```go
 func (files ZarfFiles) Filter(filter func(f *ZarfFile) bool) ZarfFiles

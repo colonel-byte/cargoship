@@ -21,7 +21,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/stretchr/testify/suite"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
