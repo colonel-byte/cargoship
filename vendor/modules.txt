@@ -1798,7 +1798,7 @@ github.com/olekukonko/cat
 # github.com/olekukonko/errors v1.3.0
 ## explicit; go 1.21
 github.com/olekukonko/errors
-# github.com/olekukonko/ll v0.1.8
+# github.com/olekukonko/ll v0.1.9
 ## explicit; go 1.21
 github.com/olekukonko/ll
 github.com/olekukonko/ll/lh
