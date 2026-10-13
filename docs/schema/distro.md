@@ -8,13 +8,13 @@ Rendered from `schema/zarf-v1alpha1-distro-package-schema.json`.
 
 <div class="schema-table">
 
-| Property     | Type                    | Required | Default | Description                                                                                      |
-| ------------ | ----------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------ |
-| `apiVersion` | `string`                | no       |         | identifies the API group and version of this configuration document. One of `zarf.dev/v1alpha1`. |
-| `build`      | [BuildData](#builddata) | no       |         | holds information recorded when the package was built.                                           |
-| `kind`       | `string`                | yes      |         | identifies the document type. The value must be ZarfDistro. One of `ZarfDistro`.                 |
-| `metadata`   | [Metadata](#metadata)   | yes      |         | holds identifying information for the distro package.                                            |
-| `spec`       | [Spec](#spec)           | yes      |         | holds the configuration for the distro package.                                                  |
+| Property     | Type                    | Required | Default | Description                                                                                                                                                     |
+| ------------ | ----------------------- | -------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apiVersion` | `string`                | no       |         | identifies the API group and version of this configuration document. One of `colonel-byte.dev/v1alpha1`, `zarf.dev/v1alpha1`.                                   |
+| `build`      | [BuildData](#builddata) | no       |         | holds information recorded when the package was built.                                                                                                          |
+| `kind`       | `string`                | yes      |         | identifies the document type. The value must be Distro, or ZarfDistro on a document written before the move to colonel-byte.dev. One of `Distro`, `ZarfDistro`. |
+| `metadata`   | [Metadata](#metadata)   | yes      |         | holds identifying information for the distro package.                                                                                                           |
+| `spec`       | [Spec](#spec)           | yes      |         | holds the configuration for the distro package.                                                                                                                 |
 
 </div>
 

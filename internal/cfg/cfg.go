@@ -18,7 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cfg is used to parse an byte array and returns a ZarfDistro
+// Package cfg is used to parse an byte array and returns a Distro
 package cfg
 
 import (
@@ -43,8 +43,13 @@ type apiVersionHandler struct {
 
 // knownAPIVersions lists every apiVersion this Cargoship version can decode. To add a
 // new version, append an entry with a higher priority than any existing one.
+//
+// DeprecatedAPIVersion decodes identically to APIVersion -- only the API group moved, the
+// document shape did not -- and sits at a lower priority so that a multi-document package
+// carrying both is read as the newer one.
 var knownAPIVersions = []apiVersionHandler{
-	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
+	{version: v1alpha1.APIVersion, priority: 2, decode: decodeV1Alpha1},
+	{version: v1alpha1.DeprecatedAPIVersion, priority: 1, decode: decodeV1Alpha1},
 }
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.

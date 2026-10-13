@@ -9,8 +9,8 @@
 # flow mapping nested in a block one, and a registry written entirely in flow style inside the list.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: flow
 spec:

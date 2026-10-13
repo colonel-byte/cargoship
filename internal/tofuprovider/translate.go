@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
@@ -34,8 +35,8 @@ import (
 )
 
 const (
-	apiVersion   = "zarf.dev/v1alpha1"
-	documentKind = "ZarfCluster"
+	apiVersion   = v1alpha1.APIVersion
+	documentKind = "Cluster"
 
 	// defaultSSHUser and defaultSSHPort are rig's own defaults, written here for the reason
 	// internal/ansibleinv writes them: rig applies them when it loads a document, but its YAML

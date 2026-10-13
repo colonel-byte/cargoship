@@ -41,7 +41,7 @@ note is appended to the grafted node's description \- the package name and versi
 The result describes the override subtree on its own, while cargoship validates the package's values merged with the overrides. It therefore catches the mistakes that are wrong in either reading \- an unknown key, a wrong type, a name outside an enum or pattern \- and does not attempt to reproduce install\-time validation.
 
 <a name="Decode"></a>
-## func [Decode](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L42>)
+## func [Decode](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L46>)
 
 ```go
 func Decode(b []byte) (any, error)
@@ -110,7 +110,7 @@ const (
 ```
 
 <a name="DetectKind"></a>
-### func [DetectKind](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L60>)
+### func [DetectKind](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L64>)
 
 ```go
 func DetectKind(doc any) (Kind, error)
@@ -119,7 +119,7 @@ func DetectKind(doc any) (Kind, error)
 DetectKind reads the schema kind out of a decoded document's own kind field, so that a file says what it is rather than the operator having to.
 
 <a name="ValidationError"></a>
-## type [ValidationError](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L145-L149>)
+## type [ValidationError](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L149-L153>)
 
 ValidationError reports every way one document failed its schema.
 
@@ -132,7 +132,7 @@ type ValidationError struct {
 ```
 
 <a name="ValidationError.Error"></a>
-### func \(\*ValidationError\) [Error](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L151>)
+### func \(\*ValidationError\) [Error](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L155>)
 
 ```go
 func (e *ValidationError) Error() string
@@ -141,7 +141,7 @@ func (e *ValidationError) Error() string
 
 
 <a name="Validator"></a>
-## type [Validator](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L78-L81>)
+## type [Validator](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L82-L85>)
 
 Validator checks documents against one schema. The schema is compiled once and reused, which is what makes checking a directory of packages worth doing in a single process.
 
@@ -152,7 +152,7 @@ type Validator struct {
 ```
 
 <a name="NewValidator"></a>
-### func [NewValidator](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L85>)
+### func [NewValidator](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L89>)
 
 ```go
 func NewValidator(kind Kind, doc map[string]any) (*Validator, error)
@@ -161,7 +161,7 @@ func NewValidator(kind Kind, doc map[string]any) (*Validator, error)
 NewValidator compiles a schema document for repeated use. Pass the document rather than the kind, so that a composed inventory schema is checked exactly as an editor would check it.
 
 <a name="NewValidatorFor"></a>
-### func [NewValidatorFor](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L94>)
+### func [NewValidatorFor](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L98>)
 
 ```go
 func NewValidatorFor(kind Kind) (*Validator, error)
@@ -170,7 +170,7 @@ func NewValidatorFor(kind Kind) (*Validator, error)
 NewValidatorFor compiles the generated schema for a kind, for callers with nothing to compose.
 
 <a name="Validator.Kind"></a>
-### func \(\*Validator\) [Kind](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L103>)
+### func \(\*Validator\) [Kind](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L107>)
 
 ```go
 func (v *Validator) Kind() Kind
@@ -179,7 +179,7 @@ func (v *Validator) Kind() Kind
 Kind returns the schema this validator checks against.
 
 <a name="Validator.Validate"></a>
-### func \(\*Validator\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L109>)
+### func \(\*Validator\) [Validate](<https://github.com/colonel-byte/cargoship/blob/main/pkg/schema/validate.go#L113>)
 
 ```go
 func (v *Validator) Validate(source string, doc any) error

@@ -870,13 +870,15 @@
     "apiVersion": {
       "description": "identifies the API group and version of this configuration document.",
       "enum": [
+        "colonel-byte.dev/v1alpha1",
         "zarf.dev/v1alpha1"
       ],
       "type": "string"
     },
     "kind": {
-      "description": "identifies the document type. The value must be ZarfCluster.",
+      "description": "identifies the document type. The value must be Cluster, or ZarfCluster on a document written before the move to colonel-byte.dev.",
       "enum": [
+        "Cluster",
         "ZarfCluster"
       ],
       "type": "string"

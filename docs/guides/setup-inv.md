@@ -9,7 +9,7 @@ A basic inventory file defines the cluster's metadata, global configuration, pro
 ```yaml
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-cluster-schema.json
-kind: ZarfCluster
+kind: Cluster
 metadata:
   name: bubbles
 ```
@@ -31,7 +31,7 @@ Then point the inventory at the local copy:
 ```yaml
 ---
 # yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
-kind: ZarfCluster
+kind: Cluster
 metadata:
   name: bubbles
 ```

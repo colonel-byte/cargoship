@@ -7,8 +7,8 @@
 #
 # Nothing here is contacted. The tests only read this file to check how a fleet is derived from
 # a document; the addresses are in the RFC 5737 documentation range.
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: external-fleet
 spec:

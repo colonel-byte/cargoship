@@ -116,7 +116,7 @@ func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.Cl
 	}
 
 	return apicluster.Cluster{
-		Kind: "ZarfCluster",
+		Kind: "Cluster",
 		Metadata: apicluster.Metadata{
 			Name: "bootloose-e2e",
 		},

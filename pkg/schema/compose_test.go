@@ -198,8 +198,8 @@ func TestComposedSchemaValidatesAnInventory(t *testing.T) {
 
 	inventory := func(values map[string]any) map[string]any {
 		return map[string]any{
-			"apiVersion": "zarf.dev/v1alpha1",
-			"kind":       "ZarfCluster",
+			"apiVersion": "colonel-byte.dev/v1alpha1",
+			"kind":       "Cluster",
 			"metadata":   map[string]any{"name": "bubbles"},
 			"spec": map[string]any{
 				"config": map[string]any{
@@ -251,7 +251,7 @@ func TestComposedSchemaValidatesAnInventory(t *testing.T) {
 	t.Run("still checks the rest of the inventory", func(t *testing.T) {
 		// The graft must not have broken the parts of the document it did not touch.
 		res, err := gojsonschema.Validate(loader, gojsonschema.NewGoLoader(map[string]any{
-			"kind": "ZarfCluster",
+			"kind": "Cluster",
 		}))
 		require.NoError(t, err)
 		require.False(t, res.Valid())

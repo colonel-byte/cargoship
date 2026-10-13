@@ -1427,7 +1427,7 @@ func TestConfigRejectsADocumentWithoutRegistries(t *testing.T) {
 	}{
 		{
 			name: "no registries key",
-			doc:  "apiVersion: zarf.dev/v1alpha1\nspec:\n  config: {}\n",
+			doc:  "apiVersion: colonel-byte.dev/v1alpha1\nspec:\n  config: {}\n",
 		},
 		{
 			name: "registries is not a list",

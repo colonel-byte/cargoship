@@ -247,9 +247,9 @@ Cluster is the root object of a cluster configuration document.
 ```go
 type Cluster struct {
     // APIVersion identifies the API group and version of this configuration document.
-    APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-    // Kind identifies the document type. The value must be ZarfCluster.
-    Kind v1alpha1.Kind `json:"kind" jsonschema:"enum=ZarfCluster"`
+    APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=colonel-byte.dev/v1alpha1,enum=zarf.dev/v1alpha1"`
+    // Kind identifies the document type. The value must be Cluster, or ZarfCluster on a document written before the move to colonel-byte.dev.
+    Kind v1alpha1.Kind `json:"kind" jsonschema:"enum=Cluster,enum=ZarfCluster"`
     // Metadata holds identifying information for the cluster.
     Metadata Metadata `json:"metadata"`
     // Spec holds the configuration and hosts for the cluster.

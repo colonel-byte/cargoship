@@ -14,10 +14,15 @@
 
 package v1alpha1
 
-// Kind identifies the kind of a zarf.dev v1alpha1 document, for example ZarfCluster or ZarfDistro.
+// Kind identifies the kind of a colonel-byte.dev v1alpha1 document, for example Cluster or Distro.
 type Kind string
 
 const (
-	// APIVersion is the API version string for the zarf.dev v1alpha1 package.
-	APIVersion string = "zarf.dev/v1alpha1"
+	// APIVersion is the API version string for the colonel-byte.dev v1alpha1 package.
+	APIVersion string = "colonel-byte.dev/v1alpha1"
+	// DeprecatedAPIVersion is the API group these documents used before the move to
+	// colonel-byte.dev. It is still accepted so that documents written against an older
+	// cargoship keep parsing, and it names an API group this project does not own: upstream
+	// Zarf defines its own kinds under colonel-byte.dev/v1alpha1, which is why the move happened.
+	DeprecatedAPIVersion string = "zarf.dev/v1alpha1"
 )

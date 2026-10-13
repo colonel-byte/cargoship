@@ -28,9 +28,9 @@ import (
 // Distro is the root object of a distro package configuration document.
 type Distro struct {
 	// APIVersion identifies the API group and version of this configuration document.
-	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	// Kind identifies the document type. The value must be ZarfDistro.
-	Kind v1alpha1.Kind `json:"kind" jsonschema:"enum=ZarfDistro"`
+	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=colonel-byte.dev/v1alpha1,enum=zarf.dev/v1alpha1"`
+	// Kind identifies the document type. The value must be Distro, or ZarfDistro on a document written before the move to colonel-byte.dev.
+	Kind v1alpha1.Kind `json:"kind" jsonschema:"enum=Distro,enum=ZarfDistro"`
 	// Metadata holds identifying information for the distro package.
 	Metadata Metadata `json:"metadata"`
 	// Build holds information recorded when the package was built.

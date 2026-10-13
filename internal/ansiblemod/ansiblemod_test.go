@@ -329,7 +329,7 @@ func TestRunTranslatesTheInventoryAndRunsTheCommand(t *testing.T) {
 		// stands in for would have done.
 		b, err := os.ReadFile(argv[3]) //nolint:gosec // the path this module just wrote
 		require.NoError(t, err)
-		require.Contains(t, string(b), "kind: ZarfCluster")
+		require.Contains(t, string(b), "kind: Cluster")
 		require.Contains(t, string(b), "kc01")
 		return nil
 	}

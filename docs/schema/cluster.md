@@ -8,12 +8,12 @@ Rendered from `schema/zarf-v1alpha1-cluster-schema.json`.
 
 <div class="schema-table">
 
-| Property     | Type                  | Required | Default | Description                                                                                      |
-| ------------ | --------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------ |
-| `apiVersion` | `string`              | no       |         | identifies the API group and version of this configuration document. One of `zarf.dev/v1alpha1`. |
-| `kind`       | `string`              | yes      |         | identifies the document type. The value must be ZarfCluster. One of `ZarfCluster`.               |
-| `metadata`   | [Metadata](#metadata) | yes      |         | holds identifying information for the cluster.                                                   |
-| `spec`       | [Spec](#spec)         | yes      |         | holds the configuration and hosts for the cluster.                                               |
+| Property     | Type                  | Required | Default | Description                                                                                                                                                         |
+| ------------ | --------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apiVersion` | `string`              | no       |         | identifies the API group and version of this configuration document. One of `colonel-byte.dev/v1alpha1`, `zarf.dev/v1alpha1`.                                       |
+| `kind`       | `string`              | yes      |         | identifies the document type. The value must be Cluster, or ZarfCluster on a document written before the move to colonel-byte.dev. One of `Cluster`, `ZarfCluster`. |
+| `metadata`   | [Metadata](#metadata) | yes      |         | holds identifying information for the cluster.                                                                                                                      |
+| `spec`       | [Spec](#spec)         | yes      |         | holds the configuration and hosts for the cluster.                                                                                                                  |
 
 </div>
 

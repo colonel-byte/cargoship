@@ -980,6 +980,7 @@
     "apiVersion": {
       "description": "identifies the API group and version of this configuration document.",
       "enum": [
+        "colonel-byte.dev/v1alpha1",
         "zarf.dev/v1alpha1"
       ],
       "type": "string"
@@ -989,8 +990,9 @@
       "description": "holds information recorded when the package was built."
     },
     "kind": {
-      "description": "identifies the document type. The value must be ZarfDistro.",
+      "description": "identifies the document type. The value must be Distro, or ZarfDistro on a document written before the move to colonel-byte.dev.",
       "enum": [
+        "Distro",
         "ZarfDistro"
       ],
       "type": "string"
