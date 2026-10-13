@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/cluster-v1alpha1-schema.json
 # An inventory of the shape an operator supplies to CARGOSHIP_E2E_BACKEND=inventory: hosts that
 # already exist somewhere the suite did not create them. The hostnames deliberately look like a
 # cloud provider's rather than the kc0/kw0 the container and VM fleets use, because the external

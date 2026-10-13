@@ -34,7 +34,7 @@ Add the document to the `testdata/` directory of the suite that uses it, with a 
 
 ```yaml
 ---
-# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/cluster-v1alpha1-schema.json
 # What this document covers and why a test needs that shape.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.

@@ -8,7 +8,7 @@ A basic inventory file defines the cluster's metadata, global configuration, pro
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/cluster-v1alpha1-schema.json
 kind: Cluster
 metadata:
   name: bubbles
@@ -23,14 +23,14 @@ The `yaml-language-server` comment on the first line is what makes an editor com
 `cargoship schema` writes the schema out of the binary, so it is the schema that build validates against and it needs no network:
 
 ```sh
-cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+cargoship schema inventory -o ./cluster-v1alpha1-schema.json
 ```
 
 Then point the inventory at the local copy:
 
 ```yaml
 ---
-# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=./cluster-v1alpha1-schema.json
 kind: Cluster
 metadata:
   name: bubbles

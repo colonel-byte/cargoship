@@ -79,14 +79,14 @@ func Targets() []Target {
 	return []Target{
 		{
 			SchemaStruct: &distro.Distro{},
-			SchemaPath:   "zarf-v1alpha1-distro-package-schema.json",
+			SchemaPath:   "distro-v1alpha1-schema.json",
 			StructPath:   []string{"api", "colonel-byte.dev", "v1alpha1", "distro"},
 			DocTitle:     "Distro package",
 			DocFile:      "distro.md",
 		},
 		{
 			SchemaStruct: &cluster.Cluster{},
-			SchemaPath:   "zarf-v1alpha1-cluster-schema.json",
+			SchemaPath:   "cluster-v1alpha1-schema.json",
 			StructPath:   []string{"api", "colonel-byte.dev", "v1alpha1", "cluster"},
 			KeyNamer: func(s string) string {
 				switch strings.ToLower(s) {
@@ -103,7 +103,7 @@ func Targets() []Target {
 		},
 		{
 			SchemaStruct: &types.DistroConfig{},
-			SchemaPath:   "zarf-config-distro-schema.json",
+			SchemaPath:   "config-distro-schema.json",
 			StructPath:   []string{"types"},
 			KeyNamer: func(s string) string {
 				return s

@@ -4,7 +4,7 @@
 
 holds the values for the `.`, or root, section of the config file
 
-Rendered from `schema/zarf-config-distro-schema.json`.
+Rendered from `schema/config-distro-schema.json`.
 
 <div class="schema-table">
 
