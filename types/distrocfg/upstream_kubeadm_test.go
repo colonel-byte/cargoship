@@ -27,10 +27,10 @@ import (
 )
 
 func TestBuildClusterConfigurationDefaults(t *testing.T) {
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Version = "v1.35.3"
 
-	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.RuntimeMeta{})
 
 	if cc["kind"] != "ClusterConfiguration" {
 		t.Fatalf("kind = %v, want ClusterConfiguration", cc["kind"])
@@ -54,13 +54,13 @@ func TestBuildClusterConfigurationDefaults(t *testing.T) {
 }
 
 func TestBuildClusterConfigurationPodSubnetAndCertSANs(t *testing.T) {
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		"config": dig.Mapping{
 			keyNetworking: dig.Mapping{keyPodSubnet: "10.10.0.0/16"},
 		},
 	}
-	run := cluster.ZarfRuntimeMeta{ControllerTLS: []string{"cluster.example.com"}}
+	run := cluster.RuntimeMeta{ControllerTLS: []string{"cluster.example.com"}}
 
 	cc := buildClusterConfiguration(context.Background(), dis, run)
 
@@ -85,13 +85,13 @@ func TestBuildClusterConfigurationPodSubnetAndCertSANs(t *testing.T) {
 }
 
 func TestBuildClusterConfigurationAuditAndPSSMountHostPaths(t *testing.T) {
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		"audit":       dig.Mapping{"rules": []any{dig.Mapping{"level": "Metadata"}}},
 		"podSecurity": dig.Mapping{"defaults": dig.Mapping{"enforce": "restricted"}},
 	}
 
-	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.RuntimeMeta{})
 
 	apiServer, ok := cc["apiServer"].(dig.Mapping)
 	if !ok {
@@ -117,7 +117,7 @@ func TestBuildClusterConfigurationAuditAndPSSMountHostPaths(t *testing.T) {
 }
 
 func TestBuildClusterConfigurationExtraArgsPassthrough(t *testing.T) {
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		"config": dig.Mapping{
 			"controllerManager": dig.Mapping{
@@ -126,7 +126,7 @@ func TestBuildClusterConfigurationExtraArgsPassthrough(t *testing.T) {
 		},
 	}
 
-	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.RuntimeMeta{})
 
 	cm, ok := cc["controllerManager"].(dig.Mapping)
 	if !ok {
@@ -142,10 +142,10 @@ func TestBuildClusterConfigurationExtraArgsPassthrough(t *testing.T) {
 }
 
 func TestBuildClusterConfigurationImageRepository(t *testing.T) {
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.ImagesConfig.Images = []string{"registry.k8s.io/kube-apiserver:v1.35.3"}
 
-	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.RuntimeMeta{})
 
 	if cc["imageRepository"] != "registry.k8s.io" {
 		t.Fatalf("imageRepository = %v, want registry.k8s.io", cc["imageRepository"])
@@ -153,7 +153,7 @@ func TestBuildClusterConfigurationImageRepository(t *testing.T) {
 }
 
 func TestBuildInitConfiguration(t *testing.T) {
-	host := &cluster.ZarfHost{Hostname: "controller-1"}
+	host := &cluster.Host{Hostname: "controller-1"}
 
 	ic := buildInitConfiguration(host)
 
@@ -170,8 +170,8 @@ func TestBuildInitConfiguration(t *testing.T) {
 }
 
 func TestBuildJoinConfigurationWorker(t *testing.T) {
-	host := &cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker}
-	run := cluster.ZarfRuntimeMeta{AgentToken: "agent-token", LoadBalancer: "lb.example.com"}
+	host := &cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker}
+	run := cluster.RuntimeMeta{AgentToken: "agent-token", LoadBalancer: "lb.example.com"}
 
 	jc := buildJoinConfiguration(host, run)
 
@@ -192,8 +192,8 @@ func TestBuildJoinConfigurationWorker(t *testing.T) {
 }
 
 func TestBuildJoinConfigurationController(t *testing.T) {
-	host := &cluster.ZarfHost{Hostname: "controller-2", Role: cluster.RoleController}
-	run := cluster.ZarfRuntimeMeta{ControllerToken: "controller-token"}
+	host := &cluster.Host{Hostname: "controller-2", Role: cluster.RoleController}
+	run := cluster.RuntimeMeta{ControllerToken: "controller-token"}
 
 	jc := buildJoinConfiguration(host, run)
 

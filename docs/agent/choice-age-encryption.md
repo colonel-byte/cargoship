@@ -92,7 +92,7 @@ It reads the prior claim from the document as it was read, not as it will be wri
 
 ### Compatibility
 
-`ZarfClusterMetadata` carries `additionalProperties: false`, so a document holding this block fails `cargoship validate` on a binary built before it existed. An apply is unaffected -- `clustercfg.Parse` is a non-strict unmarshal, and the generated schema is used only by `cargoship validate` (`cmd/misc_validate.go`). Both copies of the schema have to be regenerated together with `mage generate:schema`, since CI does not run the generator.
+`Metadata` carries `additionalProperties: false`, so a document holding this block fails `cargoship validate` on a binary built before it existed. An apply is unaffected -- `clustercfg.Parse` is a non-strict unmarshal, and the generated schema is used only by `cargoship validate` (`cmd/misc_validate.go`). Both copies of the schema have to be regenerated together with `mage generate:schema`, since CI does not run the generator.
 
 ## Why encryption picks a format but decryption never does
 

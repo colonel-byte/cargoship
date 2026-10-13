@@ -48,7 +48,7 @@ func (p *BINUploadFiles) Explanation() string {
 }
 
 // Prepare the phase
-func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.UploadFilesCommon.Prepare(ctx, c, d); err != nil {
 		logger.From(ctx).Warn("got", "error", err)
 	}
@@ -61,8 +61,8 @@ func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 
 // Run the phase
 func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
-	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.Host) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.Host) error {
 			files, err := p.filesFor(p.filesControl, zh)
 			if err != nil {
 				return err
@@ -87,8 +87,8 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 	if err != nil {
 		logger.From(ctx).Warn("got", "error", err)
 	}
-	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.Host) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.Host) error {
 			files, err := p.filesFor(p.filesWorkers, zh)
 			if err != nil {
 				return err

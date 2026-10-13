@@ -35,16 +35,16 @@ import (
 type InitializeControllers struct {
 	GenericPhase
 	Distro  distrocfg.Distro
-	run     cluster.ZarfRuntimeMeta
-	control cluster.ZarfHosts
+	run     cluster.RuntimeMeta
+	control cluster.Hosts
 }
 
 // controllersNeedingInit filters hosts down to controllers that have not yet formed or joined the
 // cluster. When d implements Bootstrapper (kubeadm-style one-shot cluster formation, no service to
 // poll) that is asked directly; every other distro falls back to the existing service-running plus
 // UnknownVersion check.
-func controllersNeedingInit(ctx context.Context, hosts cluster.ZarfHosts, d distrocfg.Distro) cluster.ZarfHosts {
-	return hosts.Filter(func(h *cluster.ZarfHost) bool {
+func controllersNeedingInit(ctx context.Context, hosts cluster.Hosts, d distrocfg.Distro) cluster.Hosts {
+	return hosts.Filter(func(h *cluster.Host) bool {
 		if !h.IsController() {
 			return false
 		}
@@ -56,8 +56,8 @@ func controllersNeedingInit(ctx context.Context, hosts cluster.ZarfHosts, d dist
 }
 
 // Prepare the phase
-func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool { return h.IsController() })
+func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool { return h.IsController() })
 	// Recomputed independently of ConfigureEngine.Prepare's identical Leader/LoadBalancer setup --
 	// deliberate, not DRY-able, so this phase does not depend on phase-ordering assumptions.
 	if len(control) > 0 {
@@ -103,7 +103,7 @@ func (p *InitializeControllers) Run(ctx context.Context) error {
 			"bootstrapping controller",
 			p.control,
 			1,
-			func(ctx context.Context, h *cluster.ZarfHost) error {
+			func(ctx context.Context, h *cluster.Host) error {
 				return b.Bootstrap(ctx, h, p.run, *p.GetDistro())
 			},
 		)
@@ -122,14 +122,14 @@ func (p *InitializeControllers) ShouldRun() bool {
 	return len(p.control) > 0
 }
 
-func (p *InitializeControllers) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *InitializeControllers) installDistro(ctx context.Context, h *cluster.Host) error {
 	if h.Metadata.Install != nil {
 		return h.Metadata.Install(ctx, h)
 	}
 	return nil
 }
 
-func (p *InitializeControllers) startService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *InitializeControllers) startService(ctx context.Context, h *cluster.Host) error {
 	service := p.Distro.GetControllerService()
 	logger.From(ctx).Info("waiting for the controller service to start", "service", service, "host", h)
 

@@ -26,11 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// downgradeHost is a host the refusal can name: a ZarfHost with no connection configuration
+// downgradeHost is a host the refusal can name: a Host with no connection configuration
 // stringifies to "unknown{}", which would make the assertions below pass on a message that tells
 // an operator nothing.
-func downgradeHost(address string) *cluster.ZarfHost {
-	return &cluster.ZarfHost{
+func downgradeHost(address string) *cluster.Host {
+	return &cluster.Host{
 		ClientWithConfig: rig.ClientWithConfig{
 			ConnectionConfig: rig.CompositeConfig{
 				SSH: &ssh.Config{Address: address},
@@ -47,7 +47,7 @@ type runningVersionDistro struct {
 	version string
 }
 
-func (d *runningVersionDistro) RunningVersion(_ *cluster.ZarfHost) (string, error) {
+func (d *runningVersionDistro) RunningVersion(_ *cluster.Host) (string, error) {
 	if d.version == "" {
 		return "", distrocfg.ErrVersionNotDetected
 	}
@@ -162,7 +162,7 @@ func TestInvestigateHostDistroDowngrade(t *testing.T) {
 			p := &GatherFactsDistro{
 				Distro:         &runningVersionDistro{version: tc.running},
 				AllowDowngrade: tc.allowDowngrade,
-				d:              &distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Version: tc.packaged}},
+				d:              &distro.Distro{Spec: distro.Spec{Version: tc.packaged}},
 			}
 			h := downgradeHost("10.0.0.11")
 

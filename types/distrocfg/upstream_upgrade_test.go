@@ -31,8 +31,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-func kubeadmDistroFiles() v1alpha1.ZarfFiles {
-	return v1alpha1.ZarfFiles{
+func kubeadmDistroFiles() v1alpha1.Files {
+	return v1alpha1.Files{
 		{Target: "/tmp/kubeadm_amd64.deb", Selector: v1alpha1.BinarySelector{Package: config.SelectorAPT, Arch: api.Arches{api.ArchAMD64}}},
 		{Target: "/tmp/kubeadm_arm64.deb", Selector: v1alpha1.BinarySelector{Package: config.SelectorAPT, Arch: api.Arches{api.ArchARM64}}},
 		{Target: "/tmp/kubeadm.rpm", Selector: v1alpha1.BinarySelector{Package: config.SelectorRPM, Arch: api.Arches{api.ArchAMD64}}},
@@ -41,8 +41,8 @@ func kubeadmDistroFiles() v1alpha1.ZarfFiles {
 }
 
 func TestKubeadmPackagePathSelectsAPT(t *testing.T) {
-	dis := distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Config: distro.ZarfDistroConfig{OS: distro.ZarfDistroOS{Files: kubeadmDistroFiles()}}}}
-	h := &cluster.ZarfHost{}
+	dis := distro.Distro{Spec: distro.Spec{Config: distro.Config{OS: distro.OS{Files: kubeadmDistroFiles()}}}}
+	h := &cluster.Host{}
 	h.Metadata.Arch = "amd64"
 
 	path, err := kubeadmPackagePath(dis, h, config.SelectorAPT)
@@ -52,8 +52,8 @@ func TestKubeadmPackagePathSelectsAPT(t *testing.T) {
 }
 
 func TestKubeadmPackagePathSelectsRPM(t *testing.T) {
-	dis := distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Config: distro.ZarfDistroConfig{OS: distro.ZarfDistroOS{Files: kubeadmDistroFiles()}}}}
-	h := &cluster.ZarfHost{}
+	dis := distro.Distro{Spec: distro.Spec{Config: distro.Config{OS: distro.OS{Files: kubeadmDistroFiles()}}}}
+	h := &cluster.Host{}
 	h.Metadata.Arch = "amd64"
 
 	path, err := kubeadmPackagePath(dis, h, config.SelectorRPM)
@@ -63,8 +63,8 @@ func TestKubeadmPackagePathSelectsRPM(t *testing.T) {
 }
 
 func TestKubeadmPackagePathFiltersByArch(t *testing.T) {
-	dis := distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Config: distro.ZarfDistroConfig{OS: distro.ZarfDistroOS{Files: kubeadmDistroFiles()}}}}
-	h := &cluster.ZarfHost{}
+	dis := distro.Distro{Spec: distro.Spec{Config: distro.Config{OS: distro.OS{Files: kubeadmDistroFiles()}}}}
+	h := &cluster.Host{}
 	h.Metadata.Arch = "arm64"
 
 	path, err := kubeadmPackagePath(dis, h, config.SelectorAPT)
@@ -74,8 +74,8 @@ func TestKubeadmPackagePathFiltersByArch(t *testing.T) {
 }
 
 func TestKubeadmPackagePathErrorsWhenNoMatch(t *testing.T) {
-	dis := distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Config: distro.ZarfDistroConfig{OS: distro.ZarfDistroOS{Files: kubeadmDistroFiles()}}}}
-	h := &cluster.ZarfHost{}
+	dis := distro.Distro{Spec: distro.Spec{Config: distro.Config{OS: distro.OS{Files: kubeadmDistroFiles()}}}}
+	h := &cluster.Host{}
 	h.Metadata.Arch = "sparc64"
 
 	_, err := kubeadmPackagePath(dis, h, config.SelectorAPT)
@@ -85,8 +85,8 @@ func TestKubeadmPackagePathErrorsWhenNoMatch(t *testing.T) {
 
 func TestPreStartUpgradeErrorsWhenNoKubeadmPackageStaged(t *testing.T) {
 	d := &Upstream{}
-	dis := distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Config: distro.ZarfDistroConfig{OS: distro.ZarfDistroOS{Files: nil}}}}
-	h := &cluster.ZarfHost{}
+	dis := distro.Distro{Spec: distro.Spec{Config: distro.Config{OS: distro.OS{Files: nil}}}}
+	h := &cluster.Host{}
 	h.Metadata.Arch = "amd64"
 
 	err := d.PreStartUpgrade(context.Background(), h, dis)
@@ -115,8 +115,8 @@ func TestPreStartUpgradeUnholdsBeforeInstall(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Upstream{}
-			dis := distro.ZarfDistro{Spec: distro.ZarfDistroSpec{Config: distro.ZarfDistroConfig{OS: distro.ZarfDistroOS{Files: kubeadmDistroFiles()}}}}
-			h := &cluster.ZarfHost{}
+			dis := distro.Distro{Spec: distro.Spec{Config: distro.Config{OS: distro.OS{Files: kubeadmDistroFiles()}}}}
+			h := &cluster.Host{}
 			h.Configurer = &linux.Ubuntu{}
 			h.Metadata.Arch = "amd64"
 			h.Metadata.IsLeader = tt.isLeader
@@ -140,9 +140,9 @@ func debugContext() (context.Context, *bytes.Buffer) {
 // before the install, so failing it on a host with no versionlock plugin would break the upgrade on
 // exactly the hosts docs/agent/choice-unpinnable-hosts.md keeps installing.
 func TestUnholdKubeadmUsingSkipsWhenVersionlockIsMissing(t *testing.T) {
-	h := &cluster.ZarfHost{}
-	present := func(*cluster.ZarfHost) error { return errors.New("No such command: versionlock") }
-	run := func(*cluster.ZarfHost, string) error {
+	h := &cluster.Host{}
+	present := func(*cluster.Host) error { return errors.New("No such command: versionlock") }
+	run := func(*cluster.Host, string) error {
 		t.Fatal("dnf versionlock delete must not run on a host without the plugin")
 		return nil
 	}
@@ -157,11 +157,11 @@ func TestUnholdKubeadmUsingSkipsWhenVersionlockIsMissing(t *testing.T) {
 // TestUnholdKubeadmUsingDeletesWhenVersionlockIsPresent pins that a host that does have the plugin
 // still gets its lock released, which is what lets the new kubeadm install over the old one.
 func TestUnholdKubeadmUsingDeletesWhenVersionlockIsPresent(t *testing.T) {
-	h := &cluster.ZarfHost{}
-	present := func(*cluster.ZarfHost) error { return nil }
+	h := &cluster.Host{}
+	present := func(*cluster.Host) error { return nil }
 
 	var got []string
-	run := func(_ *cluster.ZarfHost, cmd string) error {
+	run := func(_ *cluster.Host, cmd string) error {
 		got = append(got, cmd)
 		return nil
 	}
@@ -174,9 +174,9 @@ func TestUnholdKubeadmUsingDeletesWhenVersionlockIsPresent(t *testing.T) {
 // TestUnholdKubeadmUsingPropagatesDeleteError keeps the tolerance narrow: a host that has
 // versionlock and still fails to release the lock is a real error.
 func TestUnholdKubeadmUsingPropagatesDeleteError(t *testing.T) {
-	h := &cluster.ZarfHost{}
-	present := func(*cluster.ZarfHost) error { return nil }
-	run := func(*cluster.ZarfHost, string) error { return errors.New("locked by another process") }
+	h := &cluster.Host{}
+	present := func(*cluster.Host) error { return nil }
+	run := func(*cluster.Host, string) error { return errors.New("locked by another process") }
 
 	ctx, _ := debugContext()
 	err := unholdKubeadmUsing(ctx, h, config.SelectorRPM, present, run)
@@ -187,14 +187,14 @@ func TestUnholdKubeadmUsingPropagatesDeleteError(t *testing.T) {
 // TestUnholdKubeadmUsingAlwaysUnholdsOnAPT pins that the probe is rpm-only: apt-mark ships in apt
 // itself, so a Debian-family host can always release a hold and must not be skipped.
 func TestUnholdKubeadmUsingAlwaysUnholdsOnAPT(t *testing.T) {
-	h := &cluster.ZarfHost{}
-	present := func(*cluster.ZarfHost) error {
+	h := &cluster.Host{}
+	present := func(*cluster.Host) error {
 		t.Fatal("the versionlock probe must not run on the apt path")
 		return nil
 	}
 
 	var got []string
-	run := func(_ *cluster.ZarfHost, cmd string) error {
+	run := func(_ *cluster.Host, cmd string) error {
 		got = append(got, cmd)
 		return nil
 	}
@@ -207,9 +207,9 @@ func TestUnholdKubeadmUsingAlwaysUnholdsOnAPT(t *testing.T) {
 // TestUnholdKubeadmUsingPropagatesAPTError is the other half of that: nothing excuses a
 // Debian-family host from releasing its hold.
 func TestUnholdKubeadmUsingPropagatesAPTError(t *testing.T) {
-	h := &cluster.ZarfHost{}
-	present := func(*cluster.ZarfHost) error { return nil }
-	run := func(*cluster.ZarfHost, string) error { return errors.New("dpkg was interrupted") }
+	h := &cluster.Host{}
+	present := func(*cluster.Host) error { return nil }
+	run := func(*cluster.Host, string) error { return errors.New("dpkg was interrupted") }
 
 	ctx, _ := debugContext()
 	err := unholdKubeadmUsing(ctx, h, config.SelectorAPT, present, run)

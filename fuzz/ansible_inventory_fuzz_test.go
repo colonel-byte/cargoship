@@ -247,7 +247,7 @@ func isRead(name string) bool {
 // compared as. Comparing the structs would compare pointers, and comparing JSON would compare a
 // document that is not the one written: several embedded rig types carry omitempty on their JSON
 // tags and not on their YAML tags.
-func mustYAML(t *testing.T, out *cluster.ZarfCluster) string {
+func mustYAML(t *testing.T, out *cluster.Cluster) string {
 	t.Helper()
 
 	encoded, err := goyaml.Marshal(out)

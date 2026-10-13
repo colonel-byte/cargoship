@@ -27,7 +27,7 @@ func withListing(t *testing.T, listing map[string][]string) {
 	t.Helper()
 
 	original := listFiles
-	listFiles = func(_ *cluster.ZarfHost, dir string) []string {
+	listFiles = func(_ *cluster.Host, dir string) []string {
 		return listing[dir]
 	}
 	t.Cleanup(func() { listFiles = original })
@@ -49,7 +49,7 @@ func TestStaleFiles(t *testing.T) {
 		"/etc/rancher/rke2/registries.yaml":         {Content: []byte("---\n"), Mode: modeRegistries},
 	}
 
-	got := StaleFiles(&cluster.ZarfHost{}, []ManagedDir{{Path: registryTLSDir}}, desired)
+	got := StaleFiles(&cluster.Host{}, []ManagedDir{{Path: registryTLSDir}}, desired)
 
 	require.Equal(t, []string{
 		"/etc/cargoship/tls/also-gone.example.com.crt",
@@ -61,8 +61,8 @@ func TestStaleFiles(t *testing.T) {
 func TestStaleFilesNothingToDo(t *testing.T) {
 	withListing(t, map[string][]string{registryTLSDir: nil})
 
-	require.Nil(t, StaleFiles(&cluster.ZarfHost{}, nil, nil), "no managed directories, no stale files")
-	require.Nil(t, StaleFiles(&cluster.ZarfHost{}, []ManagedDir{{Path: registryTLSDir}}, nil), "an empty directory has no stale files")
+	require.Nil(t, StaleFiles(&cluster.Host{}, nil, nil), "no managed directories, no stale files")
+	require.Nil(t, StaleFiles(&cluster.Host{}, []ManagedDir{{Path: registryTLSDir}}, nil), "an empty directory has no stale files")
 }
 
 func TestRemoveStaleFiles(t *testing.T) {
@@ -74,7 +74,7 @@ func TestRemoveStaleFiles(t *testing.T) {
 		"/etc/cargoship/tls/gone.example.com.crt": testCAPEM,
 		"/etc/cargoship/tls/kept.example.com.crt": testCAPEM,
 	}}
-	host := fake.attach(&cluster.ZarfHost{})
+	host := fake.attach(&cluster.Host{})
 	desired := map[string]DesiredFile{
 		"/etc/cargoship/tls/kept.example.com.crt": {Content: []byte(testCAPEM), Mode: modeConfigFile},
 	}
@@ -89,7 +89,7 @@ func TestRemoveStaleFiles(t *testing.T) {
 func TestRemoveStaleFilesError(t *testing.T) {
 	withListing(t, map[string][]string{registryTLSDir: {"/etc/cargoship/tls/gone.example.com.crt"}})
 
-	host := (&fakeHost{deleteFileErr: errors.New("permission denied")}).attach(&cluster.ZarfHost{})
+	host := (&fakeHost{deleteFileErr: errors.New("permission denied")}).attach(&cluster.Host{})
 
 	err := RemoveStaleFiles(host, []ManagedDir{{Path: registryTLSDir}}, nil)
 	require.ErrorContains(t, err, "/etc/cargoship/tls/gone.example.com.crt")
@@ -125,7 +125,7 @@ func TestStaleFilesGlob(t *testing.T) {
 		manifests + "/rke2-cilium-config.yaml": {Content: []byte("---\n"), Mode: modeConfigFile},
 	}
 
-	got := StaleFiles(&cluster.ZarfHost{}, []ManagedDir{{Path: manifests, Glob: "*-config.yaml"}}, desired)
+	got := StaleFiles(&cluster.Host{}, []ManagedDir{{Path: manifests, Glob: "*-config.yaml"}}, desired)
 
 	require.Equal(t, []string{manifests + "/rancher-vsphere-cpi-config.yaml"}, got,
 		"only a chart config the engine configuration no longer asks for is stale")

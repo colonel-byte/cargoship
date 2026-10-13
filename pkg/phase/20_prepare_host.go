@@ -45,7 +45,7 @@ const sysctlConfPath = "/etc/sysctl.d/99-cargoship.conf"
 // PrepareHosts installs required packages and so on on the hosts.
 type PrepareHosts struct {
 	GenericPhase
-	d *distro.ZarfDistro
+	d *distro.Distro
 }
 
 // Title for the phase
@@ -59,7 +59,7 @@ func (p *PrepareHosts) Explanation() string {
 }
 
 // Prepare the phase
-func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error {
 	p.d = d
 	return nil
 }
@@ -73,7 +73,7 @@ type prepare interface {
 	Prepare(configurer.Host) error
 }
 
-func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.Host) error {
 	if c, ok := h.Configurer.(prepare); ok {
 		if err := c.Prepare(h); err != nil {
 			return err
@@ -107,7 +107,7 @@ func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) err
 	return nil
 }
 
-func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHost, env map[string]string) error {
+func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.Host, env map[string]string) error {
 	if err := h.Configurer.UpdateEnvironment(h, env); err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHos
 	})
 }
 
-func (p *PrepareHosts) updateSysctlConfig(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareHosts) updateSysctlConfig(ctx context.Context, h *cluster.Host) error {
 	var sb strings.Builder
 
 	keys := make([]string, 0, len(p.GetDistro().Spec.Config.OS.Sysctl))

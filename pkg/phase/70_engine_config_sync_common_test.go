@@ -99,9 +99,9 @@ type managedDirsDistro struct {
 
 func (d *managedDirsDistro) ManagedDirs() []distrocfg.ManagedDir { return d.dirs }
 
-func newSyncPhase(fsys *fileFS, desired map[string]distrocfg.DesiredFile) (*EngineConfigSyncHosts, *cluster.ZarfHost) {
+func newSyncPhase(fsys *fileFS, desired map[string]distrocfg.DesiredFile) (*EngineConfigSyncHosts, *cluster.Host) {
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 	h.SetFS(fsys)
 	return p, h
 }
@@ -164,12 +164,12 @@ func TestDriftReasonIsPerHost(t *testing.T) {
 	}
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
 
-	inSync := &cluster.ZarfHost{}
+	inSync := &cluster.Host{}
 	inSync.SetFS(&fileFS{
 		files: map[string]string{registriesPath: "---\nmirrors: {}\n"},
 		modes: map[string]fs.FileMode{registriesPath: 0o640},
 	})
-	drifted := &cluster.ZarfHost{}
+	drifted := &cluster.Host{}
 	drifted.SetFS(&fileFS{})
 
 	require.False(t, p.needsUpdate(context.Background(), inSync))
@@ -186,7 +186,7 @@ func TestNeedsUpdateNoRestartOnlyWritesDirectly(t *testing.T) {
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
 
 	fsys := &fileFS{files: map[string]string{}}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 	h.SetFS(fsys)
 
 	// Should not trigger node update/drain
@@ -204,7 +204,7 @@ func TestNeedsUpdateNoRestartWriteFailureKeepsHost(t *testing.T) {
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
 
 	fsys := &fileFS{files: map[string]string{}, writeErr: errors.New("write failed")}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 	h.SetFS(fsys)
 
 	require.True(t, p.needsUpdate(context.Background(), h))
@@ -225,10 +225,10 @@ func TestFilesForByRole(t *testing.T) {
 		},
 	}
 
-	controller := &cluster.ZarfHost{Role: cluster.RoleController}
+	controller := &cluster.Host{Role: cluster.RoleController}
 	require.Contains(t, p.filesFor(controller), chartConfig)
 
-	worker := &cluster.ZarfHost{Role: cluster.RoleWorker}
+	worker := &cluster.Host{Role: cluster.RoleWorker}
 	require.NotContains(t, p.filesFor(worker), chartConfig)
 	require.Contains(t, p.filesFor(worker), registriesPath)
 }
@@ -242,7 +242,7 @@ func TestNeedsUpdateNoRestartMarksThePhaseChanged(t *testing.T) {
 		distrocfg.DistroReleaseFile: {Content: []byte(`{"name":"rke2"}`), Mode: "0600", NoRestart: true},
 	}
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 	h.SetFS(&fileFS{files: map[string]string{}})
 
 	require.False(t, p.Changed(), "nothing has been looked at yet")
@@ -261,7 +261,7 @@ func TestNeedsUpdateWritesNothingUnderADryRun(t *testing.T) {
 	p.manager = &Manager{DryRun: true}
 
 	fsys := &fileFS{files: map[string]string{}}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 	h.SetFS(fsys)
 
 	require.False(t, p.needsUpdate(context.Background(), h))
@@ -277,7 +277,7 @@ func TestChangedIsFalseWhenNothingDrifted(t *testing.T) {
 		distrocfg.DistroReleaseFile: {Content: []byte(content), Mode: "0600", NoRestart: true},
 	}
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 	h.SetFS(&fileFS{
 		files: map[string]string{distrocfg.DistroReleaseFile: content},
 		modes: map[string]fs.FileMode{distrocfg.DistroReleaseFile: 0o600},

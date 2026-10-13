@@ -30,19 +30,19 @@ import (
 
 // fakeNameOf returns a stable, made-up package name per staged file path, recording each call so a
 // test can assert which files were resolved and in what order.
-func fakeNameOf(calls *[]string) func(*cluster.ZarfHost, string) (string, error) {
-	return func(_ *cluster.ZarfHost, path string) (string, error) {
+func fakeNameOf(calls *[]string) func(*cluster.Host, string) (string, error) {
+	return func(_ *cluster.Host, path string) (string, error) {
 		*calls = append(*calls, path)
 		return "pkg-" + path, nil
 	}
 }
 
 // noopUnhold is a passthrough unhold for tests that don't care about unhold behavior.
-func noopUnhold(context.Context, *cluster.ZarfHost, []string) error { return nil }
+func noopUnhold(context.Context, *cluster.Host, []string) error { return nil }
 
 func TestInstallAndPinPackagesForUnholdsInstallsThenHolds(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{
+	byArch := map[api.Arch][]v1alpha1.File{
 		api.ArchAMD64: {
 			{
 				Name:   "kubelet-amd64",
@@ -61,13 +61,13 @@ func TestInstallAndPinPackagesForUnholdsInstallsThenHolds(t *testing.T) {
 	var nameOfCalls []string
 	var order []string
 	var heldNames, unheldNames []string
-	var heldHost *cluster.ZarfHost
-	unhold := func(_ context.Context, _ *cluster.ZarfHost, names []string) error {
+	var heldHost *cluster.Host
+	unhold := func(_ context.Context, _ *cluster.Host, names []string) error {
 		order = append(order, "unhold")
 		unheldNames = names
 		return nil
 	}
-	hold := func(_ context.Context, hh *cluster.ZarfHost, names []string) error {
+	hold := func(_ context.Context, hh *cluster.Host, names []string) error {
 		order = append(order, "hold")
 		heldHost = hh
 		heldNames = names
@@ -87,16 +87,16 @@ func TestInstallAndPinPackagesForUnholdsInstallsThenHolds(t *testing.T) {
 
 func TestInstallAndPinPackagesForSkipsHostWithNoPackages(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
 	h, cfg := newInstallHost(t, "arm64")
 
 	holdCalled := false
-	hold := func(context.Context, *cluster.ZarfHost, []string) error {
+	hold := func(context.Context, *cluster.Host, []string) error {
 		holdCalled = true
 		return nil
 	}
 	unholdCalled := false
-	unhold := func(context.Context, *cluster.ZarfHost, []string) error {
+	unhold := func(context.Context, *cluster.Host, []string) error {
 		unholdCalled = true
 		return nil
 	}
@@ -111,10 +111,10 @@ func TestInstallAndPinPackagesForSkipsHostWithNoPackages(t *testing.T) {
 
 func TestInstallAndPinPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
 	h, cfg := newInstallHost(t, "sparc64")
 
-	hold := func(context.Context, *cluster.ZarfHost, []string) error {
+	hold := func(context.Context, *cluster.Host, []string) error {
 		t.Fatal("hold must not run when the install never happened")
 		return nil
 	}
@@ -130,16 +130,16 @@ func TestInstallAndPinPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 // the phase on either package manager rather than quietly leaving the host unpinned.
 func TestInstallAndPinPackagesForPropagatesNameLookupError(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
 	h, cfg := newInstallHost(t, "amd64")
 
 	wantErr := errors.New("dpkg-deb failed")
-	nameOf := func(*cluster.ZarfHost, string) (string, error) { return "", wantErr }
-	hold := func(context.Context, *cluster.ZarfHost, []string) error {
+	nameOf := func(*cluster.Host, string) (string, error) { return "", wantErr }
+	hold := func(context.Context, *cluster.Host, []string) error {
 		t.Fatal("hold must not run when a package name could not be resolved")
 		return nil
 	}
-	unhold := func(context.Context, *cluster.ZarfHost, []string) error {
+	unhold := func(context.Context, *cluster.Host, []string) error {
 		t.Fatal("unhold must not run when a package name could not be resolved")
 		return nil
 	}
@@ -152,12 +152,12 @@ func TestInstallAndPinPackagesForPropagatesNameLookupError(t *testing.T) {
 
 func TestInstallAndPinPackagesForPropagatesUnholdError(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
 	h, cfg := newInstallHost(t, "amd64")
 
 	wantErr := errors.New("apt-mark unhold failed")
-	unhold := func(context.Context, *cluster.ZarfHost, []string) error { return wantErr }
-	hold := func(context.Context, *cluster.ZarfHost, []string) error {
+	unhold := func(context.Context, *cluster.Host, []string) error { return wantErr }
+	hold := func(context.Context, *cluster.Host, []string) error {
 		t.Fatal("hold must not run when unhold failed")
 		return nil
 	}
@@ -170,12 +170,12 @@ func TestInstallAndPinPackagesForPropagatesUnholdError(t *testing.T) {
 
 func TestInstallAndPinPackagesForPropagatesHoldError(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
 	h, _ := newInstallHost(t, "amd64")
 
 	wantErr := errors.New("apt-mark hold failed")
 	holdCalled := false
-	hold := func(context.Context, *cluster.ZarfHost, []string) error {
+	hold := func(context.Context, *cluster.Host, []string) error {
 		holdCalled = true
 		return wantErr
 	}
@@ -190,13 +190,13 @@ func TestHoldRPMPackagesUsingLocksWhenVersionlockIsPresent(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
 	var lockedNames []string
-	var lockedHost *cluster.ZarfHost
-	add := func(hh *cluster.ZarfHost, names []string) error {
+	var lockedHost *cluster.Host
+	add := func(hh *cluster.Host, names []string) error {
 		lockedHost = hh
 		lockedNames = names
 		return nil
 	}
-	present := func(*cluster.ZarfHost) error { return nil }
+	present := func(*cluster.Host) error { return nil }
 
 	err := holdRPMPackagesUsing(context.Background(), h, []string{"k3s", "kubelet"}, present, add)
 
@@ -209,8 +209,8 @@ func TestHoldRPMPackagesUsingPropagatesLockError(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
 	wantErr := errors.New("dnf versionlock add failed")
-	add := func(*cluster.ZarfHost, []string) error { return wantErr }
-	present := func(*cluster.ZarfHost) error { return nil }
+	add := func(*cluster.Host, []string) error { return wantErr }
+	present := func(*cluster.Host) error { return nil }
 
 	err := holdRPMPackagesUsing(context.Background(), h, []string{"k3s"}, present, add)
 
@@ -223,11 +223,11 @@ func TestHoldRPMPackagesUsingPropagatesLockError(t *testing.T) {
 func TestHoldRPMPackagesUsingWarnsWhenVersionlockIsMissing(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
-	add := func(*cluster.ZarfHost, []string) error {
+	add := func(*cluster.Host, []string) error {
 		t.Fatal("dnf versionlock add must not run on a host without the plugin")
 		return nil
 	}
-	present := func(*cluster.ZarfHost) error { return errors.New("No such command: versionlock") }
+	present := func(*cluster.Host) error { return errors.New("No such command: versionlock") }
 
 	var buf bytes.Buffer
 	ctx := logger.WithContext(context.Background(), slog.New(slog.NewTextHandler(&buf, nil)))
@@ -243,13 +243,13 @@ func TestUnholdRPMPackagesUsingDeletesWhenVersionlockIsPresent(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
 	var deletedNames []string
-	var deletedHost *cluster.ZarfHost
-	del := func(hh *cluster.ZarfHost, names []string) error {
+	var deletedHost *cluster.Host
+	del := func(hh *cluster.Host, names []string) error {
 		deletedHost = hh
 		deletedNames = names
 		return nil
 	}
-	present := func(*cluster.ZarfHost) error { return nil }
+	present := func(*cluster.Host) error { return nil }
 
 	err := unholdRPMPackagesUsing(context.Background(), h, []string{"k3s", "kubelet"}, present, del)
 
@@ -262,8 +262,8 @@ func TestUnholdRPMPackagesUsingPropagatesDeleteError(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
 	wantErr := errors.New("dnf versionlock delete failed")
-	del := func(*cluster.ZarfHost, []string) error { return wantErr }
-	present := func(*cluster.ZarfHost) error { return nil }
+	del := func(*cluster.Host, []string) error { return wantErr }
+	present := func(*cluster.Host) error { return nil }
 
 	err := unholdRPMPackagesUsing(context.Background(), h, []string{"k3s"}, present, del)
 
@@ -277,11 +277,11 @@ func TestUnholdRPMPackagesUsingPropagatesDeleteError(t *testing.T) {
 func TestUnholdRPMPackagesUsingSkipsWhenVersionlockIsMissing(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
-	del := func(*cluster.ZarfHost, []string) error {
+	del := func(*cluster.Host, []string) error {
 		t.Fatal("dnf versionlock delete must not run on a host without the plugin")
 		return nil
 	}
-	present := func(*cluster.ZarfHost) error { return errors.New("No such command: versionlock") }
+	present := func(*cluster.Host) error { return errors.New("No such command: versionlock") }
 
 	var buf bytes.Buffer
 	ctx := logger.WithContext(context.Background(), slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
@@ -298,8 +298,8 @@ func TestUnholdRPMPackagesUsingSkipsWhenVersionlockIsMissing(t *testing.T) {
 func TestUnholdRPMPackagesUsingDoesNotWarnWhenVersionlockIsMissing(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
-	present := func(*cluster.ZarfHost) error { return errors.New("No such command: versionlock") }
-	del := func(*cluster.ZarfHost, []string) error { return nil }
+	present := func(*cluster.Host) error { return errors.New("No such command: versionlock") }
+	del := func(*cluster.Host, []string) error { return nil }
 
 	var buf bytes.Buffer
 	ctx := logger.WithContext(context.Background(), slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))

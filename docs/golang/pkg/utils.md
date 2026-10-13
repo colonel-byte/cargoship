@@ -17,9 +17,9 @@ Package utils is for commonly used functions
 - [func DownloadToCache\(ctx context.Context, url, relPath string, expectedSha256 ...string\) \(string, error\)](<#DownloadToCache>)
 - [func DownloadToFile\(ctx context.Context, src, dst string\) \(err error\)](<#DownloadToFile>)
 - [func DownloadToFileWithChecksum\(ctx context.Context, src, dst, checksum, cacheBaseName string\) \(err error\)](<#DownloadToFileWithChecksum>)
-- [func FilterDebianLinux\(h \*cluster.ZarfHost\) bool](<#FilterDebianLinux>)
-- [func FilterEngineAlreadyPopulated\(h \*cluster.ZarfHost\) bool](<#FilterEngineAlreadyPopulated>)
-- [func FilterEnterpriseLinux\(h \*cluster.ZarfHost\) bool](<#FilterEnterpriseLinux>)
+- [func FilterDebianLinux\(h \*cluster.Host\) bool](<#FilterDebianLinux>)
+- [func FilterEngineAlreadyPopulated\(h \*cluster.Host\) bool](<#FilterEngineAlreadyPopulated>)
+- [func FilterEnterpriseLinux\(h \*cluster.Host\) bool](<#FilterEnterpriseLinux>)
 - [func IdentifySource\(src string\) \(string, error\)](<#IdentifySource>)
 - [func InvalidPath\(path string\) bool](<#InvalidPath>)
 - [func IsDebianLinux\(con os.Configurer\) bool](<#IsDebianLinux>)
@@ -94,7 +94,7 @@ DownloadToFileWithChecksum downloads src to dst, using checksum \(if non\-empty\
 ## func [FilterDebianLinux](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L40>)
 
 ```go
-func FilterDebianLinux(h *cluster.ZarfHost) bool
+func FilterDebianLinux(h *cluster.Host) bool
 ```
 
 FilterDebianLinux is a function used to filter whether a host is a Debian based OS
@@ -103,7 +103,7 @@ FilterDebianLinux is a function used to filter whether a host is a Debian based 
 ## func [FilterEngineAlreadyPopulated](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L25>)
 
 ```go
-func FilterEngineAlreadyPopulated(h *cluster.ZarfHost) bool
+func FilterEngineAlreadyPopulated(h *cluster.Host) bool
 ```
 
 FilterEngineAlreadyPopulated is a function used to filter whether a host already has distro files populated
@@ -112,7 +112,7 @@ FilterEngineAlreadyPopulated is a function used to filter whether a host already
 ## func [FilterEnterpriseLinux](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L55>)
 
 ```go
-func FilterEnterpriseLinux(h *cluster.ZarfHost) bool
+func FilterEnterpriseLinux(h *cluster.Host) bool
 ```
 
 FilterEnterpriseLinux is a function used to filter whether a host is an Enterprise Linux OS

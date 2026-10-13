@@ -89,7 +89,7 @@ func (n *Nftables) Name() string {
 // A node whose only nftables content comes from kube-proxy and the CNI is deliberately not a
 // match. Every node in a running cluster has a non-empty ruleset, so matching on that would
 // claim hosts whose operator never configured a firewall at all.
-func (n *Nftables) Detect(ctx context.Context, h *cluster.ZarfHost) bool {
+func (n *Nftables) Detect(ctx context.Context, h *cluster.Host) bool {
 	if h == nil || h.Configurer == nil || !h.FS().CommandExist("nft") {
 		return false
 	}
@@ -102,7 +102,7 @@ func (n *Nftables) Detect(ctx context.Context, h *cluster.ZarfHost) bool {
 }
 
 // Installed is true when the nft command is present on h.
-func (n *Nftables) Installed(_ context.Context, h *cluster.ZarfHost) bool {
+func (n *Nftables) Installed(_ context.Context, h *cluster.Host) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
@@ -113,7 +113,7 @@ func (n *Nftables) Installed(_ context.Context, h *cluster.ZarfHost) bool {
 // Apply renders p as a complete ruleset, checks it, and loads it in one transaction. The
 // table is replaced rather than edited, so rules cargoship applied on an earlier run that p no
 // longer contains are gone once the transaction commits.
-func (n *Nftables) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {
+func (n *Nftables) Apply(ctx context.Context, h *cluster.Host, p Plan) error {
 	ruleset, err := nftRuleset(p)
 	if err != nil {
 		return err
@@ -142,7 +142,7 @@ func (n *Nftables) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
 // persist adds an include for cargoship's ruleset to the distro's boot-time nftables file, so
 // the rules survive a reboot. The operator's own file is never rewritten, only appended to,
 // and only once.
-func (n *Nftables) persist(ctx context.Context, h *cluster.ZarfHost) error {
+func (n *Nftables) persist(ctx context.Context, h *cluster.Host) error {
 	conf := nftConfPath(h)
 	if conf == "" {
 		logger.From(ctx).Warn("no nftables ruleset file on this host, cargoship's rules will not survive a reboot",
@@ -169,7 +169,7 @@ func (n *Nftables) persist(ctx context.Context, h *cluster.ZarfHost) error {
 
 // nftConfPath returns the boot-time nftables file this host has, or an empty string when it
 // has none.
-func nftConfPath(h *cluster.ZarfHost) string {
+func nftConfPath(h *cluster.Host) string {
 	for _, path := range nftConfPaths {
 		if h.FileExist(path) {
 			return path
@@ -287,7 +287,7 @@ func nftChainRules(p Plan) (map[string][]string, error) {
 
 // nftRule renders a single neutral rule, returning the base chain it belongs in along with
 // the rule itself.
-func nftRule(rule cluster.ZarfFirewallRule) (string, string, error) {
+func nftRule(rule cluster.FirewallRule) (string, string, error) {
 	verdict, err := nftVerdict(rule.NormalizedAction())
 	if err != nil {
 		return "", "", err
@@ -382,7 +382,7 @@ func NftSplitFamilies(addrs []string) (v4 []string, v6 []string) {
 
 // nftSortedProtocols returns the protocols the plan's ports use, sorted, so a plan renders the
 // same ruleset every time regardless of the order the inventory listed its ports in.
-func nftSortedProtocols(ports []cluster.ZarfHostPort) []string {
+func nftSortedProtocols(ports []cluster.HostPort) []string {
 	seen := map[string]struct{}{}
 	for _, port := range ports {
 		seen[nftPortProtocol(port)] = struct{}{}
@@ -398,7 +398,7 @@ func nftSortedProtocols(ports []cluster.ZarfHostPort) []string {
 }
 
 // nftPortsFor returns the plan's ports for one protocol, in nftables' range form.
-func nftPortsFor(ports []cluster.ZarfHostPort, proto string) []string {
+func nftPortsFor(ports []cluster.HostPort, proto string) []string {
 	var out []string
 	for _, port := range ports {
 		if nftPortProtocol(port) == proto {
@@ -410,7 +410,7 @@ func nftPortsFor(ports []cluster.ZarfHostPort, proto string) []string {
 }
 
 // nftPortProtocol returns a port's protocol, defaulting to tcp the way the other backends do.
-func nftPortProtocol(port cluster.ZarfHostPort) string {
+func nftPortProtocol(port cluster.HostPort) string {
 	if proto := strings.ToLower(strings.TrimSpace(port.Protocol)); proto != "" {
 		return proto
 	}

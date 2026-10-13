@@ -91,19 +91,19 @@ func init() {
 
 // AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of
 // the admin kubeconfig kubeadm writes on a controller host.
-func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error) {
+func (d *Upstream) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error) {
 	return adminCredentials(host, d.KubeconfigPath(host, dataDir))
 }
 
 // KubeconfigPath returns the path to the admin config kubeadm writes. Unlike rke2/k3s, this path
 // does not vary by host or data directory.
-func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string {
+func (d *Upstream) KubeconfigPath(_ *cluster.Host, _ string) string {
 	return upstreamKubeconfig
 }
 
 // KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster.
 // kubectl is a plain host binary here, not reached through an engine wrapper.
-func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string {
+func (d *Upstream) KubectlCmdf(host *cluster.Host, dataDir string, s string, args ...any) string {
 	return fmt.Sprintf(`env "KUBECONFIG=%s" kubectl %s`, d.KubeconfigPath(host, dataDir), fmt.Sprintf(s, args...))
 }
 
@@ -116,7 +116,7 @@ func (d *Upstream) DistroCmdf(template string, args ...any) string {
 
 // RunningVersion returns the version of kubelet running on the host, if the engine is not
 // running it throws an "ErrVersionNotDetected" error
-func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error) {
+func (d *Upstream) RunningVersion(host *cluster.Host) (string, error) {
 	bin, err := host.FS().LookPath("kubelet")
 	if err != nil {
 		return "", ErrVersionNotDetected
@@ -136,7 +136,7 @@ func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error) {
 // 10.96.0.0/12 when unset, but it has no pod subnet default -- that is entirely CNI dependent --
 // so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here
 // than inventing a value the firewall phase would treat as authoritative.
-func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string {
+func (d *Upstream) GetClusterCIDR(dis distro.Distro) []string {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 
 	svc := nodeConfig.DigString(config.EngineConfig, keyNetworking, keyServiceSubnet)
@@ -156,7 +156,7 @@ func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string {
 // RancherCommon.ConfigureEngine there is no already-running guard -- kubeadm-config.yaml is meant
 // to be rewritten every run (Bootstrap rewrites it again with the real join token right before
 // `kubeadm join`), so an unconditional overwrite is correct here, not a gap.
-func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error {
 	desired, err := d.DesiredFiles(ctx, host, run, dis)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, 
 // DesiredFiles returns the full set of engine config files this distro would write: containerd's
 // config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship
 // configures a mirror, credential, or TLS setting for.
-func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	configTOML, err := marshalTOML(buildContainerdConfig(dis))
@@ -256,7 +256,7 @@ func (d *Upstream) ManagedDirs() []ManagedDir {
 // ImportImages imports every image tarball staged under path into containerd's k8s.io image
 // store. Unlike rke2/k3s, upstream's containerd has no agent watching that directory on its own,
 // so cargoship has to trigger the import itself.
-func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error {
+func (d *Upstream) ImportImages(host *cluster.Host, path string) error {
 	if !host.FileExist(path) {
 		return nil
 	}
@@ -279,7 +279,7 @@ func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error {
 // ManifestPaths returns the on-host manifest paths the package declares for cargoship to kubectl
 // apply, e.g. a CNI. Delivery of those files is Config.Files' job; this is only the list of what
 // to apply.
-func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string {
+func (d *Upstream) ManifestPaths(dis distro.Distro) []string {
 	return dis.Spec.Config.Manifests
 }
 
@@ -300,11 +300,11 @@ func (d *Upstream) JoinTokenPathAgent() string {
 // StopControllerService stops the controller service on the host. Controller and worker are the
 // same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to
 // account for.
-func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error {
+func (d *Upstream) StopControllerService(h *cluster.Host) error {
 	return h.StopService(context.Background(), d.GetControllerService())
 }
 
 // StopWorkerService stops the worker service on the host.
-func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error {
+func (d *Upstream) StopWorkerService(h *cluster.Host) error {
 	return h.StopService(context.Background(), d.GetWorkerService())
 }

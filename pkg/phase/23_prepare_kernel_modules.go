@@ -41,7 +41,7 @@ func (p *PrepareKernelModules) Explanation() string {
 }
 
 // Prepare the phase
-func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.modules = p.manager.Distro.Spec.Config.OS.Kernel
 	return nil
 }
@@ -63,7 +63,7 @@ func (p *PrepareKernelModules) Run(ctx context.Context) error {
 	)
 }
 
-func (p *PrepareKernelModules) enableModules(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareKernelModules) enableModules(ctx context.Context, h *cluster.Host) error {
 	for _, m := range p.modules {
 		load := fmt.Sprintf("/etc/modules-load.d/%s.conf", m)
 		if !h.FileExist(load) {
@@ -77,7 +77,7 @@ func (p *PrepareKernelModules) enableModules(ctx context.Context, h *cluster.Zar
 	return nil
 }
 
-func (p *PrepareKernelModules) rebootNodes(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareKernelModules) rebootNodes(ctx context.Context, h *cluster.Host) error {
 	if h.Metadata.ModulesAdded {
 		if err := h.Sudo().FS().Reboot(ctx); err != nil {
 			logger.From(ctx).Warn("issue when trying to reboot", "host", h)

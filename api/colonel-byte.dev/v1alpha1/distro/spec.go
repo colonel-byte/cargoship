@@ -25,22 +25,22 @@ import (
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-// ZarfDistro is the root object of a distro package configuration document.
-type ZarfDistro struct {
+// Distro is the root object of a distro package configuration document.
+type Distro struct {
 	// APIVersion identifies the API group and version of this configuration document.
 	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
 	// Kind identifies the document type. The value must be ZarfDistro.
-	Kind v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfDistro"`
+	Kind v1alpha1.Kind `json:"kind" jsonschema:"enum=ZarfDistro"`
 	// Metadata holds identifying information for the distro package.
-	Metadata ZarfDistroMetadata `json:"metadata"`
+	Metadata Metadata `json:"metadata"`
 	// Build holds information recorded when the package was built.
-	Build ZarfDistroBuildData `json:"build,omitempty"`
+	Build BuildData `json:"build,omitempty"`
 	// Spec holds the configuration for the distro package.
-	Spec ZarfDistroSpec `json:"spec"`
+	Spec Spec `json:"spec"`
 }
 
-// ZarfDistroMetadata holds identifying information for a distro package.
-type ZarfDistroMetadata struct {
+// Metadata holds identifying information for a distro package.
+type Metadata struct {
 	// Uncompressed disables compression for this package when true.
 	Uncompressed bool `json:"uncompressed,omitempty"`
 	// Architecture is the CPU architecture this distro package targets. Use Architectures to target more than one.
@@ -73,7 +73,7 @@ type ZarfDistroMetadata struct {
 // declared source a --file-override redirected.
 //
 // This is evidence about a build that happened, which is what separates it from
-// ZarfDistroBuildData.FileOverrides: an override can be configured and match nothing, and the
+// BuildData.FileOverrides: an override can be configured and match nothing, and the
 // configuration alone cannot tell you which of several overlapping prefixes won for a given
 // file. Resolved names a path on the build host when the override pointed at a local
 // directory, so it discloses that much of the build host's layout to whoever reads the package.
@@ -94,8 +94,8 @@ type FileSource struct {
 	Shasum string `json:"shasum"`
 }
 
-// ZarfDistroBuildData holds information recorded when the package was built.
-type ZarfDistroBuildData struct {
+// BuildData holds information recorded when the package was built.
+type BuildData struct {
 	// Architecture is the CPU architecture used to build the package. Populated only when the package targets a single architecture.
 	Architecture api.Arch `json:"architecture,omitempty"`
 	// Architectures lists the CPU architectures used to build the package.
@@ -128,24 +128,24 @@ type ZarfDistroBuildData struct {
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 }
 
-// ZarfDistroSpec holds the configuration for a distro package.
-type ZarfDistroSpec struct {
+// Spec holds the configuration for a distro package.
+type Spec struct {
 	// Type selects the distro engine: rke2, k3s, or upstream.
 	Type string `json:"type" jsonschema:"enum=rke2,enum=k3s,enum=upstream"`
 	// Version is the version of the distro engine.
 	Version string `json:"version"`
 	// Actions defines the actions cargoship runs while building the package.
-	Actions ZarfDistroActions `json:"actions,omitempty"`
+	Actions Actions `json:"actions,omitempty"`
 	// Config holds the distro engine configuration.
-	Config ZarfDistroConfig `json:"config"`
+	Config Config `json:"config"`
 	// Values holds the default values the package is built with, and the schema they must satisfy.
-	Values ZarfDistroValues `json:"values,omitempty"`
+	Values Values `json:"values,omitempty"`
 }
 
-// ZarfDistroValues declares the values a package ships with. Values are the
+// Values declares the values a package ships with. Values are the
 // Helm-style configuration described by ZEP-0021: a nested structure addressed
 // by dotted paths, which templates in the package read as .Values.
-type ZarfDistroValues struct {
+type Values struct {
 	// Files lists the YAML values files cargoship merges, in order, to build the package's default values. Each entry is a path relative to the package definition, an absolute path, or a URL. A later file overrides an earlier one, key by key.
 	Files []string `json:"files,omitempty" jsonschema:"example=values.yaml,example=overrides/prod.yaml,example=https://example.com/values.yaml"`
 	// Schema is the JSON Schema document the merged values must satisfy. Cargoship checks the values against it when it builds the package, and refuses to build when they do not match. The schema must not use $ref.
@@ -156,11 +156,11 @@ type ZarfDistroValues struct {
 	// which is relative to spec.config.engine. A source the values do not define
 	// is left alone, so the package's own engine configuration stands as the
 	// default.
-	Mappings []ZarfDistroValueMapping `json:"mappings,omitempty"`
+	Mappings []ValueMapping `json:"mappings,omitempty"`
 }
 
-// ZarfDistroValueMapping projects one value onto one place in the engine configuration.
-type ZarfDistroValueMapping struct {
+// ValueMapping projects one value onto one place in the engine configuration.
+type ValueMapping struct {
 	// Source is the dotted path to read from the resolved values, e.g. .cilium.encryption.enabled
 	Source string `json:"source" jsonschema:"example=.cilium.encryption.enabled"`
 	// Target is the dotted path to write, relative to spec.config.engine,
@@ -168,20 +168,20 @@ type ZarfDistroValueMapping struct {
 	Target string `json:"target" jsonschema:"example=.manifest.rke2-cilium.encryption.enabled"`
 }
 
-// ZarfDistroActions defines the actions cargoship runs during specific phases of building the distro package.
-type ZarfDistroActions struct {
+// Actions defines the actions cargoship runs during specific phases of building the distro package.
+type Actions struct {
 	// OnCreate lists the actions cargoship runs when it creates the package.
 	OnCreate zarf.ZarfComponentActionSet `json:"onCreate,omitempty"`
 }
 
-// ZarfDistroConfig holds the configuration for the distro engine.
-type ZarfDistroConfig struct {
+// Config holds the configuration for the distro engine.
+type Config struct {
 	// Files lists files that cargoship writes to every host, no matter which install method it uses.
-	Files v1alpha1.ZarfFiles `json:"files,omitempty"`
+	Files v1alpha1.Files `json:"files,omitempty"`
 	// ImagesConfig holds settings for the images bundled with the package.
-	ImagesConfig ZarfDistroImageConfig `json:"imageConfig,omitempty"`
+	ImagesConfig ImageConfig `json:"imageConfig,omitempty"`
 	// OS holds settings applied to the host operating system.
-	OS ZarfDistroOS `json:"os,omitempty"`
+	OS OS `json:"os,omitempty"`
 	// Engine holds configuration passed through to the distro engine.
 	Engine dig.Mapping `json:"engine,omitempty"`
 	// Manifests lists on-host paths -- each one the Target of a Files entry -- that cargoship
@@ -195,7 +195,7 @@ type ZarfDistroConfig struct {
 // values written into a HelmChartConfig: either a YAML string or a mapping cargoship serializes
 // to YAML for the chart. Engine is otherwise a free-form mapping handed to the distro engine, so
 // the section list stays open and every other section keeps validating as it did.
-func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema) {
+func (Config) JSONSchemaExtend(s *jsonschema.Schema) {
 	engine, ok := s.Properties.Get("engine")
 	if !ok {
 		return
@@ -219,7 +219,7 @@ func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema) {
 	engine.Properties.Set("manifest", manifest)
 }
 
-// Compression formats accepted by ZarfDistroImageConfig.Compression.
+// Compression formats accepted by ImageConfig.Compression.
 const (
 	// CompressionNone writes the image tarballs uncompressed. This is the default.
 	CompressionNone = "none"
@@ -229,8 +229,8 @@ const (
 	CompressionZstd = "zstd"
 )
 
-// ZarfDistroImageConfig holds settings for the images cargoship writes to a host.
-type ZarfDistroImageConfig struct {
+// ImageConfig holds settings for the images cargoship writes to a host.
+type ImageConfig struct {
 	// Compression sets the compression format for the image tarballs.
 	Compression string `json:"compression,omitempty" jsonschema:"default=none,enum=none,enum=gz,enum=zstd"`
 	// Path is the upload destination for the image tarballs.
@@ -243,7 +243,7 @@ type ZarfDistroImageConfig struct {
 // compression format. The suffixes match the archive extensions a host imports,
 // so a compressed tarball is still picked up. An unset format means no
 // compression. It returns an error for a format cargoship cannot write.
-func (c ZarfDistroImageConfig) TarballSuffix() (string, error) {
+func (c ImageConfig) TarballSuffix() (string, error) {
 	switch c.Compression {
 	case "", CompressionNone:
 		return ".tar", nil
@@ -256,16 +256,16 @@ func (c ZarfDistroImageConfig) TarballSuffix() (string, error) {
 	}
 }
 
-// ZarfDistroOS holds settings applied to a host.
-type ZarfDistroOS struct {
+// OS holds settings applied to a host.
+type OS struct {
 	// Sysctl maps sysctl keys to the values cargoship applies to a host.
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 	// FAPolicyd holds the fapolicyd config file contents cargoship writes to a host.
 	FAPolicyd string `json:"fapolicyd,omitempty"`
 	// SELinux holds the custom SELinux policy cargoship applies to a host.
-	SELinux ZarfDistroSELinux `json:"selinux,omitempty"`
+	SELinux SELinux `json:"selinux,omitempty"`
 	// Files lists files cargoship uploads to a host.
-	Files v1alpha1.ZarfFiles `json:"files,omitempty"`
+	Files v1alpha1.Files `json:"files,omitempty"`
 	// Kernel lists the kernel modules cargoship enables on the host.
 	Kernel []string `json:"kernel,omitempty"`
 	// Environment maps environment variables cargoship sets on the host.
@@ -274,7 +274,7 @@ type ZarfDistroOS struct {
 
 // JSONSchemaExtend widens sysctl values to accept numbers alongside strings, so
 // unquoted numeric values in YAML validate.
-func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema) {
+func (OS) JSONSchemaExtend(s *jsonschema.Schema) {
 	sysctl, ok := s.Properties.Get("sysctl")
 	if !ok {
 		return
@@ -287,24 +287,24 @@ func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema) {
 	}
 }
 
-// ZarfDistroSELinux holds the custom SELinux policy cargoship applies to hosts running SELinux
+// SELinux holds the custom SELinux policy cargoship applies to hosts running SELinux
 // in enforcing mode. Every field is optional, and a host that is not enforcing is left alone.
-type ZarfDistroSELinux struct {
+type SELinux struct {
 	// Modules lists the CIL policy modules cargoship installs on a host.
-	Modules []ZarfDistroSELinuxModule `json:"modules,omitempty"`
+	Modules []SELinuxModule `json:"modules,omitempty"`
 	// Booleans maps SELinux boolean names to the values cargoship sets persistently on a host.
 	Booleans map[string]bool `json:"booleans,omitempty"`
 	// FileContexts lists the file context mappings cargoship adds on a host.
-	FileContexts []ZarfDistroSELinuxFileContext `json:"fileContexts,omitempty"`
+	FileContexts []SELinuxFileContext `json:"fileContexts,omitempty"`
 }
 
 // IsZero reports whether no SELinux policy is configured, so a phase can gate on it.
-func (s ZarfDistroSELinux) IsZero() bool {
+func (s SELinux) IsZero() bool {
 	return len(s.Modules) == 0 && len(s.Booleans) == 0 && len(s.FileContexts) == 0
 }
 
-// ZarfDistroSELinuxModule holds a single CIL policy module cargoship installs with semodule.
-type ZarfDistroSELinuxModule struct {
+// SELinuxModule holds a single CIL policy module cargoship installs with semodule.
+type SELinuxModule struct {
 	// Name identifies the module to semodule, and names the file cargoship writes to the host.
 	Name string `json:"name" jsonschema:"pattern=^[a-zA-Z0-9][a-zA-Z0-9_-]*$"`
 	// Priority holds the semodule priority the module installs at.
@@ -313,8 +313,8 @@ type ZarfDistroSELinuxModule struct {
 	CIL string `json:"cil"`
 }
 
-// ZarfDistroSELinuxFileContext holds a single file context mapping cargoship adds with semanage.
-type ZarfDistroSELinuxFileContext struct {
+// SELinuxFileContext holds a single file context mapping cargoship adds with semanage.
+type SELinuxFileContext struct {
 	// Path holds the path regular expression the mapping applies to.
 	Path string `json:"path" jsonschema:"example=/var/lib/rancher(/.*)?"`
 	// Type names the SELinux type the matching paths are labeled with.
@@ -325,7 +325,7 @@ type ZarfDistroSELinuxFileContext struct {
 
 // Arches returns the CPU architectures the package targets. It prefers Architectures and falls
 // back to the single Architecture field, so callers never have to know which one the package set.
-func (m ZarfDistroMetadata) Arches() api.Arches {
+func (m Metadata) Arches() api.Arches {
 	if len(m.Architectures) > 0 {
 		return m.Architectures
 	}
@@ -337,7 +337,7 @@ func (m ZarfDistroMetadata) Arches() api.Arches {
 
 // Arches returns the CPU architectures the package was built for. It prefers Architectures and
 // falls back to the single Architecture field.
-func (b ZarfDistroBuildData) Arches() api.Arches {
+func (b BuildData) Arches() api.Arches {
 	if len(b.Architectures) > 0 {
 		return b.Architectures
 	}
@@ -350,7 +350,7 @@ func (b ZarfDistroBuildData) Arches() api.Arches {
 // Arches returns the CPU architectures the package covers. A built package records them under
 // build, so that is preferred; a definition that has not been built yet only carries what the
 // metadata targets.
-func (distro ZarfDistro) Arches() api.Arches {
+func (distro Distro) Arches() api.Arches {
 	if arches := distro.Build.Arches(); len(arches) > 0 {
 		return arches
 	}
@@ -358,7 +358,7 @@ func (distro ZarfDistro) Arches() api.Arches {
 }
 
 // IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.
-func (distro ZarfDistro) IsSBOMAble() bool {
+func (distro Distro) IsSBOMAble() bool {
 	if len(distro.Spec.Config.ImagesConfig.Images) > 0 || len(distro.Spec.Config.Files) > 0 {
 		return true
 	}

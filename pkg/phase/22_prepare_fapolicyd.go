@@ -32,12 +32,12 @@ const (
 // PrepareFapolicy installs required packages and so on on the hosts.
 type PrepareFapolicy struct {
 	GenericPhase
-	fapolicydhosts cluster.ZarfHosts
+	fapolicydhosts cluster.Hosts
 }
 
 // Prepare the phase
-func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	p.fapolicydhosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
+	p.fapolicydhosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return h.ServiceIsRunning(ctx, FAPOLICYD)
 	})
 
@@ -66,7 +66,7 @@ func (p *PrepareFapolicy) ShouldRun() bool {
 	return len(p.fapolicydhosts) > 0 && p.manager.Distro.Spec.Config.OS.FAPolicyd != ""
 }
 
-func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.Host) error {
 	err := h.WriteFile(FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
 	if err != nil {
 		return err

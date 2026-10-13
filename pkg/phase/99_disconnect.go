@@ -44,7 +44,7 @@ func (p *Disconnect) Explanation() string {
 
 // DryRun cleans up the temporary binary from the hosts
 func (p *Disconnect) DryRun() error {
-	err := p.manager.Config.Spec.Hosts.ParallelEach(context.Background(), func(ctx context.Context, h *v1alpha1.ZarfHost) error {
+	err := p.manager.Config.Spec.Hosts.ParallelEach(context.Background(), func(ctx context.Context, h *v1alpha1.Host) error {
 		if len(h.Metadata.BinaryTempFile) > 0 {
 			for _, f := range h.Metadata.BinaryTempFile {
 				if h.FileExist(f) {
@@ -67,7 +67,7 @@ func (p *Disconnect) DryRun() error {
 
 // Run the phase
 func (p *Disconnect) Run(ctx context.Context) error {
-	return p.manager.Config.Spec.Hosts.ParallelEach(ctx, func(_ context.Context, h *v1alpha1.ZarfHost) error {
+	return p.manager.Config.Spec.Hosts.ParallelEach(ctx, func(_ context.Context, h *v1alpha1.Host) error {
 		h.Disconnect()
 		return nil
 	})

@@ -37,7 +37,7 @@ import (
 const ingestDir = "ingest"
 
 // NewDistroLayout returns an DistroLayout object
-func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout {
+func NewDistroLayout(dir string, distro v1alpha1.Distro) *DistroLayout {
 	return &DistroLayout{
 		dirPath: dir,
 		Distro:  distro,

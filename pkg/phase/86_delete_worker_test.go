@@ -44,7 +44,7 @@ func (c *stoppedConfigurer) Hostname(_ hostos.Host) string { return "node1" }
 
 // deletePhase is what DeleteWorkers and DeleteControllers have in common here.
 type deletePhase interface {
-	Prepare(context.Context, *cluster.ZarfCluster, *distro.ZarfDistro) error
+	Prepare(context.Context, *cluster.Cluster, *distro.Distro) error
 	ShouldRun() bool
 	SetManager(*Manager)
 }
@@ -81,8 +81,8 @@ func TestDeletePhasesPrepareWithNoLeader(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// One host, so the filter that dereferences the leader actually runs. With an empty
 			// host list the closure is never called and the test would pass either way.
-			m := &Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{
-				Hosts: cluster.ZarfHosts{{Hostname: "node1", Configurer: &stoppedConfigurer{}}},
+			m := &Manager{Config: &cluster.Cluster{Spec: cluster.Spec{
+				Hosts: cluster.Hosts{{Hostname: "node1", Configurer: &stoppedConfigurer{}}},
 			}}}
 			tc.phase.SetManager(m)
 
@@ -108,21 +108,21 @@ func TestDeleteCommonPrefersNonTargetedLeader(t *testing.T) {
 	dis, ok := builder().(distrocfg.Distro)
 	require.True(t, ok)
 
-	h1 := &cluster.ZarfHost{
+	h1 := &cluster.Host{
 		Hostname: "controller1",
 		Role:     cluster.RoleController,
 	}
 	h1.SetServices(fakeRunningServices{})
-	h2 := &cluster.ZarfHost{
+	h2 := &cluster.Host{
 		Hostname: "controller2",
 		Role:     cluster.RoleController,
 	}
 	h2.SetServices(fakeRunningServices{})
 
 	m := &Manager{
-		Config: &cluster.ZarfCluster{
-			Spec: cluster.ZarfClusterSpec{
-				Hosts: cluster.ZarfHosts{h1, h2},
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
+				Hosts: cluster.Hosts{h1, h2},
 			},
 		},
 	}
@@ -140,11 +140,11 @@ func TestDeleteCommonPrefersNonTargetedLeader(t *testing.T) {
 }
 
 // TestMatchesTargetHostUsesTheConfiguredAddress covers the matching an operator's target list is
-// held against. ZarfHost.Address reads the live rig client and is empty until the host has been
+// held against. Host.Address reads the live rig client and is empty until the host has been
 // dialled, so matching on it would depend on how far through a run the phase is -- and the hosts a
 // target list names are exactly the ones a run may not have reached.
 func TestMatchesTargetHostUsesTheConfiguredAddress(t *testing.T) {
-	host := &cluster.ZarfHost{
+	host := &cluster.Host{
 		Hostname: "worker3",
 		ClientWithConfig: rig.ClientWithConfig{
 			ConnectionConfig: rig.CompositeConfig{
@@ -170,7 +170,7 @@ func TestMatchesTargetHostUsesTheConfiguredAddress(t *testing.T) {
 // a target nobody matches would otherwise filter every phase to nothing and report a reset that
 // removed nothing.
 func TestCheckTargetHostsNamesWhatItDoesNotKnow(t *testing.T) {
-	hosts := cluster.ZarfHosts{
+	hosts := cluster.Hosts{
 		{Hostname: "control1"},
 		{Hostname: "worker1"},
 	}
@@ -201,21 +201,21 @@ func TestDeleteCommonRefusesWithNoSurvivingController(t *testing.T) {
 	dis, ok := builder().(distrocfg.Distro)
 	require.True(t, ok)
 
-	controller := &cluster.ZarfHost{
+	controller := &cluster.Host{
 		Hostname: "controller1",
 		Role:     cluster.RoleController,
 	}
 	controller.SetServices(fakeRunningServices{})
-	worker := &cluster.ZarfHost{
+	worker := &cluster.Host{
 		Hostname: "worker1",
 		Role:     cluster.RoleWorker,
 	}
 	worker.SetServices(fakeRunningServices{})
 
 	m := &Manager{
-		Config: &cluster.ZarfCluster{
-			Spec: cluster.ZarfClusterSpec{
-				Hosts: cluster.ZarfHosts{controller, worker},
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
+				Hosts: cluster.Hosts{controller, worker},
 			},
 		},
 	}
@@ -253,9 +253,9 @@ func TestDeleteCommonRemovesControllersOneRunAtATime(t *testing.T) {
 	dis, ok := builder().(distrocfg.Distro)
 	require.True(t, ok)
 
-	hosts := cluster.ZarfHosts{}
+	hosts := cluster.Hosts{}
 	for _, name := range []string{"controller1", "controller2", "controller3"} {
-		h := &cluster.ZarfHost{
+		h := &cluster.Host{
 			Hostname: name,
 			Role:     cluster.RoleController,
 		}
@@ -263,8 +263,8 @@ func TestDeleteCommonRemovesControllersOneRunAtATime(t *testing.T) {
 		hosts = append(hosts, h)
 	}
 	m := &Manager{
-		Config: &cluster.ZarfCluster{
-			Spec: cluster.ZarfClusterSpec{
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
 				Hosts: hosts,
 			},
 		},
@@ -295,9 +295,9 @@ func TestDeleteCommonKeepsTheEngineUpWhenOneControllerIsLeft(t *testing.T) {
 	dis, ok := builder().(distrocfg.Distro)
 	require.True(t, ok)
 
-	hosts := cluster.ZarfHosts{}
+	hosts := cluster.Hosts{}
 	for _, name := range []string{"controller1", "controller2"} {
-		h := &cluster.ZarfHost{
+		h := &cluster.Host{
 			Hostname: name,
 			Role:     cluster.RoleController,
 		}
@@ -305,8 +305,8 @@ func TestDeleteCommonKeepsTheEngineUpWhenOneControllerIsLeft(t *testing.T) {
 		hosts = append(hosts, h)
 	}
 	m := &Manager{
-		Config: &cluster.ZarfCluster{
-			Spec: cluster.ZarfClusterSpec{
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
 				Hosts: hosts,
 			},
 		},
@@ -341,21 +341,21 @@ func TestMatchNodesToHostsMatchesOnAnyIdentifier(t *testing.T) {
 
 	tests := []struct {
 		name string
-		host *cluster.ZarfHost
+		host *cluster.Host
 		want string
 	}{
 		{
 			name: "the inventory hostname is the node name",
-			host: &cluster.ZarfHost{
+			host: &cluster.Host{
 				Hostname: "kw1",
 			},
 			want: "kw1",
 		},
 		{
 			name: "the machine reports an fqdn and the inventory holds the short name",
-			host: &cluster.ZarfHost{
+			host: &cluster.Host{
 				Hostname: "kw1",
-				Metadata: cluster.ZarfHostMetadata{
+				Metadata: cluster.HostMetadata{
 					Hostname: "kw1.cargoship.test",
 				},
 			},
@@ -363,7 +363,7 @@ func TestMatchNodesToHostsMatchesOnAnyIdentifier(t *testing.T) {
 		},
 		{
 			name: "matched through the private address when no name lines up",
-			host: &cluster.ZarfHost{
+			host: &cluster.Host{
 				Hostname:       "worker-1.internal",
 				PrivateAddress: "kw0",
 			},
@@ -371,7 +371,7 @@ func TestMatchNodesToHostsMatchesOnAnyIdentifier(t *testing.T) {
 		},
 		{
 			name: "a host that is not in the cluster matches nothing",
-			host: &cluster.ZarfHost{
+			host: &cluster.Host{
 				Hostname: "kw9",
 			},
 			want: "",
@@ -382,7 +382,7 @@ func TestMatchNodesToHostsMatchesOnAnyIdentifier(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := matchNodesToHosts(listed, cluster.ZarfHosts{tt.host})
+			got := matchNodesToHosts(listed, cluster.Hosts{tt.host})
 			require.Equal(t, tt.want, got[tt.host.String()],
 				"an absent entry is how the phases tell a host that is in the cluster from one that is not")
 		})
@@ -395,13 +395,13 @@ func TestMatchNodesToHostsMatchesOnAnyIdentifier(t *testing.T) {
 func TestMatchNodesToHostsClaimsEachNodeOnce(t *testing.T) {
 	t.Parallel()
 
-	// Each host carries a connection address, because that is what ZarfHost.String() reports
+	// Each host carries a connection address, because that is what Host.String() reports
 	// and String() is the key the resolved names are held under. Hosts built without one all
 	// stringify alike and would collide in the map rather than in the matching.
 	listed := "kc0   10.0.2.15,kc0\nkw0   10.0.2.15,kw0\nkw1   10.0.2.15,kw1\n"
-	var hosts cluster.ZarfHosts
+	var hosts cluster.Hosts
 	for i, name := range []string{"kc0", "kw0", "kw1"} {
-		hosts = append(hosts, &cluster.ZarfHost{
+		hosts = append(hosts, &cluster.Host{
 			Hostname: name,
 			ClientWithConfig: rig.ClientWithConfig{
 				ConnectionConfig: rig.CompositeConfig{
@@ -456,7 +456,7 @@ func TestStopAgentBeforeDeleteIgnoresControllerQuorum(t *testing.T) {
 	dis, ok := builder().(distrocfg.Distro)
 	require.True(t, ok)
 
-	worker := &cluster.ZarfHost{
+	worker := &cluster.Host{
 		Hostname: "worker1",
 		Role:     cluster.RoleWorker,
 	}

@@ -25,13 +25,13 @@ import (
 func TestNftRule(t *testing.T) {
 	tests := []struct {
 		name      string
-		rule      cluster.ZarfFirewallRule
+		rule      cluster.FirewallRule
 		wantChain string
 		want      string
 	}{
 		{
 			name: "in rule with a source and port",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "metrics", Action: "allow", Source: "10.0.0.0/8", Port: "9100", Protocol: "tcp",
 			},
 			wantChain: "input",
@@ -39,13 +39,13 @@ func TestNftRule(t *testing.T) {
 		},
 		{
 			name:      "in rule defaults the direction",
-			rule:      cluster.ZarfFirewallRule{Name: "peers", Action: "allow", Source: "10.0.0.5"},
+			rule:      cluster.FirewallRule{Name: "peers", Action: "allow", Source: "10.0.0.5"},
 			wantChain: "input",
 			want:      `ip saddr 10.0.0.5 accept comment "cargoship:peers"`,
 		},
 		{
 			name: "out rule",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "egress-dns", Action: "allow", Direction: "out",
 				Destination: "10.43.0.10", Port: "53", Protocol: "udp",
 			},
@@ -54,7 +54,7 @@ func TestNftRule(t *testing.T) {
 		},
 		{
 			name: "forward rule uses interfaces",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "ingress-http", Action: "allow", Direction: "forward",
 				Ingress: "eth0", Egress: "cni0", Port: "80", Protocol: "tcp",
 			},
@@ -63,7 +63,7 @@ func TestNftRule(t *testing.T) {
 		},
 		{
 			name: "port range keeps the neutral form",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "nodeports", Action: "allow", Port: "30000-32767", Protocol: "tcp",
 			},
 			wantChain: "input",
@@ -71,7 +71,7 @@ func TestNftRule(t *testing.T) {
 		},
 		{
 			name: "an IPv6 source is matched in the ip6 family",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "v6-peers", Action: "allow", Source: "fd00::/8",
 			},
 			wantChain: "input",
@@ -79,25 +79,25 @@ func TestNftRule(t *testing.T) {
 		},
 		{
 			name:      "deny becomes drop",
-			rule:      cluster.ZarfFirewallRule{Name: "block", Action: "deny", Source: "192.0.2.1"},
+			rule:      cluster.FirewallRule{Name: "block", Action: "deny", Source: "192.0.2.1"},
 			wantChain: "input",
 			want:      `ip saddr 192.0.2.1 drop comment "cargoship:block"`,
 		},
 		{
 			name:      "reject stays reject",
-			rule:      cluster.ZarfFirewallRule{Name: "refuse", Action: "reject", Source: "192.0.2.2"},
+			rule:      cluster.FirewallRule{Name: "refuse", Action: "reject", Source: "192.0.2.2"},
 			wantChain: "input",
 			want:      `ip saddr 192.0.2.2 reject comment "cargoship:refuse"`,
 		},
 		{
 			name:      "a protocol with no port matches the protocol alone",
-			rule:      cluster.ZarfFirewallRule{Name: "sctp-any", Action: "allow", Protocol: "sctp"},
+			rule:      cluster.FirewallRule{Name: "sctp-any", Action: "allow", Protocol: "sctp"},
 			wantChain: "input",
 			want:      `meta l4proto sctp accept comment "cargoship:sctp-any"`,
 		},
 		{
 			name:      "a rule without a name is keyed by its fields",
-			rule:      cluster.ZarfFirewallRule{Action: "allow", Source: "10.0.0.9"},
+			rule:      cluster.FirewallRule{Action: "allow", Source: "10.0.0.9"},
 			wantChain: "input",
 			want:      `ip saddr 10.0.0.9 accept comment "cargoship:in-allow-10-0-0-9"`,
 		},
@@ -113,7 +113,7 @@ func TestNftRule(t *testing.T) {
 	}
 
 	t.Run("an unknown action is an error", func(t *testing.T) {
-		_, _, err := nftRule(cluster.ZarfFirewallRule{Name: "bad", Action: "log"})
+		_, _, err := nftRule(cluster.FirewallRule{Name: "bad", Action: "log"})
 		require.ErrorContains(t, err, "unknown action")
 	})
 }
@@ -122,12 +122,12 @@ func TestNftRuleset(t *testing.T) {
 	plan := Plan{
 		NodeAddresses: []string{"10.0.0.5", "10.0.0.6", "fd00::5"},
 		ClusterCIDRs:  []string{"10.42.0.0/16", "10.43.0.0/16"},
-		Ports: []cluster.ZarfHostPort{
+		Ports: []cluster.HostPort{
 			{Port: "6443", Protocol: "tcp"},
 			{Port: "8472", Protocol: "udp"},
 			{Port: "30000-32767"},
 		},
-		Rules: []cluster.ZarfFirewallRule{
+		Rules: []cluster.FirewallRule{
 			{Name: "metrics", Action: "allow", Source: "10.0.0.0/8", Port: "9100", Protocol: "tcp"},
 			{Name: "ingress-http", Action: "allow", Direction: "forward", Ingress: "eth0", Egress: "cni0"},
 			{Name: "egress-dns", Action: "allow", Direction: "out", Destination: "10.43.0.10", Port: "53", Protocol: "udp"},
@@ -208,7 +208,7 @@ func TestNftRulesetPolicies(t *testing.T) {
 }
 
 func TestNftRulesetError(t *testing.T) {
-	_, err := nftRuleset(Plan{Rules: []cluster.ZarfFirewallRule{{Name: "bad", Action: "log"}}})
+	_, err := nftRuleset(Plan{Rules: []cluster.FirewallRule{{Name: "bad", Action: "log"}}})
 	require.ErrorContains(t, err, "unknown action")
 }
 

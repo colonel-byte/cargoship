@@ -94,7 +94,7 @@ func TestSchemaComposesFromSourceDirectory(t *testing.T) {
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
 
-	values := schemaNode(t, doc, "$defs", "ZarfClusterConfig", "properties", "values")
+	values := schemaNode(t, doc, "$defs", "Config", "properties", "values")
 	require.Equal(t, false, values["additionalProperties"])
 	require.Contains(t, schemaNode(t, values, "properties"), "replicas")
 	require.Contains(t, values["description"], "test-package")
@@ -112,7 +112,7 @@ func TestSchemaComposesFromManifestPath(t *testing.T) {
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
 	require.Contains(t,
-		schemaNode(t, doc, "$defs", "ZarfClusterConfig", "properties", "values", "properties"),
+		schemaNode(t, doc, "$defs", "Config", "properties", "values", "properties"),
 		"replicas")
 }
 
@@ -135,7 +135,7 @@ spec:
 
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
-	require.NotContains(t, schemaNode(t, doc, "$defs", "ZarfClusterConfig", "properties", "values"), "properties")
+	require.NotContains(t, schemaNode(t, doc, "$defs", "Config", "properties", "values"), "properties")
 }
 
 func TestSchemaMissingPackage(t *testing.T) {

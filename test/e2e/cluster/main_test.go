@@ -340,7 +340,7 @@ func requireCluster(t *testing.T) {
 	t.Helper()
 
 	clusterOnce.Do(func() {
-		var inv apicluster.ZarfCluster
+		var inv apicluster.Cluster
 		if inv, testClusterErr = provision(context.Background(), clusterConfig()); testClusterErr != nil {
 			return
 		}
@@ -388,7 +388,7 @@ func requireJoinMachine(t *testing.T) {
 // the whole seam between the suite and whatever provides its hosts: nothing downstream of
 // these two files knows what they describe, because phase_harness.go loads them through
 // load.ClusterDefinition exactly as the CLI does.
-func writeInventories(inv apicluster.ZarfCluster) error {
+func writeInventories(inv apicluster.Cluster) error {
 	invDir := filepath.Join(rootDir, "test/e2e/cluster")
 
 	fullPath := filepath.Join(invDir, "generated-cluster-full.yaml")
@@ -424,10 +424,10 @@ func setup(spec fleetSpec) (*blcluster.Cluster, error) {
 // The key path is resolved here rather than in renderClusterInventory because it is a property
 // of how bootloose was asked to provision the cluster -- it generates the pair at that path on
 // first Create -- and not of the cluster it produced.
-func bootlooseInventory(c *blcluster.Cluster, spec fleetSpec) (apicluster.ZarfCluster, error) {
+func bootlooseInventory(c *blcluster.Cluster, spec fleetSpec) (apicluster.Cluster, error) {
 	keyPath, err := filepath.Abs(spec.bootlooseConfig().Cluster.PrivateKey)
 	if err != nil {
-		return apicluster.ZarfCluster{}, err
+		return apicluster.Cluster{}, err
 	}
 	return renderClusterInventory(c, keyPath)
 }

@@ -130,7 +130,7 @@ metadata:
 			pkg, err := Parse(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
-				require.Equal(t, distro.ZarfDistro{}, pkg)
+				require.Equal(t, distro.Distro{}, pkg)
 				return
 			}
 			require.NoError(t, err)
@@ -238,7 +238,7 @@ metadata:
 			pkg, err := ParseMultiDoc(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
-				require.Equal(t, distro.ZarfDistro{}, pkg)
+				require.Equal(t, distro.Distro{}, pkg)
 				return
 			}
 			require.NoError(t, err)

@@ -36,18 +36,18 @@ type ConfigureEngine struct {
 	// Keyring decrypts encrypted registry credentials, in either supported format. If it holds
 	// nothing that reads a given value, Prepare errors.
 	Keyring *clustercfg.Keyring
-	run     cluster.ZarfRuntimeMeta
-	hosts   cluster.ZarfHosts
-	control cluster.ZarfHosts
+	run     cluster.RuntimeMeta
+	hosts   cluster.Hosts
+	control cluster.Hosts
 }
 
 // Prepare the phase
-func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.GenericPhase.Prepare(c, d); err != nil {
 		logger.From(ctx).Warn("got", "error", err)
 	}
 	p.hosts = p.manager.Config.Spec.Hosts
-	p.control = p.hosts.Filter(func(h *cluster.ZarfHost) bool {
+	p.control = p.hosts.Filter(func(h *cluster.Host) bool {
 		return h.IsController()
 	})
 
@@ -120,7 +120,7 @@ func (p *ConfigureEngine) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.hosts, p.configureEngine)
 }
 
-func (p *ConfigureEngine) configureEngine(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *ConfigureEngine) configureEngine(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("applying config", "host", h)
 	return p.Distro.ConfigureEngine(ctx, h, p.run, *p.GetDistro())
 }

@@ -235,7 +235,7 @@ func (s *DryRunSuite) requireNothingRanThatWrites(result phase.RunResult) {
 
 // requireFactsGathered asserts the read-only phases did their work for real. Without this, a dry
 // run that connected to nothing would satisfy requireHostsUntouched.
-func (s *DryRunSuite) requireFactsGathered(hosts apicluster.ZarfHosts) {
+func (s *DryRunSuite) requireFactsGathered(hosts apicluster.Hosts) {
 	s.T().Helper()
 
 	for _, host := range hosts {
@@ -251,7 +251,7 @@ func (s *DryRunSuite) requireFactsGathered(hosts apicluster.ZarfHosts) {
 
 // requireHostsUntouched asserts that none of the artifacts the install walk looks for is present.
 // Each path is the one the matching install test asserts exists, so the two move together.
-func (s *DryRunSuite) requireHostsUntouched(hosts apicluster.ZarfHosts) {
+func (s *DryRunSuite) requireHostsUntouched(hosts apicluster.Hosts) {
 	s.T().Helper()
 
 	service := distroControllerService(s.T())

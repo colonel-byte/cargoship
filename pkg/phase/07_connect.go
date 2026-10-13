@@ -54,7 +54,7 @@ func (p *Connect) ReadOnly() string {
 
 // Run the phase
 func (p *Connect) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.Host) error {
 		return retry.Timeout(ctx, 10*time.Minute, func(ctx context.Context) error {
 			if err := h.Connect(ctx); err != nil {
 				logger.From(ctx).Debug("got the following", "host", h, "err", err)

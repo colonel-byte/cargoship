@@ -47,8 +47,8 @@ type GatherFactsDistro struct {
 	// because an engine does not support being moved backwards and the data directory it leaves
 	// behind was written by the newer version, so the operator has to say that they mean it.
 	AllowDowngrade bool
-	hosts          cluster.ZarfHosts
-	d              *distro.ZarfDistro
+	hosts          cluster.Hosts
+	d              *distro.Distro
 }
 
 // Title for the phase
@@ -67,7 +67,7 @@ func (p *GatherFactsDistro) ReadOnly() string {
 }
 
 // Prepare the phase
-func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error {
 	p.hosts = p.manager.Config.Spec.Hosts
 	p.d = d
 	return nil
@@ -82,7 +82,7 @@ func (p *GatherFactsDistro) Run(ctx context.Context) (err error) {
 	)
 }
 
-func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluster.Host) error {
 	ver, err := p.Distro.RunningVersion(h)
 	if err != nil && !errors.Is(err, distrocfg.ErrVersionNotDetected) {
 		return err

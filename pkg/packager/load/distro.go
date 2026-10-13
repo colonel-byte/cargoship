@@ -48,32 +48,32 @@ type DefinitionOptions struct {
 }
 
 // DistroDefinition returns a ZarfDistro object
-func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error) {
+func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.Distro, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.DistroDefinition", "path", distroPath)
 
 	disPath, err := layout.ResolveDistroPath(distroPath)
 	if err != nil {
-		return v1alpha1.ZarfDistro{}, err
+		return v1alpha1.Distro{}, err
 	}
 
 	b, err := os.ReadFile(disPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfDistro{}, err
+		return v1alpha1.Distro{}, err
 	}
 	dis, err := cfg.Parse(ctx, b)
 	if err != nil {
-		return v1alpha1.ZarfDistro{}, err
+		return v1alpha1.Distro{}, err
 	}
 	dis, declared, err := resolveArchitectures(dis, opts.Architecture)
 	if err != nil {
-		return v1alpha1.ZarfDistro{}, err
+		return v1alpha1.Distro{}, err
 	}
 
 	err = validateDistro(ctx, dis, declared, disPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfDistro{}, err
+		return v1alpha1.Distro{}, err
 	}
 	l.Debug("done layout.DistroDefinition", "duration", time.Since(start))
 	return dis, nil
@@ -90,7 +90,7 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 // It returns the narrowed package alongside the architectures the definition declared, which is
 // what the file selectors have to be validated against: a definition narrowed to amd64 still
 // carries the arm64 entries it was written with, and those entries are not a mistake.
-func resolveArchitectures(dis v1alpha1.ZarfDistro, requested string) (v1alpha1.ZarfDistro, api.Arches, error) {
+func resolveArchitectures(dis v1alpha1.Distro, requested string) (v1alpha1.Distro, api.Arches, error) {
 	var arch api.Arch
 	if requested != "" {
 		parsed, err := api.ParseArch(requested)
@@ -129,7 +129,7 @@ func resolveArchitectures(dis v1alpha1.ZarfDistro, requested string) (v1alpha1.Z
 	return dis, declared, nil
 }
 
-func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, declared api.Arches, path string) error {
+func validateDistro(_ context.Context, dis v1alpha1.Distro, declared api.Arches, path string) error {
 	// Reject an image compression format cargoship cannot write here, so a typo
 	// fails at build time instead of halfway through an apply.
 	if _, err := dis.Spec.Config.ImagesConfig.TarballSuffix(); err != nil {
@@ -148,7 +148,7 @@ func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, declared api.Arc
 // x86_64 into a build time error rather than a file that silently never uploads. It is checked
 // against the declared architectures rather than what the package was narrowed to, so that
 // narrowing a multi-architecture definition to one architecture is not itself an error.
-func validateArchitectures(dis v1alpha1.ZarfDistro, declared api.Arches) error {
+func validateArchitectures(dis v1alpha1.Distro, declared api.Arches) error {
 	arches := declared
 	if len(arches) == 0 {
 		return errors.New("package must target at least one architecture")

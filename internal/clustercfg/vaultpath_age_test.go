@@ -134,7 +134,7 @@ func TestEncryptConfigWritesAge(t *testing.T) {
 	}
 
 	// What encrypt-file writes has to be what an apply reads back, for age as for vault.
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}
@@ -229,7 +229,7 @@ func TestDecryptRegistryAuthMixedFormats(t *testing.T) {
 		identities:    ageKeyring.identities,
 	}
 
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(doc, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", doc, err)
 	}
@@ -257,7 +257,7 @@ func TestDecryptRegistryAuthMissingAgeIdentity(t *testing.T) {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(doc, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", doc, err)
 	}
@@ -283,7 +283,7 @@ func TestDecryptRegistryAuthWrongAgeIdentity(t *testing.T) {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(doc, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", doc, err)
 	}
@@ -342,7 +342,7 @@ func TestRekeyConfigMigratesVaultToAge(t *testing.T) {
 		}
 	}
 
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}

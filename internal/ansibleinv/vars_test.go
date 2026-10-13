@@ -24,7 +24,7 @@ import (
 
 // translateOne translates a single controller carrying the given host variables, which is the
 // shape every test in this file wants.
-func translateOne(t *testing.T, vars map[string]any) (*cluster.ZarfHost, error) {
+func translateOne(t *testing.T, vars map[string]any) (*cluster.Host, error) {
 	t.Helper()
 	out, err := Translate(Input{
 		Groups:   map[string][]string{"controller": {"kc01"}},

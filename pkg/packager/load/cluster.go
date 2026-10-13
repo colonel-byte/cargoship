@@ -37,34 +37,34 @@ import (
 type ClusterOptions struct{}
 
 // ClusterDefinition loads a package from the filesystem
-func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error) {
+func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.Cluster, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.ClusterDefinition", "path", configPath)
 
 	conPath, err := layout.ResolveClusterPath(configPath)
 	if err != nil {
-		return v1alpha1.ZarfCluster{}, err
+		return v1alpha1.Cluster{}, err
 	}
 
 	b, err := os.ReadFile(conPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfCluster{}, err
+		return v1alpha1.Cluster{}, err
 	}
 	cluster, err := clustercfg.Parse(ctx, b)
 	if err != nil {
-		return v1alpha1.ZarfCluster{}, err
+		return v1alpha1.Cluster{}, err
 	}
 
 	err = validateCluster(ctx, cluster, conPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfCluster{}, err
+		return v1alpha1.Cluster{}, err
 	}
 	l.Debug("done layout.ClusterDefinition", "duration", time.Since(start))
 	return cluster, nil
 }
 
-func validateCluster(_ context.Context, c v1alpha1.ZarfCluster, path string) error {
+func validateCluster(_ context.Context, c v1alpha1.Cluster, path string) error {
 	if err := v1alpha1.ValidateRegistries(c.Spec.Config.Registries); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}

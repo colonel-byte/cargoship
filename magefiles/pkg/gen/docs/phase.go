@@ -31,8 +31,8 @@ import (
 var (
 	genDocsManager = &phase.Manager{
 		DistroID: distrocfg.DistroRKE2,
-		Config: &cluster.ZarfCluster{
-			Metadata: cluster.ZarfClusterMetadata{Name: "gen-docs"},
+		Config: &cluster.Cluster{
+			Metadata: cluster.Metadata{Name: "gen-docs"},
 		},
 	}
 	genDocsManagerNoConfig = &phase.Manager{DistroID: distrocfg.DistroRKE2}

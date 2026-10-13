@@ -12,10 +12,10 @@ Package layout is used to defining the distro package files
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
-- [func AnnotationsFromMetadata\(metadata distro.ZarfDistroMetadata\) map\[string\]string](<#AnnotationsFromMetadata>)
+- [func AnnotationsFromMetadata\(metadata distro.Metadata\) map\[string\]string](<#AnnotationsFromMetadata>)
 - [func IsCleanPath\(s string\) bool](<#IsCleanPath>)
 - [func IsContainedPath\(s string\) bool](<#IsContainedPath>)
-- [func LoadValues\(ctx context.Context, dirPath string, vals distro.ZarfDistroValues, overrides ...map\[string\]any\) \(map\[string\]any, error\)](<#LoadValues>)
+- [func LoadValues\(ctx context.Context, dirPath string, vals distro.Values, overrides ...map\[string\]any\) \(map\[string\]any, error\)](<#LoadValues>)
 - [type ClusterPath](<#ClusterPath>)
   - [func ResolveClusterPath\(path string\) \(ClusterPath, error\)](<#ResolveClusterPath>)
 - [type Distro](<#Distro>)
@@ -23,7 +23,7 @@ Package layout is used to defining the distro package files
 - [type DistroLayout](<#DistroLayout>)
   - [func LoadFromDir\(ctx context.Context, dirPath string, opts DistroLayoutOptions\) \(\*DistroLayout, error\)](<#LoadFromDir>)
   - [func LoadFromTar\(ctx context.Context, tarPath string, opts DistroLayoutOptions\) \(\*DistroLayout, error\)](<#LoadFromTar>)
-  - [func NewDistroLayout\(dir string, distro v1alpha1.ZarfDistro\) \*DistroLayout](<#NewDistroLayout>)
+  - [func NewDistroLayout\(dir string, distro v1alpha1.Distro\) \*DistroLayout](<#NewDistroLayout>)
   - [func \(d \*DistroLayout\) ApplyValues\(values map\[string\]any\) error](<#DistroLayout.ApplyValues>)
   - [func \(d \*DistroLayout\) Archive\(ctx context.Context, dirPath string, \_ int\) \(string, error\)](<#DistroLayout.Archive>)
   - [func \(d \*DistroLayout\) Cleanup\(\) error](<#DistroLayout.Cleanup>)
@@ -78,7 +78,7 @@ var ErrNoVerificationMaterial = errors.New("no verification material available")
 ## func [AnnotationsFromMetadata](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/oci.go#L71>)
 
 ```go
-func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string
+func AnnotationsFromMetadata(metadata distro.Metadata) map[string]string
 ```
 
 AnnotationsFromMetadata extracts OCI manifest annotations from Zarf package metadata.
@@ -105,7 +105,7 @@ IsContainedPath returns true if s is a relative path that stays inside the direc
 ## func [LoadValues](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L268>)
 
 ```go
-func LoadValues(ctx context.Context, dirPath string, vals distro.ZarfDistroValues, overrides ...map[string]any) (map[string]any, error)
+func LoadValues(ctx context.Context, dirPath string, vals distro.Values, overrides ...map[string]any) (map[string]any, error)
 ```
 
 LoadValues merges the values files a package ships with, in order, then the given overrides, and checks the result against the package's values schema.
@@ -160,7 +160,7 @@ DistroLayout struct
 
 ```go
 type DistroLayout struct {
-    Distro distro.ZarfDistro
+    Distro distro.Distro
     // contains filtered or unexported fields
 }
 ```
@@ -187,7 +187,7 @@ LoadFromTar unpacks the given archive \(any compress/format\) and loads it.
 ### func [NewDistroLayout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/distro.go#L40>)
 
 ```go
-func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout
+func NewDistroLayout(dir string, distro v1alpha1.Distro) *DistroLayout
 ```
 
 NewDistroLayout returns an DistroLayout object

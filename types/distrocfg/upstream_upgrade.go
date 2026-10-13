@@ -32,7 +32,7 @@ import (
 // architecture. kubeadm must install and run before kubelet/kubectl are touched, so it needs
 // its own lookup rather than reusing the full-package-set install the shared upgrade phase
 // already runs right after this step.
-func kubeadmPackagePath(dis distro.ZarfDistro, host *cluster.ZarfHost, pkgManager string) (string, error) {
+func kubeadmPackagePath(dis distro.Distro, host *cluster.Host, pkgManager string) (string, error) {
 	rawArch, err := host.Arch()
 	if err != nil {
 		return "", fmt.Errorf("reading host architecture: %w", err)
@@ -53,7 +53,7 @@ func kubeadmPackagePath(dis distro.ZarfDistro, host *cluster.ZarfHost, pkgManage
 // This mirrors the probe of the same name in pkg/phase, which cannot be imported here because
 // pkg/phase imports this package. The two have to agree; see
 // docs/agent/choice-unpinnable-hosts.md.
-func dnfVersionlockPresent(host *cluster.ZarfHost) error {
+func dnfVersionlockPresent(host *cluster.Host) error {
 	return host.SudoExec("dnf versionlock --help")
 }
 
@@ -67,15 +67,15 @@ func dnfVersionlockPresent(host *cluster.ZarfHost) error {
 // host with no plugin has nothing locked, so there is nothing here to release. apt-mark ships in
 // apt itself, so a Debian-family host can always release a hold and a failure there is a real
 // error rather than absent tooling.
-func unholdKubeadm(ctx context.Context, host *cluster.ZarfHost, pkgManager string) error {
-	return unholdKubeadmUsing(ctx, host, pkgManager, dnfVersionlockPresent, func(h *cluster.ZarfHost, cmd string) error {
+func unholdKubeadm(ctx context.Context, host *cluster.Host, pkgManager string) error {
+	return unholdKubeadmUsing(ctx, host, pkgManager, dnfVersionlockPresent, func(h *cluster.Host, cmd string) error {
 		return h.SudoExec(cmd)
 	})
 }
 
 // unholdKubeadmUsing is unholdKubeadm with its two host commands injected, so a test can reach the
 // missing-plugin path without a reachable host.
-func unholdKubeadmUsing(ctx context.Context, host *cluster.ZarfHost, pkgManager string, present func(*cluster.ZarfHost) error, run func(*cluster.ZarfHost, string) error) error {
+func unholdKubeadmUsing(ctx context.Context, host *cluster.Host, pkgManager string, present func(*cluster.Host) error, run func(*cluster.Host, string) error) error {
 	if pkgManager == config.SelectorAPT {
 		return run(host, "apt-mark unhold kubeadm")
 	}
@@ -92,7 +92,7 @@ func unholdKubeadmUsing(ctx context.Context, host *cluster.ZarfHost, pkgManager 
 // install and service restart steps. kubeadm, unlike rke2/k3s, refuses to move the control plane
 // forward on a plain kubelet restart -- it must install the new kubeadm binary and run its own
 // upgrade command first, and the first controller runs a different command than every other node.
-func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error {
+func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.Host, dis distro.Distro) error {
 	pkgManager := config.SelectorAPT
 	if !utils.FilterDebianLinux(host) {
 		pkgManager = config.SelectorRPM

@@ -22,7 +22,7 @@ import (
 )
 
 // FilterEngineAlreadyPopulated is a function used to filter whether a host already has distro files populated
-func FilterEngineAlreadyPopulated(h *cluster.ZarfHost) bool {
+func FilterEngineAlreadyPopulated(h *cluster.Host) bool {
 	return !h.Metadata.EngineUploaded
 }
 
@@ -37,7 +37,7 @@ func IsDebianLinux(con os.Configurer) bool {
 }
 
 // FilterDebianLinux is a function used to filter whether a host is a Debian based OS
-func FilterDebianLinux(h *cluster.ZarfHost) bool {
+func FilterDebianLinux(h *cluster.Host) bool {
 	return IsDebianLinux(h.Configurer)
 }
 
@@ -52,6 +52,6 @@ func IsEnterpriseLinux(con os.Configurer) bool {
 }
 
 // FilterEnterpriseLinux is a function used to filter whether a host is an Enterprise Linux OS
-func FilterEnterpriseLinux(h *cluster.ZarfHost) bool {
+func FilterEnterpriseLinux(h *cluster.Host) bool {
 	return IsEnterpriseLinux(h.Configurer)
 }

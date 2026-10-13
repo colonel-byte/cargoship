@@ -28,14 +28,14 @@ type fakeManifestApplierDistro struct {
 	paths []string
 }
 
-func (f fakeManifestApplierDistro) ManifestPaths(distro.ZarfDistro) []string {
+func (f fakeManifestApplierDistro) ManifestPaths(distro.Distro) []string {
 	return f.paths
 }
 
 func TestManifestsToApplyUsesManifestApplierWhenImplemented(t *testing.T) {
 	d := fakeManifestApplierDistro{paths: []string{"/etc/kubernetes/manifests/cni.yaml"}}
 
-	got := manifestsToApply(d, distro.ZarfDistro{})
+	got := manifestsToApply(d, distro.Distro{})
 
 	require.Equal(t, []string{"/etc/kubernetes/manifests/cni.yaml"}, got)
 }
@@ -43,7 +43,7 @@ func TestManifestsToApplyUsesManifestApplierWhenImplemented(t *testing.T) {
 func TestManifestsToApplyNilWhenNotImplemented(t *testing.T) {
 	d := fakeServiceDistro{}
 
-	got := manifestsToApply(d, distro.ZarfDistro{})
+	got := manifestsToApply(d, distro.Distro{})
 
 	require.Nil(t, got)
 }

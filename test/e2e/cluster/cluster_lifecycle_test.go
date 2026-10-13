@@ -290,7 +290,7 @@ func (s *ResetSuite) Test_1_Reset() {
 // reset has run.
 //
 // `cargoship reset --help` promises "the engine and the data it wrote", and until this existed
-// nothing checked the second half. The uninstall guarded every removal on ZarfHost.FileExist,
+// nothing checked the second half. The uninstall guarded every removal on Host.FileExist,
 // which is `test -f` and therefore false for a directory -- so the data directory, the config
 // directory and /etc/cargoship were all skipped, silently, because nothing was attempted and
 // nothing failed. A reset reported success having left 2.3G in /var/lib/rancher/rke2 and a
@@ -321,7 +321,7 @@ func (s *ResetSuite) Test_2_ResetRemovesWhatItManages() {
 // distro has been torn down, and that it leaves the kubeconfig it cannot refresh in place.
 func (s *ResetSuite) Test_3_PostReset() {
 	manager := s.newBareManager(e2e.ClusterConfigPath)
-	manager.Config.Spec.Hosts = apicluster.ZarfHosts{manager.Config.Spec.Hosts.Controllers().First()}
+	manager.Config.Spec.Hosts = apicluster.Hosts{manager.Config.Spec.Hosts.Controllers().First()}
 
 	// The action fails partway through its phase list, so its own Disconnect phase never
 	// runs and the SSH connection it opened has to be closed here.

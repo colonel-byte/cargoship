@@ -29,7 +29,7 @@ import (
 
 // Host is the interface that Configurer methods use to interact with a
 // remote host. It is satisfied by *rig.Client, and therefore by any type
-// that embeds rig.ClientWithConfig (such as cluster.ZarfHost), since those
+// that embeds rig.ClientWithConfig (such as cluster.Host), since those
 // methods are promoted.
 type Host interface {
 	cmd.SimpleRunner

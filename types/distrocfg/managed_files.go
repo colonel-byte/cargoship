@@ -58,7 +58,7 @@ func (d ManagedDir) prunes(path string) bool {
 //
 // A directory that does not exist, or that cannot be listed, contributes nothing: pruning is
 // cleanup, and there is no point failing an apply over it.
-func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) []string {
+func StaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) []string {
 	var stale []string
 	for _, dir := range dirs {
 		for _, path := range listFiles(h, dir.Path) {
@@ -76,7 +76,7 @@ func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]Desir
 
 // RemoveStaleFiles deletes the files StaleFiles finds. It reports the first deletion error, so a
 // file that cannot be removed is surfaced rather than left to be rediscovered on every run.
-func RemoveStaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) error {
+func RemoveStaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) error {
 	for _, path := range StaleFiles(h, dirs, desired) {
 		if err := h.DeleteFile(path); err != nil {
 			return fmt.Errorf("removing stale file %s: %w", path, err)
@@ -92,7 +92,7 @@ var listFiles = listManagedFiles
 // listManagedFiles returns the files directly under dir on the host. Subdirectories are not
 // descended into and are not returned: cargoship writes flat directories, and anything nested is
 // something else's.
-func listManagedFiles(h *cluster.ZarfHost, dir string) []string {
+func listManagedFiles(h *cluster.Host, dir string) []string {
 	if dir == "" || !h.FileExist(dir) {
 		return nil
 	}

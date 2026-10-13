@@ -31,7 +31,7 @@ import (
 )
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, pkg distro.ZarfDistro) (registry.Reference, error) {
+func ReferenceFromMetadata(registryLocation string, pkg distro.Distro) (registry.Reference, error) {
 	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
 }
 
@@ -42,7 +42,7 @@ type ReferenceFromMetadataOptions struct {
 }
 
 // ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
-func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.ZarfDistro, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
+func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
 	// Explicit requirement for version in order to publish
 	if len(pkg.Metadata.Version) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")

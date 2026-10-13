@@ -47,7 +47,7 @@ type UninstallEngine struct {
 	Distro           distrocfg.Distro
 	WorkerConcurrent string
 	TargetHosts      []string
-	hosts            cluster.ZarfHosts
+	hosts            cluster.Hosts
 }
 
 // Title for the phase
@@ -61,7 +61,7 @@ func (p *UninstallEngine) Explanation() string {
 }
 
 // Prepare the phase
-func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.hosts = filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
 	logger.From(ctx).Debug("number of systems that need to be reset", "hosts", len(p.hosts))
 	return nil
@@ -79,7 +79,7 @@ func (p *UninstallEngine) Run(ctx context.Context) error {
 	)
 }
 
-func (p *UninstallEngine) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UninstallEngine) stopService(ctx context.Context, h *cluster.Host) error {
 	if !h.IsController() {
 		logger.From(ctx).Info("waiting for the service to stop", "service", p.Distro.GetWorkerService(), "host", h)
 		return p.Distro.StopWorkerService(h)
@@ -92,14 +92,14 @@ func (p *UninstallEngine) stopService(ctx context.Context, h *cluster.ZarfHost) 
 // kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. Warns and
 // continues on error, matching the rest of uninstallNode: a host that is unreachable or already
 // reset should not block the rest of the uninstall.
-func (p *UninstallEngine) preUninstallReset(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UninstallEngine) preUninstallReset(ctx context.Context, h *cluster.Host) error {
 	if r, ok := p.Distro.(distrocfg.PreUninstallResetter); ok {
 		return r.PreUninstallReset(ctx, h)
 	}
 	return nil
 }
 
-func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("uninstall", "node", h)
 
 	if err := p.preUninstallReset(ctx, h); err != nil {
@@ -169,7 +169,7 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 
 // cleanManagedDirs cleans up managed directories and files tracked by the distro,
 // including /etc/cargoship and any managed directories.
-func (p *UninstallEngine) cleanManagedDirs(ctx context.Context, h *cluster.ZarfHost) {
+func (p *UninstallEngine) cleanManagedDirs(ctx context.Context, h *cluster.Host) {
 	if p.Distro == nil {
 		return
 	}
@@ -201,7 +201,7 @@ func (p *UninstallEngine) cleanManagedDirs(ctx context.Context, h *cluster.ZarfH
 
 // detectInstalledEnginePackages probes the host package manager for engine packages matching
 // the distro when the staging directory holds no package files.
-func (p *UninstallEngine) detectInstalledEnginePackages(ctx context.Context, h *cluster.ZarfHost) []string {
+func (p *UninstallEngine) detectInstalledEnginePackages(ctx context.Context, h *cluster.Host) []string {
 	var candidates []string
 	binary := ""
 	if p.Distro != nil {
@@ -267,13 +267,13 @@ func (p *UninstallEngine) detectInstalledEnginePackages(ctx context.Context, h *
 
 // pathExists reports whether anything is at path on the host, directory or file.
 //
-// Not ZarfHost.FileExist, which is `test -f` and therefore false for a directory. Every path an
+// Not Host.FileExist, which is `test -f` and therefore false for a directory. Every path an
 // uninstall removes is a directory -- the engine's data directory, its config directory,
 // /etc/cargoship -- so guarding their removal on FileExist skipped all of them, and skipped
 // them silently: nothing was attempted, so nothing failed and nothing was logged. A reset left
 // 2.3G in /var/lib/rancher/rke2 and a config.yaml naming the old cluster, while reporting
 // success and promising in its own help text to remove "the engine and the data it wrote".
-func pathExists(h *cluster.ZarfHost, path string) bool {
+func pathExists(h *cluster.Host, path string) bool {
 	if path == "" {
 		return false
 	}

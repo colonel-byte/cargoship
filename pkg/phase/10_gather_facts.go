@@ -33,7 +33,7 @@ import (
 // GatherFacts gathers information about hosts
 type GatherFacts struct {
 	GenericPhase
-	profiles map[string]cluster.ZarfClusterProfiles
+	profiles map[string]cluster.Profiles
 }
 
 // Title for the phase
@@ -66,9 +66,9 @@ func (p *GatherFacts) Run(ctx context.Context) error {
 // investigateHost gathers network and host-specific facts, such as architecture, hostname, private interface, and private address, for a given host.
 //
 // ctx: Context for logging and cancellation.
-// h: Pointer to the cluster.ZarfHost to investigate.
+// h: Pointer to the cluster.Host to investigate.
 // Returns an error if resolution fails.
-func (p *GatherFacts) investigateHost(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *GatherFacts) investigateHost(ctx context.Context, h *cluster.Host) error {
 	l := logger.From(ctx)
 
 	arch, err := h.Arch()
@@ -112,9 +112,9 @@ func (p *GatherFacts) investigateHost(ctx context.Context, h *cluster.ZarfHost) 
 // setupProfileOverrides merges profile-specific engine and host configurations into the given host if a matching profile is found.
 //
 // ctx: Context for logging.
-// h: Pointer to the cluster.ZarfHost to apply profile overrides to.
+// h: Pointer to the cluster.Host to apply profile overrides to.
 // Returns an error if any occurs during the setup.
-func (p *GatherFacts) setupProfileOverrides(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *GatherFacts) setupProfileOverrides(ctx context.Context, h *cluster.Host) error {
 	if profile, ok := p.profiles[h.Profile]; ok {
 		h.Engine.Merge(profile.Engine)
 		h.Host.Merge(profile.Host)
@@ -131,7 +131,7 @@ func (p *GatherFacts) setupProfileOverrides(ctx context.Context, h *cluster.Zarf
 // names cargoship uses, so this is a lookup rather than another round trip once investigateHost has
 // run. ParseArch then rejects an architecture cargoship cannot target, such as the arm reported for
 // a 32-bit host.
-func hostArch(h *cluster.ZarfHost) (api.Arch, error) {
+func hostArch(h *cluster.Host) (api.Arch, error) {
 	raw, err := h.Arch()
 	if err != nil {
 		return "", err
@@ -151,7 +151,7 @@ func hostArch(h *cluster.ZarfHost) (api.Arch, error) {
 // A host whose architecture cannot be resolved is skipped rather than failing the set. ValidateHosts
 // has already failed the run for a host the package does not carry, so a host reaching here without
 // an architecture simply receives nothing built for one.
-func hostArches(ctx context.Context, hosts cluster.ZarfHosts) api.Arches {
+func hostArches(ctx context.Context, hosts cluster.Hosts) api.Arches {
 	var arches api.Arches
 
 	for _, h := range hosts {

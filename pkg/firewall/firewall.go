@@ -38,12 +38,12 @@ type Plan struct {
 	// trusts all traffic from these blocks.
 	ClusterCIDRs []string
 	// Ports lists the ports the node exposes publicly, from the inventory's `.host.ports`.
-	Ports []cluster.ZarfHostPort
+	Ports []cluster.HostPort
 	// Rules lists the backend-neutral rules from the inventory's `.host.firewall.rules`.
-	Rules []cluster.ZarfFirewallRule
+	Rules []cluster.FirewallRule
 	// Policies holds the legacy firewalld-only policies from the inventory's `.host.policy`.
 	// Backends other than firewalld ignore it.
-	Policies map[string]cluster.ZarfFirewallPolicyConfig
+	Policies map[string]cluster.FirewallPolicyConfig
 }
 
 // IsEmpty is true when the plan would not change anything on a node.
@@ -62,14 +62,14 @@ type Backend interface {
 	// Detect is true when this backend manages the firewall on h, meaning the firewall is
 	// installed and running. It runs commands on the host, so callers should call it once per
 	// host and reuse the result.
-	Detect(ctx context.Context, h *cluster.ZarfHost) bool
+	Detect(ctx context.Context, h *cluster.Host) bool
 	// Installed is true when this firewall is present on h, whether or not it is running. It
 	// separates a host that has the firewall stopped from one that never had it at all.
-	Installed(ctx context.Context, h *cluster.ZarfHost) bool
+	Installed(ctx context.Context, h *cluster.Host) bool
 	// Apply makes the node's firewall match p, then reloads the firewall. It is
 	// idempotent: applying the same plan twice leaves the node in the same state, and
 	// rules cargoship applied on an earlier run that p no longer contains are removed.
-	Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
+	Apply(ctx context.Context, h *cluster.Host, p Plan) error
 }
 
 // backends are matched against a host in order when the host's OS names no preferred firewall,
@@ -103,7 +103,7 @@ type Selection struct {
 // than reaching past the front end to the nftables underneath it. Only a host whose preferred
 // front end is absent, or whose OS ships none, falls through to the ordered Detect match, which
 // is how a host that manages nftables directly is picked up.
-func Select(ctx context.Context, h *cluster.ZarfHost) Selection {
+func Select(ctx context.Context, h *cluster.Host) Selection {
 	detect := func(b Backend) bool { return b.Detect(ctx, h) }
 	installed := func(b Backend) bool { return b.Installed(ctx, h) }
 
@@ -138,7 +138,7 @@ func selectBackend(available []Backend, preferred string, detect, installed func
 
 // preferredFirewall is the firewall front end h's OS ships, or an empty string when the OS ships
 // none or has not been resolved.
-func preferredFirewall(h *cluster.ZarfHost) string {
+func preferredFirewall(h *cluster.Host) string {
 	if h == nil || h.Configurer == nil {
 		return ""
 	}

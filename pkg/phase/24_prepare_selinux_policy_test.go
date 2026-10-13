@@ -24,8 +24,8 @@ import (
 
 // policyPhase is a phase wired to the distro config under test, with the host filter already
 // resolved, so ShouldRun can be exercised without a connection.
-func policyPhase(hosts cluster.ZarfHosts, cfg distro.ZarfDistroSELinux) *PrepareSelinuxPolicy {
-	d := &distro.ZarfDistro{}
+func policyPhase(hosts cluster.Hosts, cfg distro.SELinux) *PrepareSelinuxPolicy {
+	d := &distro.Distro{}
 	d.Spec.Config.OS.SELinux = cfg
 
 	p := &PrepareSelinuxPolicy{selinuxPolicyHosts: hosts}
@@ -38,18 +38,18 @@ func policyPhase(hosts cluster.ZarfHosts, cfg distro.ZarfDistroSELinux) *Prepare
 // phase off: a host that cannot take a policy must not be touched, and a package that asks for
 // no policy must not make the phase run against every enforcing host in the fleet.
 func TestPrepareSelinuxPolicyShouldRun(t *testing.T) {
-	hosts := cluster.ZarfHosts{&cluster.ZarfHost{Hostname: "control1"}}
+	hosts := cluster.Hosts{&cluster.Host{Hostname: "control1"}}
 
 	tests := []struct {
 		name  string
-		hosts cluster.ZarfHosts
-		cfg   distro.ZarfDistroSELinux
+		hosts cluster.Hosts
+		cfg   distro.SELinux
 		want  bool
 	}{
 		{
 			name:  "no capable hosts",
 			hosts: nil,
-			cfg: distro.ZarfDistroSELinux{
+			cfg: distro.SELinux{
 				Booleans: map[string]bool{"container_manage_cgroup": true},
 			},
 			want: false,
@@ -57,13 +57,13 @@ func TestPrepareSelinuxPolicyShouldRun(t *testing.T) {
 		{
 			name:  "no policy configured",
 			hosts: hosts,
-			cfg:   distro.ZarfDistroSELinux{},
+			cfg:   distro.SELinux{},
 			want:  false,
 		},
 		{
 			name:  "booleans only",
 			hosts: hosts,
-			cfg: distro.ZarfDistroSELinux{
+			cfg: distro.SELinux{
 				Booleans: map[string]bool{"container_manage_cgroup": true},
 			},
 			want: true,
@@ -71,8 +71,8 @@ func TestPrepareSelinuxPolicyShouldRun(t *testing.T) {
 		{
 			name:  "modules only",
 			hosts: hosts,
-			cfg: distro.ZarfDistroSELinux{
-				Modules: []distro.ZarfDistroSELinuxModule{
+			cfg: distro.SELinux{
+				Modules: []distro.SELinuxModule{
 					{
 						Name: "cargoship-engine",
 						CIL:  "(allow kernel_t self (capability (sys_admin)))",
@@ -84,8 +84,8 @@ func TestPrepareSelinuxPolicyShouldRun(t *testing.T) {
 		{
 			name:  "file contexts only",
 			hosts: hosts,
-			cfg: distro.ZarfDistroSELinux{
-				FileContexts: []distro.ZarfDistroSELinuxFileContext{
+			cfg: distro.SELinux{
+				FileContexts: []distro.SELinuxFileContext{
 					{
 						Path: "/var/lib/rancher(/.*)?",
 						Type: "container_var_lib_t",
@@ -187,7 +187,7 @@ func TestSelinuxBooleanArgsIsSorted(t *testing.T) {
 // TestSelinuxFcontextCommand checks the three operations share one renderer, so an added mapping
 // and the removal that undoes it cannot drift apart.
 func TestSelinuxFcontextCommand(t *testing.T) {
-	fc := distro.ZarfDistroSELinuxFileContext{
+	fc := distro.SELinuxFileContext{
 		Path: "/var/lib/rancher(/.*)?",
 		Type: "container_var_lib_t",
 	}
@@ -224,7 +224,7 @@ func TestSelinuxFcontextCommand(t *testing.T) {
 // TestSelinuxFcontextCommandUsesTheConfiguredFileType makes sure an explicit file type reaches
 // semanage, since a mapping restricted to directories behaves differently from one that is not.
 func TestSelinuxFcontextCommandUsesTheConfiguredFileType(t *testing.T) {
-	fc := distro.ZarfDistroSELinuxFileContext{
+	fc := distro.SELinuxFileContext{
 		Path:     "/var/lib/kubelet",
 		Type:     "container_var_lib_t",
 		FileType: "dir",
@@ -242,17 +242,17 @@ func TestSelinuxFcontextCommandUsesTheConfiguredFileType(t *testing.T) {
 func TestSelinuxModulePriority(t *testing.T) {
 	tests := []struct {
 		name   string
-		module distro.ZarfDistroSELinuxModule
+		module distro.SELinuxModule
 		want   int
 	}{
 		{
 			name:   "unset defaults above the distribution policy",
-			module: distro.ZarfDistroSELinuxModule{Name: "cargoship-engine"},
+			module: distro.SELinuxModule{Name: "cargoship-engine"},
 			want:   DefaultSELinuxModulePriority,
 		},
 		{
 			name: "explicit priority is kept",
-			module: distro.ZarfDistroSELinuxModule{
+			module: distro.SELinuxModule{
 				Name:     "cargoship-engine",
 				Priority: 500,
 			},
@@ -260,7 +260,7 @@ func TestSelinuxModulePriority(t *testing.T) {
 		},
 		{
 			name: "a negative priority falls back to the default",
-			module: distro.ZarfDistroSELinuxModule{
+			module: distro.SELinuxModule{
 				Name:     "cargoship-engine",
 				Priority: -1,
 			},

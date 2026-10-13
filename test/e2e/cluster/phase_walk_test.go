@@ -144,7 +144,7 @@ func sameVersion(want, got string) (bool, error) {
 	return wantVer.Equal(gotVer), nil
 }
 
-func (s *phaseWalk) requireSchedulable(hosts apicluster.ZarfHosts) {
+func (s *phaseWalk) requireSchedulable(hosts apicluster.Hosts) {
 	s.T().Helper()
 
 	cs, err := e2e.KubeClient(s.T())

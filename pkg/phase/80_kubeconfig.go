@@ -56,7 +56,7 @@ type KubeConfig struct {
 	// and one that does keeps every cluster already in it.
 	Path         string
 	configAccess clientcmd.ConfigAccess
-	leader       *cluster.ZarfHost
+	leader       *cluster.Host
 	built        *clientcmdapi.Config
 }
 
@@ -71,8 +71,8 @@ func (p *KubeConfig) Explanation() string {
 }
 
 // Prepare the phase
-func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) > 0 {

@@ -58,14 +58,14 @@ const (
 )
 
 // isUploadOnly reports whether a host is in the inventory only to receive uploads.
-func isUploadOnly(h *apicluster.ZarfHost) bool {
+func isUploadOnly(h *apicluster.Host) bool {
 	return strings.HasPrefix(h.Hostname, uploadOnlyPrefix)
 }
 
 // engineHosts returns the hosts that join the cluster, which is every host that is not
 // upload-only. This is the inventory the CLI-driven steps are given.
-func engineHosts(c apicluster.ZarfCluster) apicluster.ZarfCluster {
-	c.Spec.Hosts = c.Spec.Hosts.Filter(func(h *apicluster.ZarfHost) bool { return !isUploadOnly(h) })
+func engineHosts(c apicluster.Cluster) apicluster.Cluster {
+	c.Spec.Hosts = c.Spec.Hosts.Filter(func(h *apicluster.Host) bool { return !isUploadOnly(h) })
 	return c
 }
 
@@ -73,10 +73,10 @@ func engineHosts(c apicluster.ZarfCluster) apicluster.ZarfCluster {
 // mapping kc*/kw* hostnames to controller/worker roles. The Fedora replicas are named kcf*
 // and kwf*, so the same two prefixes claim them and the OS family never has to be part of
 // the mapping. A machine whose name matches neither prefix is skipped rather than guessed at.
-func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.ZarfCluster, error) {
+func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.Cluster, error) {
 	machines, err := c.Inspect(nil)
 	if err != nil {
-		return apicluster.ZarfCluster{}, fmt.Errorf("failed to inspect bootloose cluster: %w", err)
+		return apicluster.Cluster{}, fmt.Errorf("failed to inspect bootloose cluster: %w", err)
 	}
 
 	var controllers, workers []*blcluster.Machine
@@ -89,39 +89,39 @@ func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.Za
 		}
 	}
 	if len(controllers) == 0 {
-		return apicluster.ZarfCluster{}, fmt.Errorf("no controller machines found in bootloose cluster")
+		return apicluster.Cluster{}, fmt.Errorf("no controller machines found in bootloose cluster")
 	}
 	sortByHostname(controllers)
 	sortByHostname(workers)
 
-	hosts := make(apicluster.ZarfHosts, 0, len(controllers)+len(workers))
+	hosts := make(apicluster.Hosts, 0, len(controllers)+len(workers))
 	for _, m := range controllers {
 		host, err := hostFromMachine(m, apicluster.RoleController, keyPath)
 		if err != nil {
-			return apicluster.ZarfCluster{}, err
+			return apicluster.Cluster{}, err
 		}
 		hosts = append(hosts, host)
 	}
 	for _, m := range workers {
 		host, err := hostFromMachine(m, apicluster.RoleWorker, keyPath)
 		if err != nil {
-			return apicluster.ZarfCluster{}, err
+			return apicluster.Cluster{}, err
 		}
 		hosts = append(hosts, host)
 	}
 
 	leaderIP := controllers[0].Status().IP
 	if leaderIP == "" {
-		return apicluster.ZarfCluster{}, fmt.Errorf("could not determine docker-bridge IP for leader controller %s", controllers[0].Hostname())
+		return apicluster.Cluster{}, fmt.Errorf("could not determine docker-bridge IP for leader controller %s", controllers[0].Hostname())
 	}
 
-	return apicluster.ZarfCluster{
+	return apicluster.Cluster{
 		Kind: "ZarfCluster",
-		Metadata: apicluster.ZarfClusterMetadata{
+		Metadata: apicluster.Metadata{
 			Name: "bootloose-e2e",
 		},
-		Spec: apicluster.ZarfClusterSpec{
-			Config: apicluster.ZarfClusterConfig{
+		Spec: apicluster.Spec{
+			Config: apicluster.Config{
 				LoadBalancer: leaderIP,
 			},
 			Hosts: hosts,
@@ -135,12 +135,12 @@ func sortByHostname(machines []*blcluster.Machine) {
 	})
 }
 
-func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apicluster.ZarfHost, error) {
+func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apicluster.Host, error) {
 	port, err := m.HostPort(sshPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get SSH host port for %s: %w", m.Hostname(), err)
 	}
-	return &apicluster.ZarfHost{
+	return &apicluster.Host{
 		Hostname: m.Hostname(),
 		Role:     role,
 		// The profile doubles as the node-role.kubernetes.io/<profile> label the LabelNodes
@@ -163,7 +163,7 @@ func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apiclu
 
 // writeClusterInventory marshals cluster to YAML (via the same library cargoship uses to
 // parse a ZarfCluster document) and writes it to path.
-func writeClusterInventory(cluster apicluster.ZarfCluster, path string) error {
+func writeClusterInventory(cluster apicluster.Cluster, path string) error {
 	b, err := goyaml.Marshal(cluster)
 	if err != nil {
 		return fmt.Errorf("failed to marshal cluster inventory: %w", err)

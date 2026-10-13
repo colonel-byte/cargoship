@@ -9,7 +9,7 @@ The module is a stub: `go.mod` with no dependencies and a `main` that exits 1. T
 Settled by the answers to the design questions:
 
 - **In-process via `pkg/action`.** The provider module requires `github.com/colonel-byte/cargoship` and calls `action.NewApply` / `action.NewReset` directly, so it gets `phase.RunResult` and typed errors rather than an exit code.
-- **Hosts as HCL blocks**, rendered into a `cluster.ZarfCluster` the way `internal/ansibleinv.Translate` renders one for Ansible.
+- **Hosts as HCL blocks**, rendered into a `cluster.Cluster` the way `internal/ansibleinv.Translate` renders one for Ansible.
 - **Destroy runs reset, with an opt-out.** Both "destroy runs reset" and "destroy is a no-op" were chosen; they are reconciled as a default plus a flag, since one has to be the default. `tofu destroy` resets, because that is what destroy means everywhere else in tofu, and `retain_on_destroy = true` downgrades it to dropping state with a warning. Say so in the schema description, not only here.
 - **`kubeconfig` output, opt-in** per `choice-tofu-secrets.md` rule 4.
 - **A separate `cargoship_prepared_hosts` resource** for the disruptive prepare phases.
@@ -34,7 +34,7 @@ internal/tofuprovider/
   provider.go                  # provider schema: vault/age env passthrough, cache path, log level
   cluster_resource.go          # cargoship_cluster: Schema, Create, Read, Update, Delete, ImportState
   prepared_hosts_resource.go   # cargoship_prepared_hosts
-  translate.go                 # HCL model -> cluster.ZarfCluster
+  translate.go                 # HCL model -> cluster.Cluster
   translate_test.go
   logging.go                   # zarf logger + Manager.Writer -> tflog
   plan.go                      # plan-time checks (downgrade, removed hosts)
@@ -57,7 +57,7 @@ Computed: `id`, `engine_version` (what the package carries), and `nodes` -- one 
 
 ### Create
 
-1. `translate.go` turns the model into a `cluster.ZarfCluster`. It renders the YAML and parses it back through `clustercfg.Parse`, rather than building the struct, so the provider gets the same schema validation and the same defaults a file gets -- `load.ClusterDefinition` only adds file reading on top of that.
+1. `translate.go` turns the model into a `cluster.Cluster`. It renders the YAML and parses it back through `clustercfg.Parse`, rather than building the struct, so the provider gets the same schema validation and the same defaults a file gets -- `load.ClusterDefinition` only adds file reading on top of that.
 2. `distro.Load` extracts the package into the provider's cache directory.
 3. Build the `phase.Manager`: `Config`, `Distro`, `DistroID`, `TempDirectory`, `Concurrency`, `ConcurrentUploads`, `Writer` (the tflog adapter), `SetTimeout`.
 4. `action.NewApply(...).Run(ctx)` with a `phase.WithResultSink` context, so what the phases did comes back.

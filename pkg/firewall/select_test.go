@@ -28,10 +28,10 @@ type fakeBackend struct {
 	name string
 }
 
-func (f *fakeBackend) Name() string                                          { return f.name }
-func (f *fakeBackend) Detect(_ context.Context, _ *cluster.ZarfHost) bool    { return false }
-func (f *fakeBackend) Installed(_ context.Context, _ *cluster.ZarfHost) bool { return false }
-func (f *fakeBackend) Apply(_ context.Context, _ *cluster.ZarfHost, _ Plan) error {
+func (f *fakeBackend) Name() string                                      { return f.name }
+func (f *fakeBackend) Detect(_ context.Context, _ *cluster.Host) bool    { return false }
+func (f *fakeBackend) Installed(_ context.Context, _ *cluster.Host) bool { return false }
+func (f *fakeBackend) Apply(_ context.Context, _ *cluster.Host, _ Plan) error {
 	return nil
 }
 

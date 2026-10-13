@@ -54,7 +54,7 @@ func (p *conditionalPhase) Run(_ context.Context) error {
 }
 
 func TestConditionalPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &conditionalPhase{}
 	m.AddPhase(p)
 	require.NoError(t, m.Run(context.Background()))
@@ -74,7 +74,7 @@ func (p *configPhase) Explanation() string {
 	return "test function"
 }
 
-func (p *configPhase) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *configPhase) Prepare(_ context.Context, c *cluster.Cluster, _ *distro.Distro) error {
 	p.receivedConfig = c != nil
 	return nil
 }
@@ -84,7 +84,7 @@ func (p *configPhase) Run(_ context.Context) error {
 }
 
 func TestConfigPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &configPhase{}
 	m.AddPhase(p)
 	require.NoError(t, m.Run(context.Background()))
@@ -130,7 +130,7 @@ func (p *hookedPhase) Run(_ context.Context) error {
 }
 
 func TestHookedPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &hookedPhase{}
 	m.AddPhase(p)
 	require.Error(t, m.Run(context.Background()))
@@ -140,7 +140,7 @@ func TestHookedPhase(t *testing.T) {
 
 func TestContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p1 := &hookedPhase{fn: func() error {
 		cancel()
 		return nil
@@ -232,7 +232,7 @@ func (p *mutatingPhase) Run(_ context.Context) error {
 // read `if dp, ok := p.(withDryRun); ok && m.DryRun`, so a phase that implemented neither
 // interface fell through to Run and changed the host it was supposed to be reporting on.
 func TestDryRunSkipsUndeclaredPhases(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	ro := &readOnlyPhase{}
 	dry := &dryRunPhase{}
 	mut := &mutatingPhase{}
@@ -248,7 +248,7 @@ func TestDryRunSkipsUndeclaredPhases(t *testing.T) {
 // TestWetRunRunsEveryPhase pins the other direction: the gate is the only thing the marker
 // changes, so with DryRun off all three phases run normally.
 func TestWetRunRunsEveryPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	ro := &readOnlyPhase{}
 	dry := &dryRunPhase{}
 	mut := &mutatingPhase{}
@@ -265,7 +265,7 @@ func TestWetRunRunsEveryPhase(t *testing.T) {
 // must not fire, because a hook changes the host by the same route the phase would; and it must
 // not be cleaned up when a later phase fails, because there is nothing to undo.
 func TestDryRunSkipsHooksAndCleanUp(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	skipped := &hookedPhase{}
 	failing := &readOnlyPhase{err: fmt.Errorf("preflight failed")}
 	m.AddPhase(skipped, failing)
@@ -328,7 +328,7 @@ func (p *unpreparablePhase) Explanation() string {
 	return "test function"
 }
 
-func (p *unpreparablePhase) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *unpreparablePhase) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.prepareCalls++
 	return p.prepareErr
 }
@@ -352,7 +352,7 @@ func (p *readOnlyUnpreparable) ReadOnly() string {
 // the state every skipped phase left behind rather than a preflight result. Failing there made
 // --dry-run unusable against a cluster with nothing installed on it.
 func TestDryRunToleratesPrepareFailureOnSkippedPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	unprepared := &unpreparablePhase{prepareErr: fmt.Errorf("no controllers are running")}
 	// A read-only phase after it, not a mutating one: a mutating phase is skipped under a dry
 	// run whether the run continued or not, so it could not tell the two apart.
@@ -368,7 +368,7 @@ func TestDryRunToleratesPrepareFailureOnSkippedPhase(t *testing.T) {
 // TestDryRunFailsOnPrepareFailureOfReadOnlyPhase is the other half. A read-only phase runs for
 // real under a dry run, so its Prepare failing is the preflight failing and has to stop the run.
 func TestDryRunFailsOnPrepareFailureOfReadOnlyPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	unprepared := &readOnlyUnpreparable{unpreparablePhase{prepareErr: fmt.Errorf("host unreachable")}}
 	after := &readOnlyPhase{}
 	m.AddPhase(unprepared, after)
@@ -379,7 +379,7 @@ func TestDryRunFailsOnPrepareFailureOfReadOnlyPhase(t *testing.T) {
 
 // TestWetRunFailsOnPrepareFailure keeps the tolerance out of a real run entirely.
 func TestWetRunFailsOnPrepareFailure(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	unprepared := &unpreparablePhase{prepareErr: fmt.Errorf("no controllers are running")}
 	after := &readOnlyPhase{}
 	m.AddPhase(unprepared, after)
@@ -442,7 +442,7 @@ func (p *changingPhase) Run(_ context.Context) error {
 // one worth having a test for: a phase filtered out by ShouldRun runs nothing, but it can have
 // finished its work in Prepare, so leaving it out of the result would lose a real change.
 func TestRunResultRecordsEveryDisposition(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	m.AddPhase(
 		&changingPhase{title: "ran", shouldRun: true},
 		&conditionalPhase{},
@@ -497,7 +497,7 @@ func TestRunResultChangedComesOnlyFromDeclaredPhases(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+			m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 			m.SetPhases(tc.phases)
 
 			require.NoError(t, m.Run(context.Background()))
@@ -512,7 +512,7 @@ func TestRunResultChangedComesOnlyFromDeclaredPhases(t *testing.T) {
 // part-way. The phases it got through are the ones that changed the fleet, so they have to be in
 // the result even though Run returned an error.
 func TestRunResultSurvivesAFailure(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	m.AddPhase(
 		&changingPhase{title: "first", shouldRun: true, changed: true},
 		&changingPhase{title: "second", shouldRun: true, err: fmt.Errorf("phase failed")},
@@ -528,7 +528,7 @@ func TestRunResultSurvivesAFailure(t *testing.T) {
 // so Changed is false and the question worth asking is whether a real run would have: that is
 // Outstanding, and a phase only reaches Planned after its ShouldRun said there was work to do.
 func TestDryRunResultReportsOutstandingWork(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	m.AddPhase(&changingPhase{title: "would sync", shouldRun: true})
 
 	require.NoError(t, m.Run(context.Background()))
@@ -541,7 +541,7 @@ func TestDryRunResultReportsOutstandingWork(t *testing.T) {
 // TestDryRunReportsNoOutstandingWorkWhenThereIsNone is the other half: a phase whose ShouldRun
 // found nothing to do is skipped before the dry-run gate, so it is never reported as pending.
 func TestDryRunReportsNoOutstandingWorkWhenThereIsNone(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	m.AddPhase(&changingPhase{title: "nothing drifted", shouldRun: false})
 
 	require.NoError(t, m.Run(context.Background()))
@@ -555,7 +555,7 @@ func TestResultSinkCollectsTheRun(t *testing.T) {
 	ctx, sink := WithResultSink(context.Background())
 	require.False(t, sink.Observed(), "nothing has run yet")
 
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	m.AddPhase(&changingPhase{title: "ran", shouldRun: true, changed: true})
 	require.NoError(t, m.Run(ctx))
 

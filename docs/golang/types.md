@@ -39,7 +39,7 @@ var CommonFileSources = []string{
 }
 ```
 
-<a name="CommonRegistries"></a>CommonRegistries are suggested, non\-exhaustive registry names used in generated schemas \-\- editors with YAML/JSON schema support \(e.g. the redhat.vscode\-yaml extension\) offer them as autocomplete, for RegistryOverrideMap's registry\_override keys here and for ZarfClusterRegistrieName's registry name field in the cluster API.
+<a name="CommonRegistries"></a>CommonRegistries are suggested, non\-exhaustive registry names used in generated schemas \-\- editors with YAML/JSON schema support \(e.g. the redhat.vscode\-yaml extension\) offer them as autocomplete, for RegistryOverrideMap's registry\_override keys here and for RegistryName's registry name field in the cluster API.
 
 ```go
 var CommonRegistries = []string{

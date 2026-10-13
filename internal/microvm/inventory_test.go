@@ -54,7 +54,7 @@ func TestInventoryHosts(t *testing.T) {
 	f := fleetFixture(t)
 	inv := Inventory(f)
 
-	require.Equal(t, v1alpha1.ZarfDistroKind("ZarfCluster"), inv.Kind)
+	require.Equal(t, v1alpha1.Kind("ZarfCluster"), inv.Kind)
 	require.Equal(t, "microvm-dev", inv.Metadata.Name)
 	require.Len(t, inv.Spec.Hosts, len(f.Nodes))
 
@@ -111,7 +111,7 @@ func TestInventoryRoundTripsThroughLoad(t *testing.T) {
 	b, err := goyaml.Marshal(Inventory(f))
 	require.NoError(t, err)
 
-	var got apicluster.ZarfCluster
+	var got apicluster.Cluster
 	require.NoError(t, goyaml.Unmarshal(b, &got))
 
 	require.Len(t, got.Spec.Hosts, len(f.Nodes))

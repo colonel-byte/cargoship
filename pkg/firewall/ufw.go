@@ -62,7 +62,7 @@ func (u *UFW) Name() string {
 }
 
 // Detect is true when ufw is installed on h and reports itself active.
-func (u *UFW) Detect(_ context.Context, h *cluster.ZarfHost) bool {
+func (u *UFW) Detect(_ context.Context, h *cluster.Host) bool {
 	if h == nil || h.Configurer == nil || !h.FS().CommandExist(UFWService) {
 		return false
 	}
@@ -76,7 +76,7 @@ func (u *UFW) Detect(_ context.Context, h *cluster.ZarfHost) bool {
 }
 
 // Installed is true when ufw is present on h, active or not.
-func (u *UFW) Installed(_ context.Context, h *cluster.ZarfHost) bool {
+func (u *UFW) Installed(_ context.Context, h *cluster.Host) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
@@ -86,7 +86,7 @@ func (u *UFW) Installed(_ context.Context, h *cluster.ZarfHost) bool {
 
 // Apply reconciles the node's ufw rules with p and reloads ufw. Rules cargoship applied on an
 // earlier run that p no longer contains are deleted.
-func (u *UFW) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {
+func (u *UFW) Apply(ctx context.Context, h *cluster.Host, p Plan) error {
 	if err := u.applyProfile(h, p); err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (u *UFW) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {
 
 // applyProfile writes the application profile holding the inventory ports, and removes it
 // when the plan has no ports left.
-func (u *UFW) applyProfile(h *cluster.ZarfHost, p Plan) error {
+func (u *UFW) applyProfile(h *cluster.Host, p Plan) error {
 	if len(p.Ports) == 0 {
 		if h.FileExist(ufwProfilePath) {
 			return h.DeleteFile(ufwProfilePath)
@@ -138,7 +138,7 @@ func (u *UFW) applyProfile(h *cluster.ZarfHost, p Plan) error {
 
 // readState returns the rules cargoship applied to h on its last run. A node cargoship has
 // not configured before, or one whose state file is unreadable, is treated as having none.
-func (u *UFW) readState(ctx context.Context, h *cluster.ZarfHost) []string {
+func (u *UFW) readState(ctx context.Context, h *cluster.Host) []string {
 	if !h.FileExist(ufwStatePath) {
 		return nil
 	}
@@ -162,7 +162,7 @@ func (u *UFW) readState(ctx context.Context, h *cluster.ZarfHost) []string {
 }
 
 // writeState records the rules cargoship applied, for the next run to reconcile against.
-func (u *UFW) writeState(h *cluster.ZarfHost, rules []string) error {
+func (u *UFW) writeState(h *cluster.Host, rules []string) error {
 	if err := h.Sudo().FS().MkdirAll(ufwStateDir, 0o755); err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (u *UFW) writeState(h *cluster.ZarfHost, rules []string) error {
 // deleteRule removes a rule cargoship applied on an earlier run. A delete that fails is
 // logged rather than returned: the rule may already be gone, and that is not a reason to fail
 // the phase.
-func (u *UFW) deleteRule(ctx context.Context, h *cluster.ZarfHost, rule string) {
+func (u *UFW) deleteRule(ctx context.Context, h *cluster.Host, rule string) {
 	if err := h.Sudo().Exec("ufw --force delete " + stripComment(rule)); err != nil {
 		logger.From(ctx).Warn("could not delete stale ufw rule",
 			"host", h.String(), "rule", rule, "error", err)
@@ -181,7 +181,7 @@ func (u *UFW) deleteRule(ctx context.Context, h *cluster.ZarfHost, rule string) 
 }
 
 // ufwProfile renders the application profile holding the inventory ports.
-func ufwProfile(ports []cluster.ZarfHostPort) string {
+func ufwProfile(ports []cluster.HostPort) string {
 	specs := make([]string, 0, len(ports))
 	for _, port := range ports {
 		proto := strings.ToLower(port.Protocol)
@@ -226,7 +226,7 @@ func ufwRules(p Plan) ([]string, error) {
 }
 
 // ufwRule renders a single neutral rule as ufw command arguments.
-func ufwRule(rule cluster.ZarfFirewallRule) (string, error) {
+func ufwRule(rule cluster.FirewallRule) (string, error) {
 	action := rule.NormalizedAction()
 	switch action {
 	case cluster.FirewallActionAllow, cluster.FirewallActionDeny, cluster.FirewallActionReject:

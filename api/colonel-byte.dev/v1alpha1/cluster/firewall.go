@@ -42,18 +42,18 @@ const (
 // portPattern matches a single port ("6443") or an inclusive range ("30000-32767").
 var portPattern = regexp.MustCompile(`^\d{1,5}(-\d{1,5})?$`)
 
-// ZarfFirewallConfig is the backend-neutral firewall configuration for a node. Cargoship
+// FirewallConfig is the backend-neutral firewall configuration for a node. Cargoship
 // renders these rules onto whichever firewall backend the node runs, so a single inventory
 // can target firewalld, ufw, and nftables hosts alike.
-type ZarfFirewallConfig struct {
+type FirewallConfig struct {
 	// Rules lists the firewall rules cargoship applies to the node.
-	Rules []ZarfFirewallRule `json:"rules,omitempty"`
+	Rules []FirewallRule `json:"rules,omitempty"`
 }
 
-// ZarfFirewallRule is a single backend-neutral firewall rule. Every field except Action is
+// FirewallRule is a single backend-neutral firewall rule. Every field except Action is
 // optional; an omitted match field means "any". Backends translate a rule into their own
 // dialect, so not every combination is expressible everywhere -- see the firewall package.
-type ZarfFirewallRule struct {
+type FirewallRule struct {
 	// Name identifies the rule. Cargoship uses it to name the artifacts it writes on the
 	// node, so it must be unique within a host. Cargoship generates one when it is empty.
 	Name string `json:"name,omitempty" jsonschema:"example=allow-metrics"`
@@ -78,12 +78,12 @@ type ZarfFirewallRule struct {
 }
 
 // NormalizedAction returns the rule's action, lowercased.
-func (r ZarfFirewallRule) NormalizedAction() string {
+func (r FirewallRule) NormalizedAction() string {
 	return strings.ToLower(strings.TrimSpace(r.Action))
 }
 
 // NormalizedDirection returns the rule's direction, lowercased, defaulting to in.
-func (r ZarfFirewallRule) NormalizedDirection() string {
+func (r FirewallRule) NormalizedDirection() string {
 	d := strings.ToLower(strings.TrimSpace(r.Direction))
 	if d == "" {
 		return FirewallDirectionIn
@@ -92,14 +92,14 @@ func (r ZarfFirewallRule) NormalizedDirection() string {
 }
 
 // NormalizedProtocol returns the rule's protocol, lowercased.
-func (r ZarfFirewallRule) NormalizedProtocol() string {
+func (r FirewallRule) NormalizedProtocol() string {
 	return strings.ToLower(strings.TrimSpace(r.Protocol))
 }
 
 // Key returns the rule's Name, or a stable name derived from the rule's fields when Name is
 // empty. Backends use it to name the files and comments that tie an applied rule back to
 // this configuration.
-func (r ZarfFirewallRule) Key() string {
+func (r FirewallRule) Key() string {
 	if r.Name != "" {
 		return sanitizeName(r.Name)
 	}
@@ -115,7 +115,7 @@ func (r ZarfFirewallRule) Key() string {
 }
 
 // Validate returns an error when the rule cannot be applied by any backend.
-func (r ZarfFirewallRule) Validate() error {
+func (r FirewallRule) Validate() error {
 	switch r.NormalizedAction() {
 	case FirewallActionAllow, FirewallActionDeny, FirewallActionReject:
 	case "":
@@ -162,9 +162,9 @@ func (r ZarfFirewallRule) Validate() error {
 
 // Merge adds every rule from update that c does not already define, matching rules by Key. A
 // host that names a rule the same as its profile does keeps its own; every other profile rule
-// is added. Unlike the rest of ZarfHostConfig, firewall rules union rather than replace, so a
+// is added. Unlike the rest of HostConfig, firewall rules union rather than replace, so a
 // host can add one rule of its own without giving up the baseline its profile sets.
-func (c *ZarfFirewallConfig) Merge(update ZarfFirewallConfig) {
+func (c *FirewallConfig) Merge(update FirewallConfig) {
 	if len(update.Rules) == 0 {
 		return
 	}
@@ -185,7 +185,7 @@ func (c *ZarfFirewallConfig) Merge(update ZarfFirewallConfig) {
 }
 
 // Validate returns an error when any rule in the config is unusable.
-func (c ZarfFirewallConfig) Validate() error {
+func (c FirewallConfig) Validate() error {
 	seen := make(map[string]struct{}, len(c.Rules))
 	for _, rule := range c.Rules {
 		if err := rule.Validate(); err != nil {

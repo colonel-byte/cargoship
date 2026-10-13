@@ -40,7 +40,7 @@ func (p *APTUploadFiles) Explanation() string {
 }
 
 // Prepare the phase
-func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.UploadFilesCommon.Prepare(ctx, c, d); err != nil {
 		logger.From(ctx).Warn("got", "error", err)
 	}
@@ -56,8 +56,8 @@ func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 
 // Run the phase
 func (p *APTUploadFiles) Run(ctx context.Context) (err error) {
-	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.Host) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.Host) error {
 			return p.installAndPinPackagesFor(ctx, p.filesControl, zh, debPackageName, holdAPTPackages, unholdAPTPackages)
 		}
 		return nil
@@ -65,8 +65,8 @@ func (p *APTUploadFiles) Run(ctx context.Context) (err error) {
 	if err != nil {
 		logger.From(ctx).Warn("got", "error", err)
 	}
-	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.Host) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.Host) error {
 			return p.installAndPinPackagesFor(ctx, p.filesWorkers, zh, debPackageName, holdAPTPackages, unholdAPTPackages)
 		}
 		return nil

@@ -53,14 +53,14 @@ var (
 )
 
 // IsBootstrapped reports whether host has already run `kubeadm init` or `kubeadm join`.
-func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool {
+func (d *Upstream) IsBootstrapped(host *cluster.Host) bool {
 	return host.FileExist(upstreamKubeletConfPath)
 }
 
 // Bootstrap forms the cluster on the leader with `kubeadm init`, joins an additional controller
 // onto it with kubeadm's HA control-plane path, or joins a worker with a plain `kubeadm join`,
 // against the kubeadm-config.yaml ConfigureEngine already wrote to host.
-func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error {
+func (d *Upstream) Bootstrap(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error {
 	switch {
 	case host.Metadata.IsLeader:
 		return d.bootstrapLeader(host)
@@ -76,7 +76,7 @@ func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run clus
 // control-plane certs in a Secret so an additional controller can join without this host having to
 // do anything further at that moment -- see bootstrapJoinController for what happens once that
 // Secret is more than 2 hours old.
-func (d *Upstream) bootstrapLeader(host *cluster.ZarfHost) error {
+func (d *Upstream) bootstrapLeader(host *cluster.Host) error {
 	out, err := host.SudoExecOutput(fmt.Sprintf("kubeadm init --config %s --upload-certs", kubeadmConfigPath))
 	if err != nil {
 		return fmt.Errorf("kubeadm init: %w", err)
@@ -95,7 +95,7 @@ func (d *Upstream) bootstrapLeader(host *cluster.ZarfHost) error {
 
 // readJoinTokenAndHash fetches the join token and CA cert hash bootstrapLeader captured off the
 // leader, trimmed and ready to use.
-func readJoinTokenAndHash(leader *cluster.ZarfHost) (token, hash string, err error) {
+func readJoinTokenAndHash(leader *cluster.Host) (token, hash string, err error) {
 	token, err = leader.ReadFile(upstreamJoinTokenFile)
 	if err != nil {
 		return "", "", fmt.Errorf("reading join token from leader: %w", err)
@@ -110,7 +110,7 @@ func readJoinTokenAndHash(leader *cluster.ZarfHost) (token, hash string, err err
 // bootstrapJoin fetches the real join token and CA cert hash off the leader, rewrites this host's
 // kubeadm-config.yaml with them (buildJoinConfiguration's own rendering left caCertHashes empty --
 // generating that value is this step's job, not DesiredFiles'), and runs `kubeadm join`.
-func (d *Upstream) bootstrapJoin(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta) error {
+func (d *Upstream) bootstrapJoin(host *cluster.Host, run cluster.RuntimeMeta) error {
 	if run.Leader == nil {
 		return ErrNoLeader
 	}
@@ -142,7 +142,7 @@ func (d *Upstream) bootstrapJoin(host *cluster.ZarfHost, run cluster.ZarfRuntime
 // join, this needs a certificate key: the leader's initial --upload-certs Secret expires after 2
 // hours, so a large or retried rollout can outlive it. Re-running the upload-certs phase per join
 // and using a fresh key each time sidesteps that expiry instead of racing it.
-func (d *Upstream) bootstrapJoinController(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta) error {
+func (d *Upstream) bootstrapJoinController(host *cluster.Host, run cluster.RuntimeMeta) error {
 	if run.Leader == nil {
 		return ErrNoLeader
 	}

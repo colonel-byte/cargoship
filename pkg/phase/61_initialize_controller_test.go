@@ -52,21 +52,21 @@ type fakeBootstrapperDistro struct {
 	bootstrapErr   error
 }
 
-func (f *fakeBootstrapperDistro) IsBootstrapped(h *cluster.ZarfHost) bool {
+func (f *fakeBootstrapperDistro) IsBootstrapped(h *cluster.Host) bool {
 	return f.bootstrapped[h.Hostname]
 }
 
-func (f *fakeBootstrapperDistro) Bootstrap(_ context.Context, h *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error {
+func (f *fakeBootstrapperDistro) Bootstrap(_ context.Context, h *cluster.Host, _ cluster.RuntimeMeta, _ distro.Distro) error {
 	f.bootstrapCalls = append(f.bootstrapCalls, h.Hostname)
 	return f.bootstrapErr
 }
 
-func newServiceHost(hostname string, controller bool, running bool) *cluster.ZarfHost {
+func newServiceHost(hostname string, controller bool, running bool) *cluster.Host {
 	role := cluster.RoleWorker
 	if controller {
 		role = cluster.RoleController
 	}
-	h := &cluster.ZarfHost{Hostname: hostname, Role: role}
+	h := &cluster.Host{Hostname: hostname, Role: role}
 	h.Metadata.DistroVersion = UnknownVersion
 	h.SetServices(&fakeServiceState{running: running})
 	return h
@@ -78,7 +78,7 @@ func TestControllersNeedingInitFallsBackToServiceCheck(t *testing.T) {
 	stopped := newServiceHost("controller-stopped", true, false)
 	worker := newServiceHost("worker-1", false, false)
 
-	got := controllersNeedingInit(context.Background(), cluster.ZarfHosts{running, stopped, worker}, d)
+	got := controllersNeedingInit(context.Background(), cluster.Hosts{running, stopped, worker}, d)
 
 	require.Len(t, got, 1)
 	require.Equal(t, "controller-stopped", got[0].Hostname)
@@ -86,11 +86,11 @@ func TestControllersNeedingInitFallsBackToServiceCheck(t *testing.T) {
 
 func TestControllersNeedingInitUsesBootstrapperWhenImplemented(t *testing.T) {
 	d := &fakeBootstrapperDistro{bootstrapped: map[string]bool{"controller-done": true}}
-	done := &cluster.ZarfHost{Hostname: "controller-done", Role: cluster.RoleController}
-	pending := &cluster.ZarfHost{Hostname: "controller-pending", Role: cluster.RoleController}
-	worker := &cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker}
+	done := &cluster.Host{Hostname: "controller-done", Role: cluster.RoleController}
+	pending := &cluster.Host{Hostname: "controller-pending", Role: cluster.RoleController}
+	worker := &cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker}
 
-	got := controllersNeedingInit(context.Background(), cluster.ZarfHosts{done, pending, worker}, d)
+	got := controllersNeedingInit(context.Background(), cluster.Hosts{done, pending, worker}, d)
 
 	require.Len(t, got, 1)
 	require.Equal(t, "controller-pending", got[0].Hostname)

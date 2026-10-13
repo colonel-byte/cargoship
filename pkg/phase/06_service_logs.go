@@ -34,7 +34,7 @@ var serviceLogFilenameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9.-]+`)
 // local file -- so a service that never became ready leaves behind more to debug than just a
 // timeout error. It always returns waitErr unchanged: a failure to capture logs must never mask
 // or replace the real error that made the wait fail.
-func (p *GenericPhase) captureServiceLogsOnFailure(ctx context.Context, h *cluster.ZarfHost, service string, startedAt time.Time, waitErr error) error {
+func (p *GenericPhase) captureServiceLogsOnFailure(ctx context.Context, h *cluster.Host, service string, startedAt time.Time, waitErr error) error {
 	if waitErr == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (p *GenericPhase) captureServiceLogsOnFailure(ctx context.Context, h *clust
 // writeServiceLogFile saves content under the same cache/logs directory cargoship's own
 // --log-file debug log uses, named so repeated failures for the same host/service don't
 // clobber each other.
-func writeServiceLogFile(h *cluster.ZarfHost, service, content string) (string, error) {
+func writeServiceLogFile(h *cluster.Host, service, content string) (string, error) {
 	cacheDir, err := config.GetAbsCachePath()
 	if err != nil || cacheDir == "" {
 		cacheDir = config.DefaultCachePath

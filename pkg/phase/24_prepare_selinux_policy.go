@@ -72,11 +72,11 @@ type selinuxStateFileContext struct {
 // PrepareSelinuxPolicy installs the distro-supplied SELinux policy on the hosts.
 type PrepareSelinuxPolicy struct {
 	GenericPhase
-	selinuxPolicyHosts cluster.ZarfHosts
+	selinuxPolicyHosts cluster.Hosts
 }
 
 // Prepare the phase
-func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.selinuxPolicyHosts = p.manager.Config.Spec.Hosts.Filter(selinuxPolicyCapable)
 
 	logger.From(ctx).Info("number of systems that can take an selinux policy", "hosts", len(p.selinuxPolicyHosts))
@@ -114,7 +114,7 @@ func (p *PrepareSelinuxPolicy) ShouldRun() bool {
 
 // applyModules writes every CIL module to the host and installs it. The modules run ahead of the
 // booleans and file contexts because a module can define the type a context refers to.
-func (p *PrepareSelinuxPolicy) applyModules(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareSelinuxPolicy) applyModules(ctx context.Context, h *cluster.Host) error {
 	modules := p.manager.Distro.Spec.Config.OS.SELinux.Modules
 	if len(modules) == 0 {
 		return nil
@@ -165,7 +165,7 @@ func (p *PrepareSelinuxPolicy) applyModules(ctx context.Context, h *cluster.Zarf
 
 // applyBooleans sets every configured boolean persistently, recording the values the host held
 // beforehand so RemoveSelinuxPolicy can put them back.
-func (p *PrepareSelinuxPolicy) applyBooleans(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareSelinuxPolicy) applyBooleans(ctx context.Context, h *cluster.Host) error {
 	booleans := p.manager.Distro.Spec.Config.OS.SELinux.Booleans
 	if len(booleans) == 0 {
 		return nil
@@ -185,7 +185,7 @@ func (p *PrepareSelinuxPolicy) applyBooleans(ctx context.Context, h *cluster.Zar
 }
 
 // applyFileContexts adds every configured file context mapping and relabels the paths it covers.
-func (p *PrepareSelinuxPolicy) applyFileContexts(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareSelinuxPolicy) applyFileContexts(ctx context.Context, h *cluster.Host) error {
 	contexts := p.manager.Distro.Spec.Config.OS.SELinux.FileContexts
 	if len(contexts) == 0 {
 		return nil
@@ -218,7 +218,7 @@ func (p *PrepareSelinuxPolicy) applyFileContexts(ctx context.Context, h *cluster
 // relabel runs restorecon over the paths a mapping covers. restorecon takes a real path and the
 // mapping holds a regular expression, so the literal prefix is resolved against the host rather
 // than guessed: the prefix itself when it exists, otherwise its parent directory.
-func (p *GenericPhase) relabelSELinux(ctx context.Context, h *cluster.ZarfHost, path string) error {
+func (p *GenericPhase) relabelSELinux(ctx context.Context, h *cluster.Host, path string) error {
 	target := selinuxRelabelTarget(h, path)
 	if target == "" {
 		logger.From(ctx).Warn("no existing path to relabel for selinux file context", "host", h, "path", path)
@@ -239,7 +239,7 @@ func (p *GenericPhase) relabelSELinux(ctx context.Context, h *cluster.ZarfHost, 
 // changed. Booleans already recorded keep the value written the first time, which is the one the
 // host had before cargoship touched it; the module and file context lists are replaced, so they
 // describe what is actually installed now.
-func (p *PrepareSelinuxPolicy) recordState(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareSelinuxPolicy) recordState(ctx context.Context, h *cluster.Host) error {
 	cfg := p.manager.Distro.Spec.Config.OS.SELinux
 
 	state := selinuxState{Booleans: map[string]bool{}}
@@ -310,13 +310,13 @@ func (p *PrepareSelinuxPolicy) recordState(ctx context.Context, h *cluster.ZarfH
 
 // selinuxPolicyCapable reports whether h can take a policy module at all: SELinux has to be
 // enforcing, and the tooling that installs a module has to be present.
-func selinuxPolicyCapable(h *cluster.ZarfHost) bool {
+func selinuxPolicyCapable(h *cluster.Host) bool {
 	return selinuxEnabled(h) && h.FS().CommandExist(SEModule)
 }
 
 // installedSELinuxModules reads the module names semodule already knows about. Its output lists
 // one module per line as "<priority> <name> <language>".
-func installedSELinuxModules(h *cluster.ZarfHost) (map[string]bool, error) {
+func installedSELinuxModules(h *cluster.Host) (map[string]bool, error) {
 	out, err := h.SudoExecOutput(SEModule + " -lfull")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list selinux modules: %w", err)
@@ -336,7 +336,7 @@ func installedSELinuxModules(h *cluster.ZarfHost) (map[string]bool, error) {
 
 // currentSELinuxBooleans reads the present value of every named boolean. getsebool writes one
 // line per boolean as "<name> --> on".
-func currentSELinuxBooleans(h *cluster.ZarfHost, names []string) (map[string]bool, error) {
+func currentSELinuxBooleans(h *cluster.Host, names []string) (map[string]bool, error) {
 	out, err := h.SudoExecOutput("getsebool " + strings.Join(names, " "))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read selinux booleans: %w", err)
@@ -374,7 +374,7 @@ func selinuxBooleanArgs(booleans map[string]bool, names []string) []string {
 }
 
 // selinuxFcontextCommand renders a semanage fcontext call for op, which is -a, -m or -d.
-func selinuxFcontextCommand(op string, fc distro.ZarfDistroSELinuxFileContext) string {
+func selinuxFcontextCommand(op string, fc distro.SELinuxFileContext) string {
 	return fmt.Sprintf(
 		"semanage fcontext %s -t %s -f %s %s",
 		op,
@@ -390,7 +390,7 @@ func selinuxModulePath(name string) string {
 }
 
 // selinuxModulePriority is the priority m installs at, defaulted when it sets none.
-func selinuxModulePriority(m distro.ZarfDistroSELinuxModule) int {
+func selinuxModulePriority(m distro.SELinuxModule) int {
 	if m.Priority <= 0 {
 		return DefaultSELinuxModulePriority
 	}
@@ -398,7 +398,7 @@ func selinuxModulePriority(m distro.ZarfDistroSELinuxModule) int {
 }
 
 // selinuxFileType is the semanage file type fc applies to, defaulted when it sets none.
-func selinuxFileType(fc distro.ZarfDistroSELinuxFileContext) string {
+func selinuxFileType(fc distro.SELinuxFileContext) string {
 	if fc.FileType == "" {
 		return DefaultSELinuxFileType
 	}
@@ -408,7 +408,7 @@ func selinuxFileType(fc distro.ZarfDistroSELinuxFileContext) string {
 // selinuxRelabelTarget resolves the path regular expression to a directory on h that restorecon
 // can be pointed at, or "" when there is none. "/" is never returned: relabeling the whole
 // filesystem is never what a single mapping asked for.
-func selinuxRelabelTarget(h *cluster.ZarfHost, path string) string {
+func selinuxRelabelTarget(h *cluster.Host, path string) string {
 	prefix := selinuxLiteralPrefix(path)
 	if prefix == "" {
 		return ""

@@ -74,7 +74,7 @@ func (s *phaseWalk) binUploadFiles() {
 // the install hook this phase hands the host is what moves it into place, which does not happen
 // until the initialize phases call that hook. Every file this phase uploads is an executable,
 // so asserting on the target alone would assert that a later phase has already run.
-func (s *phaseWalk) stagedOrPresent(host *apicluster.ZarfHost, path string) bool {
+func (s *phaseWalk) stagedOrPresent(host *apicluster.Host, path string) bool {
 	s.T().Helper()
 
 	if host.FileExist(path) {

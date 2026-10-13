@@ -77,7 +77,7 @@ func extraArg(name, value string) dig.Mapping {
 // buildClusterConfiguration renders kubeadm's ClusterConfiguration: the cluster-wide document a
 // leader's `kubeadm init` reads. Every other host only ever sees a JoinConfiguration -- this
 // object is deliberately never rendered for them.
-func buildClusterConfiguration(ctx context.Context, dis distro.ZarfDistro, run cluster.ZarfRuntimeMeta) dig.Mapping {
+func buildClusterConfiguration(ctx context.Context, dis distro.Distro, run cluster.RuntimeMeta) dig.Mapping {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 	validateNestedEngineConfig(ctx, dis.Spec.Version, nodeConfig.DigMapping(config.EngineConfig))
 
@@ -193,7 +193,7 @@ func imageRepository(nodeConfig dig.Mapping, images []string) string {
 // buildInitConfiguration renders kubeadm's InitConfiguration for the cluster leader. No
 // bootstrapTokens entry is set -- kubeadm mints its own default token when init is given none,
 // and deciding whether to pin one instead is a bootstrap-time concern, not a rendering one.
-func buildInitConfiguration(host *cluster.ZarfHost) dig.Mapping {
+func buildInitConfiguration(host *cluster.Host) dig.Mapping {
 	return dig.Mapping{
 		"apiVersion":       kubeadmAPIVersion,
 		"kind":             "InitConfiguration",
@@ -203,9 +203,9 @@ func buildInitConfiguration(host *cluster.ZarfHost) dig.Mapping {
 
 // buildJoinConfiguration renders kubeadm's JoinConfiguration for every host that is not the
 // cluster leader. discovery.bootstrapToken.caCertHashes is left empty: generating and threading
-// a real hash through ZarfRuntimeMeta is the bootstrap phase's job, not DesiredFiles' -- this
+// a real hash through RuntimeMeta is the bootstrap phase's job, not DesiredFiles' -- this
 // only has to give that later step a key to fill in, not invent the value itself.
-func buildJoinConfiguration(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta) dig.Mapping {
+func buildJoinConfiguration(host *cluster.Host, run cluster.RuntimeMeta) dig.Mapping {
 	token := run.AgentToken
 	if host.IsController() {
 		token = run.ControllerToken
@@ -234,7 +234,7 @@ func buildJoinConfiguration(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta)
 
 // nodeRegistration renders the nodeRegistration block InitConfiguration and JoinConfiguration
 // both carry: the name kubeadm registers the node under, and the CRI socket it talks to.
-func nodeRegistration(host *cluster.ZarfHost) dig.Mapping {
+func nodeRegistration(host *cluster.Host) dig.Mapping {
 	return dig.Mapping{
 		"name":      host.Hostname,
 		"criSocket": containerdSocket,

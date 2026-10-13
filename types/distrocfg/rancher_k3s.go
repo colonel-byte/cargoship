@@ -61,26 +61,26 @@ func init() {
 
 // AdminCredentials returns the cluster CA certificate and the admin client key pair, read
 // out of the admin kubeconfig k3s writes on a controller host.
-func (d *K3S) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error) {
+func (d *K3S) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error) {
 	return adminCredentials(host, d.KubeconfigPath(host, dataDir))
 }
 
 // KubeconfigPath returns the path to the admin config for a given
-func (d *K3S) KubeconfigPath(_ *cluster.ZarfHost, _ string) string {
+func (d *K3S) KubeconfigPath(_ *cluster.Host, _ string) string {
 	return filepath.Join(filepath.Dir(d.Config), "k3s.yaml")
 }
 
 // KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
-func (d *K3S) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string {
+func (d *K3S) KubectlCmdf(host *cluster.Host, dataDir string, s string, args ...any) string {
 	return fmt.Sprintf(`env "KUBECONFIG=%s" %s`, d.KubeconfigPath(host, dataDir), d.DistroCmdf(`kubectl %s`, fmt.Sprintf(s, args...)))
 }
 
 // StopControllerService stops the controller service on the host
-func (d *K3S) StopControllerService(h *cluster.ZarfHost) error {
+func (d *K3S) StopControllerService(h *cluster.Host) error {
 	return d.stopService(h, d.GetControllerService(), "k3s-killall.sh")
 }
 
 // StopWorkerService stops the controller service on the host
-func (d *K3S) StopWorkerService(h *cluster.ZarfHost) error {
+func (d *K3S) StopWorkerService(h *cluster.Host) error {
 	return d.stopService(h, d.GetWorkerService(), "k3s-killall.sh")
 }

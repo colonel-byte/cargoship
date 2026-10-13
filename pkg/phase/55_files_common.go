@@ -32,7 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-func getPath(files []v1alpha1.ZarfFile) []string {
+func getPath(files []v1alpha1.File) []string {
 	filePath := []string{}
 
 	for _, f := range files {
@@ -46,36 +46,36 @@ func getPath(files []v1alpha1.ZarfFile) []string {
 type UploadFilesCommon struct {
 	GenericPhase
 
-	workers cluster.ZarfHosts
-	control cluster.ZarfHosts
+	workers cluster.Hosts
+	control cluster.Hosts
 
-	distroFiles v1alpha1.ZarfFiles
+	distroFiles v1alpha1.Files
 
 	// filesWorkers and filesControl hold the files to upload, keyed by the architecture of the
 	// host receiving them. A package targeting one architecture has a single entry; a host looks
 	// its own up rather than taking the whole list.
-	filesWorkers map[api.Arch][]v1alpha1.ZarfFile
-	filesControl map[api.Arch][]v1alpha1.ZarfFile
+	filesWorkers map[api.Arch][]v1alpha1.File
+	filesControl map[api.Arch][]v1alpha1.File
 
 	// priorManifest holds each host's upload manifest as it was before this run touched it,
 	// captured in Prepare so Run can tell which of those files an upgrade no longer uploads.
-	priorManifest map[*cluster.ZarfHost][]ManifestEntry
+	priorManifest map[*cluster.Host][]ManifestEntry
 }
 
 // Prepare the phase
-func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.distroFiles = p.manager.Distro.Spec.Config.OS.Files
 	hosts := p.manager.Config.Spec.Hosts
 
-	p.workers = hosts.Filter(func(h *cluster.ZarfHost) bool {
+	p.workers = hosts.Filter(func(h *cluster.Host) bool {
 		return !h.Metadata.EngineUploaded && !h.IsController()
 	})
 
-	p.control = hosts.Filter(func(h *cluster.ZarfHost) bool {
+	p.control = hosts.Filter(func(h *cluster.Host) bool {
 		return !h.Metadata.EngineUploaded && h.IsController()
 	})
 
-	p.priorManifest = make(map[*cluster.ZarfHost][]ManifestEntry, len(p.control)+len(p.workers))
+	p.priorManifest = make(map[*cluster.Host][]ManifestEntry, len(p.control)+len(p.workers))
 	for _, h := range slices.Concat(p.control, p.workers) {
 		p.priorManifest[h] = p.readManifest(h)
 	}
@@ -111,7 +111,7 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 // version but didn't re-upload itself, e.g. an engine binary a version bump renamed. The diff is
 // scoped to the "engine" category: other upload phases (e.g. images) record into the same
 // per-host UploadedFiles list, and their entries may not exist yet by the time this phase runs.
-func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.Host) error {
 	current := ParseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
 	old := filterManifestByCategory(p.priorManifest[h], "engine")
 	current = filterManifestByCategory(current, "engine")
@@ -122,8 +122,8 @@ func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.Za
 // blockOtherInstallsIfUploaded marks a host populated only when this phase actually had files for
 // it. A host the package carries no files for (e.g. a Debian host and a package with no deb
 // selector) is left unmarked, so a later catch-all phase like BIN still sees it.
-func (p *UploadFilesCommon) blockOtherInstallsIfUploaded(byArch map[api.Arch][]v1alpha1.ZarfFile) func(context.Context, *cluster.ZarfHost) error {
-	return func(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFilesCommon) blockOtherInstallsIfUploaded(byArch map[api.Arch][]v1alpha1.File) func(context.Context, *cluster.Host) error {
+	return func(ctx context.Context, h *cluster.Host) error {
 		files, err := p.filesFor(byArch, h)
 		if err != nil {
 			return err
@@ -138,7 +138,7 @@ func (p *UploadFilesCommon) blockOtherInstallsIfUploaded(byArch map[api.Arch][]v
 	}
 }
 
-func (p *UploadFilesCommon) uploadControllerFiles(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFilesCommon) uploadControllerFiles(ctx context.Context, h *cluster.Host) error {
 	files, err := p.filesFor(p.filesControl, h)
 	if err != nil {
 		return err
@@ -147,7 +147,7 @@ func (p *UploadFilesCommon) uploadControllerFiles(ctx context.Context, h *cluste
 	return p.uploadFiles(ctx, h, files)
 }
 
-func (p *UploadFilesCommon) uploadWorkerFiles(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFilesCommon) uploadWorkerFiles(ctx context.Context, h *cluster.Host) error {
 	files, err := p.filesFor(p.filesWorkers, h)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func (p *UploadFilesCommon) uploadWorkerFiles(ctx context.Context, h *cluster.Za
 // ValidateHosts rejects a host the package does not carry, but only for a package that records
 // which architectures it was built for. One built before that metadata existed is applied
 // unchecked, so an architecture cargoship cannot parse still reaches this.
-func (p *UploadFilesCommon) filesFor(byArch map[api.Arch][]v1alpha1.ZarfFile, h *cluster.ZarfHost) ([]v1alpha1.ZarfFile, error) {
+func (p *UploadFilesCommon) filesFor(byArch map[api.Arch][]v1alpha1.File, h *cluster.Host) ([]v1alpha1.File, error) {
 	arch, err := hostArch(h)
 	if err != nil {
 		return nil, fmt.Errorf("cannot tell which files %s needs: %w", h, err)
@@ -180,7 +180,7 @@ func (p *UploadFilesCommon) filesFor(byArch map[api.Arch][]v1alpha1.ZarfFile, h 
 // A host the package carries no packages for is left alone rather than handed an empty list: dnf
 // and apt-get both read a list of packages to install, and calling either with none fails on its
 // own usage, which says nothing about why cargoship had no packages to give it.
-func (p *UploadFilesCommon) installPackagesFor(ctx context.Context, byArch map[api.Arch][]v1alpha1.ZarfFile, h *cluster.ZarfHost) error {
+func (p *UploadFilesCommon) installPackagesFor(ctx context.Context, byArch map[api.Arch][]v1alpha1.File, h *cluster.Host) error {
 	files, err := p.filesFor(byArch, h)
 	if err != nil {
 		return err
@@ -200,11 +200,11 @@ func (p *UploadFilesCommon) ShouldRun() bool {
 
 // getProfileFiles groups the files this phase uploads by the architecture of the host receiving
 // them, so a cluster of mixed CPUs gets the right binaries on each node.
-func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) map[api.Arch][]v1alpha1.ZarfFile {
+func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) map[api.Arch][]v1alpha1.File {
 	// p.control and p.workers are read as they stand, so a phase that narrows them first, as the
 	// RPM and APT phases do, only builds file sets for architectures it will actually upload.
 	arches := hostArches(ctx, slices.Concat(p.control, p.workers))
-	byArch := make(map[api.Arch][]v1alpha1.ZarfFile, len(arches))
+	byArch := make(map[api.Arch][]v1alpha1.File, len(arches))
 
 	for _, arch := range arches {
 		byArch[arch] = p.profileFilesForArch(ctx, selector, profile, arch)
@@ -218,8 +218,8 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 // A file's position in p.distroFiles is the name of the directory it was assembled into, so a file
 // that does not apply is skipped inside the loop rather than filtered out of the list beforehand.
 // Filtering first would renumber every later file and read the wrong bytes off disk.
-func (p *UploadFilesCommon) profileFilesForArch(ctx context.Context, selector string, profile string, arch api.Arch) []v1alpha1.ZarfFile {
-	files := []v1alpha1.ZarfFile{}
+func (p *UploadFilesCommon) profileFilesForArch(ctx context.Context, selector string, profile string, arch api.Arch) []v1alpha1.File {
+	files := []v1alpha1.File{}
 
 	for i, f := range p.distroFiles {
 		if f.Selector.Package != selector {
@@ -244,7 +244,7 @@ func (p *UploadFilesCommon) profileFilesForArch(ctx context.Context, selector st
 		if f.Executable {
 			target = stageTempPath(false, f.Target)
 		}
-		files = append(files, v1alpha1.ZarfFile{
+		files = append(files, v1alpha1.File{
 			Name:           filepath.Base(f.Target),
 			Target:         target,
 			OriginalTarget: f.Target,
@@ -260,7 +260,7 @@ func (p *UploadFilesCommon) profileFilesForArch(ctx context.Context, selector st
 
 // CleanUp the phase
 func (p *UploadFilesCommon) CleanUp(ctx context.Context) {
-	err := p.parallelDo(context.Background(), p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+	err := p.parallelDo(context.Background(), p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.Host) error {
 		if len(h.Metadata.BinaryTempFile) == 0 {
 			return nil
 		}

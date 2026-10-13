@@ -119,7 +119,7 @@ func filterManifestByCategory(entries []ManifestEntry, category string) []Manife
 
 // readManifest reads and parses the manifest from h. It returns nil if the manifest doesn't
 // exist or can't be read.
-func (p *GenericPhase) readManifest(h *cluster.ZarfHost) []ManifestEntry {
+func (p *GenericPhase) readManifest(h *cluster.Host) []ManifestEntry {
 	if !h.FileExist(manifestFile) {
 		return nil
 	}
@@ -134,7 +134,7 @@ func (p *GenericPhase) readManifest(h *cluster.ZarfHost) []ManifestEntry {
 // was uploaded during the current run (used by removeStaleManifestEntries to find files an
 // upgrade no longer needs). Failures are logged and swallowed: a missed manifest entry should
 // never fail an upload.
-func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.ZarfHost, category, path string) {
+func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.Host, category, path string) {
 	if category == "" {
 		category = "file"
 	}
@@ -154,7 +154,7 @@ func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.ZarfH
 
 // removeStaleManifestEntries deletes files on h that appear in old but not in current, e.g. an
 // engine binary left behind after a version bump renamed it.
-func (p *GenericPhase) removeStaleManifestEntries(ctx context.Context, h *cluster.ZarfHost, old, current []ManifestEntry) {
+func (p *GenericPhase) removeStaleManifestEntries(ctx context.Context, h *cluster.Host, old, current []ManifestEntry) {
 	for _, e := range diffManifest(old, current) {
 		logger.From(ctx).Info("removing stale upload from previous install", "host", h, "category", e.Category, "path", e.Path)
 		if err := h.DeleteFile(e.Path); err != nil {
@@ -166,7 +166,7 @@ func (p *GenericPhase) removeStaleManifestEntries(ctx context.Context, h *cluste
 // cleanUploadManifest deletes every file listed in h's upload manifest, then the manifest
 // itself. Used during uninstall to remove files an engine's own data/config directories don't
 // cover, such as binaries staged outside the distro's data dir.
-func (p *GenericPhase) cleanUploadManifest(ctx context.Context, h *cluster.ZarfHost) {
+func (p *GenericPhase) cleanUploadManifest(ctx context.Context, h *cluster.Host) {
 	entries := p.readManifest(h)
 	if len(entries) == 0 {
 		return

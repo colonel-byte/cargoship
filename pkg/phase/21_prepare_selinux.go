@@ -31,12 +31,12 @@ const (
 // PrepareSelinux installs required packages and so on on the hosts.
 type PrepareSelinux struct {
 	GenericPhase
-	selinuxHosts cluster.ZarfHosts
+	selinuxHosts cluster.Hosts
 }
 
 // Prepare the phase
-func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	p.selinuxHosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
+	p.selinuxHosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return selinuxEnabled(h)
 	})
 
@@ -65,7 +65,7 @@ func (p *PrepareSelinux) ShouldRun() bool {
 	return len(p.selinuxHosts) > 0
 }
 
-func (p *PrepareSelinux) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareSelinux) prepareHost(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("attempting to install", "host", h, "package", ContainerSELinux)
 	err := h.Configurer.InstallPackage(h, ContainerSELinux)
 	if err != nil {
@@ -79,6 +79,6 @@ func (p *PrepareSelinux) prepareHost(ctx context.Context, h *cluster.ZarfHost) e
 // no remotefs.OS equivalent for this check (it is not a generic OS/filesystem
 // operation), so it is implemented as a direct privileged shell command,
 // matching the behavior of the v0.x Configurer.SELinuxEnabled implementation.
-func selinuxEnabled(h *cluster.ZarfHost) bool {
+func selinuxEnabled(h *cluster.Host) bool {
 	return h.Sudo().Exec("getenforce | grep -iq enforcing") == nil
 }

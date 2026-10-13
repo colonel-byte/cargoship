@@ -42,7 +42,7 @@ type LabelNodes struct {
 	Distro    distrocfg.Distro
 	ClusterLB string
 	Enabled   bool
-	leader    *cluster.ZarfHost
+	leader    *cluster.Host
 }
 
 // Title for the phase
@@ -56,8 +56,8 @@ func (p *LabelNodes) Explanation() string {
 }
 
 // Prepare the phase
-func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
 		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) > 0 {

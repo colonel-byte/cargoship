@@ -25,45 +25,45 @@ import (
 func TestDistroLayoutFileName(t *testing.T) {
 	tests := []struct {
 		name    string
-		distro  v1alpha1.ZarfDistro
+		distro  v1alpha1.Distro
 		want    string
 		wantErr string
 	}{
 		{
 			name: "single architecture from the scalar field",
-			distro: v1alpha1.ZarfDistro{
-				Metadata: v1alpha1.ZarfDistroMetadata{Name: "rancher-rke2", Version: "1.0.0"},
-				Build:    v1alpha1.ZarfDistroBuildData{Architecture: api.ArchAMD64},
+			distro: v1alpha1.Distro{
+				Metadata: v1alpha1.Metadata{Name: "rancher-rke2", Version: "1.0.0"},
+				Build:    v1alpha1.BuildData{Architecture: api.ArchAMD64},
 			},
 			want: "cargoship-rancher-rke2-amd64-1.0.0.tar.zst",
 		},
 		{
 			name: "single architecture from the list",
-			distro: v1alpha1.ZarfDistro{
-				Metadata: v1alpha1.ZarfDistroMetadata{Name: "rancher-rke2", Version: "1.0.0"},
-				Build:    v1alpha1.ZarfDistroBuildData{Architectures: api.Arches{api.ArchARM64}},
+			distro: v1alpha1.Distro{
+				Metadata: v1alpha1.Metadata{Name: "rancher-rke2", Version: "1.0.0"},
+				Build:    v1alpha1.BuildData{Architectures: api.Arches{api.ArchARM64}},
 			},
 			want: "cargoship-rancher-rke2-arm64-1.0.0.tar.zst",
 		},
 		{
 			name: "several architectures become multi",
-			distro: v1alpha1.ZarfDistro{
-				Metadata: v1alpha1.ZarfDistroMetadata{Name: "rancher-rke2", Version: "1.0.0"},
-				Build:    v1alpha1.ZarfDistroBuildData{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
+			distro: v1alpha1.Distro{
+				Metadata: v1alpha1.Metadata{Name: "rancher-rke2", Version: "1.0.0"},
+				Build:    v1alpha1.BuildData{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
 			},
 			want: "cargoship-rancher-rke2-multi-1.0.0.tar.zst",
 		},
 		{
 			name: "uncompressed multi architecture package",
-			distro: v1alpha1.ZarfDistro{
-				Metadata: v1alpha1.ZarfDistroMetadata{Name: "rancher-rke2", Uncompressed: true},
-				Build:    v1alpha1.ZarfDistroBuildData{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
+			distro: v1alpha1.Distro{
+				Metadata: v1alpha1.Metadata{Name: "rancher-rke2", Uncompressed: true},
+				Build:    v1alpha1.BuildData{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
 			},
 			want: "cargoship-rancher-rke2-multi.tar",
 		},
 		{
 			name:    "no architecture at all is an error",
-			distro:  v1alpha1.ZarfDistro{Metadata: v1alpha1.ZarfDistroMetadata{Name: "rancher-rke2"}},
+			distro:  v1alpha1.Distro{Metadata: v1alpha1.Metadata{Name: "rancher-rke2"}},
 			wantErr: "must include a build architecture",
 		},
 	}

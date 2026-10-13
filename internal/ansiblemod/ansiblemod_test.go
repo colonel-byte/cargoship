@@ -463,7 +463,7 @@ func (p *silentPhase) Run(context.Context) error { return nil }
 // selects one, by the flag the module rendered, so check mode is proved end to end.
 func runPhases(phases ...phase.Phase) Exec {
 	return func(ctx context.Context, argv []string) error {
-		m := phase.Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+		m := phase.Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 		for _, a := range argv {
 			if a == "--dry-run" {
 				m.DryRun = true

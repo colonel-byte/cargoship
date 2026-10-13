@@ -32,22 +32,22 @@ type fakePreStartUpgraderDistro struct {
 	err   error
 }
 
-func (f *fakePreStartUpgraderDistro) PreStartUpgrade(_ context.Context, h *cluster.ZarfHost, _ distro.ZarfDistro) error {
+func (f *fakePreStartUpgraderDistro) PreStartUpgrade(_ context.Context, h *cluster.Host, _ distro.Distro) error {
 	f.calls = append(f.calls, h.Hostname)
 	return f.err
 }
 
 func TestPreStartUpgradeNoOpWhenNotImplemented(t *testing.T) {
-	p := &UpgradeHosts{Distro: fakeServiceDistro{}, dis: &distro.ZarfDistro{}}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	p := &UpgradeHosts{Distro: fakeServiceDistro{}, dis: &distro.Distro{}}
+	h := &cluster.Host{Hostname: "node1"}
 
 	require.NoError(t, p.preStartUpgrade(context.Background(), h))
 }
 
 func TestPreStartUpgradeDispatchesWhenImplemented(t *testing.T) {
 	d := &fakePreStartUpgraderDistro{}
-	p := &UpgradeHosts{Distro: d, dis: &distro.ZarfDistro{}}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	p := &UpgradeHosts{Distro: d, dis: &distro.Distro{}}
+	h := &cluster.Host{Hostname: "node1"}
 
 	require.NoError(t, p.preStartUpgrade(context.Background(), h))
 	require.Equal(t, []string{"node1"}, d.calls)
@@ -56,8 +56,8 @@ func TestPreStartUpgradeDispatchesWhenImplemented(t *testing.T) {
 func TestPreStartUpgradePropagatesError(t *testing.T) {
 	wantErr := errors.New("kubeadm upgrade apply failed")
 	d := &fakePreStartUpgraderDistro{err: wantErr}
-	p := &UpgradeHosts{Distro: d, dis: &distro.ZarfDistro{}}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	p := &UpgradeHosts{Distro: d, dis: &distro.Distro{}}
+	h := &cluster.Host{Hostname: "node1"}
 
 	err := p.preStartUpgrade(context.Background(), h)
 

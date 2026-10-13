@@ -185,7 +185,7 @@ const (
 // "rewrite" entry per mirror when `.proxy.rewrite` is set, and a "configs" entry with auth when credentials are set.
 
 // ConfigureEngine does distro specific configuration on a host
-func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 
 	nodeConfig.DigMapping(config.EngineConfig)[keyNodeName] = host.Hostname
@@ -345,7 +345,7 @@ func (d *RancherCommon) warnUnknownAddons(ctx context.Context, version string, a
 	}
 }
 
-func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.ZarfHost) bool {
+func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.Host) bool {
 	service := d.GetWorkerService()
 	if h.IsController() {
 		service = d.GetControllerService()
@@ -356,7 +356,7 @@ func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.Zar
 // DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
 // the given host/run/dis, keyed by their full destination path. Content is identical across
 // hosts of the same run (no host-varying fields are involved), unlike config.yaml.
-func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	if len(run.Registries) > 0 {
@@ -507,7 +507,7 @@ func disabledCharts(nodeConfig dig.Mapping) map[string]bool {
 // https://docs.rke2.io/install/private_registry. Unmarshalling is not strict, so a key spelled
 // any other way is dropped silently and the engine goes on to pull anonymously, which surfaces
 // far away from here as a 401.
-func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mapping {
+func buildRegistriesConfig(registries []cluster.Registries) dig.Mapping {
 	mirrors := dig.Mapping{}
 	configs := dig.Mapping{}
 
@@ -563,7 +563,7 @@ func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mappi
 //
 // A username without a password (or the reverse) cannot be encoded into a pair, so it is written
 // under its own key and left for the engine to complete or reject.
-func registryAuth(a cluster.ZarfClusterRegistryAuth) dig.Mapping {
+func registryAuth(a cluster.RegistryAuth) dig.Mapping {
 	auth := dig.Mapping{}
 	switch {
 	case a.Token != "":
@@ -585,7 +585,7 @@ func registryAuth(a cluster.ZarfClusterRegistryAuth) dig.Mapping {
 // written here -- it goes to its own file on the host (see registryCAFiles), and ca_file points
 // at that path. insecure_skip_verify is written only when it is on, since the engine's own
 // default is to verify.
-func registryTLS(t *cluster.ZarfClusterRegistryTLS, host string) dig.Mapping {
+func registryTLS(t *cluster.RegistryTLS, host string) dig.Mapping {
 	tls := dig.Mapping{}
 	if t == nil {
 		return tls
@@ -612,7 +612,7 @@ func registryTLS(t *cluster.ZarfClusterRegistryTLS, host string) dig.Mapping {
 // every registry that carries an inline PEM CA. Writing them alongside registries.yaml keeps
 // the certificate and the configuration that references it in one place, so the engine-config
 // sync phases notice a changed certificate the same way they notice a changed mirror.
-func registryCAFiles(registries []cluster.ZarfClusterRegistries) map[string][]byte {
+func registryCAFiles(registries []cluster.Registries) map[string][]byte {
 	files := map[string][]byte{}
 	for _, reg := range registries {
 		if reg.TLS == nil || reg.TLS.CA == "" {
@@ -646,7 +646,7 @@ func sanitizeRegistryFilename(host string) string {
 }
 
 // GetClusterCIDR returns a string array with the all the known cluster cidr blocks
-func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
+func (d *RancherCommon) GetClusterCIDR(dis distro.Distro) []string {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 	pod := nodeConfig.DigString(config.EngineConfig, keyCIDRPod)
 	if pod == "" {
@@ -711,7 +711,7 @@ func (d *RancherCommon) JoinTokenPathAgent() string {
 // the server and the agent config of every supported version. The engines accept a bare string
 // too; matching the schema keeps what cargoship writes consistent with what it validates a
 // package against.
-func setNodeIP(cfg dig.Mapping, host *cluster.ZarfHost) {
+func setNodeIP(cfg dig.Mapping, host *cluster.Host) {
 	if host.PrivateAddress == "" {
 		return
 	}
@@ -727,7 +727,7 @@ func (d *RancherCommon) DistroCmdf(template string, args ...any) string {
 }
 
 // RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
-func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
+func (d *RancherCommon) RunningVersion(host *cluster.Host) (string, error) {
 	bin, err := host.FS().LookPath(d.Binary)
 	if err != nil {
 		return "", ErrVersionNotDetected
@@ -743,7 +743,7 @@ func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
 	return match, nil
 }
 
-func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall string) error {
+func (d *RancherCommon) stopService(h *cluster.Host, ser string, killall string) error {
 	ctx := context.Background()
 	riglogger.Logger().Debug("trying to stop service", "service", ser)
 	if h.ServiceIsRunning(ctx, ser) {

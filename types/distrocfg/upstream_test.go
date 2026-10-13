@@ -44,7 +44,7 @@ func newTestUpstream() *Upstream {
 func TestUpstreamKubeconfigPath(t *testing.T) {
 	d := newTestUpstream()
 
-	got := d.KubeconfigPath(&cluster.ZarfHost{}, "/var/lib/kubelet")
+	got := d.KubeconfigPath(&cluster.Host{}, "/var/lib/kubelet")
 
 	if got != "/etc/kubernetes/admin.conf" {
 		t.Fatalf("KubeconfigPath() = %q, want %q", got, "/etc/kubernetes/admin.conf")
@@ -54,7 +54,7 @@ func TestUpstreamKubeconfigPath(t *testing.T) {
 func TestUpstreamKubectlCmdf(t *testing.T) {
 	d := newTestUpstream()
 
-	got := d.KubectlCmdf(&cluster.ZarfHost{}, "", "get nodes -o %s", "wide")
+	got := d.KubectlCmdf(&cluster.Host{}, "", "get nodes -o %s", "wide")
 
 	want := `env "KUBECONFIG=/etc/kubernetes/admin.conf" kubectl get nodes -o wide`
 	if got != want {
@@ -76,7 +76,7 @@ func TestUpstreamDistroCmdf(t *testing.T) {
 func TestUpstreamRunningVersionLookPathError(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{lookPathErr: errors.New("not found")}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	_, err := d.RunningVersion(host)
 
@@ -88,7 +88,7 @@ func TestUpstreamRunningVersionLookPathError(t *testing.T) {
 func TestUpstreamRunningVersionExecNotConnected(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{lookPathResult: "/usr/bin/kubelet"}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	_, err := d.RunningVersion(host)
 
@@ -122,7 +122,7 @@ func TestUpstreamGetClusterCIDR(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newTestUpstream()
-			dis := distro.ZarfDistro{}
+			dis := distro.Distro{}
 			dis.Spec.Config.Engine = tt.engine
 
 			got := d.GetClusterCIDR(dis)
@@ -135,7 +135,7 @@ func TestUpstreamGetClusterCIDR(t *testing.T) {
 
 func TestUpstreamGetClusterCIDRWithPodSubnet(t *testing.T) {
 	d := newTestUpstream()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		"config": dig.Mapping{
 			keyNetworking: dig.Mapping{
@@ -155,9 +155,9 @@ func TestUpstreamGetClusterCIDRWithPodSubnet(t *testing.T) {
 func TestUpstreamConfigureEngineWritesDesiredFiles(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker})
+	host := cfg.attach(&cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker})
 
-	if err := d.ConfigureEngine(context.Background(), host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{}); err != nil {
+	if err := d.ConfigureEngine(context.Background(), host, cluster.RuntimeMeta{}, distro.Distro{}); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v, want nil", err)
 	}
 
@@ -171,7 +171,7 @@ func TestUpstreamConfigureEngineWritesDesiredFiles(t *testing.T) {
 func TestUpstreamDesiredFilesRendersContainerdAndCrictl(t *testing.T) {
 	d := newTestUpstream()
 
-	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.Host{}, cluster.RuntimeMeta{}, distro.Distro{})
 
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -186,18 +186,18 @@ func TestUpstreamDesiredFilesRendersContainerdAndCrictl(t *testing.T) {
 
 func TestUpstreamDesiredFilesRendersRegistryHostsTOML(t *testing.T) {
 	d := newTestUpstream()
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name: "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{
+				Proxy: &cluster.RegistryProxy{
 					URL: "mirror.example.com",
 				},
 			},
 		},
 	}
 
-	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.Host{}, run, distro.Distro{})
 
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -211,25 +211,25 @@ func TestUpstreamDesiredFilesRendersRegistryHostsTOML(t *testing.T) {
 func TestUpstreamDesiredFilesRendersKubeadmConfigPerRole(t *testing.T) {
 	tests := []struct {
 		name    string
-		host    *cluster.ZarfHost
+		host    *cluster.Host
 		wantHas []string
 		wantNot []string
 	}{
 		{
 			name:    "leader",
-			host:    &cluster.ZarfHost{Hostname: "leader-1", Metadata: cluster.ZarfHostMetadata{IsLeader: true}},
+			host:    &cluster.Host{Hostname: "leader-1", Metadata: cluster.HostMetadata{IsLeader: true}},
 			wantHas: []string{"kind: ClusterConfiguration", "kind: InitConfiguration", "kind: KubeletConfiguration"},
 			wantNot: []string{"kind: JoinConfiguration"},
 		},
 		{
 			name:    "joining controller",
-			host:    &cluster.ZarfHost{Hostname: "controller-2", Role: cluster.RoleController},
+			host:    &cluster.Host{Hostname: "controller-2", Role: cluster.RoleController},
 			wantHas: []string{"kind: JoinConfiguration", "kind: KubeletConfiguration", "controlPlane"},
 			wantNot: []string{"kind: ClusterConfiguration", "kind: InitConfiguration"},
 		},
 		{
 			name:    "worker",
-			host:    &cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker},
+			host:    &cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker},
 			wantHas: []string{"kind: JoinConfiguration", "kind: KubeletConfiguration"},
 			wantNot: []string{"kind: ClusterConfiguration", "kind: InitConfiguration", "controlPlane"},
 		},
@@ -239,7 +239,7 @@ func TestUpstreamDesiredFilesRendersKubeadmConfigPerRole(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newTestUpstream()
 
-			files, err := d.DesiredFiles(context.Background(), tt.host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+			files, err := d.DesiredFiles(context.Background(), tt.host, cluster.RuntimeMeta{}, distro.Distro{})
 
 			if err != nil {
 				t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -301,7 +301,7 @@ func TestUpstreamJoinTokenPathAgentEmpty(t *testing.T) {
 
 func TestUpstreamManifestPaths(t *testing.T) {
 	d := newTestUpstream()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Manifests = []string{"/etc/kubernetes/manifests/cni.yaml"}
 
 	got := d.ManifestPaths(dis)
@@ -314,7 +314,7 @@ func TestUpstreamManifestPaths(t *testing.T) {
 func TestUpstreamManifestPathsEmpty(t *testing.T) {
 	d := newTestUpstream()
 
-	if got := d.ManifestPaths(distro.ZarfDistro{}); len(got) != 0 {
+	if got := d.ManifestPaths(distro.Distro{}); len(got) != 0 {
 		t.Fatalf("ManifestPaths() = %v, want empty", got)
 	}
 }
@@ -322,7 +322,7 @@ func TestUpstreamManifestPathsEmpty(t *testing.T) {
 func TestUpstreamStopControllerService(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{serviceRunning: true}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	if err := d.StopControllerService(host); err != nil {
 		t.Fatalf("StopControllerService() error = %v", err)
@@ -332,7 +332,7 @@ func TestUpstreamStopControllerService(t *testing.T) {
 func TestUpstreamStopWorkerService(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{serviceRunning: true}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	if err := d.StopWorkerService(host); err != nil {
 		t.Fatalf("StopWorkerService() error = %v", err)

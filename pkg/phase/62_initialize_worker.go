@@ -35,16 +35,16 @@ import (
 type InitializeWorkers struct {
 	GenericPhase
 	Distro           distrocfg.Distro
-	run              cluster.ZarfRuntimeMeta
-	worker           cluster.ZarfHosts
+	run              cluster.RuntimeMeta
+	worker           cluster.Hosts
 	WorkerConcurrent string
 }
 
 // workersNeedingInit filters hosts down to non-controllers that have not yet joined the cluster.
 // When d implements Bootstrapper that is asked directly; every other distro falls back to the
 // existing service-running check.
-func workersNeedingInit(ctx context.Context, hosts cluster.ZarfHosts, d distrocfg.Distro) cluster.ZarfHosts {
-	return hosts.Filter(func(h *cluster.ZarfHost) bool {
+func workersNeedingInit(ctx context.Context, hosts cluster.Hosts, d distrocfg.Distro) cluster.Hosts {
+	return hosts.Filter(func(h *cluster.Host) bool {
 		if h.IsController() {
 			return false
 		}
@@ -66,8 +66,8 @@ func (p *InitializeWorkers) Explanation() string {
 }
 
 // Prepare the phase
-func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool { return h.IsController() })
+func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool { return h.IsController() })
 	// Recomputed independently of ConfigureEngine.Prepare's identical Leader/LoadBalancer setup --
 	// deliberate, not DRY-able, so this phase does not depend on phase-ordering assumptions.
 	if len(control) > 0 {
@@ -107,7 +107,7 @@ func (p *InitializeWorkers) Run(ctx context.Context) error {
 			"joining cluster",
 			p.worker,
 			p.WorkerConcurrent,
-			func(ctx context.Context, h *cluster.ZarfHost) error {
+			func(ctx context.Context, h *cluster.Host) error {
 				return b.Bootstrap(ctx, h, p.run, *p.GetDistro())
 			},
 		)
@@ -121,14 +121,14 @@ func (p *InitializeWorkers) Run(ctx context.Context) error {
 	)
 }
 
-func (p *InitializeWorkers) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *InitializeWorkers) installDistro(ctx context.Context, h *cluster.Host) error {
 	if h.Metadata.Install != nil {
 		return h.Metadata.Install(ctx, h)
 	}
 	return nil
 }
 
-func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.Host) error {
 	service := p.Distro.GetWorkerService()
 	logger.From(ctx).Info("waiting for the worker service to start", "service", service, "host", h)
 

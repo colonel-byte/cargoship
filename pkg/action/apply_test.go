@@ -31,7 +31,7 @@ func newTestApply(t *testing.T) *Apply {
 	a := NewApply(ApplyOptions{
 		Manager: &phase.Manager{
 			DistroID: "k3s",
-			Config:   &cluster.ZarfCluster{},
+			Config:   &cluster.Cluster{},
 		},
 	})
 	require.NotNil(t, a, "NewApply returned nil, which it only does for an unknown distro")
@@ -94,7 +94,7 @@ func TestApplyPassesAllowDowngrade(t *testing.T) {
 	a := NewApply(ApplyOptions{
 		Manager: &phase.Manager{
 			DistroID: "k3s",
-			Config:   &cluster.ZarfCluster{},
+			Config:   &cluster.Cluster{},
 		},
 		AllowDowngrade: true,
 	})

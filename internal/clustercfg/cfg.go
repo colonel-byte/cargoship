@@ -24,7 +24,7 @@ import (
 )
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
-func Parse(_ context.Context, b []byte) (_ cluster.ZarfCluster, err error) {
+func Parse(_ context.Context, b []byte) (_ cluster.Cluster, err error) {
 	// A bare "!" tag with no following value (e.g. "registries: ! ") makes go-yaml's decoder call
 	// ArrayRange on a TagNode whose Value isn't an array, which returns a nil *ArrayNodeIter that
 	// the decoder then dereferences -- a panic rather than a decode error. Recovering keeps a
@@ -35,9 +35,9 @@ func Parse(_ context.Context, b []byte) (_ cluster.ZarfCluster, err error) {
 		}
 	}()
 
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(b, &dis); err != nil {
-		return cluster.ZarfCluster{}, err
+		return cluster.Cluster{}, err
 	}
 	return dis, nil
 }

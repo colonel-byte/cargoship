@@ -10,8 +10,8 @@ Package load for loading a given package
 
 ## Index
 
-- [func ClusterDefinition\(ctx context.Context, configPath string, \_ ClusterOptions\) \(v1alpha1.ZarfCluster, error\)](<#ClusterDefinition>)
-- [func DistroDefinition\(ctx context.Context, distroPath string, opts DefinitionOptions\) \(v1alpha1.ZarfDistro, error\)](<#DistroDefinition>)
+- [func ClusterDefinition\(ctx context.Context, configPath string, \_ ClusterOptions\) \(v1alpha1.Cluster, error\)](<#ClusterDefinition>)
+- [func DistroDefinition\(ctx context.Context, distroPath string, opts DefinitionOptions\) \(v1alpha1.Distro, error\)](<#DistroDefinition>)
 - [type ClusterOptions](<#ClusterOptions>)
 - [type DefinitionOptions](<#DefinitionOptions>)
 
@@ -20,7 +20,7 @@ Package load for loading a given package
 ## func [ClusterDefinition](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/cluster.go#L40>)
 
 ```go
-func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error)
+func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.Cluster, error)
 ```
 
 ClusterDefinition loads a package from the filesystem
@@ -29,7 +29,7 @@ ClusterDefinition loads a package from the filesystem
 ## func [DistroDefinition](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/distro.go#L51>)
 
 ```go
-func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error)
+func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.Distro, error)
 ```
 
 DistroDefinition returns a ZarfDistro object

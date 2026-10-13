@@ -103,7 +103,7 @@ type clusterModel struct {
 // Host order is load-bearing. ConfigureEngine makes the first controller the leader, so the
 // controllers are emitted first, each group in configuration order. A configuration that lists its
 // intended leader first gets it.
-func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, error) {
+func translate(ctx context.Context, model clusterModel) (*cluster.Cluster, error) {
 	if model.Name == "" {
 		return nil, fmt.Errorf("name is required: it becomes metadata.name, and the kubeconfig context")
 	}
@@ -114,7 +114,7 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 		return nil, fmt.Errorf("at least one host block is required")
 	}
 
-	built := make(cluster.ZarfHosts, 0, len(model.Hosts))
+	built := make(cluster.Hosts, 0, len(model.Hosts))
 	for i := range model.Hosts {
 		host, err := hostFrom(model.Hosts[i])
 		if err != nil {
@@ -126,7 +126,7 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 	// Controllers first, each in configuration order: ConfigureEngine makes the first controller
 	// the leader, so a configuration that lists its intended leader first gets it. Everything
 	// else keeps its order too, which is what makes a worker batch reproducible.
-	hosts := make(cluster.ZarfHosts, 0, len(built))
+	hosts := make(cluster.Hosts, 0, len(built))
 	for _, host := range built {
 		if host.IsController() {
 			hosts = append(hosts, host)
@@ -138,12 +138,12 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 		}
 	}
 
-	out := &cluster.ZarfCluster{
+	out := &cluster.Cluster{
 		APIVersion: apiVersion,
 		Kind:       documentKind,
-		Metadata:   cluster.ZarfClusterMetadata{Name: model.Name},
-		Spec: cluster.ZarfClusterSpec{
-			Config: cluster.ZarfClusterConfig{
+		Metadata:   cluster.Metadata{Name: model.Name},
+		Spec: cluster.Spec{
+			Config: cluster.Config{
 				LoadBalancer: model.LoadBalancer,
 			},
 			Hosts: hosts,
@@ -166,7 +166,7 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 }
 
 // hostFrom builds one host, refusing a role the cluster API does not define.
-func hostFrom(model hostModel) (*cluster.ZarfHost, error) {
+func hostFrom(model hostModel) (*cluster.Host, error) {
 	if model.Address == "" {
 		return nil, fmt.Errorf("every host block needs an address")
 	}
@@ -195,7 +195,7 @@ func hostFrom(model hostModel) (*cluster.ZarfHost, error) {
 		sshCfg.KeyPath = &keyPath
 	}
 
-	return &cluster.ZarfHost{
+	return &cluster.Host{
 		Role:           model.Role,
 		Profile:        model.Profile,
 		Hostname:       model.Hostname,

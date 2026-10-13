@@ -24,24 +24,24 @@ import (
 func TestUFWRule(t *testing.T) {
 	tests := []struct {
 		name string
-		rule cluster.ZarfFirewallRule
+		rule cluster.FirewallRule
 		want string
 	}{
 		{
 			name: "in rule with a source and port",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "metrics", Action: "allow", Source: "10.0.0.0/8", Port: "9100", Protocol: "tcp",
 			},
 			want: "allow in from 10.0.0.0/8 to any port 9100 proto tcp comment 'cargoship:metrics'",
 		},
 		{
 			name: "in rule defaults the direction",
-			rule: cluster.ZarfFirewallRule{Name: "peers", Action: "allow", Source: "10.0.0.5"},
+			rule: cluster.FirewallRule{Name: "peers", Action: "allow", Source: "10.0.0.5"},
 			want: "allow in from 10.0.0.5 to any comment 'cargoship:peers'",
 		},
 		{
 			name: "out rule",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "egress-dns", Action: "allow", Direction: "out",
 				Destination: "10.43.0.10", Port: "53", Protocol: "udp",
 			},
@@ -49,7 +49,7 @@ func TestUFWRule(t *testing.T) {
 		},
 		{
 			name: "forward rule uses interfaces",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "ingress-http", Action: "allow", Direction: "forward",
 				Ingress: "eth0", Egress: "cni0", Port: "80", Protocol: "tcp",
 			},
@@ -57,14 +57,14 @@ func TestUFWRule(t *testing.T) {
 		},
 		{
 			name: "port range becomes ufw's colon form",
-			rule: cluster.ZarfFirewallRule{
+			rule: cluster.FirewallRule{
 				Name: "nodeports", Action: "allow", Port: "30000-32767", Protocol: "tcp",
 			},
 			want: "allow in from any to any port 30000:32767 proto tcp comment 'cargoship:nodeports'",
 		},
 		{
 			name: "deny and reject pass through",
-			rule: cluster.ZarfFirewallRule{Name: "block", Action: "reject", Source: "192.168.1.0/24"},
+			rule: cluster.FirewallRule{Name: "block", Action: "reject", Source: "192.168.1.0/24"},
 			want: "reject in from 192.168.1.0/24 to any comment 'cargoship:block'",
 		},
 	}
@@ -78,7 +78,7 @@ func TestUFWRule(t *testing.T) {
 	}
 
 	t.Run("unknown action", func(t *testing.T) {
-		_, err := ufwRule(cluster.ZarfFirewallRule{Action: "drop"})
+		_, err := ufwRule(cluster.FirewallRule{Action: "drop"})
 		require.ErrorContains(t, err, "unknown action")
 	})
 }
@@ -87,8 +87,8 @@ func TestUFWRules(t *testing.T) {
 	plan := Plan{
 		NodeAddresses: []string{"10.0.0.1", "10.0.0.2"},
 		ClusterCIDRs:  []string{"10.42.0.0/16"},
-		Ports:         []cluster.ZarfHostPort{{Port: "6443", Protocol: "tcp"}},
-		Rules: []cluster.ZarfFirewallRule{
+		Ports:         []cluster.HostPort{{Port: "6443", Protocol: "tcp"}},
+		Rules: []cluster.FirewallRule{
 			{Name: "metrics", Action: "allow", Source: "10.0.0.0/8", Port: "9100", Protocol: "tcp"},
 		},
 	}
@@ -117,7 +117,7 @@ func TestUFWRules(t *testing.T) {
 }
 
 func TestUFWProfile(t *testing.T) {
-	got := ufwProfile([]cluster.ZarfHostPort{
+	got := ufwProfile([]cluster.HostPort{
 		{Port: "6443", Protocol: "tcp"},
 		{Port: "30000-32767", Protocol: "udp"},
 		{Port: "9345"},

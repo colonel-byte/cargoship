@@ -52,7 +52,7 @@ func (p *DaemonReload) ShouldRun() bool {
 // Run the phase
 func (p *DaemonReload) Run(ctx context.Context) error {
 	hosts := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
-	return p.parallelDo(ctx, hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
+	return p.parallelDo(ctx, hosts, func(ctx context.Context, h *cluster.Host) error {
 		logger.From(ctx).Info("reloading service manager", "host", h)
 		if err := daemonReload(ctx, h); err != nil {
 			logger.From(ctx).Warn("failed to reload service manager", "host", h, "error", err)
@@ -64,7 +64,7 @@ func (p *DaemonReload) Run(ctx context.Context) error {
 // daemonReload triggers an explicit init system config reload (e.g. `systemctl
 // daemon-reload`) when the detected init system supports one. Not every init
 // system does (e.g. OpenRC), so a missing capability is not an error.
-func daemonReload(ctx context.Context, h *cluster.ZarfHost) error {
+func daemonReload(ctx context.Context, h *cluster.Host) error {
 	mgr, err := h.Sudo().ServiceManager()
 	if err != nil {
 		return err

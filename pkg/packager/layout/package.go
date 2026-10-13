@@ -213,7 +213,7 @@ func validateDistroIntegrity(disLayout *DistroLayout) error {
 
 // validateDistroPaths checks that package config fields used as filesystem
 // path components do not contain path traversal sequences or separators.
-func validateDistroPaths(dis distro.ZarfDistro) error {
+func validateDistroPaths(dis distro.Distro) error {
 	if !IsCleanPath(dis.Metadata.Name) {
 		return fmt.Errorf("package metadata name %q would result in an invalid path", dis.Metadata.Name)
 	}
@@ -265,7 +265,7 @@ func IsContainedPath(s string) bool {
 // here. Overrides come from outside the package - a cluster inventory, say - so
 // they are merged before the schema check, not after: an override that breaks
 // the schema has to fail as loudly as a bad values file would.
-func LoadValues(ctx context.Context, dirPath string, vals distro.ZarfDistroValues, overrides ...map[string]any) (map[string]any, error) {
+func LoadValues(ctx context.Context, dirPath string, vals distro.Values, overrides ...map[string]any) (map[string]any, error) {
 	merged, err := helmvalues.LoadFiles(ctx, dirPath, "", vals.Files)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read values files: %w", err)
@@ -345,7 +345,7 @@ func (d *DistroLayout) ApplyValues(values map[string]any) error {
 // RPM, and a template pass over one of those would either corrupt it or fail on a brace
 // that happens to appear in the middle of a binary.
 func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any) error {
-	render := func(dir string, files v1alpha1.ZarfFiles) error {
+	render := func(dir string, files v1alpha1.Files) error {
 		for i, f := range files {
 			if f == nil || !f.IsTemplate() {
 				continue

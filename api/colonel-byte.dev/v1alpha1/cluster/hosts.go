@@ -27,11 +27,11 @@ import (
 	"sync"
 )
 
-// ZarfHosts is an ordered list of hosts that cargoship manages together.
-type ZarfHosts []*ZarfHost
+// Hosts is an ordered list of hosts that cargoship manages together.
+type Hosts []*Host
 
 // First returns the first host. It returns nil if there are no hosts.
-func (hosts ZarfHosts) First() *ZarfHost {
+func (hosts Hosts) First() *Host {
 	if len(hosts) == 0 {
 		return nil
 	}
@@ -39,7 +39,7 @@ func (hosts ZarfHosts) First() *ZarfHost {
 }
 
 // Last returns the last host. It returns nil if there are no hosts.
-func (hosts ZarfHosts) Last() *ZarfHost {
+func (hosts Hosts) Last() *Host {
 	c := len(hosts) - 1
 
 	if c < 0 {
@@ -50,7 +50,7 @@ func (hosts ZarfHosts) Last() *ZarfHost {
 }
 
 // Find returns the first host for which filter returns true. It returns nil if no host matches.
-func (hosts ZarfHosts) Find(filter func(h *ZarfHost) bool) *ZarfHost {
+func (hosts Hosts) Find(filter func(h *Host) bool) *Host {
 	for _, h := range hosts {
 		if filter(h) {
 			return (h)
@@ -60,8 +60,8 @@ func (hosts ZarfHosts) Find(filter func(h *ZarfHost) bool) *ZarfHost {
 }
 
 // Filter returns the hosts for which filter returns true.
-func (hosts ZarfHosts) Filter(filter func(h *ZarfHost) bool) ZarfHosts {
-	result := make(ZarfHosts, 0, len(hosts))
+func (hosts Hosts) Filter(filter func(h *Host) bool) Hosts {
+	result := make(Hosts, 0, len(hosts))
 
 	for _, h := range hosts {
 		if filter(h) {
@@ -73,35 +73,35 @@ func (hosts ZarfHosts) Filter(filter func(h *ZarfHost) bool) ZarfHosts {
 }
 
 // WithRole returns the hosts that have the given role.
-func (hosts ZarfHosts) WithRole(s string) ZarfHosts {
-	return hosts.Filter(func(h *ZarfHost) bool {
+func (hosts Hosts) WithRole(s string) Hosts {
+	return hosts.Filter(func(h *Host) bool {
 		return h.Role == s
 	})
 }
 
 // Controllers returns the hosts that act as a controller. This includes hosts with role controller, controller+worker, or single.
-func (hosts ZarfHosts) Controllers() ZarfHosts {
-	return hosts.Filter(func(h *ZarfHost) bool { return h.IsController() })
+func (hosts Hosts) Controllers() Hosts {
+	return hosts.Filter(func(h *Host) bool { return h.IsController() })
 }
 
 // Workers returns the hosts with role worker.
-func (hosts ZarfHosts) Workers() ZarfHosts {
+func (hosts Hosts) Workers() Hosts {
 	return hosts.WithRole(RoleWorker)
 }
 
-// ZarfHostGroup is a set of hosts that share the same profile.
-type ZarfHostGroup struct {
+// HostGroup is a set of hosts that share the same profile.
+type HostGroup struct {
 	// Profile is the profile name shared by Hosts. Empty for hosts that selected no profile.
 	Profile string
 	// Hosts are the hosts that selected Profile, in their original relative order.
-	Hosts ZarfHosts
+	Hosts Hosts
 }
 
 // GroupByProfile splits hosts into groups by their Profile field, preserving each host's
 // relative order within its group. Groups are ordered by each profile's first appearance in
 // hosts, so the result is deterministic.
-func (hosts ZarfHosts) GroupByProfile() []ZarfHostGroup {
-	var groups []ZarfHostGroup
+func (hosts Hosts) GroupByProfile() []HostGroup {
+	var groups []HostGroup
 	index := make(map[string]int)
 
 	for _, h := range hosts {
@@ -109,7 +109,7 @@ func (hosts ZarfHosts) GroupByProfile() []ZarfHostGroup {
 		if !ok {
 			i = len(groups)
 			index[h.Profile] = i
-			groups = append(groups, ZarfHostGroup{Profile: h.Profile})
+			groups = append(groups, HostGroup{Profile: h.Profile})
 		}
 		groups[i].Hosts = append(groups[i].Hosts, h)
 	}
@@ -118,7 +118,7 @@ func (hosts ZarfHosts) GroupByProfile() []ZarfHostGroup {
 }
 
 // Each runs each filter on every host, in the order given. It stops and returns the error if ctx is canceled or a filter returns an error.
-func (hosts ZarfHosts) Each(ctx context.Context, filters ...func(context.Context, *ZarfHost) error) error {
+func (hosts Hosts) Each(ctx context.Context, filters ...func(context.Context, *Host) error) error {
 	for _, filter := range filters {
 		for _, h := range hosts {
 			if err := ctx.Err(); err != nil {
@@ -135,7 +135,7 @@ func (hosts ZarfHosts) Each(ctx context.Context, filters ...func(context.Context
 
 // ParallelEach runs each filter on every host in parallel. It runs the filters in the order given, completing one filter across all hosts before it starts the next.
 // It collects every error and returns them combined.
-func (hosts ZarfHosts) ParallelEach(ctx context.Context, filters ...func(context.Context, *ZarfHost) error) error {
+func (hosts Hosts) ParallelEach(ctx context.Context, filters ...func(context.Context, *Host) error) error {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var errors []string
@@ -143,7 +143,7 @@ func (hosts ZarfHosts) ParallelEach(ctx context.Context, filters ...func(context
 	for _, filter := range filters {
 		for _, h := range hosts {
 			wg.Add(1)
-			go func(h *ZarfHost) {
+			go func(h *Host) {
 				defer wg.Done()
 				if err := ctx.Err(); err != nil {
 					mu.Lock()
@@ -170,7 +170,7 @@ func (hosts ZarfHosts) ParallelEach(ctx context.Context, filters ...func(context
 
 // BatchedParallelEach runs each filter on every host in parallel, in groups of batchSize hosts. It completes one group before it starts the next.
 // It stops and returns the error if ctx is canceled or a group returns an error.
-func (hosts ZarfHosts) BatchedParallelEach(ctx context.Context, batchSize int, filter ...func(context.Context, *ZarfHost) error) error {
+func (hosts Hosts) BatchedParallelEach(ctx context.Context, batchSize int, filter ...func(context.Context, *Host) error) error {
 	for i := 0; i < len(hosts); i += batchSize {
 		end := min(i+batchSize, len(hosts))
 		if err := ctx.Err(); err != nil {

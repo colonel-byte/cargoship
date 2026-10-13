@@ -85,7 +85,7 @@ func TestLayersFromFiles(t *testing.T) {
 	fetcher.addLayer(root, filepath.Join(config.FilesDir, "0", "one.txt"), []byte("one"))
 	// Index 1 has no corresponding layer, so it should be skipped rather than error.
 
-	files := v1alpha1.ZarfFiles{
+	files := v1alpha1.Files{
 		{Target: "/some/one.txt"},
 		{Target: "/some/two.txt"},
 	}

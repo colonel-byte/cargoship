@@ -24,11 +24,11 @@ import (
 )
 
 // controllerHosts builds a controller per name, each with a distinct connection address since
-// ZarfHost.String() reports that and the phase keys off it.
-func controllerHosts(names ...string) cluster.ZarfHosts {
-	var hosts cluster.ZarfHosts
+// Host.String() reports that and the phase keys off it.
+func controllerHosts(names ...string) cluster.Hosts {
+	var hosts cluster.Hosts
 	for i, name := range names {
-		h := &cluster.ZarfHost{
+		h := &cluster.Host{
 			Hostname: name,
 			Role:     cluster.RoleController,
 		}
@@ -92,8 +92,8 @@ func TestReconfigureSurvivorsElectsTheFirstHostThatStays(t *testing.T) {
 
 			hosts := controllerHosts(tt.hosts...)
 			m := &Manager{
-				Config: &cluster.ZarfCluster{
-					Spec: cluster.ZarfClusterSpec{
+				Config: &cluster.Cluster{
+					Spec: cluster.Spec{
 						Hosts: hosts,
 					},
 				},
@@ -122,8 +122,8 @@ func TestReconfigureSurvivorsServerForDropsTheKeyOnTheLeader(t *testing.T) {
 
 	hosts := controllerHosts("kc0", "kc1", "kc2")
 	m := &Manager{
-		Config: &cluster.ZarfCluster{
-			Spec: cluster.ZarfClusterSpec{
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
 				Hosts: hosts,
 			},
 		},

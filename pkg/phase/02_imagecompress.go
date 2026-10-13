@@ -39,7 +39,7 @@ func imageCompressWriter(format string, w io.Writer) (io.WriteCloser, error) {
 		}
 		return enc, nil
 	default:
-		_, err := distro.ZarfDistroImageConfig{Compression: format}.TarballSuffix()
+		_, err := distro.ImageConfig{Compression: format}.TarballSuffix()
 		return nil, err
 	}
 }
