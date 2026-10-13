@@ -19,7 +19,7 @@
 # so the build-twice comparison has per-architecture content to compare rather than metadata alone.
 
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/distro-v1alpha1-schema.json
 apiVersion: colonel-byte.dev/v1alpha1
 kind: Distro
 metadata:

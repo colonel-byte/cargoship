@@ -4,7 +4,7 @@
 
 is the root object of a cluster configuration document.
 
-Rendered from `schema/zarf-v1alpha1-cluster-schema.json`.
+Rendered from `schema/cluster-v1alpha1-schema.json`.
 
 <div class="schema-table">
 

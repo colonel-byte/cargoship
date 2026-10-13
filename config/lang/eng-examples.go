@@ -326,11 +326,11 @@ $ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer
 
 	// CmdSchemaExample schema example
 	CmdSchemaExample = `# Write the inventory schema next to an inventory file, for an editor to read
-$ cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+$ cargoship schema inventory -o ./cluster-v1alpha1-schema.json
 
 # Then point the inventory at it, as its first line
 $ head -1 ./inventory.yaml
-# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=./cluster-v1alpha1-schema.json
 
 # Compose in a package's own values, so spec.config.values completes too
 $ cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json

@@ -4,7 +4,7 @@
 
 is the root object of a distro package configuration document.
 
-Rendered from `schema/zarf-v1alpha1-distro-package-schema.json`.
+Rendered from `schema/distro-v1alpha1-schema.json`.
 
 <div class="schema-table">
 

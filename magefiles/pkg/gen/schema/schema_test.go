@@ -118,7 +118,7 @@ func TestSensitivePropertiesAreMarked(t *testing.T) {
 	}{
 		{
 			name:   "registry credentials",
-			target: "zarf-v1alpha1-cluster-schema.json",
+			target: "cluster-v1alpha1-schema.json",
 			def:    "RegistryAuth",
 			properties: []string{
 				"pass",
@@ -128,7 +128,7 @@ func TestSensitivePropertiesAreMarked(t *testing.T) {
 		},
 		{
 			name:   "package signing key password",
-			target: "zarf-config-distro-schema.json",
+			target: "config-distro-schema.json",
 			def:    "DistroPublishOptions",
 			properties: []string{
 				"signing_key_password",
