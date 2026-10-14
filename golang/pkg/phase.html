@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-717151c9.js";
+            window.path_to_searchindex_js = "../../searchindex-3482cbae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-7fc8444f.js"></script>
+        <script src="../../toc-ef97ed17.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -318,6 +318,7 @@
 <li><a href="#EngineConfigSyncHosts">type EngineConfigSyncHosts</a>
 <ul>
 <li><a href="#EngineConfigSyncHosts.Changed">func (p *EngineConfigSyncHosts) Changed() bool</a></li>
+<li><a href="#EngineConfigSyncHosts.HostsChanged">func (p *EngineConfigSyncHosts) HostsChanged() []HostChange</a></li>
 <li><a href="#EngineConfigSyncHosts.ShouldRun">func (p *EngineConfigSyncHosts) ShouldRun() bool</a></li>
 </ul>
 </li>
@@ -358,6 +359,9 @@
 <li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
 </ul>
 </li>
+<li><a href="#HostChange">type HostChange</a></li>
+<li><a href="#HostChangeDetail">type HostChangeDetail</a></li>
+<li><a href="#HostSummary">type HostSummary</a></li>
 <li><a href="#ImportImages">type ImportImages</a>
 <ul>
 <li><a href="#ImportImages.Explanation">func (p *ImportImages) Explanation() string</a></li>
@@ -534,7 +538,10 @@
 <ul>
 <li><a href="#RunResult.Changed">func (r RunResult) Changed() bool</a></li>
 <li><a href="#RunResult.Complete">func (r RunResult) Complete() bool</a></li>
+<li><a href="#RunResult.HostSummaries">func (r RunResult) HostSummaries() []HostSummary</a></li>
+<li><a href="#RunResult.HostsUndeclared">func (r RunResult) HostsUndeclared() []string</a></li>
 <li><a href="#RunResult.Outstanding">func (r RunResult) Outstanding() bool</a></li>
+<li><a href="#RunResult.Signal">func (r RunResult) Signal() string</a></li>
 <li><a href="#RunResult.Undeclared">func (r RunResult) Undeclared() []string</a></li>
 </ul>
 </li>
@@ -602,6 +609,19 @@
 </li>
 </ul>
 <h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
+<p><a name="SignalUnknown"></a>Changed signal values, naming how much a reported Changed is worth.</p>
+<p>They live here rather than with any one caller because more than one reports them: the Ansible module’s changedSignal and the CLI run receipt are the same claim about the same RunResult, and a second copy of the vocabulary is a second thing to keep in step.</p>
+<pre><code class="language-go">const (
+    // SignalUnknown means no phase reported whether it changed anything, so the changed answer
+    // beside it is a convention rather than an observation.
+    SignalUnknown = "unknown"
+    // SignalPartial means some phases reported and some did not. The ones that did not are
+    // named by Undeclared.
+    SignalPartial = "partial"
+    // SignalComplete means every phase the run reached reported whether it changed anything.
+    SignalComplete = "complete"
+)
+</code></pre>
 <p><a name="FAPolicydRuleFile"></a></p>
 <pre><code class="language-go">const (
     // FAPolicydRuleFile path on the host
@@ -697,7 +717,7 @@
 </code></pre>
 <p>DryRunNote returns the phase’s own account of why a dry run runs it, or “” for a phase that gives none. Only read-only phases carry one: they are the phases a dry run runs against live hosts, so they are the ones a reader is entitled to an argument about.</p>
 <p><a name="Titles"></a></p>
-<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L273">Titles</a></a></h2>
+<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L417">Titles</a></a></h2>
 <pre><code class="language-go">func Titles(results []PhaseResult) []string
 </code></pre>
 <p>Titles names the phases in a slice, for a caller that reports a list of names rather than the detail behind them.</p>
@@ -1154,7 +1174,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="EngineConfigSyncHosts"></a></p>
-<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L64">EngineConfigSyncHosts</a></a></h2>
+<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L68">EngineConfigSyncHosts</a></a></h2>
 <p>EngineConfigSyncHosts phase state</p>
 <pre><code class="language-go">type EngineConfigSyncHosts struct {
     GenericPhase
@@ -1165,13 +1185,20 @@
 }
 </code></pre>
 <p><a name="EngineConfigSyncHosts.Changed"></a></p>
-<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L81">Changed</a></a></h3>
+<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L163">Changed</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) Changed() bool
 </code></pre>
 <p>Changed reports whether this phase altered any host, which is what Ansible’s changed is built from. See changedReporter in 05_manager.go.</p>
 <p>There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.</p>
+<p><a name="EngineConfigSyncHosts.HostsChanged"></a></p>
+<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L132">HostsChanged</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
+</code></pre>
+<p>HostsChanged reports what this phase did to each host it looked at. See hostChangedReporter in 05_manager.go.</p>
+<p>Every host Prepare checked is reported, including the ones that turned out to be in sync. A host that was checked and found correct is a different answer from a host nothing looked at, and only one of them means the fleet was fully assessed.</p>
+<p>The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.</p>
 <p><a name="EngineConfigSyncHosts.ShouldRun"></a></p>
-<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L88">ShouldRun</a></a></h3>
+<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L170">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are hosts to sync</p>
@@ -1316,6 +1343,54 @@
 <pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
 </code></pre>
 <p>Wet is a shorthand for manager.Wet</p>
+<p><a name="HostChange"></a></p>
+<h2 id="type-hostchange"><a class="header" href="#type-hostchange">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L212-L222">HostChange</a></a></h2>
+<p>HostChange is what one phase did to one host.</p>
+<pre><code class="language-go">type HostChange struct {
+    // Host identifies the host as the cluster configuration would: the address from its host
+    // block, with the port when it is not the default. A hostname is not enough on its own,
+    // because Host.Hostname is an optional override that is empty on most hosts.
+    Host    string
+    Changed bool
+    // Details names what moved on this host, one entry per file or setting. It is empty when
+    // the phase knows the host changed but not what in it, which is a weaker answer than a
+    // populated list rather than a claim that nothing in particular happened.
+    Details []HostChangeDetail
+}
+</code></pre>
+<p><a name="HostChangeDetail"></a></p>
+<h2 id="type-hostchangedetail"><a class="header" href="#type-hostchangedetail">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L225-L239">HostChangeDetail</a></a></h2>
+<p>HostChangeDetail is one thing a phase did to one host.</p>
+<pre><code class="language-go">type HostChangeDetail struct {
+    // Path is the file this is about, absolute as the host sees it.
+    Path string
+    // Reason is why the phase touched it, in the vocabulary the phases already log: "missing",
+    // "out of sync", "wrong mode", "stale".
+    Reason string
+    // Diff is a unified diff of the change. It is empty when the phase never read the prior
+    // content -- several phases compare by checksum or write unconditionally, and an empty Diff
+    // says the content was not compared rather than that it did not differ.
+    //
+    // It can carry anything the file carried, which for an engine configuration includes join
+    // tokens and registry credentials. Anything rendering a receipt outside the management node
+    // is expected to drop it.
+    Diff string
+}
+</code></pre>
+<p><a name="HostSummary"></a></p>
+<h2 id="type-hostsummary"><a class="header" href="#type-hostsummary">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L368-L377">HostSummary</a></a></h2>
+<p>HostSummary is one host’s line in a run summary.</p>
+<pre><code class="language-go">type HostSummary struct {
+    Host    string
+    Changed bool
+    // Named is how many phases named this host, and Reporting how many declared per host at
+    // all. They are reported as a pair because Named alone cannot be read: a host named by two
+    // of two reporting phases has been fully accounted for, and a host named by two of fifteen
+    // has not, and the two look identical without the denominator.
+    Named     int
+    Reporting int
+}
+</code></pre>
 <p><a name="ImportImages"></a></p>
 <h2 id="type-importimages"><a class="header" href="#type-importimages">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L29-L34">ImportImages</a></a></h2>
 <p>ImportImages imports uploaded image tarballs into a distro’s engine, for a distro whose engine does not do this on its own. rke2 and k3s’s own agents import automatically, so most applies skip this phase entirely -- ShouldRun is false unless the distro opts in.</p>
@@ -1556,7 +1631,7 @@
 </code></pre>
 <p>UnlockPhase returns an unlock phase for this lock phase</p>
 <p><a name="Manager"></a></p>
-<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L377-L398">Manager</a></a></h2>
+<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L538-L559">Manager</a></a></h2>
 <p>Manager executes phases to construct the cluster</p>
 <pre><code class="language-go">type Manager struct {
     Config *cluster.Cluster
@@ -1582,47 +1657,47 @@
 }
 </code></pre>
 <p><a name="NewManager"></a></p>
-<h3 id="func-newmanager"><a class="header" href="#func-newmanager">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L411">NewManager</a></a></h3>
+<h3 id="func-newmanager"><a class="header" href="#func-newmanager">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L572">NewManager</a></a></h3>
 <pre><code class="language-go">func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)
 </code></pre>
 <p>NewManager creates a new Manager</p>
 <p><a name="Manager.AddPhase"></a></p>
-<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L423">AddPhase</a></a></h3>
+<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L584">AddPhase</a></a></h3>
 <pre><code class="language-go">func (m *Manager) AddPhase(p ...Phase)
 </code></pre>
 <p>AddPhase adds a Phase to Manager</p>
 <p><a name="Manager.GetDistroOSFiles"></a></p>
-<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L446">GetDistroOSFiles</a></a></h3>
+<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L607">GetDistroOSFiles</a></a></h3>
 <pre><code class="language-go">func (m *Manager) GetDistroOSFiles() v1alpha1.Files
 </code></pre>
 <p>GetDistroOSFiles returns the ZarfFiles for a distro</p>
 <p><a name="Manager.RetryTimeout"></a></p>
-<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L438">RetryTimeout</a></a></h3>
+<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L599">RetryTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error
 </code></pre>
 <p>RetryTimeout wraps retry Timeout logic</p>
 <p><a name="Manager.Run"></a></p>
-<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L471">Run</a></a></h3>
+<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L632">Run</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Run(ctx context.Context) error
 </code></pre>
 <p>Run executes all the added Phases in order</p>
 <p><a name="Manager.SetPhases"></a></p>
-<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L428">SetPhases</a></a></h3>
+<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L589">SetPhases</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetPhases(p Phases)
 </code></pre>
 <p>SetPhases sets the list of phases</p>
 <p><a name="Manager.SetTimeout"></a></p>
-<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433">SetTimeout</a></a></h3>
+<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L594">SetTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetTimeout(tm time.Duration)
 </code></pre>
 <p>SetTimeout sets the timeout for the manager</p>
 <p><a name="Manager.Wet"></a></p>
-<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L455">Wet</a></a></h3>
+<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L616">Wet</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
 </code></pre>
 <p>Wet runs the first given function when not in dry-run mode. The second function will be run when in dry-mode and the message will be displayed. Any error returned from the functions will be returned and will halt the operation.</p>
 <p><a name="ManagerDistroConfig"></a></p>
-<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L401-L408">ManagerDistroConfig</a></a></h2>
+<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L562-L569">ManagerDistroConfig</a></a></h2>
 <p>ManagerDistroConfig stores some values for manager distro config</p>
 <pre><code class="language-go">type ManagerDistroConfig struct {
     BinaryDir string
@@ -1649,36 +1724,37 @@
 </code></pre>
 <p>ParseManifest reads manifest file content back into entries. Malformed lines are skipped.</p>
 <p><a name="ModifyHosts"></a></p>
-<h2 id="type-modifyhosts"><a class="header" href="#type-modifyhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L33-L37">ModifyHosts</a></a></h2>
+<h2 id="type-modifyhosts"><a class="header" href="#type-modifyhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L37-L44">ModifyHosts</a></a></h2>
 <p>ModifyHosts state</p>
 <pre><code class="language-go">type ModifyHosts struct {
     GenericPhase
+
     Enabled bool
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="ModifyHosts.Explanation"></a></p>
-<h3 id="func-modifyhosts-explanation"><a class="header" href="#func-modifyhosts-explanation">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L45">Explanation</a></a></h3>
+<h3 id="func-modifyhosts-explanation"><a class="header" href="#func-modifyhosts-explanation">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L52">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ModifyHosts.Prepare"></a></p>
-<h3 id="func-modifyhosts-prepare"><a class="header" href="#func-modifyhosts-prepare">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L50">Prepare</a></a></h3>
+<h3 id="func-modifyhosts-prepare"><a class="header" href="#func-modifyhosts-prepare">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L57">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ModifyHosts.Run"></a></p>
-<h3 id="func-modifyhosts-run"><a class="header" href="#func-modifyhosts-run">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L69">Run</a></a></h3>
+<h3 id="func-modifyhosts-run"><a class="header" href="#func-modifyhosts-run">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L76">Run</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="ModifyHosts.ShouldRun"></a></p>
-<h3 id="func-modifyhosts-shouldrun"><a class="header" href="#func-modifyhosts-shouldrun">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L64">ShouldRun</a></a></h3>
+<h3 id="func-modifyhosts-shouldrun"><a class="header" href="#func-modifyhosts-shouldrun">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L71">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when this phase is enabled</p>
 <p><a name="ModifyHosts.Title"></a></p>
-<h3 id="func-modifyhosts-title"><a class="header" href="#func-modifyhosts-title">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L40">Title</a></a></h3>
+<h3 id="func-modifyhosts-title"><a class="header" href="#func-modifyhosts-title">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L47">Title</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -1692,7 +1768,7 @@
 }
 </code></pre>
 <p><a name="PhaseResult"></a></p>
-<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L198-L207">PhaseResult</a></a></h2>
+<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L242-L259">PhaseResult</a></a></h2>
 <p>PhaseResult is what a single phase did during a run.</p>
 <pre><code class="language-go">type PhaseResult struct {
     Title       string
@@ -1703,6 +1779,14 @@
     // false because nothing was asked, not because nothing happened.
     Declared bool
     Changed  bool
+    // HostsDeclared is whether the phase implements hostChangedReporter, and stands to Hosts as
+    // Declared stands to Changed.
+    HostsDeclared bool
+    Hosts         []HostChange
+    // Duration is how long the phase's Run -- or its DryRun, under a dry run -- took. It
+    // excludes the phase's Prepare, ShouldRun and in-phase Before/After hooks, so two phases'
+    // durations are comparable to each other rather than to the run's wall clock.
+    Duration time.Duration
 }
 </code></pre>
 <p><a name="Phases"></a></p>
@@ -1731,7 +1815,7 @@
 </code></pre>
 <p>Replace replaces the first occurrence of a phase with the given title</p>
 <p><a name="PrepareFapolicy"></a></p>
-<h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L36">PrepareFapolicy</a></a></h2>
+<h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L40">PrepareFapolicy</a></a></h2>
 <p>PrepareFapolicy installs required packages and so on on the hosts.</p>
 <pre><code class="language-go">type PrepareFapolicy struct {
     GenericPhase
@@ -1739,32 +1823,32 @@
 }
 </code></pre>
 <p><a name="PrepareFapolicy.Explanation"></a></p>
-<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L55">Explanation</a></a></h3>
+<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L59">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareFapolicy.Prepare"></a></p>
-<h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39">Prepare</a></a></h3>
+<h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L43">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareFapolicy.Run"></a></p>
-<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L60">Run</a></a></h3>
+<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L64">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareFapolicy.ShouldRun"></a></p>
-<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L65">ShouldRun</a></a></h3>
+<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L69">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
 <p><a name="PrepareFapolicy.Title"></a></p>
-<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L50">Title</a></a></h3>
+<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L54">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="PrepareHosts"></a></p>
-<h2 id="type-preparehosts"><a class="header" href="#type-preparehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L46-L49">PrepareHosts</a></a></h2>
+<h2 id="type-preparehosts"><a class="header" href="#type-preparehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L46-L53">PrepareHosts</a></a></h2>
 <p>PrepareHosts installs required packages and so on on the hosts.</p>
 <pre><code class="language-go">type PrepareHosts struct {
     GenericPhase
@@ -1772,56 +1856,57 @@
 }
 </code></pre>
 <p><a name="PrepareHosts.Explanation"></a></p>
-<h3 id="func-preparehosts-explanation"><a class="header" href="#func-preparehosts-explanation">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L57">Explanation</a></a></h3>
+<h3 id="func-preparehosts-explanation"><a class="header" href="#func-preparehosts-explanation">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L61">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareHosts.Prepare"></a></p>
-<h3 id="func-preparehosts-prepare"><a class="header" href="#func-preparehosts-prepare">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L62">Prepare</a></a></h3>
+<h3 id="func-preparehosts-prepare"><a class="header" href="#func-preparehosts-prepare">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L66">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareHosts.Run"></a></p>
-<h3 id="func-preparehosts-run"><a class="header" href="#func-preparehosts-run">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L68">Run</a></a></h3>
+<h3 id="func-preparehosts-run"><a class="header" href="#func-preparehosts-run">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L72">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareHosts.Title"></a></p>
-<h3 id="func-preparehosts-title"><a class="header" href="#func-preparehosts-title">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L52">Title</a></a></h3>
+<h3 id="func-preparehosts-title"><a class="header" href="#func-preparehosts-title">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L56">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="PrepareKernelModules"></a></p>
-<h2 id="type-preparekernelmodules"><a class="header" href="#type-preparekernelmodules">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L27-L31">PrepareKernelModules</a></a></h2>
+<h2 id="type-preparekernelmodules"><a class="header" href="#type-preparekernelmodules">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L27-L34">PrepareKernelModules</a></a></h2>
 <p>PrepareKernelModules enables the list of requested modules on the host, then reboots the box if modules are added</p>
 <pre><code class="language-go">type PrepareKernelModules struct {
     GenericPhase
+
     Enabled bool
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="PrepareKernelModules.Explanation"></a></p>
-<h3 id="func-preparekernelmodules-explanation"><a class="header" href="#func-preparekernelmodules-explanation">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L39">Explanation</a></a></h3>
+<h3 id="func-preparekernelmodules-explanation"><a class="header" href="#func-preparekernelmodules-explanation">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L42">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareKernelModules.Prepare"></a></p>
-<h3 id="func-preparekernelmodules-prepare"><a class="header" href="#func-preparekernelmodules-prepare">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L44">Prepare</a></a></h3>
+<h3 id="func-preparekernelmodules-prepare"><a class="header" href="#func-preparekernelmodules-prepare">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L47">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareKernelModules.Run"></a></p>
-<h3 id="func-preparekernelmodules-run"><a class="header" href="#func-preparekernelmodules-run">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L55">Run</a></a></h3>
+<h3 id="func-preparekernelmodules-run"><a class="header" href="#func-preparekernelmodules-run">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L58">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareKernelModules.ShouldRun"></a></p>
-<h3 id="func-preparekernelmodules-shouldrun"><a class="header" href="#func-preparekernelmodules-shouldrun">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L50">ShouldRun</a></a></h3>
+<h3 id="func-preparekernelmodules-shouldrun"><a class="header" href="#func-preparekernelmodules-shouldrun">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L53">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when we need to enable kernel modules</p>
 <p><a name="PrepareKernelModules.Title"></a></p>
-<h3 id="func-preparekernelmodules-title"><a class="header" href="#func-preparekernelmodules-title">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L34">Title</a></a></h3>
+<h3 id="func-preparekernelmodules-title"><a class="header" href="#func-preparekernelmodules-title">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L37">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -1859,7 +1944,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="PrepareSelinuxPolicy"></a></p>
-<h2 id="type-prepareselinuxpolicy"><a class="header" href="#type-prepareselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L76">PrepareSelinuxPolicy</a></a></h2>
+<h2 id="type-prepareselinuxpolicy"><a class="header" href="#type-prepareselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L79">PrepareSelinuxPolicy</a></a></h2>
 <p>PrepareSelinuxPolicy installs the distro-supplied SELinux policy on the hosts.</p>
 <pre><code class="language-go">type PrepareSelinuxPolicy struct {
     GenericPhase
@@ -1867,27 +1952,27 @@
 }
 </code></pre>
 <p><a name="PrepareSelinuxPolicy.Explanation"></a></p>
-<h3 id="func-prepareselinuxpolicy-explanation"><a class="header" href="#func-prepareselinuxpolicy-explanation">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L93">Explanation</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-explanation"><a class="header" href="#func-prepareselinuxpolicy-explanation">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L96">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareSelinuxPolicy.Prepare"></a></p>
-<h3 id="func-prepareselinuxpolicy-prepare"><a class="header" href="#func-prepareselinuxpolicy-prepare">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79">Prepare</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-prepare"><a class="header" href="#func-prepareselinuxpolicy-prepare">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L82">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareSelinuxPolicy.Run"></a></p>
-<h3 id="func-prepareselinuxpolicy-run"><a class="header" href="#func-prepareselinuxpolicy-run">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L98">Run</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-run"><a class="header" href="#func-prepareselinuxpolicy-run">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L101">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareSelinuxPolicy.ShouldRun"></a></p>
-<h3 id="func-prepareselinuxpolicy-shouldrun"><a class="header" href="#func-prepareselinuxpolicy-shouldrun">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L111">ShouldRun</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-shouldrun"><a class="header" href="#func-prepareselinuxpolicy-shouldrun">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L114">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when a host can take a policy and the distro package supplies one</p>
 <p><a name="PrepareSelinuxPolicy.Title"></a></p>
-<h3 id="func-prepareselinuxpolicy-title"><a class="header" href="#func-prepareselinuxpolicy-title">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L88">Title</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-title"><a class="header" href="#func-prepareselinuxpolicy-title">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L91">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -1919,41 +2004,42 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ReconfigureSurvivors"></a></p>
-<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L63">ReconfigureSurvivors</a></a></h2>
+<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L66">ReconfigureSurvivors</a></a></h2>
 <p>ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.</p>
 <p>A controller that is not the first one carries `server:` naming the first, written when it joined. That value is read at startup, so removing the first controller leaves a cluster that keeps working and cannot come back: every survivor names a machine that is gone, and the next restart or reboot of any of them fails to rejoin.</p>
 <p>cargoship apply already fixes this -- it re-elects the first controller from the hosts that are left and rewrites `server:` on the rest -- and the documented procedure is to run one after a removal. The trouble with leaving it there is that a reset reports success having created that state, so the safety of the operation rests on the operator remembering a second command. This phase converges the survivors itself, and says so when it cannot.</p>
 <p>It edits the file in place rather than rendering a fresh one, because a reset loads no package and so has nothing to render from. Only `server:` is touched.</p>
 <pre><code class="language-go">type ReconfigureSurvivors struct {
     GenericPhase
+
     Distro      distrocfg.Distro
     TargetHosts []string
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="ReconfigureSurvivors.Explanation"></a></p>
-<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L71">Explanation</a></a></h3>
+<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L74">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ReconfigureSurvivors.Prepare"></a></p>
-<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L76">Prepare</a></a></h3>
+<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L79">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ReconfigureSurvivors.Run"></a></p>
-<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L109">Run</a></a></h3>
+<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L112">Run</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="ReconfigureSurvivors.ShouldRun"></a></p>
-<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L104">ShouldRun</a></a></h3>
+<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L107">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when the run removed a controller and kept at least one.</p>
 <p>Removing every controller is a whole-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.</p>
 <p><a name="ReconfigureSurvivors.Title"></a></p>
-<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L66">Title</a></a></h3>
+<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L69">Title</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -1991,7 +2077,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ResultSink"></a></p>
-<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L301-L305">ResultSink</a></a></h2>
+<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L445-L449">ResultSink</a></a></h2>
 <p>ResultSink collects the RunResult of every Manager.Run that happens on a context.</p>
 <p>It exists because the Ansible module mode runs cargoship by building an argument vector and calling the ordinary command, which returns an error and nothing else -- see src/cmd.ExecuteArgs. Threading a return value back through cobra, the action and the manager would change five call sites to serve one caller. A sink on the context that nobody else installs does not, and a run with no sink on its context pays nothing for this.</p>
 <pre><code class="language-go">type ResultSink struct {
@@ -1999,22 +2085,22 @@
 }
 </code></pre>
 <p><a name="WithResultSink"></a></p>
-<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L308">WithResultSink</a></a></h3>
+<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L452">WithResultSink</a></a></h3>
 <pre><code class="language-go">func WithResultSink(ctx context.Context) (context.Context, *ResultSink)
 </code></pre>
 <p>WithResultSink returns a context carrying a sink, and the sink itself.</p>
 <p><a name="ResultSink.Observed"></a></p>
-<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L330">Observed</a></a></h3>
+<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L474">Observed</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Observed() bool
 </code></pre>
 <p>Observed reports whether any run reached its phases at all. A command that failed before that -- an unreadable package, a configuration that does not validate -- publishes nothing, and that is a different thing from a run in which no phase changed anything.</p>
 <p><a name="ResultSink.Result"></a></p>
-<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L321">Result</a></a></h3>
+<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L465">Result</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Result() RunResult
 </code></pre>
 <p>Result is every run that reached its phases on this context, flattened into one.</p>
 <p><a name="RunResult"></a></p>
-<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L211-L224">RunResult</a></a></h2>
+<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L263-L276">RunResult</a></a></h2>
 <p>RunResult is what a whole Manager.Run did, phase by phase. Manager.Run fills it in on the way through, so a run that returned an error still carries the phases it got through first.</p>
 <pre><code class="language-go">type RunResult struct {
     // Ran are the phases that executed, in order. That includes the read-only phases a dry run
@@ -2032,22 +2118,39 @@
 }
 </code></pre>
 <p><a name="RunResult.Changed"></a></p>
-<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L228">Changed</a></a></h3>
+<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L280">Changed</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Changed() bool
 </code></pre>
 <p>Changed reports whether any phase said it changed something on the fleet. Phases that declared nothing do not contribute; read Complete to find out whether that leaves the answer partial.</p>
 <p><a name="RunResult.Complete"></a></p>
-<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L267">Complete</a></a></h3>
+<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L319">Complete</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Complete() bool
 </code></pre>
 <p>Complete reports whether every phase the run reached declared whether it changed anything.</p>
+<p><a name="RunResult.HostSummaries"></a></p>
+<h3 id="func-runresult-hostsummaries"><a class="header" href="#func-runresult-hostsummaries">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L385">HostSummaries</a></a></h3>
+<pre><code class="language-go">func (r RunResult) HostSummaries() []HostSummary
+</code></pre>
+<p>HostSummaries rolls the per-host answers up across every phase of the run, in the order the hosts were first named.</p>
+<p>A host appears here only if some phase named it, so this is not a roster of the fleet: a caller wanting every host, including the ones no phase spoke for, is expected to start from the cluster configuration and look each one up.</p>
+<p><a name="RunResult.HostsUndeclared"></a></p>
+<h3 id="func-runresult-hostsundeclared"><a class="header" href="#func-runresult-hostsundeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L355">HostsUndeclared</a></a></h3>
+<pre><code class="language-go">func (r RunResult) HostsUndeclared() []string
+</code></pre>
+<p>HostsUndeclared names the phases that did not say which hosts they changed, in the order the run reached them. It stands to the per-host answer as Undeclared stands to the fleet-wide one: a caller rendering a per-host summary is expected to report these alongside it, because a host missing from the summary may simply never have been spoken for.</p>
 <p><a name="RunResult.Outstanding"></a></p>
-<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L243">Outstanding</a></a></h3>
+<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L295">Outstanding</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Outstanding() bool
 </code></pre>
 <p>Outstanding is the dry-run counterpart of Changed: it reports whether any phase that can report a change was reported rather than run. A phase reaches Planned only after its ShouldRun said there was work to do, so this answers “would a real run change anything” for the phases that have said how to tell.</p>
+<p><a name="RunResult.Signal"></a></p>
+<h3 id="func-runresult-signal"><a class="header" href="#func-runresult-signal">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L344">Signal</a></a></h3>
+<pre><code class="language-go">func (r RunResult) Signal() string
+</code></pre>
+<p>Signal reports how much Changed is worth, as one of SignalComplete or SignalPartial.</p>
+<p>SignalUnknown is deliberately not among the answers. It means no run reached its phases at all, which is a property of the sink rather than of a result -- an empty RunResult and a run in which nothing was declared are the same value here. See ResultSink.Observed.</p>
 <p><a name="RunResult.Undeclared"></a></p>
-<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L254">Undeclared</a></a></h3>
+<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L306">Undeclared</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Undeclared() []string
 </code></pre>
 <p>Undeclared names the phases that did not say whether they changed anything, in the order the run reached them. A caller reporting Changed is expected to report these alongside it.</p>

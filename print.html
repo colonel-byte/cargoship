@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-717151c9.js";
+            window.path_to_searchindex_js = "searchindex-3482cbae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-7fc8444f.js"></script>
+        <script src="toc-ef97ed17.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2552,6 +2552,7 @@ go build -o build/zarf_package_deploy ./cmd/zarf/deploy
 <li><a href="#prepare">cargoship prepare</a>	 - Prepares the nodes, including restarting the node if new kernel modules are enabled</li>
 <li><a href="#publish">cargoship publish</a>	 - Publish the Cargoship Package to an OCI registry</li>
 <li><a href="#pull">cargoship pull</a>	 - Pulls a Cargoship package from a remote registry and saves it to the local filesystem</li>
+<li><a href="#redact-receipt">cargoship redact-receipt</a>	 - Rewrites a run receipt so it can be attached to an issue</li>
 <li><a href="#reset">cargoship reset</a>	 - Reset a cluster, stopping, uninstalling, and removing all data for an engine</li>
 <li><a href="#schema-1">cargoship schema</a>	 - Writes out a JSON Schema for one of cargoship’s own file formats</li>
 <li><a href="#sha256sum">cargoship sha256sum</a>	 - Generates a SHA256SUM for the given file</li>
@@ -2612,6 +2613,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
       --label-nodes                             Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
@@ -2738,6 +2740,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
       --label-nodes                             Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
@@ -2905,6 +2908,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
   -H, --hosts                                   Whether to update every host node's /etc/hosts file.
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
@@ -3037,39 +3041,26 @@ $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --certifi
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="reset"><a href="#reset" class="header">reset</a></h1>
+<h1 id="redact-receipt"><a href="#redact-receipt" class="header">redact-receipt</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-reset"><a class="header" href="#cargoship-reset">cargoship reset</a></h2>
-<p>Reset a cluster, stopping, uninstalling, and removing all data for an engine</p>
+<h2 id="cargoship-redact-receipt"><a class="header" href="#cargoship-redact-receipt">cargoship redact-receipt</a></h2>
+<p>Rewrites a run receipt so it can be attached to an issue</p>
 <h3 id="synopsis-9"><a class="header" href="#synopsis-9">Synopsis</a></h3>
-<p>Removes the engine and the data it wrote from every host the cluster configuration names. Each node is deleted from the cluster, drained first where that is enabled, then the engine’s packages or binaries are uninstalled and the service manager is reloaded.</p>
-<p>This is destructive and it backs nothing up. Nothing a workload kept on a host survives it, and no command puts the cluster back: what follows a reset is an apply, which bootstraps a new one.</p>
-<p>–distro names the engine to remove. A reset loads no package, so it has nothing else to read the engine’s identity from.</p>
-<p>This needs –confirm. Pass –dry-run to report every host it would reset, and what it would do to each, without touching one.</p>
-<pre><code>cargoship reset [flags]
+<p>Reads the run receipt at RECEIPT and writes a copy with everything that identifies the fleet removed, for attaching to a bug report. Hosts are renumbered host-01, host-02 in the order the receipt lists them, consistently across every phase, so it still reads as a sequence of events on particular machines without naming them. Diff bodies are dropped entirely – an engine configuration diff carries join tokens and registry credentials – leaving the file paths and the reasons they changed, which is what a maintainer triages from. The cluster name, the operator, the management node and the command line go with them. What stays is the phase ledger, the package provenance, the outcome, and the architecture and OS of each host. Redaction is one way: the original is left untouched, because it is the audit record and this is only a copy to send.</p>
+<pre><code>cargoship redact-receipt [RECEIPT] [flags]
 </code></pre>
 <h3 id="examples-8"><a class="header" href="#examples-8">Examples</a></h3>
-<pre><code># Reset an RKE2 cluster, uninstalling the engine and removing its data
-$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
+<pre><code>
+# Print a shareable copy of a run receipt
+$ cargoship redact-receipt ./apply-20260928-143000.json
 
-# Reset a K3s cluster
-$ cargoship reset --config ./cargoship-config.yaml --distro k3s --confirm
+# Write one to a file, ready to attach to an issue
+$ cargoship redact-receipt ./apply-20260928-143000.json -o ./share.json
 
-# Reset at most five hosts at a time
-$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --concurrency 5
-
-# Reset workers 25% at a time
-$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --work-concurrency 25%
 </code></pre>
 <h3 id="options-10"><a class="header" href="#options-10">Options</a></h3>
-<pre><code>  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string             Config file used to bootstrap a cluster.
-      --confirm                   Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
-  -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
-      --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -h, --help                      help for reset
-      --target-hosts strings      Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration.
-  -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
+<pre><code>  -h, --help            help for redact-receipt
+  -o, --output string   Write the redacted receipt to this path instead of standard output. The file is created readable only by its owner.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-9"><a class="header" href="#options-inherited-from-parent-commands-9">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
@@ -3082,15 +3073,61 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="reset"><a href="#reset" class="header">reset</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-reset"><a class="header" href="#cargoship-reset">cargoship reset</a></h2>
+<p>Reset a cluster, stopping, uninstalling, and removing all data for an engine</p>
+<h3 id="synopsis-10"><a class="header" href="#synopsis-10">Synopsis</a></h3>
+<p>Removes the engine and the data it wrote from every host the cluster configuration names. Each node is deleted from the cluster, drained first where that is enabled, then the engine’s packages or binaries are uninstalled and the service manager is reloaded.</p>
+<p>This is destructive and it backs nothing up. Nothing a workload kept on a host survives it, and no command puts the cluster back: what follows a reset is an apply, which bootstraps a new one.</p>
+<p>–distro names the engine to remove. A reset loads no package, so it has nothing else to read the engine’s identity from.</p>
+<p>This needs –confirm. Pass –dry-run to report every host it would reset, and what it would do to each, without touching one.</p>
+<pre><code>cargoship reset [flags]
+</code></pre>
+<h3 id="examples-9"><a class="header" href="#examples-9">Examples</a></h3>
+<pre><code># Reset an RKE2 cluster, uninstalling the engine and removing its data
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
+
+# Reset a K3s cluster
+$ cargoship reset --config ./cargoship-config.yaml --distro k3s --confirm
+
+# Reset at most five hosts at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --concurrency 5
+
+# Reset workers 25% at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --work-concurrency 25%
+</code></pre>
+<h3 id="options-11"><a class="header" href="#options-11">Options</a></h3>
+<pre><code>  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string             Config file used to bootstrap a cluster.
+      --confirm                   Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
+  -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
+      --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
+  -h, --help                      help for reset
+      --receipt-path string       Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --target-hosts strings      Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration.
+  -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-10"><a class="header" href="#options-inherited-from-parent-commands-10">Options inherited from parent commands</a></h3>
+<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
+</code></pre>
+<h3 id="see-also-11"><a class="header" href="#see-also-11">SEE ALSO</a></h3>
+<ul>
+<li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="schema-1"><a href="#schema-1" class="header">schema</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-schema"><a class="header" href="#cargoship-schema">cargoship schema</a></h2>
 <p>Writes out a JSON Schema for one of cargoship’s own file formats</p>
-<h3 id="synopsis-10"><a class="header" href="#synopsis-10">Synopsis</a></h3>
+<h3 id="synopsis-11"><a class="header" href="#synopsis-11">Synopsis</a></h3>
 <p>Writes out the JSON Schema for KIND – ‘inventory’ for a cluster file, ‘package’ for a distro.yaml, ‘config’ for a cargoship config file – so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to –output. Point an editor at a written file with a ‘# yaml-language-server: $schema=PATH’ comment on the first line. With –package, the package’s own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship – so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation.</p>
 <pre><code>cargoship schema KIND [flags]
 </code></pre>
-<h3 id="examples-9"><a class="header" href="#examples-9">Examples</a></h3>
+<h3 id="examples-10"><a class="header" href="#examples-10">Examples</a></h3>
 <pre><code># Write the inventory schema next to an inventory file, for an editor to read
 $ cargoship schema inventory -o ./cluster-v1alpha1-schema.json
 
@@ -3108,7 +3145,7 @@ $ cargoship schema inventory --package ./example/rke2-cilium-vsphere/v1_37/v1.37
 $ cargoship schema package -o ./distro.schema.json
 $ cargoship schema config -o ./cargoship.schema.json
 </code></pre>
-<h3 id="options-11"><a class="header" href="#options-11">Options</a></h3>
+<h3 id="options-12"><a class="header" href="#options-12">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
@@ -3127,13 +3164,13 @@ $ cargoship schema config -o ./cargoship.schema.json
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-10"><a class="header" href="#options-inherited-from-parent-commands-10">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-11"><a class="header" href="#options-inherited-from-parent-commands-11">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-11"><a class="header" href="#see-also-11">SEE ALSO</a></h3>
+<h3 id="see-also-12"><a class="header" href="#see-also-12">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -3144,7 +3181,7 @@ $ cargoship schema config -o ./cargoship.schema.json
 <p>Generates a SHA256SUM for the given file</p>
 <pre><code>cargoship sha256sum [ FILE | URL ] [flags]
 </code></pre>
-<h3 id="examples-10"><a class="header" href="#examples-10">Examples</a></h3>
+<h3 id="examples-11"><a class="header" href="#examples-11">Examples</a></h3>
 <pre><code># Checksum a local file
 $ cargoship sha256sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 
@@ -3157,18 +3194,18 @@ $ cargoship sha256sum ./artifact.tar.gz --extract-path ./bin/tool
 # Same thing, using the shorter alias
 $ cargoship sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 </code></pre>
-<h3 id="options-12"><a class="header" href="#options-12">Options</a></h3>
+<h3 id="options-13"><a class="header" href="#options-13">Options</a></h3>
 <pre><code>  -e, --extract-path string   The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")
   -h, --help                  help for sha256sum
       --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-11"><a class="header" href="#options-inherited-from-parent-commands-11">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-12"><a class="header" href="#options-inherited-from-parent-commands-12">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-12"><a class="header" href="#see-also-12">SEE ALSO</a></h3>
+<h3 id="see-also-13"><a class="header" href="#see-also-13">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -3177,11 +3214,11 @@ $ cargoship sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-sign"><a class="header" href="#cargoship-sign">cargoship sign</a></h2>
 <p>Signs an existing Cargoship distro package</p>
-<h3 id="synopsis-11"><a class="header" href="#synopsis-11">Synopsis</a></h3>
+<h3 id="synopsis-12"><a class="header" href="#synopsis-12">Synopsis</a></h3>
 <p>Signs an existing Cargoship distro package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the distro.yaml file and does not modify the package checksums.</p>
 <pre><code>cargoship sign PACKAGE_SOURCE [flags]
 </code></pre>
-<h3 id="examples-11"><a class="header" href="#examples-11">Examples</a></h3>
+<h3 id="examples-12"><a class="header" href="#examples-12">Examples</a></h3>
 <pre><code># Sign an unsigned package
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
 
@@ -3197,7 +3234,7 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./priv
 # Sign with a cloud KMS key
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
 </code></pre>
-<h3 id="options-13"><a class="header" href="#options-13">Options</a></h3>
+<h3 id="options-14"><a class="header" href="#options-14">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
@@ -3230,13 +3267,13 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-12"><a class="header" href="#options-inherited-from-parent-commands-12">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-13"><a class="header" href="#options-inherited-from-parent-commands-13">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-13"><a class="header" href="#see-also-13">SEE ALSO</a></h3>
+<h3 id="see-also-14"><a class="header" href="#see-also-14">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -3245,13 +3282,13 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-validate"><a class="header" href="#cargoship-validate">cargoship validate</a></h2>
 <p>Checks a cluster inventory, package definition, or config file against its schema</p>
-<h3 id="synopsis-12"><a class="header" href="#synopsis-12">Synopsis</a></h3>
+<h3 id="synopsis-13"><a class="header" href="#synopsis-13">Synopsis</a></h3>
 <p>Checks one or more files against the JSON Schema cargoship generates for that file format, reporting every problem rather than the first. Cargoship parses these files without strict key checking, so a misspelled key is dropped rather than reported; this catches that, along with a wrong type and a value outside an enumerated list. The schema is read from the binary, so no network access is needed.</p>
 <p>The schema is chosen from the document’s own ‘kind’ field. A cargoship config file declares no kind and has to be named with –kind.</p>
 <p>spec.config.values is untyped in the inventory schema, because its shape belongs to whichever package is being installed. Pass –package to check it as well.</p>
 <pre><code>cargoship validate FILE... [flags]
 </code></pre>
-<h3 id="examples-12"><a class="header" href="#examples-12">Examples</a></h3>
+<h3 id="examples-13"><a class="header" href="#examples-13">Examples</a></h3>
 <pre><code>
 # Check a cluster inventory against the inventory schema:
 $ cargoship validate ./inventory.yaml
@@ -3266,7 +3303,7 @@ $ cargoship validate --kind config ./cargoship-config.yaml
 $ cargoship validate ./inventory.yaml --package ./package.tar.zst
 
 </code></pre>
-<h3 id="options-14"><a class="header" href="#options-14">Options</a></h3>
+<h3 id="options-15"><a class="header" href="#options-15">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
@@ -3285,13 +3322,13 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-13"><a class="header" href="#options-inherited-from-parent-commands-13">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-14"><a class="header" href="#options-inherited-from-parent-commands-14">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-14"><a class="header" href="#see-also-14">SEE ALSO</a></h3>
+<h3 id="see-also-15"><a class="header" href="#see-also-15">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -3300,18 +3337,18 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault"><a class="header" href="#cargoship-vault">cargoship vault</a></h2>
 <p>Encrypts and decrypts cluster configuration values with Ansible Vault or age</p>
-<h3 id="synopsis-13"><a class="header" href="#synopsis-13">Synopsis</a></h3>
+<h3 id="synopsis-14"><a class="header" href="#synopsis-14">Synopsis</a></h3>
 <p>Groups the commands that read and write encrypted values for a cluster configuration, in either of the two formats cargoship supports: Ansible Vault, keyed by a shared password given via –vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable, and age, keyed by public keys given via –age-recipient and read back with –age-identity-file. Cargoship decrypts a registry’s user/pass/token and tls.ca fields at apply time. Which format a value is in is read from the value itself, so one configuration can hold both, and moving between them is ‘cargoship vault rekey’. The group is still called vault because renaming it would break every script that calls it.</p>
-<h3 id="options-15"><a class="header" href="#options-15">Options</a></h3>
+<h3 id="options-16"><a class="header" href="#options-16">Options</a></h3>
 <pre><code>  -h, --help   help for vault
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-14"><a class="header" href="#options-inherited-from-parent-commands-14">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-15"><a class="header" href="#options-inherited-from-parent-commands-15">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-15"><a class="header" href="#see-also-15">SEE ALSO</a></h3>
+<h3 id="see-also-16"><a class="header" href="#see-also-16">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 <li><a href="#decrypt">cargoship vault decrypt</a>	 - Decrypts an Ansible Vault or age value, printing the plaintext</li>
@@ -3328,11 +3365,11 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-decrypt-file"><a class="header" href="#cargoship-vault-decrypt-file">cargoship vault decrypt-file</a></h2>
 <p>Decrypts every registry credential in a config file, in place</p>
-<h3 id="synopsis-14"><a class="header" href="#synopsis-14">Synopsis</a></h3>
+<h3 id="synopsis-15"><a class="header" href="#synopsis-15">Synopsis</a></h3>
 <p>Decrypts every encrypted registry credential FILE holds – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of ‘cargoship vault encrypt-file’, and leaves the credentials readable to anyone who can read the file.</p>
 <pre><code>cargoship vault decrypt-file FILE [flags]
 </code></pre>
-<h3 id="examples-13"><a class="header" href="#examples-13">Examples</a></h3>
+<h3 id="examples-14"><a class="header" href="#examples-14">Examples</a></h3>
 <pre><code># Decrypt every registry credential in a cluster configuration
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
 
@@ -3349,53 +3386,12 @@ $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.txt
 </code></pre>
-<h3 id="options-16"><a class="header" href="#options-16">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
-      --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
-  -h, --help                              help for decrypt-file
-      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
-</code></pre>
-<h3 id="options-inherited-from-parent-commands-15"><a class="header" href="#options-inherited-from-parent-commands-15">Options inherited from parent commands</a></h3>
-<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
-</code></pre>
-<h3 id="see-also-16"><a class="header" href="#see-also-16">SEE ALSO</a></h3>
-<ul>
-<li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
-</ul>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="decrypt-path"><a href="#decrypt-path" class="header">decrypt-path</a></h1>
-<!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-vault-decrypt-path"><a class="header" href="#cargoship-vault-decrypt-path">cargoship vault decrypt-path</a></h2>
-<p>Decrypts the values a config file holds at one or more YAML paths, in place</p>
-<h3 id="synopsis-15"><a class="header" href="#synopsis-15">Synopsis</a></h3>
-<p>Decrypts the encrypted values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as ‘.spec.config.registries[0].auth.pass’, and the leading ‘$’ go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like – FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of ‘cargoship vault encrypt-path’, and leaves the values readable to anyone who can read the file.</p>
-<pre><code>cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
-</code></pre>
-<h3 id="examples-14"><a class="header" href="#examples-14">Examples</a></h3>
-<pre><code># Put the plaintext password back into a config, in place of the ciphertext
-$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
-
-# Decrypt several values in one pass
-$ cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
-
-# Check that a vaulted value decrypts, without writing the plaintext to disk
-$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run
-
-# Rotate the password a config is vaulted with
-$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
-$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt
-</code></pre>
 <h3 id="options-17"><a class="header" href="#options-17">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
       --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
-  -h, --help                              help for decrypt-path
+  -h, --help                              help for decrypt-file
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-16"><a class="header" href="#options-inherited-from-parent-commands-16">Options inherited from parent commands</a></h3>
@@ -3409,15 +3405,56 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="decrypt-path"><a href="#decrypt-path" class="header">decrypt-path</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-vault-decrypt-path"><a class="header" href="#cargoship-vault-decrypt-path">cargoship vault decrypt-path</a></h2>
+<p>Decrypts the values a config file holds at one or more YAML paths, in place</p>
+<h3 id="synopsis-16"><a class="header" href="#synopsis-16">Synopsis</a></h3>
+<p>Decrypts the encrypted values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as ‘.spec.config.registries[0].auth.pass’, and the leading ‘$’ go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like – FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of ‘cargoship vault encrypt-path’, and leaves the values readable to anyone who can read the file.</p>
+<pre><code>cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
+</code></pre>
+<h3 id="examples-15"><a class="header" href="#examples-15">Examples</a></h3>
+<pre><code># Put the plaintext password back into a config, in place of the ciphertext
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Decrypt several values in one pass
+$ cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
+
+# Check that a vaulted value decrypts, without writing the plaintext to disk
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run
+
+# Rotate the password a config is vaulted with
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt
+</code></pre>
+<h3 id="options-18"><a class="header" href="#options-18">Options</a></h3>
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
+  -h, --help                              help for decrypt-path
+      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-17"><a class="header" href="#options-inherited-from-parent-commands-17">Options inherited from parent commands</a></h3>
+<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
+</code></pre>
+<h3 id="see-also-18"><a class="header" href="#see-also-18">SEE ALSO</a></h3>
+<ul>
+<li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="decrypt"><a href="#decrypt" class="header">decrypt</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-decrypt"><a class="header" href="#cargoship-vault-decrypt">cargoship vault decrypt</a></h2>
 <p>Decrypts an Ansible Vault or age value, printing the plaintext</p>
-<h3 id="synopsis-16"><a class="header" href="#synopsis-16">Synopsis</a></h3>
+<h3 id="synopsis-17"><a class="header" href="#synopsis-17">Synopsis</a></h3>
 <p>Decrypts VALUE, a string produced by ‘cargoship vault encrypt’ in either format, and prints the plaintext to stdout. The format is read from the value itself: a $ANSIBLE_VAULT prefix needs the vault password, an —–BEGIN AGE ENCRYPTED FILE—– prefix needs –age-identity-file. If VALUE is omitted, it is read from stdin, which is the easier way to hand over an age value, since one begins with dashes and is read as a flag when given as an argument; after the flags, ‘–’ works too. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file.</p>
 <pre><code>cargoship vault decrypt [VALUE] [flags]
 </code></pre>
-<h3 id="examples-15"><a class="header" href="#examples-15">Examples</a></h3>
+<h3 id="examples-16"><a class="header" href="#examples-16">Examples</a></h3>
 <pre><code># Decrypt a value copied out of a config file
 $ cargoship vault decrypt '$ANSIBLE_VAULT;1.1;AES256
 3862...' --vault-password-file ./vault-pass.txt
@@ -3437,20 +3474,20 @@ $ cargoship vault decrypt --age-identity-file ./key.txt &lt; ./encrypted-token.t
 # The same value as an argument, with "--" after the flags to end flag parsing
 $ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-token.txt)"
 </code></pre>
-<h3 id="options-18"><a class="header" href="#options-18">Options</a></h3>
+<h3 id="options-19"><a class="header" href="#options-19">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
   -h, --help                              help for decrypt
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-17"><a class="header" href="#options-inherited-from-parent-commands-17">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-18"><a class="header" href="#options-inherited-from-parent-commands-18">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-18"><a class="header" href="#see-also-18">SEE ALSO</a></h3>
+<h3 id="see-also-19"><a class="header" href="#see-also-19">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -3459,11 +3496,11 @@ $ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-to
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-encrypt-file"><a class="header" href="#cargoship-vault-encrypt-file">cargoship vault encrypt-file</a></h2>
 <p>Encrypts every registry credential in a config file, in place</p>
-<h3 id="synopsis-17"><a class="header" href="#synopsis-17">Synopsis</a></h3>
+<h3 id="synopsis-18"><a class="header" href="#synopsis-18">Synopsis</a></h3>
 <p>Encrypts every registry credential FILE holds that cargoship decrypts at apply time – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what ‘cargoship vault rekey’ is for. Every credential skipped for a reason worth knowing about is reported, so a run that changes nothing says which values it left alone and why.</p>
 <pre><code>cargoship vault encrypt-file FILE [flags]
 </code></pre>
-<h3 id="examples-16"><a class="header" href="#examples-16">Examples</a></h3>
+<h3 id="examples-17"><a class="header" href="#examples-17">Examples</a></h3>
 <pre><code># Encrypt every registry credential in a cluster configuration
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
 
@@ -3479,7 +3516,7 @@ $ cargoship vault encrypt-file ./cluster.yaml
 # Encrypt to the SSH keys a team already distributes, using its authorized_keys file as it is
 $ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys
 </code></pre>
-<h3 id="options-19"><a class="header" href="#options-19">Options</a></h3>
+<h3 id="options-20"><a class="header" href="#options-20">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
@@ -3488,13 +3525,13 @@ $ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized
   -h, --help                              help for encrypt-file
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-18"><a class="header" href="#options-inherited-from-parent-commands-18">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-19"><a class="header" href="#options-inherited-from-parent-commands-19">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-19"><a class="header" href="#see-also-19">SEE ALSO</a></h3>
+<h3 id="see-also-20"><a class="header" href="#see-also-20">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -3503,11 +3540,11 @@ $ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-encrypt-path"><a class="header" href="#cargoship-vault-encrypt-path">cargoship vault encrypt-path</a></h2>
 <p>Encrypts the values a config file already holds at one or more YAML paths, in place</p>
-<h3 id="synopsis-18"><a class="header" href="#synopsis-18">Synopsis</a></h3>
+<h3 id="synopsis-19"><a class="header" href="#synopsis-19">Synopsis</a></h3>
 <p>Encrypts the values FILE holds at each YAML_PATH and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as ‘.spec.config.registries[0].auth.pass’, and the leading ‘$’ go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like – FILE is written once, after every one of them has encrypted, so a path that is missing or encrypted already leaves FILE as it was rather than partly rewritten. Cargoship decrypts a registry’s user/pass/token and tls.ca fields at apply time, and warns about a path anywhere else, because nothing unwraps a value encrypted elsewhere.</p>
 <pre><code>cargoship vault encrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
 </code></pre>
-<h3 id="examples-17"><a class="header" href="#examples-17">Examples</a></h3>
+<h3 id="examples-18"><a class="header" href="#examples-18">Examples</a></h3>
 <pre><code># Encrypt the password a config already holds for its first registry
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
 
@@ -3523,7 +3560,7 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.t
 # Encrypt to an age recipient instead of a vault password
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
 </code></pre>
-<h3 id="options-20"><a class="header" href="#options-20">Options</a></h3>
+<h3 id="options-21"><a class="header" href="#options-21">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
@@ -3532,13 +3569,13 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
   -h, --help                              help for encrypt-path
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-19"><a class="header" href="#options-inherited-from-parent-commands-19">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-20"><a class="header" href="#options-inherited-from-parent-commands-20">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-20"><a class="header" href="#see-also-20">SEE ALSO</a></h3>
+<h3 id="see-also-21"><a class="header" href="#see-also-21">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -3547,11 +3584,11 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-encrypt"><a class="header" href="#cargoship-vault-encrypt">cargoship vault encrypt</a></h2>
 <p>Encrypts a value with Ansible Vault or age, for use in a registry’s user/pass/token fields</p>
-<h3 id="synopsis-19"><a class="header" href="#synopsis-19">Synopsis</a></h3>
+<h3 id="synopsis-20"><a class="header" href="#synopsis-20">Synopsis</a></h3>
 <p>Encrypts VALUE, producing a string that cargoship decrypts automatically at apply time when placed in a registry’s user/pass/token field. With –age-recipient or –age-recipients-file the output is armored age ciphertext beginning with —–BEGIN AGE ENCRYPTED FILE—–; otherwise it is Ansible Vault ciphertext beginning with $ANSIBLE_VAULT. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal.</p>
 <pre><code>cargoship vault encrypt [VALUE] [flags]
 </code></pre>
-<h3 id="examples-18"><a class="header" href="#examples-18">Examples</a></h3>
+<h3 id="examples-19"><a class="header" href="#examples-19">Examples</a></h3>
 <pre><code># Encrypt a registry password for a config file's user/pass/token field
 $ cargoship vault encrypt my-registry-password --vault-password-file ./vault-pass.txt
 
@@ -3570,20 +3607,20 @@ $ cargoship vault encrypt my-registry-password --age-recipient age1ql3z7hjy54pw3
 # Encrypt to every key a team keeps in one file, each of whom can decrypt on their own
 $ cargoship vault encrypt my-registry-password --age-recipients-file ./recipients.txt
 </code></pre>
-<h3 id="options-21"><a class="header" href="#options-21">Options</a></h3>
+<h3 id="options-22"><a class="header" href="#options-22">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
   -h, --help                              help for encrypt
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-20"><a class="header" href="#options-inherited-from-parent-commands-20">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-21"><a class="header" href="#options-inherited-from-parent-commands-21">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-21"><a class="header" href="#see-also-21">SEE ALSO</a></h3>
+<h3 id="see-also-22"><a class="header" href="#see-also-22">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -3592,11 +3629,11 @@ $ cargoship vault encrypt my-registry-password --age-recipients-file ./recipient
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-keygen"><a class="header" href="#cargoship-vault-keygen">cargoship vault keygen</a></h2>
 <p>Generates an age key pair, or prints the public key of one you already hold</p>
-<h3 id="synopsis-20"><a class="header" href="#synopsis-20">Synopsis</a></h3>
+<h3 id="synopsis-21"><a class="header" href="#synopsis-21">Synopsis</a></h3>
 <p>Generates an age key pair in the format age-keygen writes, so that the age distribution is not a prerequisite for encrypting a configuration with age, and the file stays readable by ‘age –decrypt’ and anything else that speaks the format. The identity – the private key, AGE-SECRET-KEY-1… – goes to –output, or to stdout when that is omitted; the recipient – the public key, age1… – goes to stderr, so that the file holds the private key alone and the public key can be copied straight into a recipients file. With –public-key it generates nothing and instead prints the public keys held in IDENTITY_FILE, or in stdin when no file is given, which is how a recipient is recovered from a private key you still have. A key pair is not registered anywhere: pass the public key to ‘cargoship vault encrypt’ as –age-recipient, and the file back as –age-identity-file to read those values again.</p>
 <pre><code>cargoship vault keygen [IDENTITY_FILE] [flags]
 </code></pre>
-<h3 id="examples-19"><a class="header" href="#examples-19">Examples</a></h3>
+<h3 id="examples-20"><a class="header" href="#examples-20">Examples</a></h3>
 <pre><code># Generate a key pair, writing the private key to a file and printing the public key
 $ cargoship vault keygen --output ~/.age/cargoship.key
 
@@ -3611,18 +3648,18 @@ $ cargoship vault encrypt-file ./cluster.yaml --age-recipient age1ql3z7hjy54pw3h
 $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargoship.key
 
 </code></pre>
-<h3 id="options-22"><a class="header" href="#options-22">Options</a></h3>
+<h3 id="options-23"><a class="header" href="#options-23">Options</a></h3>
 <pre><code>  -h, --help            help for keygen
   -o, --output string   Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead.
   -y, --public-key      Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given. This reads age identity files; the public key of an SSH key is in the ".pub" file beside it.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-21"><a class="header" href="#options-inherited-from-parent-commands-21">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-22"><a class="header" href="#options-inherited-from-parent-commands-22">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-22"><a class="header" href="#see-also-22">SEE ALSO</a></h3>
+<h3 id="see-also-23"><a class="header" href="#see-also-23">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -3631,11 +3668,11 @@ $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargosh
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-rekey"><a class="header" href="#cargoship-vault-rekey">cargoship vault rekey</a></h2>
 <p>Re-wraps every encrypted registry credential in a config file, optionally under a new key</p>
-<h3 id="synopsis-21"><a class="header" href="#synopsis-21">Synopsis</a></h3>
+<h3 id="synopsis-22"><a class="header" href="#synopsis-22">Synopsis</a></h3>
 <p>Re-wraps every encrypted registry credential FILE holds – each registry’s auth.user, auth.pass, auth.token and tls.ca – under the key named by –new-vault-password-file or by –age-recipient, leaving comments, key order, and the rest of the document untouched. Naming age recipients while reading with the vault password is how a configuration moves from Ansible Vault to age; naming neither re-wraps the values under the key they already carry, which gives every one of them fresh ciphertext without changing the key. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the keys given, and the command stops without touching FILE if one is not, because a configuration encrypted under two keys is one no single key can read back.</p>
 <pre><code>cargoship vault rekey FILE [flags]
 </code></pre>
-<h3 id="examples-20"><a class="header" href="#examples-20">Examples</a></h3>
+<h3 id="examples-21"><a class="header" href="#examples-21">Examples</a></h3>
 <pre><code># Move every encrypted registry credential in a cluster configuration to a new vault password
 $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt
 
@@ -3652,7 +3689,7 @@ $ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt --
 $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recipients-file ./recipients.txt
 
 </code></pre>
-<h3 id="options-23"><a class="header" href="#options-23">Options</a></h3>
+<h3 id="options-24"><a class="header" href="#options-24">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
@@ -3661,13 +3698,13 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
       --new-vault-password-file string    Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the key the file already uses, or pass --age-recipient instead to move the file onto age. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened.
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-22"><a class="header" href="#options-inherited-from-parent-commands-22">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-23"><a class="header" href="#options-inherited-from-parent-commands-23">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-23"><a class="header" href="#see-also-23">SEE ALSO</a></h3>
+<h3 id="see-also-24"><a class="header" href="#see-also-24">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -3676,11 +3713,11 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-verify"><a class="header" href="#cargoship-verify">cargoship verify</a></h2>
 <p>Verifies the signature on a Cargoship distro package</p>
-<h3 id="synopsis-22"><a class="header" href="#synopsis-22">Synopsis</a></h3>
+<h3 id="synopsis-23"><a class="header" href="#synopsis-23">Synopsis</a></h3>
 <p>Verifies the signature on an existing Cargoship distro package. The package can be a local tarball or pulled from an OCI registry. Pass –key to verify against a public key, or the keyless flags to verify a signer identity against a Fulcio root and a transparency log. An unsigned package is reported as a failure. The other commands that load packages verify as part of loading, gated on their –verify flag – this command verifies and nothing else, so it can be run before a play that has no network for the keyless flow.</p>
 <pre><code>cargoship verify PACKAGE_SOURCE [flags]
 </code></pre>
-<h3 id="examples-21"><a class="header" href="#examples-21">Examples</a></h3>
+<h3 id="examples-22"><a class="header" href="#examples-22">Examples</a></h3>
 <pre><code># Verify a signed package against a public key
 $ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --key ./cosign.pub
 
@@ -3693,7 +3730,7 @@ $ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-iden
 # Match the signer identity by pattern instead
 $ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-identity-regexp '.*@example\.com' --certificate-oidc-issuer https://token.actions.githubusercontent.com
 </code></pre>
-<h3 id="options-24"><a class="header" href="#options-24">Options</a></h3>
+<h3 id="options-25"><a class="header" href="#options-25">Options</a></h3>
 <pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
@@ -3706,13 +3743,13 @@ $ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-iden
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-23"><a class="header" href="#options-inherited-from-parent-commands-23">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-24"><a class="header" href="#options-inherited-from-parent-commands-24">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-24"><a class="header" href="#see-also-24">SEE ALSO</a></h3>
+<h3 id="see-also-25"><a class="header" href="#see-also-25">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -3721,11 +3758,11 @@ $ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-iden
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-version"><a class="header" href="#cargoship-version">cargoship version</a></h2>
 <p>Shows the version of the running binary</p>
-<h3 id="synopsis-23"><a class="header" href="#synopsis-23">Synopsis</a></h3>
+<h3 id="synopsis-24"><a class="header" href="#synopsis-24">Synopsis</a></h3>
 <p>Displays the version of the release that the current binary was built from.</p>
 <pre><code>cargoship version [flags]
 </code></pre>
-<h3 id="examples-22"><a class="header" href="#examples-22">Examples</a></h3>
+<h3 id="examples-23"><a class="header" href="#examples-23">Examples</a></h3>
 <pre><code># Print the version of the running binary
 $ cargoship version
 
@@ -3735,17 +3772,17 @@ $ cargoship version --output yaml
 # Print it as JSON, for piping into jq
 $ cargoship version -o json
 </code></pre>
-<h3 id="options-25"><a class="header" href="#options-25">Options</a></h3>
+<h3 id="options-26"><a class="header" href="#options-26">Options</a></h3>
 <pre><code>  -h, --help                  help for version
   -o, --output outputFormat   Output format. Valid options are: yaml, json.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-24"><a class="header" href="#options-inherited-from-parent-commands-24">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-25"><a class="header" href="#options-inherited-from-parent-commands-25">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-25"><a class="header" href="#see-also-25">SEE ALSO</a></h3>
+<h3 id="see-also-26"><a class="header" href="#see-also-26">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -6521,6 +6558,7 @@ $ cargoship version -o json
 <li><a href="#Host.Address">func (h *Host) Address() string</a></li>
 <li><a href="#Host.Arch">func (h *Host) Arch() (string, error)</a></li>
 <li><a href="#Host.CheckHTTPStatus">func (h *Host) CheckHTTPStatus(ctx context.Context, url string, expected …int) error</a></li>
+<li><a href="#Host.ConfiguredAddress">func (h *Host) ConfiguredAddress() string</a></li>
 <li><a href="#Host.Connect">func (h *Host) Connect(ctx context.Context) error</a></li>
 <li><a href="#Host.DeleteFile">func (h *Host) DeleteFile(path string) error</a></li>
 <li><a href="#Host.Dir">func (h *Host) Dir(path string) (string, error)</a></li>
@@ -6785,7 +6823,7 @@ $ cargoship version -o json
 </code></pre>
 <p>Validate returns an error when any rule in the config is unusable.</p>
 <p><a name="FirewallPolicyConfig"></a></p>
-<h2 id="type-firewallpolicyconfig"><a class="header" href="#type-firewallpolicyconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L207-L220">FirewallPolicyConfig</a></a></h2>
+<h2 id="type-firewallpolicyconfig"><a class="header" href="#type-firewallpolicyconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L208-L221">FirewallPolicyConfig</a></a></h2>
 <p>FirewallPolicyConfig configures a firewalld policy that opens ports from one zone to another.</p>
 <pre><code class="language-go">type FirewallPolicyConfig struct {
     // XMLName sets the element name cargoship uses when it marshals this policy to firewalld XML.
@@ -6803,7 +6841,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="FirewallPort"></a></p>
-<h2 id="type-firewallport"><a class="header" href="#type-firewallport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L229-L234">FirewallPort</a></a></h2>
+<h2 id="type-firewallport"><a class="header" href="#type-firewallport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L230-L235">FirewallPort</a></a></h2>
 <p>FirewallPort defines a port allowed through the firewalld policy.</p>
 <pre><code class="language-go">type FirewallPort struct {
     // Protocol is the type of allowed traffic.
@@ -6865,7 +6903,7 @@ $ cargoship version -o json
 </code></pre>
 <p>Validate returns an error when the rule cannot be applied by any backend.</p>
 <p><a name="FirewallZone"></a></p>
-<h2 id="type-firewallzone"><a class="header" href="#type-firewallzone">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L223-L226">FirewallZone</a></a></h2>
+<h2 id="type-firewallzone"><a class="header" href="#type-firewallzone">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L224-L227">FirewallZone</a></a></h2>
 <p>FirewallZone is the name of either the ingress or egress zone for a policy.</p>
 <pre><code class="language-go">type FirewallZone struct {
     // Name identifies the firewalld zone.
@@ -6873,7 +6911,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="Host"></a></p>
-<h2 id="type-host"><a class="header" href="#type-host">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L64-L96">Host</a></a></h2>
+<h2 id="type-host"><a class="header" href="#type-host">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L65-L97">Host</a></a></h2>
 <p>Host is a remote connection to a node</p>
 <pre><code class="language-go">type Host struct {
     // ClientWithConfig embeds rig's client type. It gives Host multi-protocol connectivity to a remote host.
@@ -6907,164 +6945,170 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="Host.Address"></a></p>
-<h3 id="func-host-address"><a class="header" href="#func-host-address">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L546">Address</a></a></h3>
+<h3 id="func-host-address"><a class="header" href="#func-host-address">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L547">Address</a></a></h3>
 <pre><code class="language-go">func (h *Host) Address() string
 </code></pre>
 <p>Address returns the address rig is connected to for this host, or the empty string for a host that has not gone through Setup or Connect yet.</p>
 <p>The promoted rig.Client.Address panics on a host in that state: ClientWithConfig defers creating its embedded *Client until Setup or Connect runs, so a host built directly (as tests do, or as a host removed from the config and never dialed this run) has a nil Client, and Address dereferences it unconditionally.</p>
 <p><a name="Host.Arch"></a></p>
-<h3 id="func-host-arch"><a class="header" href="#func-host-arch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L327">Arch</a></a></h3>
+<h3 id="func-host-arch"><a class="header" href="#func-host-arch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L328">Arch</a></a></h3>
 <pre><code class="language-go">func (h *Host) Arch() (string, error)
 </code></pre>
 <p>Arch returns the host architecture, caching the result in metadata</p>
 <p><a name="Host.CheckHTTPStatus"></a></p>
-<h3 id="func-host-checkhttpstatus"><a class="header" href="#func-host-checkhttpstatus">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L666">CheckHTTPStatus</a></a></h3>
+<h3 id="func-host-checkhttpstatus"><a class="header" href="#func-host-checkhttpstatus">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L692">CheckHTTPStatus</a></a></h3>
 <pre><code class="language-go">func (h *Host) CheckHTTPStatus(ctx context.Context, url string, expected ...int) error
 </code></pre>
 <p>CheckHTTPStatus requests url and returns an error if the response status is not one of expected.</p>
+<p><a name="Host.ConfiguredAddress"></a></p>
+<h3 id="func-host-configuredaddress"><a class="header" href="#func-host-configuredaddress">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568">ConfiguredAddress</a></a></h3>
+<pre><code class="language-go">func (h *Host) ConfiguredAddress() string
+</code></pre>
+<p>ConfiguredAddress is the address the cluster configuration would recognise: what the host block said, with the port when it is not the default.</p>
+<p>It is what to identify a host by in anything written for a person to read back against their own configuration -- a run receipt, a provider attribute, a summary table. Neither of the obvious alternatives works for that. Address reads through the embedded rig client, so it is empty on a host that was never dialed and on one already disconnected, which is exactly the host a failed run most needs to name. String falls back to rig’s CompositeConfig.String, which renders a Go-ish “ssh.Config{127.0.0.1:2223}” -- right for a log line, wrong for something compared against a config file.</p>
 <p><a name="Host.Connect"></a></p>
-<h3 id="func-host-connect"><a class="header" href="#func-host-connect">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L292">Connect</a></a></h3>
+<h3 id="func-host-connect"><a class="header" href="#func-host-connect">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L293">Connect</a></a></h3>
 <pre><code class="language-go">func (h *Host) Connect(ctx context.Context) error
 </code></pre>
 <p>Connect establishes the connection to the host, injecting cargoship’s configured logger so that rig’s internal logging is routed through the same logger as the rest of the run. rig v2 has no global logger setter; the logger is injected per-client via rig.WithLogger, which is only honored at client construction (the first Connect call) or via ClientWithConfig.Connect’s own options -- see riglogger.RigLogger.</p>
 <p><a name="Host.DeleteFile"></a></p>
-<h3 id="func-host-deletefile"><a class="header" href="#func-host-deletefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L349">DeleteFile</a></a></h3>
+<h3 id="func-host-deletefile"><a class="header" href="#func-host-deletefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L350">DeleteFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) DeleteFile(path string) error
 </code></pre>
 <p>DeleteFile removes a file from the host. Always runs with privilege escalation.</p>
 <p><a name="Host.Dir"></a></p>
-<h3 id="func-host-dir"><a class="header" href="#func-host-dir">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L313">Dir</a></a></h3>
+<h3 id="func-host-dir"><a class="header" href="#func-host-dir">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L314">Dir</a></a></h3>
 <pre><code class="language-go">func (h *Host) Dir(path string) (string, error)
 </code></pre>
 <p>Dir returns the directory name for the given path using the remote filesystem.</p>
 <p><a name="Host.EnableService"></a></p>
-<h3 id="func-host-enableservice"><a class="header" href="#func-host-enableservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L513">EnableService</a></a></h3>
+<h3 id="func-host-enableservice"><a class="header" href="#func-host-enableservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L514">EnableService</a></a></h3>
 <pre><code class="language-go">func (h *Host) EnableService(ctx context.Context, name string) error
 </code></pre>
 <p>EnableService enables the named service on the host.</p>
 <p><a name="Host.Exec"></a></p>
-<h3 id="func-host-exec"><a class="header" href="#func-host-exec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L421">Exec</a></a></h3>
+<h3 id="func-host-exec"><a class="header" href="#func-host-exec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L422">Exec</a></a></h3>
 <pre><code class="language-go">func (h *Host) Exec(command string, opts ...cmd.ExecOption) error
 </code></pre>
 <p>Exec runs a command on the host. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.</p>
 <p><a name="Host.ExecOutput"></a></p>
-<h3 id="func-host-execoutput"><a class="header" href="#func-host-execoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L430">ExecOutput</a></a></h3>
+<h3 id="func-host-execoutput"><a class="header" href="#func-host-execoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L431">ExecOutput</a></a></h3>
 <pre><code class="language-go">func (h *Host) ExecOutput(command string, opts ...cmd.ExecOption) (string, error)
 </code></pre>
 <p>ExecOutput runs a command on the host and returns its output. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.</p>
 <p><a name="Host.FS"></a></p>
-<h3 id="func-host-fs"><a class="header" href="#func-host-fs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L397">FS</a></a></h3>
+<h3 id="func-host-fs"><a class="header" href="#func-host-fs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L398">FS</a></a></h3>
 <pre><code class="language-go">func (h *Host) FS() remotefs.FS
 </code></pre>
 <p>FS returns the host’s filesystem. It shadows the promoted rig client method so that a host with a substituted filesystem uses that one, and an unconnected host returns a filesystem that fails rather than one that panics.</p>
 <p><a name="Host.FileChanged"></a></p>
-<h3 id="func-host-filechanged"><a class="header" href="#func-host-filechanged">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L598">FileChanged</a></a></h3>
+<h3 id="func-host-filechanged"><a class="header" href="#func-host-filechanged">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L624">FileChanged</a></a></h3>
 <pre><code class="language-go">func (h *Host) FileChanged(lpath, rpath string) bool
 </code></pre>
 <p>FileChanged compares the local file at lpath to the remote file at rpath by sha256 checksum. It returns true if the checksums differ or if either checksum cannot be computed.</p>
 <p><a name="Host.FileExist"></a></p>
-<h3 id="func-host-fileexist"><a class="header" href="#func-host-fileexist">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L661">FileExist</a></a></h3>
+<h3 id="func-host-fileexist"><a class="header" href="#func-host-fileexist">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L687">FileExist</a></a></h3>
 <pre><code class="language-go">func (h *Host) FileExist(path string) bool
 </code></pre>
 <p>FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the behavior of the v0.x Configurer.FileExist implementation this replaces.</p>
 <p><a name="Host.IsController"></a></p>
-<h3 id="func-host-iscontroller"><a class="header" href="#func-host-iscontroller">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L535">IsController</a></a></h3>
+<h3 id="func-host-iscontroller"><a class="header" href="#func-host-iscontroller">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L536">IsController</a></a></h3>
 <pre><code class="language-go">func (h *Host) IsController() bool
 </code></pre>
 <p>IsController returns true for the controller, controller+worker, and single roles.</p>
 <p><a name="Host.KubeRole"></a></p>
-<h3 id="func-host-kuberole"><a class="header" href="#func-host-kuberole">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L525">KubeRole</a></a></h3>
+<h3 id="func-host-kuberole"><a class="header" href="#func-host-kuberole">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L526">KubeRole</a></a></h3>
 <pre><code class="language-go">func (h *Host) KubeRole() string
 </code></pre>
 <p>KubeRole returns the Kubernetes role for this host. It maps controller+worker and single to controller.</p>
 <p><a name="Host.OSKind"></a></p>
-<h3 id="func-host-oskind"><a class="header" href="#func-host-oskind">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L318">OSKind</a></a></h3>
+<h3 id="func-host-oskind"><a class="header" href="#func-host-oskind">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L319">OSKind</a></a></h3>
 <pre><code class="language-go">func (h *Host) OSKind() (string, error)
 </code></pre>
 <p>OSKind returns the host OS kind via the resolved configurer.</p>
 <p><a name="Host.ReadFile"></a></p>
-<h3 id="func-host-readfile"><a class="header" href="#func-host-readfile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L645">ReadFile</a></a></h3>
+<h3 id="func-host-readfile"><a class="header" href="#func-host-readfile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L671">ReadFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) ReadFile(path string) (string, error)
 </code></pre>
 <p>ReadFile returns the contents of path on the host, or an error if the file does not exist. Always runs with privilege escalation.</p>
 <p><a name="Host.ResolveConfigurer"></a></p>
-<h3 id="func-host-resolveconfigurer"><a class="header" href="#func-host-resolveconfigurer">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L572">ResolveConfigurer</a></a></h3>
+<h3 id="func-host-resolveconfigurer"><a class="header" href="#func-host-resolveconfigurer">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L598">ResolveConfigurer</a></a></h3>
 <pre><code class="language-go">func (h *Host) ResolveConfigurer() error
 </code></pre>
 <p>ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.</p>
 <p><a name="Host.RestartService"></a></p>
-<h3 id="func-host-restartservice"><a class="header" href="#func-host-restartservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L501">RestartService</a></a></h3>
+<h3 id="func-host-restartservice"><a class="header" href="#func-host-restartservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L502">RestartService</a></a></h3>
 <pre><code class="language-go">func (h *Host) RestartService(ctx context.Context, name string) error
 </code></pre>
 <p>RestartService restarts the named service on the host.</p>
 <p><a name="Host.ServiceIsRunning"></a></p>
-<h3 id="func-host-serviceisrunning"><a class="header" href="#func-host-serviceisrunning">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L465">ServiceIsRunning</a></a></h3>
+<h3 id="func-host-serviceisrunning"><a class="header" href="#func-host-serviceisrunning">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L466">ServiceIsRunning</a></a></h3>
 <pre><code class="language-go">func (h *Host) ServiceIsRunning(ctx context.Context, name string) bool
 </code></pre>
 <p>ServiceIsRunning returns true if the named service is running on the host.</p>
 <p><a name="Host.ServiceName"></a></p>
-<h3 id="func-host-servicename"><a class="header" href="#func-host-servicename">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L554">ServiceName</a></a></h3>
+<h3 id="func-host-servicename"><a class="header" href="#func-host-servicename">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L580">ServiceName</a></a></h3>
 <pre><code class="language-go">func (h *Host) ServiceName() string
 </code></pre>
 <p>ServiceName returns the name of the distro service that runs on this host.</p>
 <p><a name="Host.SetFS"></a></p>
-<h3 id="func-host-setfs"><a class="header" href="#func-host-setfs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L370">SetFS</a></a></h3>
+<h3 id="func-host-setfs"><a class="header" href="#func-host-setfs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L371">SetFS</a></a></h3>
 <pre><code class="language-go">func (h *Host) SetFS(fs remotefs.FS)
 </code></pre>
 <p>SetFS substitutes the filesystem this host’s file operations act through, in place of the one its rig connection provides.</p>
 <p><a name="Host.SetServices"></a></p>
-<h3 id="func-host-setservices"><a class="header" href="#func-host-setservices">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L376">SetServices</a></a></h3>
+<h3 id="func-host-setservices"><a class="header" href="#func-host-setservices">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L377">SetServices</a></a></h3>
 <pre><code class="language-go">func (h *Host) SetServices(services HostServices)
 </code></pre>
 <p>SetServices substitutes the init system this host’s service operations act through, in place of the one its rig connection provides.</p>
 <p><a name="Host.StartService"></a></p>
-<h3 id="func-host-startservice"><a class="header" href="#func-host-startservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L477">StartService</a></a></h3>
+<h3 id="func-host-startservice"><a class="header" href="#func-host-startservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L478">StartService</a></a></h3>
 <pre><code class="language-go">func (h *Host) StartService(ctx context.Context, name string) error
 </code></pre>
 <p>StartService starts the named service on the host.</p>
 <p><a name="Host.Stat"></a></p>
-<h3 id="func-host-stat"><a class="header" href="#func-host-stat">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L655">Stat</a></a></h3>
+<h3 id="func-host-stat"><a class="header" href="#func-host-stat">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L681">Stat</a></a></h3>
 <pre><code class="language-go">func (h *Host) Stat(path string) (fs.FileInfo, error)
 </code></pre>
 <p>Stat returns file information for path on the host. Always runs with privilege escalation, matching the rest of this host’s file operations.</p>
 <p><a name="Host.StopService"></a></p>
-<h3 id="func-host-stopservice"><a class="header" href="#func-host-stopservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L489">StopService</a></a></h3>
+<h3 id="func-host-stopservice"><a class="header" href="#func-host-stopservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L490">StopService</a></a></h3>
 <pre><code class="language-go">func (h *Host) StopService(ctx context.Context, name string) error
 </code></pre>
 <p>StopService stops the named service on the host.</p>
 <p><a name="Host.String"></a></p>
-<h3 id="func-host-string"><a class="header" href="#func-host-string">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L297">String</a></a></h3>
+<h3 id="func-host-string"><a class="header" href="#func-host-string">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L298">String</a></a></h3>
 <pre><code class="language-go">func (h *Host) String() string
 </code></pre>
 <p>String returns the connection string. Safe to call before Connect.</p>
 <p><a name="Host.SudoExec"></a></p>
-<h3 id="func-host-sudoexec"><a class="header" href="#func-host-sudoexec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L439">SudoExec</a></a></h3>
+<h3 id="func-host-sudoexec"><a class="header" href="#func-host-sudoexec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L440">SudoExec</a></a></h3>
 <pre><code class="language-go">func (h *Host) SudoExec(command string, opts ...cmd.ExecOption) error
 </code></pre>
 <p>SudoExec runs a command on the host with privilege escalation. Like Exec, it returns an error rather than panicking on a host that was never connected.</p>
 <p><a name="Host.SudoExecOutput"></a></p>
-<h3 id="func-host-sudoexecoutput"><a class="header" href="#func-host-sudoexecoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L448">SudoExecOutput</a></a></h3>
+<h3 id="func-host-sudoexecoutput"><a class="header" href="#func-host-sudoexecoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L449">SudoExecOutput</a></a></h3>
 <pre><code class="language-go">func (h *Host) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, error)
 </code></pre>
 <p>SudoExecOutput runs a command on the host with privilege escalation and returns its output. Like ExecOutput, it returns an error rather than panicking on a host that was never connected.</p>
 <p><a name="Host.Touch"></a></p>
-<h3 id="func-host-touch"><a class="header" href="#func-host-touch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L344">Touch</a></a></h3>
+<h3 id="func-host-touch"><a class="header" href="#func-host-touch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L345">Touch</a></a></h3>
 <pre><code class="language-go">func (h *Host) Touch(path string, modTime time.Time) error
 </code></pre>
 <p>Touch updates file modification timestamps, creating the file if needed. Always runs with privilege escalation.</p>
 <p><a name="Host.UnmarshalYAML"></a></p>
-<h3 id="func-host-unmarshalyaml"><a class="header" href="#func-host-unmarshalyaml">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L108">UnmarshalYAML</a></a></h3>
+<h3 id="func-host-unmarshalyaml"><a class="header" href="#func-host-unmarshalyaml">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L109">UnmarshalYAML</a></a></h3>
 <pre><code class="language-go">func (h *Host) UnmarshalYAML(unmarshal func(any) error) error
 </code></pre>
 <p>UnmarshalYAML decodes a host document into both Host’s own fields and the embedded rig client’s connection configuration.</p>
 <p>rig.ClientWithConfig implements UnmarshalYAML itself, and since it is embedded anonymously that method is promoted onto *Host. Left alone, goccy/go-yaml would treat *Host as an InterfaceUnmarshaler and call the promoted method for the whole host document -- which decodes only ClientWithConfig’s own fields and silently leaves every field Host declares (Hostname, Role, Profile, …) zeroed. Decoding into a shadow type with no embedded ClientWithConfig avoids triggering that promoted method, and a second explicit decode through ClientWithConfig’s own UnmarshalYAML fills in the connection config the same way it always did.</p>
 <p><a name="Host.WriteFile"></a></p>
-<h3 id="func-host-writefile"><a class="header" href="#func-host-writefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L636">WriteFile</a></a></h3>
+<h3 id="func-host-writefile"><a class="header" href="#func-host-writefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L662">WriteFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) WriteFile(path string, data string, permissions string) error
 </code></pre>
 <p>WriteFile writes data to path on the host. Do not use this for large files. Always runs with privilege escalation.</p>
 <p><a name="HostConfig"></a></p>
-<h2 id="type-hostconfig"><a class="header" href="#type-hostconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L144-L153">HostConfig</a></a></h2>
+<h2 id="type-hostconfig"><a class="header" href="#type-hostconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L145-L154">HostConfig</a></a></h2>
 <p>HostConfig defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.</p>
 <pre><code class="language-go">type HostConfig struct {
     // Firewall holds the backend-neutral firewall rules cargoship renders onto whichever
@@ -7078,12 +7122,12 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="HostConfig.Merge"></a></p>
-<h3 id="func-hostconfig-merge"><a class="header" href="#func-hostconfig-merge">func (*HostConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L157">Merge</a></a></h3>
+<h3 id="func-hostconfig-merge"><a class="header" href="#func-hostconfig-merge">func (*HostConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L158">Merge</a></a></h3>
 <pre><code class="language-go">func (c *HostConfig) Merge(update HostConfig)
 </code></pre>
 <p>Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c, and unions update’s firewall rules into c’s.</p>
 <p><a name="HostEngine"></a></p>
-<h2 id="type-hostengine"><a class="header" href="#type-hostengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L175-L180">HostEngine</a></a></h2>
+<h2 id="type-hostengine"><a class="header" href="#type-hostengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L176-L181">HostEngine</a></a></h2>
 <p>HostEngine defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.</p>
 <pre><code class="language-go">type HostEngine struct {
     // NodeLabels maps Kubernetes node label keys to their values.
@@ -7093,7 +7137,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="HostEngine.Merge"></a></p>
-<h3 id="func-hostengine-merge"><a class="header" href="#func-hostengine-merge">func (*HostEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L183">Merge</a></a></h3>
+<h3 id="func-hostengine-merge"><a class="header" href="#func-hostengine-merge">func (*HostEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L184">Merge</a></a></h3>
 <pre><code class="language-go">func (c *HostEngine) Merge(update HostEngine)
 </code></pre>
 <p>Merge copies NodeLabels and NodeTaints from update into c, for whichever of those fields are empty in c.</p>
@@ -7108,7 +7152,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="HostMetadata"></a></p>
-<h2 id="type-hostmetadata"><a class="header" href="#type-hostmetadata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L237-L270">HostMetadata</a></a></h2>
+<h2 id="type-hostmetadata"><a class="header" href="#type-hostmetadata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L238-L271">HostMetadata</a></a></h2>
 <p>HostMetadata holds values cargoship discovers about a host at runtime.</p>
 <pre><code class="language-go">type HostMetadata struct {
     // Arch is the CPU architecture detected on the host.
@@ -7146,7 +7190,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="HostPort"></a></p>
-<h2 id="type-hostport"><a class="header" href="#type-hostport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L199-L204">HostPort</a></a></h2>
+<h2 id="type-hostport"><a class="header" href="#type-hostport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L200-L205">HostPort</a></a></h2>
 <p>HostPort is a port cargoship opens on the public side of the firewall.</p>
 <pre><code class="language-go">type HostPort struct {
     // Protocol is the type of allowed traffic.
@@ -7156,7 +7200,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="HostServices"></a></p>
-<h2 id="type-hostservices"><a class="header" href="#type-hostservices">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L360-L366">HostServices</a></a></h2>
+<h2 id="type-hostservices"><a class="header" href="#type-hostservices">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L361-L367">HostServices</a></a></h2>
 <p>HostServices is the init system surface a host exposes. A real host satisfies it through its rig connection; SetServices substitutes another implementation, which is how the distro modules and phases are exercised without a machine to run against.</p>
 <pre><code class="language-go">type HostServices interface {
     ServiceIsRunning(ctx context.Context, name string) bool
@@ -11899,6 +11943,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#EngineConfigSyncHosts">type EngineConfigSyncHosts</a>
 <ul>
 <li><a href="#EngineConfigSyncHosts.Changed">func (p *EngineConfigSyncHosts) Changed() bool</a></li>
+<li><a href="#EngineConfigSyncHosts.HostsChanged">func (p *EngineConfigSyncHosts) HostsChanged() []HostChange</a></li>
 <li><a href="#EngineConfigSyncHosts.ShouldRun">func (p *EngineConfigSyncHosts) ShouldRun() bool</a></li>
 </ul>
 </li>
@@ -11939,6 +11984,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
 </ul>
 </li>
+<li><a href="#HostChange">type HostChange</a></li>
+<li><a href="#HostChangeDetail">type HostChangeDetail</a></li>
+<li><a href="#HostSummary">type HostSummary</a></li>
 <li><a href="#ImportImages">type ImportImages</a>
 <ul>
 <li><a href="#ImportImages.Explanation">func (p *ImportImages) Explanation() string</a></li>
@@ -12115,7 +12163,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <ul>
 <li><a href="#RunResult.Changed">func (r RunResult) Changed() bool</a></li>
 <li><a href="#RunResult.Complete">func (r RunResult) Complete() bool</a></li>
+<li><a href="#RunResult.HostSummaries">func (r RunResult) HostSummaries() []HostSummary</a></li>
+<li><a href="#RunResult.HostsUndeclared">func (r RunResult) HostsUndeclared() []string</a></li>
 <li><a href="#RunResult.Outstanding">func (r RunResult) Outstanding() bool</a></li>
+<li><a href="#RunResult.Signal">func (r RunResult) Signal() string</a></li>
 <li><a href="#RunResult.Undeclared">func (r RunResult) Undeclared() []string</a></li>
 </ul>
 </li>
@@ -12183,6 +12234,19 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 </ul>
 <h2 id="constants-11"><a class="header" href="#constants-11">Constants</a></h2>
+<p><a name="SignalUnknown"></a>Changed signal values, naming how much a reported Changed is worth.</p>
+<p>They live here rather than with any one caller because more than one reports them: the Ansible module’s changedSignal and the CLI run receipt are the same claim about the same RunResult, and a second copy of the vocabulary is a second thing to keep in step.</p>
+<pre><code class="language-go">const (
+    // SignalUnknown means no phase reported whether it changed anything, so the changed answer
+    // beside it is a convention rather than an observation.
+    SignalUnknown = "unknown"
+    // SignalPartial means some phases reported and some did not. The ones that did not are
+    // named by Undeclared.
+    SignalPartial = "partial"
+    // SignalComplete means every phase the run reached reported whether it changed anything.
+    SignalComplete = "complete"
+)
+</code></pre>
 <p><a name="FAPolicydRuleFile"></a></p>
 <pre><code class="language-go">const (
     // FAPolicydRuleFile path on the host
@@ -12278,7 +12342,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>DryRunNote returns the phase’s own account of why a dry run runs it, or “” for a phase that gives none. Only read-only phases carry one: they are the phases a dry run runs against live hosts, so they are the ones a reader is entitled to an argument about.</p>
 <p><a name="Titles"></a></p>
-<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L273">Titles</a></a></h2>
+<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L417">Titles</a></a></h2>
 <pre><code class="language-go">func Titles(results []PhaseResult) []string
 </code></pre>
 <p>Titles names the phases in a slice, for a caller that reports a list of names rather than the detail behind them.</p>
@@ -12735,7 +12799,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="EngineConfigSyncHosts"></a></p>
-<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L64">EngineConfigSyncHosts</a></a></h2>
+<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L68">EngineConfigSyncHosts</a></a></h2>
 <p>EngineConfigSyncHosts phase state</p>
 <pre><code class="language-go">type EngineConfigSyncHosts struct {
     GenericPhase
@@ -12746,13 +12810,20 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="EngineConfigSyncHosts.Changed"></a></p>
-<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L81">Changed</a></a></h3>
+<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L163">Changed</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) Changed() bool
 </code></pre>
 <p>Changed reports whether this phase altered any host, which is what Ansible’s changed is built from. See changedReporter in 05_manager.go.</p>
 <p>There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.</p>
+<p><a name="EngineConfigSyncHosts.HostsChanged"></a></p>
+<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L132">HostsChanged</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
+</code></pre>
+<p>HostsChanged reports what this phase did to each host it looked at. See hostChangedReporter in 05_manager.go.</p>
+<p>Every host Prepare checked is reported, including the ones that turned out to be in sync. A host that was checked and found correct is a different answer from a host nothing looked at, and only one of them means the fleet was fully assessed.</p>
+<p>The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.</p>
 <p><a name="EngineConfigSyncHosts.ShouldRun"></a></p>
-<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L88">ShouldRun</a></a></h3>
+<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L170">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are hosts to sync</p>
@@ -12897,6 +12968,54 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
 </code></pre>
 <p>Wet is a shorthand for manager.Wet</p>
+<p><a name="HostChange"></a></p>
+<h2 id="type-hostchange"><a class="header" href="#type-hostchange">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L212-L222">HostChange</a></a></h2>
+<p>HostChange is what one phase did to one host.</p>
+<pre><code class="language-go">type HostChange struct {
+    // Host identifies the host as the cluster configuration would: the address from its host
+    // block, with the port when it is not the default. A hostname is not enough on its own,
+    // because Host.Hostname is an optional override that is empty on most hosts.
+    Host    string
+    Changed bool
+    // Details names what moved on this host, one entry per file or setting. It is empty when
+    // the phase knows the host changed but not what in it, which is a weaker answer than a
+    // populated list rather than a claim that nothing in particular happened.
+    Details []HostChangeDetail
+}
+</code></pre>
+<p><a name="HostChangeDetail"></a></p>
+<h2 id="type-hostchangedetail"><a class="header" href="#type-hostchangedetail">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L225-L239">HostChangeDetail</a></a></h2>
+<p>HostChangeDetail is one thing a phase did to one host.</p>
+<pre><code class="language-go">type HostChangeDetail struct {
+    // Path is the file this is about, absolute as the host sees it.
+    Path string
+    // Reason is why the phase touched it, in the vocabulary the phases already log: "missing",
+    // "out of sync", "wrong mode", "stale".
+    Reason string
+    // Diff is a unified diff of the change. It is empty when the phase never read the prior
+    // content -- several phases compare by checksum or write unconditionally, and an empty Diff
+    // says the content was not compared rather than that it did not differ.
+    //
+    // It can carry anything the file carried, which for an engine configuration includes join
+    // tokens and registry credentials. Anything rendering a receipt outside the management node
+    // is expected to drop it.
+    Diff string
+}
+</code></pre>
+<p><a name="HostSummary"></a></p>
+<h2 id="type-hostsummary"><a class="header" href="#type-hostsummary">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L368-L377">HostSummary</a></a></h2>
+<p>HostSummary is one host’s line in a run summary.</p>
+<pre><code class="language-go">type HostSummary struct {
+    Host    string
+    Changed bool
+    // Named is how many phases named this host, and Reporting how many declared per host at
+    // all. They are reported as a pair because Named alone cannot be read: a host named by two
+    // of two reporting phases has been fully accounted for, and a host named by two of fifteen
+    // has not, and the two look identical without the denominator.
+    Named     int
+    Reporting int
+}
+</code></pre>
 <p><a name="ImportImages"></a></p>
 <h2 id="type-importimages"><a class="header" href="#type-importimages">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L29-L34">ImportImages</a></a></h2>
 <p>ImportImages imports uploaded image tarballs into a distro’s engine, for a distro whose engine does not do this on its own. rke2 and k3s’s own agents import automatically, so most applies skip this phase entirely -- ShouldRun is false unless the distro opts in.</p>
@@ -13137,7 +13256,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>UnlockPhase returns an unlock phase for this lock phase</p>
 <p><a name="Manager"></a></p>
-<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L377-L398">Manager</a></a></h2>
+<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L538-L559">Manager</a></a></h2>
 <p>Manager executes phases to construct the cluster</p>
 <pre><code class="language-go">type Manager struct {
     Config *cluster.Cluster
@@ -13163,47 +13282,47 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="NewManager"></a></p>
-<h3 id="func-newmanager"><a class="header" href="#func-newmanager">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L411">NewManager</a></a></h3>
+<h3 id="func-newmanager"><a class="header" href="#func-newmanager">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L572">NewManager</a></a></h3>
 <pre><code class="language-go">func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)
 </code></pre>
 <p>NewManager creates a new Manager</p>
 <p><a name="Manager.AddPhase"></a></p>
-<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L423">AddPhase</a></a></h3>
+<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L584">AddPhase</a></a></h3>
 <pre><code class="language-go">func (m *Manager) AddPhase(p ...Phase)
 </code></pre>
 <p>AddPhase adds a Phase to Manager</p>
 <p><a name="Manager.GetDistroOSFiles"></a></p>
-<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L446">GetDistroOSFiles</a></a></h3>
+<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L607">GetDistroOSFiles</a></a></h3>
 <pre><code class="language-go">func (m *Manager) GetDistroOSFiles() v1alpha1.Files
 </code></pre>
 <p>GetDistroOSFiles returns the ZarfFiles for a distro</p>
 <p><a name="Manager.RetryTimeout"></a></p>
-<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L438">RetryTimeout</a></a></h3>
+<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L599">RetryTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error
 </code></pre>
 <p>RetryTimeout wraps retry Timeout logic</p>
 <p><a name="Manager.Run"></a></p>
-<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L471">Run</a></a></h3>
+<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L632">Run</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Run(ctx context.Context) error
 </code></pre>
 <p>Run executes all the added Phases in order</p>
 <p><a name="Manager.SetPhases"></a></p>
-<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L428">SetPhases</a></a></h3>
+<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L589">SetPhases</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetPhases(p Phases)
 </code></pre>
 <p>SetPhases sets the list of phases</p>
 <p><a name="Manager.SetTimeout"></a></p>
-<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433">SetTimeout</a></a></h3>
+<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L594">SetTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetTimeout(tm time.Duration)
 </code></pre>
 <p>SetTimeout sets the timeout for the manager</p>
 <p><a name="Manager.Wet"></a></p>
-<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L455">Wet</a></a></h3>
+<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L616">Wet</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
 </code></pre>
 <p>Wet runs the first given function when not in dry-run mode. The second function will be run when in dry-mode and the message will be displayed. Any error returned from the functions will be returned and will halt the operation.</p>
 <p><a name="ManagerDistroConfig"></a></p>
-<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L401-L408">ManagerDistroConfig</a></a></h2>
+<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L562-L569">ManagerDistroConfig</a></a></h2>
 <p>ManagerDistroConfig stores some values for manager distro config</p>
 <pre><code class="language-go">type ManagerDistroConfig struct {
     BinaryDir string
@@ -13230,36 +13349,37 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>ParseManifest reads manifest file content back into entries. Malformed lines are skipped.</p>
 <p><a name="ModifyHosts"></a></p>
-<h2 id="type-modifyhosts"><a class="header" href="#type-modifyhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L33-L37">ModifyHosts</a></a></h2>
+<h2 id="type-modifyhosts"><a class="header" href="#type-modifyhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L37-L44">ModifyHosts</a></a></h2>
 <p>ModifyHosts state</p>
 <pre><code class="language-go">type ModifyHosts struct {
     GenericPhase
+
     Enabled bool
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="ModifyHosts.Explanation"></a></p>
-<h3 id="func-modifyhosts-explanation"><a class="header" href="#func-modifyhosts-explanation">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L45">Explanation</a></a></h3>
+<h3 id="func-modifyhosts-explanation"><a class="header" href="#func-modifyhosts-explanation">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L52">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ModifyHosts.Prepare"></a></p>
-<h3 id="func-modifyhosts-prepare"><a class="header" href="#func-modifyhosts-prepare">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L50">Prepare</a></a></h3>
+<h3 id="func-modifyhosts-prepare"><a class="header" href="#func-modifyhosts-prepare">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L57">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ModifyHosts.Run"></a></p>
-<h3 id="func-modifyhosts-run"><a class="header" href="#func-modifyhosts-run">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L69">Run</a></a></h3>
+<h3 id="func-modifyhosts-run"><a class="header" href="#func-modifyhosts-run">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L76">Run</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="ModifyHosts.ShouldRun"></a></p>
-<h3 id="func-modifyhosts-shouldrun"><a class="header" href="#func-modifyhosts-shouldrun">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L64">ShouldRun</a></a></h3>
+<h3 id="func-modifyhosts-shouldrun"><a class="header" href="#func-modifyhosts-shouldrun">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L71">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when this phase is enabled</p>
 <p><a name="ModifyHosts.Title"></a></p>
-<h3 id="func-modifyhosts-title"><a class="header" href="#func-modifyhosts-title">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L40">Title</a></a></h3>
+<h3 id="func-modifyhosts-title"><a class="header" href="#func-modifyhosts-title">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L47">Title</a></a></h3>
 <pre><code class="language-go">func (p *ModifyHosts) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13273,7 +13393,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PhaseResult"></a></p>
-<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L198-L207">PhaseResult</a></a></h2>
+<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L242-L259">PhaseResult</a></a></h2>
 <p>PhaseResult is what a single phase did during a run.</p>
 <pre><code class="language-go">type PhaseResult struct {
     Title       string
@@ -13284,6 +13404,14 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // false because nothing was asked, not because nothing happened.
     Declared bool
     Changed  bool
+    // HostsDeclared is whether the phase implements hostChangedReporter, and stands to Hosts as
+    // Declared stands to Changed.
+    HostsDeclared bool
+    Hosts         []HostChange
+    // Duration is how long the phase's Run -- or its DryRun, under a dry run -- took. It
+    // excludes the phase's Prepare, ShouldRun and in-phase Before/After hooks, so two phases'
+    // durations are comparable to each other rather than to the run's wall clock.
+    Duration time.Duration
 }
 </code></pre>
 <p><a name="Phases"></a></p>
@@ -13312,7 +13440,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Replace replaces the first occurrence of a phase with the given title</p>
 <p><a name="PrepareFapolicy"></a></p>
-<h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L36">PrepareFapolicy</a></a></h2>
+<h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L40">PrepareFapolicy</a></a></h2>
 <p>PrepareFapolicy installs required packages and so on on the hosts.</p>
 <pre><code class="language-go">type PrepareFapolicy struct {
     GenericPhase
@@ -13320,32 +13448,32 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PrepareFapolicy.Explanation"></a></p>
-<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L55">Explanation</a></a></h3>
+<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L59">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareFapolicy.Prepare"></a></p>
-<h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39">Prepare</a></a></h3>
+<h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L43">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareFapolicy.Run"></a></p>
-<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L60">Run</a></a></h3>
+<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L64">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareFapolicy.ShouldRun"></a></p>
-<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L65">ShouldRun</a></a></h3>
+<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L69">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
 <p><a name="PrepareFapolicy.Title"></a></p>
-<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L50">Title</a></a></h3>
+<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L54">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="PrepareHosts"></a></p>
-<h2 id="type-preparehosts"><a class="header" href="#type-preparehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L46-L49">PrepareHosts</a></a></h2>
+<h2 id="type-preparehosts"><a class="header" href="#type-preparehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L46-L53">PrepareHosts</a></a></h2>
 <p>PrepareHosts installs required packages and so on on the hosts.</p>
 <pre><code class="language-go">type PrepareHosts struct {
     GenericPhase
@@ -13353,56 +13481,57 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PrepareHosts.Explanation"></a></p>
-<h3 id="func-preparehosts-explanation"><a class="header" href="#func-preparehosts-explanation">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L57">Explanation</a></a></h3>
+<h3 id="func-preparehosts-explanation"><a class="header" href="#func-preparehosts-explanation">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L61">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareHosts.Prepare"></a></p>
-<h3 id="func-preparehosts-prepare"><a class="header" href="#func-preparehosts-prepare">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L62">Prepare</a></a></h3>
+<h3 id="func-preparehosts-prepare"><a class="header" href="#func-preparehosts-prepare">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L66">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareHosts.Run"></a></p>
-<h3 id="func-preparehosts-run"><a class="header" href="#func-preparehosts-run">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L68">Run</a></a></h3>
+<h3 id="func-preparehosts-run"><a class="header" href="#func-preparehosts-run">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L72">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareHosts.Title"></a></p>
-<h3 id="func-preparehosts-title"><a class="header" href="#func-preparehosts-title">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L52">Title</a></a></h3>
+<h3 id="func-preparehosts-title"><a class="header" href="#func-preparehosts-title">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L56">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareHosts) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="PrepareKernelModules"></a></p>
-<h2 id="type-preparekernelmodules"><a class="header" href="#type-preparekernelmodules">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L27-L31">PrepareKernelModules</a></a></h2>
+<h2 id="type-preparekernelmodules"><a class="header" href="#type-preparekernelmodules">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L27-L34">PrepareKernelModules</a></a></h2>
 <p>PrepareKernelModules enables the list of requested modules on the host, then reboots the box if modules are added</p>
 <pre><code class="language-go">type PrepareKernelModules struct {
     GenericPhase
+
     Enabled bool
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="PrepareKernelModules.Explanation"></a></p>
-<h3 id="func-preparekernelmodules-explanation"><a class="header" href="#func-preparekernelmodules-explanation">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L39">Explanation</a></a></h3>
+<h3 id="func-preparekernelmodules-explanation"><a class="header" href="#func-preparekernelmodules-explanation">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L42">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareKernelModules.Prepare"></a></p>
-<h3 id="func-preparekernelmodules-prepare"><a class="header" href="#func-preparekernelmodules-prepare">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L44">Prepare</a></a></h3>
+<h3 id="func-preparekernelmodules-prepare"><a class="header" href="#func-preparekernelmodules-prepare">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L47">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareKernelModules.Run"></a></p>
-<h3 id="func-preparekernelmodules-run"><a class="header" href="#func-preparekernelmodules-run">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L55">Run</a></a></h3>
+<h3 id="func-preparekernelmodules-run"><a class="header" href="#func-preparekernelmodules-run">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L58">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareKernelModules.ShouldRun"></a></p>
-<h3 id="func-preparekernelmodules-shouldrun"><a class="header" href="#func-preparekernelmodules-shouldrun">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L50">ShouldRun</a></a></h3>
+<h3 id="func-preparekernelmodules-shouldrun"><a class="header" href="#func-preparekernelmodules-shouldrun">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L53">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when we need to enable kernel modules</p>
 <p><a name="PrepareKernelModules.Title"></a></p>
-<h3 id="func-preparekernelmodules-title"><a class="header" href="#func-preparekernelmodules-title">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L34">Title</a></a></h3>
+<h3 id="func-preparekernelmodules-title"><a class="header" href="#func-preparekernelmodules-title">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L37">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareKernelModules) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13440,7 +13569,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="PrepareSelinuxPolicy"></a></p>
-<h2 id="type-prepareselinuxpolicy"><a class="header" href="#type-prepareselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L76">PrepareSelinuxPolicy</a></a></h2>
+<h2 id="type-prepareselinuxpolicy"><a class="header" href="#type-prepareselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L79">PrepareSelinuxPolicy</a></a></h2>
 <p>PrepareSelinuxPolicy installs the distro-supplied SELinux policy on the hosts.</p>
 <pre><code class="language-go">type PrepareSelinuxPolicy struct {
     GenericPhase
@@ -13448,27 +13577,27 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PrepareSelinuxPolicy.Explanation"></a></p>
-<h3 id="func-prepareselinuxpolicy-explanation"><a class="header" href="#func-prepareselinuxpolicy-explanation">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L93">Explanation</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-explanation"><a class="header" href="#func-prepareselinuxpolicy-explanation">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L96">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareSelinuxPolicy.Prepare"></a></p>
-<h3 id="func-prepareselinuxpolicy-prepare"><a class="header" href="#func-prepareselinuxpolicy-prepare">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79">Prepare</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-prepare"><a class="header" href="#func-prepareselinuxpolicy-prepare">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L82">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareSelinuxPolicy.Run"></a></p>
-<h3 id="func-prepareselinuxpolicy-run"><a class="header" href="#func-prepareselinuxpolicy-run">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L98">Run</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-run"><a class="header" href="#func-prepareselinuxpolicy-run">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L101">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareSelinuxPolicy.ShouldRun"></a></p>
-<h3 id="func-prepareselinuxpolicy-shouldrun"><a class="header" href="#func-prepareselinuxpolicy-shouldrun">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L111">ShouldRun</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-shouldrun"><a class="header" href="#func-prepareselinuxpolicy-shouldrun">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L114">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when a host can take a policy and the distro package supplies one</p>
 <p><a name="PrepareSelinuxPolicy.Title"></a></p>
-<h3 id="func-prepareselinuxpolicy-title"><a class="header" href="#func-prepareselinuxpolicy-title">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L88">Title</a></a></h3>
+<h3 id="func-prepareselinuxpolicy-title"><a class="header" href="#func-prepareselinuxpolicy-title">func (*PrepareSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L91">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareSelinuxPolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13500,41 +13629,42 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ReconfigureSurvivors"></a></p>
-<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L63">ReconfigureSurvivors</a></a></h2>
+<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L66">ReconfigureSurvivors</a></a></h2>
 <p>ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.</p>
 <p>A controller that is not the first one carries `server:` naming the first, written when it joined. That value is read at startup, so removing the first controller leaves a cluster that keeps working and cannot come back: every survivor names a machine that is gone, and the next restart or reboot of any of them fails to rejoin.</p>
 <p>cargoship apply already fixes this -- it re-elects the first controller from the hosts that are left and rewrites `server:` on the rest -- and the documented procedure is to run one after a removal. The trouble with leaving it there is that a reset reports success having created that state, so the safety of the operation rests on the operator remembering a second command. This phase converges the survivors itself, and says so when it cannot.</p>
 <p>It edits the file in place rather than rendering a fresh one, because a reset loads no package and so has nothing to render from. Only `server:` is touched.</p>
 <pre><code class="language-go">type ReconfigureSurvivors struct {
     GenericPhase
+
     Distro      distrocfg.Distro
     TargetHosts []string
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="ReconfigureSurvivors.Explanation"></a></p>
-<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L71">Explanation</a></a></h3>
+<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L74">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ReconfigureSurvivors.Prepare"></a></p>
-<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L76">Prepare</a></a></h3>
+<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L79">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ReconfigureSurvivors.Run"></a></p>
-<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L109">Run</a></a></h3>
+<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L112">Run</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="ReconfigureSurvivors.ShouldRun"></a></p>
-<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L104">ShouldRun</a></a></h3>
+<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L107">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when the run removed a controller and kept at least one.</p>
 <p>Removing every controller is a whole-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.</p>
 <p><a name="ReconfigureSurvivors.Title"></a></p>
-<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L66">Title</a></a></h3>
+<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L69">Title</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13572,7 +13702,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ResultSink"></a></p>
-<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L301-L305">ResultSink</a></a></h2>
+<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L445-L449">ResultSink</a></a></h2>
 <p>ResultSink collects the RunResult of every Manager.Run that happens on a context.</p>
 <p>It exists because the Ansible module mode runs cargoship by building an argument vector and calling the ordinary command, which returns an error and nothing else -- see src/cmd.ExecuteArgs. Threading a return value back through cobra, the action and the manager would change five call sites to serve one caller. A sink on the context that nobody else installs does not, and a run with no sink on its context pays nothing for this.</p>
 <pre><code class="language-go">type ResultSink struct {
@@ -13580,22 +13710,22 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="WithResultSink"></a></p>
-<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L308">WithResultSink</a></a></h3>
+<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L452">WithResultSink</a></a></h3>
 <pre><code class="language-go">func WithResultSink(ctx context.Context) (context.Context, *ResultSink)
 </code></pre>
 <p>WithResultSink returns a context carrying a sink, and the sink itself.</p>
 <p><a name="ResultSink.Observed"></a></p>
-<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L330">Observed</a></a></h3>
+<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L474">Observed</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Observed() bool
 </code></pre>
 <p>Observed reports whether any run reached its phases at all. A command that failed before that -- an unreadable package, a configuration that does not validate -- publishes nothing, and that is a different thing from a run in which no phase changed anything.</p>
 <p><a name="ResultSink.Result"></a></p>
-<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L321">Result</a></a></h3>
+<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L465">Result</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Result() RunResult
 </code></pre>
 <p>Result is every run that reached its phases on this context, flattened into one.</p>
 <p><a name="RunResult"></a></p>
-<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L211-L224">RunResult</a></a></h2>
+<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L263-L276">RunResult</a></a></h2>
 <p>RunResult is what a whole Manager.Run did, phase by phase. Manager.Run fills it in on the way through, so a run that returned an error still carries the phases it got through first.</p>
 <pre><code class="language-go">type RunResult struct {
     // Ran are the phases that executed, in order. That includes the read-only phases a dry run
@@ -13613,22 +13743,39 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="RunResult.Changed"></a></p>
-<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L228">Changed</a></a></h3>
+<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L280">Changed</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Changed() bool
 </code></pre>
 <p>Changed reports whether any phase said it changed something on the fleet. Phases that declared nothing do not contribute; read Complete to find out whether that leaves the answer partial.</p>
 <p><a name="RunResult.Complete"></a></p>
-<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L267">Complete</a></a></h3>
+<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L319">Complete</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Complete() bool
 </code></pre>
 <p>Complete reports whether every phase the run reached declared whether it changed anything.</p>
+<p><a name="RunResult.HostSummaries"></a></p>
+<h3 id="func-runresult-hostsummaries"><a class="header" href="#func-runresult-hostsummaries">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L385">HostSummaries</a></a></h3>
+<pre><code class="language-go">func (r RunResult) HostSummaries() []HostSummary
+</code></pre>
+<p>HostSummaries rolls the per-host answers up across every phase of the run, in the order the hosts were first named.</p>
+<p>A host appears here only if some phase named it, so this is not a roster of the fleet: a caller wanting every host, including the ones no phase spoke for, is expected to start from the cluster configuration and look each one up.</p>
+<p><a name="RunResult.HostsUndeclared"></a></p>
+<h3 id="func-runresult-hostsundeclared"><a class="header" href="#func-runresult-hostsundeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L355">HostsUndeclared</a></a></h3>
+<pre><code class="language-go">func (r RunResult) HostsUndeclared() []string
+</code></pre>
+<p>HostsUndeclared names the phases that did not say which hosts they changed, in the order the run reached them. It stands to the per-host answer as Undeclared stands to the fleet-wide one: a caller rendering a per-host summary is expected to report these alongside it, because a host missing from the summary may simply never have been spoken for.</p>
 <p><a name="RunResult.Outstanding"></a></p>
-<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L243">Outstanding</a></a></h3>
+<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L295">Outstanding</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Outstanding() bool
 </code></pre>
 <p>Outstanding is the dry-run counterpart of Changed: it reports whether any phase that can report a change was reported rather than run. A phase reaches Planned only after its ShouldRun said there was work to do, so this answers “would a real run change anything” for the phases that have said how to tell.</p>
+<p><a name="RunResult.Signal"></a></p>
+<h3 id="func-runresult-signal"><a class="header" href="#func-runresult-signal">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L344">Signal</a></a></h3>
+<pre><code class="language-go">func (r RunResult) Signal() string
+</code></pre>
+<p>Signal reports how much Changed is worth, as one of SignalComplete or SignalPartial.</p>
+<p>SignalUnknown is deliberately not among the answers. It means no run reached its phases at all, which is a property of the sink rather than of a result -- an empty RunResult and a run in which nothing was declared are the same value here. See ResultSink.Observed.</p>
 <p><a name="RunResult.Undeclared"></a></p>
-<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L254">Undeclared</a></a></h3>
+<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L306">Undeclared</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Undeclared() []string
 </code></pre>
 <p>Undeclared names the phases that did not say whether they changed anything, in the order the run reached them. A caller reporting Changed is expected to report these alongside it.</p>
@@ -18283,7 +18430,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>If some future case genuinely needs an unverifiable overridden download, it needs an explicit opt-out flag with a name that says what it gives up, and a line in the build log every time it fires. It does not need this check quietly deleted.</p>
 <h2 id="what-the-record-is-for"><a class="header" href="#what-the-record-is-for">What the record is for</a></h2>
 <p>Because the checksum is mandatory, <code>.build.fileSources</code> can record it next to the mirror each file came from, and every entry is then a complete claim: these bytes, from this place, matching this digest. That is only worth writing down because the refusal above guarantees the digest exists. Drop the refusal and the provenance record degrades into a list of URLs nobody can check.</p>
-<h2 id="see-also-26"><a class="header" href="#see-also-26">See also</a></h2>
+<h2 id="see-also-27"><a class="header" href="#see-also-27">See also</a></h2>
 <ul>
 <li><code>pkg/fileoverride</code> – the matcher, and why it parses URLs instead of comparing string prefixes.</li>
 <li><a href="#file-override-guide"><code>docs/guides/file-override.md</code></a> – the user-facing guide.</li>

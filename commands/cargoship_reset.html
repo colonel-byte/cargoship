@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-717151c9.js";
+            window.path_to_searchindex_js = "../searchindex-3482cbae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-7fc8444f.js"></script>
+        <script src="../toc-ef97ed17.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -212,6 +212,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
       --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help                      help for reset
+      --receipt-path string       Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --target-hosts strings      Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration.
   -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
 </code></pre>
@@ -230,7 +231,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../commands/cargoship_pull.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../commands/cargoship_redact-receipt.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -244,7 +245,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../commands/cargoship_pull.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../commands/cargoship_redact-receipt.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
