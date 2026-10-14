@@ -29,6 +29,7 @@ import (
 	"io"
 	"io/fs"
 	"maps"
+	"net"
 	gos "os"
 	"slices"
 	"strconv"
@@ -548,6 +549,31 @@ func (h *Host) Address() string {
 		return ""
 	}
 	return h.Client.Address()
+}
+
+// defaultSSHPort is rig's own default, written here so ConfiguredAddress can leave an unremarkable
+// port out of the address it renders.
+const defaultSSHPort = 22
+
+// ConfiguredAddress is the address the cluster configuration would recognise: what the host block
+// said, with the port when it is not the default.
+//
+// It is what to identify a host by in anything written for a person to read back against their own
+// configuration -- a run receipt, a provider attribute, a summary table. Neither of the obvious
+// alternatives works for that. Address reads through the embedded rig client, so it is empty on a
+// host that was never dialed and on one already disconnected, which is exactly the host a failed
+// run most needs to name. String falls back to rig's CompositeConfig.String, which renders a Go-ish
+// "ssh.Config{127.0.0.1:2223}" -- right for a log line, wrong for something compared against a
+// config file.
+func (h *Host) ConfiguredAddress() string {
+	cfg := h.ConnectionConfig.SSH
+	if cfg == nil {
+		return h.ConnectionConfig.String()
+	}
+	if cfg.Port == 0 || cfg.Port == defaultSSHPort {
+		return cfg.Address
+	}
+	return net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port))
 }
 
 // ServiceName returns the name of the distro service that runs on this host.
