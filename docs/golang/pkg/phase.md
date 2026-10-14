@@ -93,6 +93,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*EngineConfigSyncController\) Title\(\) string](<#EngineConfigSyncController.Title>)
 - [type EngineConfigSyncHosts](<#EngineConfigSyncHosts>)
   - [func \(p \*EngineConfigSyncHosts\) Changed\(\) bool](<#EngineConfigSyncHosts.Changed>)
+  - [func \(p \*EngineConfigSyncHosts\) HostsChanged\(\) \[\]HostChange](<#EngineConfigSyncHosts.HostsChanged>)
   - [func \(p \*EngineConfigSyncHosts\) ShouldRun\(\) bool](<#EngineConfigSyncHosts.ShouldRun>)
 - [type EngineConfigSyncWorker](<#EngineConfigSyncWorker>)
   - [func \(p \*EngineConfigSyncWorker\) Explanation\(\) string](<#EngineConfigSyncWorker.Explanation>)
@@ -1230,7 +1231,7 @@ func (p *EngineConfigSyncController) Title() string
 Title for the phase
 
 <a name="EngineConfigSyncHosts"></a>
-## type [EngineConfigSyncHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L64>)
+## type [EngineConfigSyncHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L68>)
 
 EngineConfigSyncHosts phase state
 
@@ -1245,7 +1246,7 @@ type EngineConfigSyncHosts struct {
 ```
 
 <a name="EngineConfigSyncHosts.Changed"></a>
-### func \(\*EngineConfigSyncHosts\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L81>)
+### func \(\*EngineConfigSyncHosts\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L163>)
 
 ```go
 func (p *EngineConfigSyncHosts) Changed() bool
@@ -1255,8 +1256,21 @@ Changed reports whether this phase altered any host, which is what Ansible's cha
 
 There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re\-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.
 
+<a name="EngineConfigSyncHosts.HostsChanged"></a>
+### func \(\*EngineConfigSyncHosts\) [HostsChanged](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L132>)
+
+```go
+func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
+```
+
+HostsChanged reports what this phase did to each host it looked at. See hostChangedReporter in 05\_manager.go.
+
+Every host Prepare checked is reported, including the ones that turned out to be in sync. A host that was checked and found correct is a different answer from a host nothing looked at, and only one of them means the fleet was fully assessed.
+
+The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.
+
 <a name="EngineConfigSyncHosts.ShouldRun"></a>
-### func \(\*EngineConfigSyncHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L88>)
+### func \(\*EngineConfigSyncHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L170>)
 
 ```go
 func (p *EngineConfigSyncHosts) ShouldRun() bool
@@ -2106,20 +2120,21 @@ func ParseManifest(content string) []ManifestEntry
 ParseManifest reads manifest file content back into entries. Malformed lines are skipped.
 
 <a name="ModifyHosts"></a>
-## type [ModifyHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L33-L37>)
+## type [ModifyHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L37-L44>)
 
 ModifyHosts state
 
 ```go
 type ModifyHosts struct {
     GenericPhase
+
     Enabled bool
     // contains filtered or unexported fields
 }
 ```
 
 <a name="ModifyHosts.Explanation"></a>
-### func \(\*ModifyHosts\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L45>)
+### func \(\*ModifyHosts\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L52>)
 
 ```go
 func (p *ModifyHosts) Explanation() string
@@ -2128,7 +2143,7 @@ func (p *ModifyHosts) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="ModifyHosts.Prepare"></a>
-### func \(\*ModifyHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L50>)
+### func \(\*ModifyHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L57>)
 
 ```go
 func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -2137,7 +2152,7 @@ func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro
 Prepare the phase
 
 <a name="ModifyHosts.Run"></a>
-### func \(\*ModifyHosts\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L69>)
+### func \(\*ModifyHosts\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L76>)
 
 ```go
 func (p *ModifyHosts) Run(ctx context.Context) error
@@ -2146,7 +2161,7 @@ func (p *ModifyHosts) Run(ctx context.Context) error
 Run the phase
 
 <a name="ModifyHosts.ShouldRun"></a>
-### func \(\*ModifyHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L64>)
+### func \(\*ModifyHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L71>)
 
 ```go
 func (p *ModifyHosts) ShouldRun() bool
@@ -2155,7 +2170,7 @@ func (p *ModifyHosts) ShouldRun() bool
 ShouldRun is true when this phase is enabled
 
 <a name="ModifyHosts.Title"></a>
-### func \(\*ModifyHosts\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L40>)
+### func \(\*ModifyHosts\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L47>)
 
 ```go
 func (p *ModifyHosts) Title() string
@@ -2248,7 +2263,7 @@ func (p *Phases) Replace(title string, phase Phase)
 Replace replaces the first occurrence of a phase with the given title
 
 <a name="PrepareFapolicy"></a>
-## type [PrepareFapolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L36>)
+## type [PrepareFapolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L40>)
 
 PrepareFapolicy installs required packages and so on on the hosts.
 
@@ -2260,7 +2275,7 @@ type PrepareFapolicy struct {
 ```
 
 <a name="PrepareFapolicy.Explanation"></a>
-### func \(\*PrepareFapolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L55>)
+### func \(\*PrepareFapolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L59>)
 
 ```go
 func (p *PrepareFapolicy) Explanation() string
@@ -2269,7 +2284,7 @@ func (p *PrepareFapolicy) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="PrepareFapolicy.Prepare"></a>
-### func \(\*PrepareFapolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39>)
+### func \(\*PrepareFapolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L43>)
 
 ```go
 func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -2278,7 +2293,7 @@ func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *di
 Prepare the phase
 
 <a name="PrepareFapolicy.Run"></a>
-### func \(\*PrepareFapolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L60>)
+### func \(\*PrepareFapolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L64>)
 
 ```go
 func (p *PrepareFapolicy) Run(ctx context.Context) error
@@ -2287,7 +2302,7 @@ func (p *PrepareFapolicy) Run(ctx context.Context) error
 Run the phase
 
 <a name="PrepareFapolicy.ShouldRun"></a>
-### func \(\*PrepareFapolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L65>)
+### func \(\*PrepareFapolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L69>)
 
 ```go
 func (p *PrepareFapolicy) ShouldRun() bool
@@ -2296,7 +2311,7 @@ func (p *PrepareFapolicy) ShouldRun() bool
 ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
 
 <a name="PrepareFapolicy.Title"></a>
-### func \(\*PrepareFapolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L50>)
+### func \(\*PrepareFapolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L54>)
 
 ```go
 func (p *PrepareFapolicy) Title() string
@@ -2305,7 +2320,7 @@ func (p *PrepareFapolicy) Title() string
 Title for the phase
 
 <a name="PrepareHosts"></a>
-## type [PrepareHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L46-L49>)
+## type [PrepareHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L46-L53>)
 
 PrepareHosts installs required packages and so on on the hosts.
 
@@ -2317,7 +2332,7 @@ type PrepareHosts struct {
 ```
 
 <a name="PrepareHosts.Explanation"></a>
-### func \(\*PrepareHosts\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L57>)
+### func \(\*PrepareHosts\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L61>)
 
 ```go
 func (p *PrepareHosts) Explanation() string
@@ -2326,7 +2341,7 @@ func (p *PrepareHosts) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="PrepareHosts.Prepare"></a>
-### func \(\*PrepareHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L62>)
+### func \(\*PrepareHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L66>)
 
 ```go
 func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.Distro) error
@@ -2335,7 +2350,7 @@ func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.Cluster, d *distro.
 Prepare the phase
 
 <a name="PrepareHosts.Run"></a>
-### func \(\*PrepareHosts\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L68>)
+### func \(\*PrepareHosts\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L72>)
 
 ```go
 func (p *PrepareHosts) Run(ctx context.Context) error
@@ -2344,7 +2359,7 @@ func (p *PrepareHosts) Run(ctx context.Context) error
 Run the phase
 
 <a name="PrepareHosts.Title"></a>
-### func \(\*PrepareHosts\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L52>)
+### func \(\*PrepareHosts\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L56>)
 
 ```go
 func (p *PrepareHosts) Title() string
@@ -2353,20 +2368,21 @@ func (p *PrepareHosts) Title() string
 Title for the phase
 
 <a name="PrepareKernelModules"></a>
-## type [PrepareKernelModules](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L27-L31>)
+## type [PrepareKernelModules](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L27-L34>)
 
 PrepareKernelModules enables the list of requested modules on the host, then reboots the box if modules are added
 
 ```go
 type PrepareKernelModules struct {
     GenericPhase
+
     Enabled bool
     // contains filtered or unexported fields
 }
 ```
 
 <a name="PrepareKernelModules.Explanation"></a>
-### func \(\*PrepareKernelModules\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L39>)
+### func \(\*PrepareKernelModules\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L42>)
 
 ```go
 func (p *PrepareKernelModules) Explanation() string
@@ -2375,7 +2391,7 @@ func (p *PrepareKernelModules) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="PrepareKernelModules.Prepare"></a>
-### func \(\*PrepareKernelModules\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L44>)
+### func \(\*PrepareKernelModules\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L47>)
 
 ```go
 func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -2384,7 +2400,7 @@ func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.Cluster, _ 
 Prepare the phase
 
 <a name="PrepareKernelModules.Run"></a>
-### func \(\*PrepareKernelModules\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L55>)
+### func \(\*PrepareKernelModules\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L58>)
 
 ```go
 func (p *PrepareKernelModules) Run(ctx context.Context) error
@@ -2393,7 +2409,7 @@ func (p *PrepareKernelModules) Run(ctx context.Context) error
 Run the phase
 
 <a name="PrepareKernelModules.ShouldRun"></a>
-### func \(\*PrepareKernelModules\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L50>)
+### func \(\*PrepareKernelModules\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L53>)
 
 ```go
 func (p *PrepareKernelModules) ShouldRun() bool
@@ -2402,7 +2418,7 @@ func (p *PrepareKernelModules) ShouldRun() bool
 ShouldRun is true when we need to enable kernel modules
 
 <a name="PrepareKernelModules.Title"></a>
-### func \(\*PrepareKernelModules\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L34>)
+### func \(\*PrepareKernelModules\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L37>)
 
 ```go
 func (p *PrepareKernelModules) Title() string
@@ -2468,7 +2484,7 @@ func (p *PrepareSelinux) Title() string
 Title for the phase
 
 <a name="PrepareSelinuxPolicy"></a>
-## type [PrepareSelinuxPolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L76>)
+## type [PrepareSelinuxPolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L79>)
 
 PrepareSelinuxPolicy installs the distro\-supplied SELinux policy on the hosts.
 
@@ -2480,7 +2496,7 @@ type PrepareSelinuxPolicy struct {
 ```
 
 <a name="PrepareSelinuxPolicy.Explanation"></a>
-### func \(\*PrepareSelinuxPolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L93>)
+### func \(\*PrepareSelinuxPolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L96>)
 
 ```go
 func (p *PrepareSelinuxPolicy) Explanation() string
@@ -2489,7 +2505,7 @@ func (p *PrepareSelinuxPolicy) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="PrepareSelinuxPolicy.Prepare"></a>
-### func \(\*PrepareSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79>)
+### func \(\*PrepareSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L82>)
 
 ```go
 func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -2498,7 +2514,7 @@ func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, 
 Prepare the phase
 
 <a name="PrepareSelinuxPolicy.Run"></a>
-### func \(\*PrepareSelinuxPolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L98>)
+### func \(\*PrepareSelinuxPolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L101>)
 
 ```go
 func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error
@@ -2507,7 +2523,7 @@ func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error
 Run the phase
 
 <a name="PrepareSelinuxPolicy.ShouldRun"></a>
-### func \(\*PrepareSelinuxPolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L111>)
+### func \(\*PrepareSelinuxPolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L114>)
 
 ```go
 func (p *PrepareSelinuxPolicy) ShouldRun() bool
@@ -2516,7 +2532,7 @@ func (p *PrepareSelinuxPolicy) ShouldRun() bool
 ShouldRun is true when a host can take a policy and the distro package supplies one
 
 <a name="PrepareSelinuxPolicy.Title"></a>
-### func \(\*PrepareSelinuxPolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L88>)
+### func \(\*PrepareSelinuxPolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L91>)
 
 ```go
 func (p *PrepareSelinuxPolicy) Title() string
@@ -2572,7 +2588,7 @@ func (p *RPMUploadFiles) Title() string
 Title for the phase
 
 <a name="ReconfigureSurvivors"></a>
-## type [ReconfigureSurvivors](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L63>)
+## type [ReconfigureSurvivors](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L66>)
 
 ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.
 
@@ -2585,6 +2601,7 @@ It edits the file in place rather than rendering a fresh one, because a reset lo
 ```go
 type ReconfigureSurvivors struct {
     GenericPhase
+
     Distro      distrocfg.Distro
     TargetHosts []string
     // contains filtered or unexported fields
@@ -2592,7 +2609,7 @@ type ReconfigureSurvivors struct {
 ```
 
 <a name="ReconfigureSurvivors.Explanation"></a>
-### func \(\*ReconfigureSurvivors\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L71>)
+### func \(\*ReconfigureSurvivors\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L74>)
 
 ```go
 func (p *ReconfigureSurvivors) Explanation() string
@@ -2601,7 +2618,7 @@ func (p *ReconfigureSurvivors) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="ReconfigureSurvivors.Prepare"></a>
-### func \(\*ReconfigureSurvivors\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L76>)
+### func \(\*ReconfigureSurvivors\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L79>)
 
 ```go
 func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -2610,7 +2627,7 @@ func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, 
 Prepare the phase
 
 <a name="ReconfigureSurvivors.Run"></a>
-### func \(\*ReconfigureSurvivors\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L109>)
+### func \(\*ReconfigureSurvivors\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L112>)
 
 ```go
 func (p *ReconfigureSurvivors) Run(ctx context.Context) error
@@ -2619,7 +2636,7 @@ func (p *ReconfigureSurvivors) Run(ctx context.Context) error
 Run the phase
 
 <a name="ReconfigureSurvivors.ShouldRun"></a>
-### func \(\*ReconfigureSurvivors\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L104>)
+### func \(\*ReconfigureSurvivors\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L107>)
 
 ```go
 func (p *ReconfigureSurvivors) ShouldRun() bool
@@ -2630,7 +2647,7 @@ ShouldRun is true when the run removed a controller and kept at least one.
 Removing every controller is a whole\-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.
 
 <a name="ReconfigureSurvivors.Title"></a>
-### func \(\*ReconfigureSurvivors\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L66>)
+### func \(\*ReconfigureSurvivors\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L69>)
 
 ```go
 func (p *ReconfigureSurvivors) Title() string

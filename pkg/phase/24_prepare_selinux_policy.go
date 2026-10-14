@@ -72,6 +72,9 @@ type selinuxStateFileContext struct {
 // PrepareSelinuxPolicy installs the distro-supplied SELinux policy on the hosts.
 type PrepareSelinuxPolicy struct {
 	GenericPhase
+	// hostChanges carries Changed and HostsChanged. This phase reads each module file before
+	// writing it, so it can report a real diff rather than only that something moved.
+	hostChanges
 	selinuxPolicyHosts cluster.Hosts
 }
 
@@ -140,6 +143,7 @@ func (p *PrepareSelinuxPolicy) applyModules(ctx context.Context, h *cluster.Host
 		// the file and then failed to install it, and skipping would leave the policy inactive.
 		if current == m.CIL && installed[m.Name] {
 			logger.From(ctx).Debug("selinux module already installed", "host", h, "module", m.Name)
+			p.observed(h)
 			continue
 		}
 
@@ -149,6 +153,16 @@ func (p *PrepareSelinuxPolicy) applyModules(ctx context.Context, h *cluster.Host
 			}); err != nil {
 				return fmt.Errorf("failed to write %s: %w", path, err)
 			}
+			reason := reasonOutOfSync
+			if current == "" {
+				reason = reasonMissing
+			}
+			p.changedFile(h, path, reason, unifiedDiff(path, current, m.CIL))
+		} else {
+			// The file is right and the module is not installed, which is the half-finished
+			// state the check above is about. Installing it changes the host even though
+			// nothing was written.
+			p.changedHost(h)
 		}
 
 		install := fmt.Sprintf("%s -X %d -i %s", SEModule, selinuxModulePriority(m), shellQuote(path))
