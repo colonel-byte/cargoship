@@ -1271,9 +1271,6 @@ github.com/googleapis/gax-go/v2/internallog
 github.com/googleapis/gax-go/v2/internallog/grpclog
 github.com/googleapis/gax-go/v2/internallog/internal
 github.com/googleapis/gax-go/v2/iterator
-# github.com/gookit/color v1.6.1
-## explicit; go 1.18
-github.com/gookit/color
 # github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 ## explicit; go 1.20
 github.com/gorilla/websocket
@@ -1999,10 +1996,11 @@ github.com/protocolbuffers/txtpbfmt/quote
 github.com/protocolbuffers/txtpbfmt/sort
 github.com/protocolbuffers/txtpbfmt/unquote
 github.com/protocolbuffers/txtpbfmt/wrap
-# github.com/pterm/pterm v0.12.83
-## explicit; go 1.24.0
+# github.com/pterm/pterm v0.12.84
+## explicit; go 1.26.0
 github.com/pterm/pterm
 github.com/pterm/pterm/internal
+github.com/pterm/pterm/internal/color
 # github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 ## explicit
 github.com/rcrowley/go-metrics
@@ -2385,9 +2383,6 @@ github.com/xeipuuv/gojsonschema
 # github.com/xlab/treeprint v1.2.0
 ## explicit; go 1.13
 github.com/xlab/treeprint
-# github.com/xo/terminfo v1.2.0
-## explicit; go 1.25
-github.com/xo/terminfo
 # github.com/yashtewari/glob-intersection v0.2.0
 ## explicit; go 1.17
 github.com/yashtewari/glob-intersection
