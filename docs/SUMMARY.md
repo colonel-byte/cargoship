@@ -228,6 +228,7 @@
 - [choice-preferred-firewall](agent/choice-preferred-firewall.md)
 - [choice-removed-hosts](agent/choice-removed-hosts.md)
 - [choice-reset-target-hosts](agent/choice-reset-target-hosts.md)
+- [choice-run-receipts](agent/choice-run-receipts.md)
 - [choice-selinux-policy](agent/choice-selinux-policy.md)
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)

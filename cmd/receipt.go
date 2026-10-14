@@ -47,20 +47,15 @@ type receiptFinisher func(manager *phase.Manager, distroPath string, pkg *layout
 // startReceipt prepares a run to be recorded, returning a context carrying the result sink and
 // the function that finishes the record.
 //
-// A command with no --receipt-path still gets a working finisher, which does nothing. That keeps
-// the call sites free of a conditional around something they have to remember to defer: the cost
-// of forgetting is a run with no record, which is only ever discovered by the person who needed
-// it.
+// The sink is installed whether or not --receipt-path was given, because the per-host summary
+// table is printed either way and is built from the same result. It costs a mutex and a struct on
+// a run that uses neither.
 //
 // The sink goes on the context rather than being threaded back through cobra, the action and the
 // manager, which is the same reason the Ansible module mode reads its results this way -- see
 // phase.WithResultSink.
 func startReceipt(ctx context.Context, cmd *cobra.Command, opt InstallCommon) (context.Context, receiptFinisher) {
 	path := opt.receiptPath
-	if path == "" {
-		return ctx, func(*phase.Manager, string, *layout.DistroLayout, error) {}
-	}
-
 	started := time.Now()
 	ctx, sink := phase.WithResultSink(ctx)
 	command := cmd.Name()
@@ -90,6 +85,14 @@ func startReceipt(ctx context.Context, cmd *cobra.Command, opt InstallCommon) (c
 			Observed:   sink.Observed(),
 			Err:        runErr,
 		})
+
+		// The table goes to stdout, where a person reads it, rather than onto the log stream
+		// beside it. It prints itself only when some phase reported per host.
+		printHostSummary(OutputWriter, r)
+
+		if path == "" {
+			return
+		}
 
 		l := logger.From(ctx)
 		if err := receipt.Write(path, r); err != nil {
