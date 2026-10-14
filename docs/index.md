@@ -236,6 +236,21 @@ cargoship schema inventory -o ./inventory.schema.json
 cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
 ```
 
+### 10. Record a Run for Audit
+
+```bash
+# Write a structured record of the run: what ran, against which package, against which fleet,
+# and what changed. Written whether the run succeeds or fails, readable only by its owner.
+cargoship apply ./build/cargoship-distro-amd64.tar.zst \
+  --config ./cluster.yaml --confirm \
+  --receipt-path /var/log/cargoship/receipts/apply-20260928-143000.json
+
+# Strip everything that identifies the fleet, ready to attach to a bug report
+cargoship redact-receipt ./receipt.json -o ./share.json
+```
+
+The receipt carries the invocation and the cargoship that ran it, the package's digests and signature status, the cluster inventory, and the phase-by-phase ledger with per-host change reasons and diffs. `redact-receipt` renumbers the hosts `host-01`, `host-02`, drops the diff bodies -- an engine configuration diff carries join tokens -- and removes the cluster name, operator and command line, leaving what a maintainer triages from.
+
 ---
 
 ## OpenTofu and Terraform
