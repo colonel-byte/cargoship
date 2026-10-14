@@ -79,7 +79,7 @@ type AgeOptions struct {
 ```
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194>)
 
 ApplyOptions holds the values for the \`.distro.apply\` section of the config file
 
@@ -118,7 +118,7 @@ type DistroConfig struct {
 ```
 
 <a name="DistroCreateOptions"></a>
-## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L163-L171>)
+## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L169-L177>)
 
 DistroCreateOptions holds the values for the \`.distro.create\` section of the config file
 
@@ -135,7 +135,7 @@ type DistroCreateOptions struct {
 ```
 
 <a name="DistroDeployOptions"></a>
-## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L182-L185>)
+## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188-L191>)
 
 DistroDeployOptions holds the values for the \`.distro.deploy\` section of the config file
 
@@ -147,7 +147,7 @@ type DistroDeployOptions struct {
 ```
 
 <a name="DistroOptions"></a>
-## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L160>)
+## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L166>)
 
 DistroOptions holds the values for the \`.distro\` section of the config file
 
@@ -186,6 +186,12 @@ type DistroOptions struct {
     // KubeConfig path of the kubeconfig file the admin creds are merged into, the standard
     // location -- KUBECONFIG, else ~/.kube/config -- when empty
     KubeConfig string `json:"kubeconfig,omitempty" mapstructure:"kubeconfig"`
+    // ReceiptPath is where the lifecycle commands -- apply, prepare, reset and
+    // engine-config-sync -- write the structured JSON record of a run, empty for no receipt.
+    // Equivalent to --receipt-path, and templated the same way: {command} expands to the
+    // command that ran and {timestamp} to when it started, so one configured value gives
+    // every run its own file rather than overwriting the last.
+    ReceiptPath string `json:"receipt_path,omitempty" mapstructure:"receipt_path" jsonschema:"example=/var/log/cargoship/receipts/{command}-{timestamp}.json"`
     // WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
     // ("5") or a percentage of the batch ("25%")
     WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
@@ -217,7 +223,7 @@ type DistroOptions struct {
 ```
 
 <a name="DistroPublishOptions"></a>
-## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L174-L179>)
+## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L180-L185>)
 
 DistroPublishOptions holds the values for the \`.distro.publish\` section of the config file
 
@@ -231,7 +237,7 @@ type DistroPublishOptions struct {
 ```
 
 <a name="FileOverrideMap"></a>
-## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L213>)
+## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L219>)
 
 FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.
 
@@ -240,7 +246,7 @@ type FileOverrideMap map[string]string
 ```
 
 <a name="FileOverrideMap.JSONSchemaExtend"></a>
-### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L218>)
+### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L224>)
 
 ```go
 func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -249,7 +255,7 @@ func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonFileSources to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="RegistryOverrideMap"></a>
-## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L197>)
+## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L203>)
 
 RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It's a named type \(rather than a bare map\[string\]string\) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.
 
@@ -258,7 +264,7 @@ type RegistryOverrideMap map[string]string
 ```
 
 <a name="RegistryOverrideMap.JSONSchemaExtend"></a>
-### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L202>)
+### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L208>)
 
 ```go
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -267,7 +273,7 @@ func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonRegistries to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L191>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L197>)
 
 ResetOptions holds the values for the \`.distro.reset\` section of the config file
 

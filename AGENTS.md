@@ -87,6 +87,23 @@ Treat it as part of the change, not a follow-up:
 
 The generated command and phase reference under `docs/` comes from the code, so it corrects itself on `go run ./magefiles/core generate:document`. `README.md` does not - it is hand-written, and nothing fails if it drifts. After editing it, run that target so `docs/index.md` matches.
 
+## A new flag belongs in the config file too
+
+A flag on a cobra command is one half of how cargoship is configured. The other half is [`types/config.go`](types/config.go), the struct `v.Unmarshal(&resolvedConfig)` decodes the config file, the environment and the viper defaults into - and `resolvedConfig` is what a flag registration reads for its default value. A flag wired only into cobra works, which is why it is easy to stop there, and it leaves an operator restating on every invocation something their whole fleet has one answer to.
+
+So adding a flag that carries a setting rather than a one-off instruction means all of:
+
+- **a field in the right section of `types/config.go`**, with the `json` and `mapstructure` tags that name its key. The doc comment is the generated schema's description, so write it for an operator authoring YAML, and say which commands honour it when not all of them do.
+- **a `v.SetDefault(configPath(...), ...)` in [`cmd/viper.go`](cmd/viper.go)**, even when the default is the Go zero value. Read the comment above the zero-value block before deciding to skip one: `Unmarshal` builds its result from `v.AllKeys()`, so a key with no default registered is invisible to it and silently loses environment-variable support.
+- **the flag's default read from `resolvedConfig`**, not a literal - `cmd.Flags().StringVar(&o.thing, InstallThing, resolvedConfig.DistroOpts.Thing, lang.CmdInstallFlagThing)`. This is the line that makes the config file take effect, and the ordering falls out of it for free: flag beats config beats default.
+- **an entry in `expandHomePaths`, for a path-valued field.** A shell expands a leading `~` in a flag value before cargoship sees it; nothing expands one in a config file or an environment variable, so `~/.cache/cargoship/...` reaches `os.Open` as a literal and fails naming a path a shell would have found. Add the field to the slice in `expandHomePaths` and a case to `TestExpandHomePaths`, which compares the whole struct and so fails until the expectation is written out.
+- **a line in [`cargoship-config.yaml`](cargoship-config.yaml)**, the sample config at the repository root. It is what an operator copies and what the `README.md` examples all point `--config` at, so a key missing from it is a key nobody discovers. Add it commented out, with its one-line explanation, where the setting should not be on by default - a sample that writes files or changes host state on a first run is worse than one that is incomplete. `test/e2e/cargoship-config.yaml` is a fixture rather than a sample: change it only when a suite needs the key.
+- **a `README.md` snippet showing the config-file form**, per the section above, and a regenerated schema - `go run ./magefiles/core generate:schema`.
+
+Not every flag qualifies. `--confirm` and `--dry-run` are decisions about one invocation, and a config file that answered them standingly would be a hazard rather than a convenience; they stay cobra-only. The test is whether an operator would give the same answer every time they run the command.
+
+**Where the key goes is a question for the person, not a guess.** The section a field lands in is the key an operator types, it ships in a generated schema, and moving it later breaks every config file that set it - while from inside the code two or three placements usually look equally defensible. Say which one you think is right and why, show the YAML it produces, and ask before writing it.
+
 ## Pinned versions, digests, and checksums
 
 Pins live all over the tree - container image digests in `containers/*/Dockerfile`, `dnf` package versions, upstream distro tags in `thirdparty-src/pins.json`, cloud image checksums in Go constants - but the machinery that moves them is mage and Dependabot. Every pin needs one of those owning it, or a written bump procedure where neither fits. Before adding a pinned value anywhere, read the rule and the worked examples in [`magefiles/AGENTS.md`](magefiles/AGENTS.md#every-pin-needs-an-owner).

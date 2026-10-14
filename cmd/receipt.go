@@ -16,7 +16,10 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
@@ -31,11 +34,64 @@ import (
 )
 
 // registerFlagReceiptPath adds the run receipt flag to cmd, backed by path.
+//
+// The default comes from `.distro.receipt_path`, so a fleet that keeps an audit trail configures
+// it once rather than restating it on every invocation. The configured value is a template -- see
+// expandReceiptPath -- which is what keeps a single setting from having each run overwrite the
+// receipt of the last.
 func registerFlagReceiptPath(cmd *cobra.Command, path *string) {
-	cmd.Flags().StringVar(path, InstallReceiptPath, "", lang.CmdInstallFlagReceiptPath)
+	cmd.Flags().StringVar(path, InstallReceiptPath, resolvedConfig.DistroOpts.ReceiptPath, lang.CmdInstallFlagReceiptPath)
 	if err := cmd.MarkFlagFilename(InstallReceiptPath, "json"); err != nil {
 		logger.Default().Debug("unable to mark the receipt flag as a filename", "error", err)
 	}
+}
+
+// receiptPathPlaceholder matches one {...} group in a receipt path, including an empty or
+// unknown one, so expandReceiptPath can reject what it does not recognise rather than leaving
+// it in the filename.
+var receiptPathPlaceholder = regexp.MustCompile(`\{[^{}]*\}`)
+
+// receiptTimestampLayout is the {timestamp} expansion: sortable, no characters that need quoting
+// in a shell, and second resolution, which is finer than two runs against one fleet are ever
+// started apart.
+const receiptTimestampLayout = "20060102-150405"
+
+// expandReceiptPath substitutes the placeholders in a receipt path.
+//
+// A path is templated because it is also a config-file setting. `--receipt-path` names one file
+// for one run, and a literal path is the right thing there; `.distro.receipt_path` is read by
+// every apply, prepare, reset and engine-config-sync the operator ever runs, and a literal path
+// there would have each run truncate the receipt of the one before it -- which is the opposite of
+// an audit trail, and silent. {command} and {timestamp} together make a name unique per run, so
+// one configured value behaves the way an operator who configured it meant.
+//
+// An unrecognised placeholder is an error rather than a literal. The alternative is a run that
+// succeeds and leaves its record in a file called `apply-{date}.json`, which nobody notices until
+// they go looking for a receipt that was never written where they expected it.
+func expandReceiptPath(path, command string, started time.Time) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+
+	replacements := map[string]string{
+		"{command}":   command,
+		"{timestamp}": started.Format(receiptTimestampLayout),
+	}
+
+	var unknown []string
+	expanded := receiptPathPlaceholder.ReplaceAllStringFunc(path, func(match string) string {
+		value, ok := replacements[match]
+		if !ok {
+			unknown = append(unknown, match)
+			return match
+		}
+		return value
+	})
+	if len(unknown) > 0 {
+		return "", fmt.Errorf("unknown placeholder %s in receipt path %q, expected {command} or {timestamp}", strings.Join(unknown, ", "), path)
+	}
+
+	return expanded, nil
 }
 
 // receiptFinisher writes the receipt for a run that has ended. It is what startReceipt hands
@@ -54,11 +110,21 @@ type receiptFinisher func(manager *phase.Manager, distroPath string, pkg *layout
 // The sink goes on the context rather than being threaded back through cobra, the action and the
 // manager, which is the same reason the Ansible module mode reads its results this way -- see
 // phase.WithResultSink.
-func startReceipt(ctx context.Context, cmd *cobra.Command, opt InstallCommon) (context.Context, receiptFinisher) {
-	path := opt.receiptPath
+//
+// It fails, before the run starts, on a receipt path it cannot expand. A receipt is asked for by
+// somebody who needs the record, and the run is repeatable -- so refusing the invocation is
+// cheaper than completing a fleet-wide change and then reporting that its record went somewhere
+// nobody will look.
+func startReceipt(ctx context.Context, cmd *cobra.Command, opt InstallCommon) (context.Context, receiptFinisher, error) {
 	started := time.Now()
-	ctx, sink := phase.WithResultSink(ctx)
 	command := cmd.Name()
+
+	path, err := expandReceiptPath(opt.receiptPath, command, started)
+	if err != nil {
+		return ctx, nil, err
+	}
+
+	ctx, sink := phase.WithResultSink(ctx)
 
 	// Read os.Args now rather than in the finisher, so the record is of what was invoked even
 	// if something later rewrites them.
@@ -67,7 +133,7 @@ func startReceipt(ctx context.Context, cmd *cobra.Command, opt InstallCommon) (c
 		args = append(args, os.Args[1:]...)
 	}
 
-	return ctx, func(manager *phase.Manager, distroPath string, pkg *layout.DistroLayout, runErr error) {
+	finish := func(manager *phase.Manager, distroPath string, pkg *layout.DistroLayout, runErr error) {
 		var cfg *cluster.Cluster
 		if manager != nil {
 			cfg = manager.Config
@@ -104,6 +170,8 @@ func startReceipt(ctx context.Context, cmd *cobra.Command, opt InstallCommon) (c
 		}
 		l.Info("run receipt written", "path", path)
 	}
+
+	return ctx, finish, nil
 }
 
 // packageProvenance reads what a loaded package can prove about itself.

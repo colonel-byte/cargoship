@@ -92,7 +92,10 @@ func (o *installResetOptions) run(ctx context.Context, cmd *cobra.Command, _ []s
 		manager *phase.Manager
 		runErr  error
 	)
-	ctx, finishReceipt := startReceipt(ctx, cmd, o.InstallCommon)
+	ctx, finishReceipt, err := startReceipt(ctx, cmd, o.InstallCommon)
+	if err != nil {
+		return err
+	}
 	defer func() { finishReceipt(manager, "", nil, runErr) }()
 
 	if runErr = preflightReset(o.config, o.confirm, o.dryRun); runErr != nil {

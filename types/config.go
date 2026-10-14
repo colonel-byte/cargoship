@@ -130,6 +130,12 @@ type DistroOptions struct {
 	// KubeConfig path of the kubeconfig file the admin creds are merged into, the standard
 	// location -- KUBECONFIG, else ~/.kube/config -- when empty
 	KubeConfig string `json:"kubeconfig,omitempty" mapstructure:"kubeconfig"`
+	// ReceiptPath is where the lifecycle commands -- apply, prepare, reset and
+	// engine-config-sync -- write the structured JSON record of a run, empty for no receipt.
+	// Equivalent to --receipt-path, and templated the same way: {command} expands to the
+	// command that ran and {timestamp} to when it started, so one configured value gives
+	// every run its own file rather than overwriting the last.
+	ReceiptPath string `json:"receipt_path,omitempty" mapstructure:"receipt_path" jsonschema:"example=/var/log/cargoship/receipts/{command}-{timestamp}.json"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
 	// ("5") or a percentage of the batch ("25%")
 	WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`

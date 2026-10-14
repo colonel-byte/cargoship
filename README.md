@@ -249,6 +249,16 @@ cargoship redact-receipt ./receipt.json -o ./share.json
 
 The receipt carries the invocation and the cargoship that ran it, the package's digests and signature status, the cluster inventory, and the phase-by-phase ledger with per-host change reasons and diffs. `redact-receipt` renumbers the hosts `host-01`, `host-02`, drops the diff bodies -- an engine configuration diff carries join tokens -- and removes the cluster name, operator and command line, leaving what a maintainer triages from.
 
+A fleet that keeps an audit trail sets the path once in the config file instead, under `.distro.receipt_path`, where `apply`, `prepare`, `reset` and `engine-config-sync` all pick it up:
+
+```yaml
+distro:
+  # {command} and {timestamp} expand per run, so each receipt lands in its own file
+  receipt_path: /var/log/cargoship/receipts/{command}-{timestamp}.json
+```
+
+Those two placeholders are the only ones accepted; anything else is rejected before the run starts, rather than written out literally. `--receipt-path` overrides the configured value and takes the same placeholders.
+
 ---
 
 ## OpenTofu and Terraform

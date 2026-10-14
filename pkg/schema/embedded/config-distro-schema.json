@@ -176,6 +176,13 @@
           "$ref": "#/$defs/DistroPublishOptions",
           "description": "are options used by the publish subcommand"
         },
+        "receipt_path": {
+          "description": "is where the lifecycle commands -- apply, prepare, reset and\nengine-config-sync -- write the structured JSON record of a run, empty for no receipt.\nEquivalent to --receipt-path, and templated the same way: {command} expands to the\ncommand that ran and {timestamp} to when it started, so one configured value gives\nevery run its own file rather than overwriting the last.",
+          "examples": [
+            "/var/log/cargoship/receipts/{command}-{timestamp}.json"
+          ],
+          "type": "string"
+        },
         "reset": {
           "$ref": "#/$defs/ResetOptions",
           "description": "ResetOptions are options used by the reset subcommand"

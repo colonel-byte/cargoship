@@ -20,10 +20,12 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/receipt"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/types"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
@@ -33,8 +35,9 @@ import (
 // discovered by the person who needed the receipt.
 func TestStartReceiptWithoutAPathDoesNothing(t *testing.T) {
 	cmd := &cobra.Command{Use: "apply"}
-	ctx, finish := startReceipt(context.Background(), cmd, InstallCommon{})
+	ctx, finish, err := startReceipt(context.Background(), cmd, InstallCommon{})
 
+	require.NoError(t, err)
 	require.NotNil(t, finish)
 	require.NotPanics(t, func() { finish(nil, "", nil, errors.New("boom")) })
 
@@ -55,7 +58,8 @@ func TestStartReceiptWritesOnFailure(t *testing.T) {
 		receiptPath: path,
 	}
 
-	_, finish := startReceipt(context.Background(), cmd, opt)
+	_, finish, err := startReceipt(context.Background(), cmd, opt)
+	require.NoError(t, err)
 	// A nil manager is the state a run that failed in preflight is in.
 	finish(nil, "", nil, errors.New("unable to read the cluster configuration"))
 
@@ -94,7 +98,8 @@ func TestStartReceiptRecordsTheFleet(t *testing.T) {
 	}
 
 	cmd := &cobra.Command{Use: "reset"}
-	_, finish := startReceipt(context.Background(), cmd, InstallCommon{receiptPath: path})
+	_, finish, err := startReceipt(context.Background(), cmd, InstallCommon{receiptPath: path})
+	require.NoError(t, err)
 	finish(manager, "", nil, nil)
 
 	got, err := receipt.Read(path)
@@ -207,4 +212,155 @@ func TestReceiptFlagIsRegisteredOnTheLifecycleCommands(t *testing.T) {
 			require.Equal(t, tc.expected, tc.cmd.Flags().Lookup(InstallReceiptPath) != nil)
 		})
 	}
+}
+
+// TestExpandReceiptPath covers the templating that makes `.distro.receipt_path` usable as a
+// standing configuration rather than a path every run truncates.
+func TestExpandReceiptPath(t *testing.T) {
+	started := time.Date(2026, 9, 28, 14, 30, 0, 0, time.UTC)
+
+	for _, tc := range []struct {
+		name    string
+		path    string
+		command string
+		want    string
+		wantErr string
+	}{
+		{
+			name: "empty stays empty",
+			path: "",
+			want: "",
+		},
+		{
+			name:    "a literal path is left alone",
+			path:    "/var/log/cargoship/apply.json",
+			command: "apply",
+			want:    "/var/log/cargoship/apply.json",
+		},
+		{
+			name:    "command and timestamp",
+			path:    "/var/log/cargoship/receipts/{command}-{timestamp}.json",
+			command: "apply",
+			want:    "/var/log/cargoship/receipts/apply-20260928-143000.json",
+		},
+		{
+			// Write creates the parent directory, so a placeholder in a directory
+			// component works the same as one in the filename.
+			name:    "a placeholder in a directory component",
+			path:    "/var/log/cargoship/{command}/{timestamp}.json",
+			command: "engine-config-sync",
+			want:    "/var/log/cargoship/engine-config-sync/20260928-143000.json",
+		},
+		{
+			name:    "repeated placeholders",
+			path:    "/receipts/{command}/{command}-{timestamp}.json",
+			command: "reset",
+			want:    "/receipts/reset/reset-20260928-143000.json",
+		},
+		{
+			name:    "an unknown placeholder is an error",
+			path:    "/receipts/{date}.json",
+			command: "apply",
+			wantErr: "unknown placeholder {date}",
+		},
+		{
+			// "phase" means a numbered step inside a run, not the command that ran, so
+			// it is deliberately not an alias for {command}.
+			name:    "phase is not an alias for command",
+			path:    "/receipts/{phase}.json",
+			command: "apply",
+			wantErr: "unknown placeholder {phase}",
+		},
+		{
+			name:    "every unknown placeholder is named at once",
+			path:    "/receipts/{date}/{cluster}.json",
+			command: "apply",
+			wantErr: "unknown placeholder {date}, {cluster}",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := expandReceiptPath(tc.path, tc.command, started)
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, tc.wantErr)
+				require.Empty(t, got)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// TestStartReceiptRejectsABadPathBeforeTheRun pins that the failure comes back from startReceipt
+// rather than from the finisher. The call sites return it before touching a host, which is the
+// whole point: a typo in a receipt path must not cost a fleet-wide run its record.
+func TestStartReceiptRejectsABadPathBeforeTheRun(t *testing.T) {
+	cmd := &cobra.Command{Use: "apply"}
+	_, finish, err := startReceipt(context.Background(), cmd, InstallCommon{receiptPath: "/receipts/{nope}.json"})
+
+	require.ErrorContains(t, err, "unknown placeholder {nope}")
+	require.Nil(t, finish)
+}
+
+// TestStartReceiptExpandsTheConfiguredPath is the end of the wiring: a templated path reaches the
+// file that actually gets written.
+func TestStartReceiptExpandsTheConfiguredPath(t *testing.T) {
+	dir := t.TempDir()
+
+	cmd := &cobra.Command{Use: "prepare"}
+	_, finish, err := startReceipt(context.Background(), cmd, InstallCommon{
+		receiptPath: filepath.Join(dir, "{command}-{timestamp}.json"),
+	})
+	require.NoError(t, err)
+	finish(nil, "", nil, nil)
+
+	entries, err := filepath.Glob(filepath.Join(dir, "prepare-*.json"))
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+
+	got, err := receipt.Read(entries[0])
+	require.NoError(t, err)
+	require.Equal(t, "prepare", got.Invocation.Command)
+}
+
+// TestReceiptFlagDefaultsToTheConfiguredPath pins the config-to-flag seam: the flag's default is
+// the configured value, untemplated, so `--help` shows the operator what they configured and
+// expansion still happens once per run.
+func TestReceiptFlagDefaultsToTheConfiguredPath(t *testing.T) {
+	configured := "/var/log/cargoship/receipts/{command}-{timestamp}.json"
+
+	original := resolvedConfig.DistroOpts.ReceiptPath
+	resolvedConfig.DistroOpts.ReceiptPath = configured
+	t.Cleanup(func() { resolvedConfig.DistroOpts.ReceiptPath = original })
+
+	cmd := &cobra.Command{Use: "apply"}
+	var path string
+	registerFlagReceiptPath(cmd, &path)
+
+	require.Equal(t, configured, path)
+	require.Equal(t, configured, cmd.Flags().Lookup(InstallReceiptPath).DefValue)
+}
+
+// TestConfiguredReceiptPathExpandsHomeThenPlaceholders walks the two rewrites a config-file value
+// goes through, in the order initViper applies them. They are far apart in the code -- one in
+// expandHomePaths at startup, one in startReceipt per run -- and the composition is what an
+// operator actually writes, so it is worth pinning that neither step disturbs the other's syntax.
+func TestConfiguredReceiptPathExpandsHomeThenPlaceholders(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg := types.DistroConfig{
+		DistroOpts: types.DistroOptions{
+			ReceiptPath: "~/.cache/cargoship/logs/{command}-{timestamp}.json",
+		},
+	}
+	require.NoError(t, expandHomePaths(&cfg))
+
+	got, err := expandReceiptPath(cfg.DistroOpts.ReceiptPath, "apply", time.Date(2026, 9, 28, 14, 30, 0, 0, time.UTC))
+	require.NoError(t, err)
+
+	require.Equal(t, filepath.Join(home, ".cache", "cargoship", "logs", "apply-20260928-143000.json"), got)
+	require.True(t, filepath.IsAbs(got))
+	require.NotContains(t, got, "~")
+	require.NotContains(t, got, "{")
 }
