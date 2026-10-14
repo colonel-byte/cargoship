@@ -25,6 +25,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/receipt"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/types"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
@@ -338,4 +339,28 @@ func TestReceiptFlagDefaultsToTheConfiguredPath(t *testing.T) {
 
 	require.Equal(t, configured, path)
 	require.Equal(t, configured, cmd.Flags().Lookup(InstallReceiptPath).DefValue)
+}
+
+// TestConfiguredReceiptPathExpandsHomeThenPlaceholders walks the two rewrites a config-file value
+// goes through, in the order initViper applies them. They are far apart in the code -- one in
+// expandHomePaths at startup, one in startReceipt per run -- and the composition is what an
+// operator actually writes, so it is worth pinning that neither step disturbs the other's syntax.
+func TestConfiguredReceiptPathExpandsHomeThenPlaceholders(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg := types.DistroConfig{
+		DistroOpts: types.DistroOptions{
+			ReceiptPath: "~/.cache/cargoship/logs/{command}-{timestamp}.json",
+		},
+	}
+	require.NoError(t, expandHomePaths(&cfg))
+
+	got, err := expandReceiptPath(cfg.DistroOpts.ReceiptPath, "apply", time.Date(2026, 9, 28, 14, 30, 0, 0, time.UTC))
+	require.NoError(t, err)
+
+	require.Equal(t, filepath.Join(home, ".cache", "cargoship", "logs", "apply-20260928-143000.json"), got)
+	require.True(t, filepath.IsAbs(got))
+	require.NotContains(t, got, "~")
+	require.NotContains(t, got, "{")
 }
