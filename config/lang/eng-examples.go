@@ -366,4 +366,12 @@ $ cargoship version --output yaml
 
 # Print it as JSON, for piping into jq
 $ cargoship version -o json`
+	// CmdRedactReceiptExample redact-receipt example
+	CmdRedactReceiptExample = `
+# Print a shareable copy of a run receipt
+$ cargoship redact-receipt ./apply-20260928-143000.json
+
+# Write one to a file, ready to attach to an issue
+$ cargoship redact-receipt ./apply-20260928-143000.json -o ./share.json
+`
 )
