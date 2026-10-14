@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
@@ -575,4 +576,318 @@ func TestResultSinkObservesNothingBeforeThePhases(t *testing.T) {
 	require.Error(t, m.Run(ctx))
 
 	require.False(t, sink.Observed())
+}
+
+// hostChangingPhase declares which hosts it changed as well as whether it changed anything, so
+// the two halves of the opt-in can be exercised apart: a phase can speak fleet-wide and stay
+// silent per host, which is what every phase in the tree did before HostsChanged existed.
+type hostChangingPhase struct {
+	title     string
+	changed   bool
+	hosts     []HostChange
+	shouldRun bool
+	runFor    time.Duration
+}
+
+func (p *hostChangingPhase) Title() string {
+	if p.title == "" {
+		return "host changing phase"
+	}
+	return p.title
+}
+
+func (p *hostChangingPhase) Explanation() string {
+	return "test function"
+}
+
+func (p *hostChangingPhase) ShouldRun() bool {
+	return p.shouldRun
+}
+
+func (p *hostChangingPhase) Changed() bool {
+	return p.changed
+}
+
+func (p *hostChangingPhase) HostsChanged() []HostChange {
+	return p.hosts
+}
+
+func (p *hostChangingPhase) Run(_ context.Context) error {
+	time.Sleep(p.runFor)
+	return nil
+}
+
+// TestPhaseResultRecordsHostChanges pins that HostsDeclared tracks the interface and not the
+// contents. A phase that implements HostsChanged and returns nothing has declared that it
+// changed no host, which is a different answer from a phase that was never asked.
+func TestPhaseResultRecordsHostChanges(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		phase    Phase
+		declared bool
+		hosts    []HostChange
+	}{
+		{
+			name:     "never asked",
+			phase:    &changingPhase{changed: true},
+			declared: false,
+			hosts:    nil,
+		},
+		{
+			name:     "declared, no host moved",
+			phase:    &hostChangingPhase{},
+			declared: true,
+			hosts:    nil,
+		},
+		{
+			name: "declared, one host moved",
+			phase: &hostChangingPhase{
+				changed: true,
+				hosts: []HostChange{
+					{
+						Host:    "10.0.0.1",
+						Changed: true,
+						Details: []HostChangeDetail{
+							{
+								Path:   "/etc/hosts",
+								Reason: "out of sync",
+							},
+						},
+					},
+				},
+			},
+			declared: true,
+			hosts: []HostChange{
+				{
+					Host:    "10.0.0.1",
+					Changed: true,
+					Details: []HostChangeDetail{
+						{
+							Path:   "/etc/hosts",
+							Reason: "out of sync",
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := phaseResult(tc.phase, 0)
+			require.Equal(t, tc.declared, got.HostsDeclared)
+			require.Equal(t, tc.hosts, got.Hosts)
+		})
+	}
+}
+
+// TestHostsUndeclaredNamesEveryPhaseThatStayedSilent is the per-host counterpart of
+// TestRunResultChangedComesOnlyFromDeclaredPhases. A phase that reports fleet-wide but not per
+// host is still silent per host, and has to be named: a host missing from a summary built on
+// this may simply never have been spoken for.
+func TestHostsUndeclaredNamesEveryPhaseThatStayedSilent(t *testing.T) {
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.AddPhase(
+		&hostChangingPhase{title: "speaks per host", shouldRun: true},
+		&changingPhase{title: "speaks fleet wide", shouldRun: true},
+		&mutatingPhase{},
+	)
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Equal(t, []string{"speaks fleet wide", "mutating phase"}, m.Result.HostsUndeclared())
+	require.Equal(t, []string{"mutating phase"}, m.Result.Undeclared())
+}
+
+// TestHostSummariesRollUpAcrossPhases pins the denominator. Named alone cannot be read -- a host
+// named by one of one reporting phase is fully accounted for and a host named by one of eight is
+// not -- so Reporting counts every phase that declared per host, including the ones that named
+// no host at all.
+func TestHostSummariesRollUpAcrossPhases(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		result RunResult
+		want   []HostSummary
+	}{
+		{
+			name:   "nothing reported",
+			result: RunResult{},
+			want:   nil,
+		},
+		{
+			name: "one phase reported and named nobody",
+			result: RunResult{
+				Ran: []PhaseResult{
+					{
+						Title:         "quiet",
+						HostsDeclared: true,
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "a host that moved in one phase of two stays changed",
+			result: RunResult{
+				Ran: []PhaseResult{
+					{
+						Title:         "first",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: true,
+							},
+							{
+								Host:    "kc02",
+								Changed: false,
+							},
+						},
+					},
+					{
+						Title:         "second",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: false,
+							},
+						},
+					},
+				},
+			},
+			want: []HostSummary{
+				{
+					Host:      "kc01",
+					Changed:   true,
+					Named:     2,
+					Reporting: 2,
+				},
+				{
+					Host:      "kc02",
+					Changed:   false,
+					Named:     1,
+					Reporting: 2,
+				},
+			},
+		},
+		{
+			name: "a phase that never declared adds no denominator",
+			result: RunResult{
+				Ran: []PhaseResult{
+					{
+						Title:         "declared",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: true,
+							},
+						},
+					},
+					{
+						Title:         "silent",
+						HostsDeclared: false,
+					},
+				},
+			},
+			want: []HostSummary{
+				{
+					Host:      "kc01",
+					Changed:   true,
+					Named:     1,
+					Reporting: 1,
+				},
+			},
+		},
+		{
+			name: "planned and skipped phases count too",
+			result: RunResult{
+				Planned: []PhaseResult{
+					{
+						Title:         "planned",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: false,
+							},
+						},
+					},
+				},
+				Skipped: []PhaseResult{
+					{
+						Title:         "skipped",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc02",
+								Changed: true,
+							},
+						},
+					},
+				},
+			},
+			want: []HostSummary{
+				{
+					Host:      "kc01",
+					Changed:   false,
+					Named:     1,
+					Reporting: 2,
+				},
+				{
+					Host:      "kc02",
+					Changed:   true,
+					Named:     1,
+					Reporting: 2,
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, tc.result.HostSummaries())
+		})
+	}
+}
+
+// TestSignalReportsHowMuchChangedIsWorth pins that the vocabulary lives here rather than in the
+// Ansible module, which now aliases it.
+func TestSignalReportsHowMuchChangedIsWorth(t *testing.T) {
+	complete := RunResult{
+		Ran: []PhaseResult{
+			{
+				Title:    "declared",
+				Declared: true,
+			},
+		},
+	}
+	require.Equal(t, SignalComplete, complete.Signal())
+
+	partial := RunResult{
+		Ran: []PhaseResult{
+			{
+				Title:    "declared",
+				Declared: true,
+			},
+			{
+				Title:    "silent",
+				Declared: false,
+			},
+		},
+	}
+	require.Equal(t, SignalPartial, partial.Signal())
+}
+
+// TestRunRecordsPhaseDuration pins that a phase that executed carries a duration and a phase
+// that did not carries zero. The zero is the point: a planned phase took no time because it
+// never ran, and a reader comparing durations should see that rather than a missing field.
+func TestRunRecordsPhaseDuration(t *testing.T) {
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.AddPhase(
+		&hostChangingPhase{title: "ran", shouldRun: true, runFor: 10 * time.Millisecond},
+		&conditionalPhase{},
+	)
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Len(t, m.Result.Ran, 1)
+	require.GreaterOrEqual(t, m.Result.Ran[0].Duration, 10*time.Millisecond)
+	require.Len(t, m.Result.Skipped, 1)
+	require.Zero(t, m.Result.Skipped[0].Duration)
 }
