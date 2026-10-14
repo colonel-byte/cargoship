@@ -1514,7 +1514,7 @@ HostChange is what one phase did to one host.
 type HostChange struct {
     // Host identifies the host as the cluster configuration would: the address from its host
     // block, with the port when it is not the default. A hostname is not enough on its own,
-    // because ZarfHost.Hostname is an optional override that is empty on most hosts.
+    // because Host.Hostname is an optional override that is empty on most hosts.
     Host    string
     Changed bool
     // Details names what moved on this host, one entry per file or setting. It is empty when
