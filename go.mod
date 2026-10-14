@@ -121,7 +121,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.6 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.66.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.47.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.47.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.21 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kms v1.61.3 // indirect
