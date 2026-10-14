@@ -98,6 +98,8 @@ const (
 	InstallVaultPasswordFile = "vault-password-file"
 	// InstallValues flag
 	InstallValues = "values"
+	// InstallReceiptPath flag
+	InstallReceiptPath = "receipt-path"
 )
 
 const (

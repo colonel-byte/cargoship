@@ -21,6 +21,8 @@ import (
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/action"
+	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -54,6 +56,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
+	registerFlagReceiptPath(cmd, &o.receiptPath)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
@@ -88,33 +91,44 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 }
 
 func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
-	d, err := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
-	if err != nil {
-		return err
+	// Opened before anything that can fail, so a run that never reaches its phases still leaves
+	// a receipt saying so. runErr is what the receipt records as the outcome, which is why every
+	// return below assigns it rather than returning directly.
+	var (
+		manager      *phase.Manager
+		distroLayout *layout.DistroLayout
+		runErr       error
+	)
+	ctx, finishReceipt := startReceipt(ctx, cmd, o.InstallCommon)
+	defer func() { finishReceipt(manager, args[0], distroLayout, runErr) }()
+
+	d, runErr := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
+	if runErr != nil {
+		return runErr
 	}
 
-	if err := riglogger.RigLogger(ctx); err != nil {
-		return err
+	if runErr = riglogger.RigLogger(ctx); runErr != nil {
+		return runErr
 	}
 
-	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
-	if err != nil {
-		return err
+	manager, distroLayout, runErr = initManager(ctx, cmd, args[0], o.InstallCommon)
+	if runErr != nil {
+		return runErr
 	}
 
 	manager.SetTimeout(d)
 
 	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
 	// and demanding one would break every plaintext configuration that works today.
-	keyring, err := o.resolveKeyring(cmd)
-	if err != nil {
-		return err
+	keyring, runErr := o.resolveKeyring(cmd)
+	if runErr != nil {
+		return runErr
 	}
 
 	// Nothing decrypts these until the engine configuration is written, which is well after every
 	// host has been connected to. Check them here, while stopping still costs nothing.
-	if err := clustercfg.VerifyRegistryAuth(manager.Config, keyring); err != nil {
-		return err
+	if runErr = clustercfg.VerifyRegistryAuth(manager.Config, keyring); runErr != nil {
+		return runErr
 	}
 
 	engineConfigSyncOpts := action.EngineConfigSyncOptions{
@@ -127,5 +141,6 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		AllowDowngrade:   o.allowDowngrade,
 	}
 
-	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)
+	runErr = action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)
+	return runErr
 }
