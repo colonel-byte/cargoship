@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
-	"strconv"
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
@@ -162,19 +160,11 @@ func factsOf(hosts cluster.Hosts) []hostFacts {
 // addressOf is the address a configuration would recognise: what the host block said, with the
 // port when it is not the default.
 //
-// rig's CompositeConfig.String renders a Go-ish "ssh.Config{127.0.0.1:2223}", which is right for a
-// log line and wrong for an attribute somebody writes a comparison against. Host.Address is
-// not an option either: it reads through the embedded rig client, which a host that has already
-// been disconnected no longer has.
+// It is kept as a name here because the provider's attributes are written in terms of it, but the
+// rendering itself belongs to the host -- the run receipt identifies a host the same way, and two
+// copies of that rule would be two things to keep in step.
 func addressOf(host *cluster.Host) string {
-	cfg := host.ConnectionConfig.SSH
-	if cfg == nil {
-		return host.ConnectionConfig.String()
-	}
-	if cfg.Port == 0 || cfg.Port == defaultSSHPort {
-		return cfg.Address
-	}
-	return net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port))
+	return host.ConfiguredAddress()
 }
 
 // distroModule resolves a distro ID to the module the phases take, the way every action does.
