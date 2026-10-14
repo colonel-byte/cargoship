@@ -28,6 +28,8 @@ import (
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/action"
+	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -65,6 +67,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
+	registerFlagReceiptPath(cmd, &o.receiptPath)
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
@@ -105,18 +108,29 @@ func newInstallApplyCommand() *cobra.Command {
 func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	d, err := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
-	if err != nil {
-		return err
+	// Opened before anything that can fail, so a run that never reaches its phases still leaves
+	// a receipt saying so. runErr is what the receipt records as the outcome, which is why every
+	// return below assigns it rather than returning directly.
+	var (
+		manager      *phase.Manager
+		distroLayout *layout.DistroLayout
+		runErr       error
+	)
+	ctx, finishReceipt := startReceipt(ctx, cmd, o.InstallCommon)
+	defer func() { finishReceipt(manager, args[0], distroLayout, runErr) }()
+
+	d, runErr := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
+	if runErr != nil {
+		return runErr
 	}
 
-	if err := riglogger.RigLogger(ctx); err != nil {
-		return err
+	if runErr = riglogger.RigLogger(ctx); runErr != nil {
+		return runErr
 	}
 
-	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
-	if err != nil {
-		return err
+	manager, distroLayout, runErr = initManager(ctx, cmd, args[0], o.InstallCommon)
+	if runErr != nil {
+		return runErr
 	}
 	// deletes the temp directory at the end of the apply phases
 	defer func() {
@@ -130,9 +144,9 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 
 	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
 	// and demanding one would break every plaintext configuration that works today.
-	keyring, err := o.resolveKeyring(cmd)
-	if err != nil {
-		return err
+	keyring, runErr := o.resolveKeyring(cmd)
+	if runErr != nil {
+		return runErr
 	}
 
 	// Nothing decrypts these until the engine configuration is written, which is well after every
@@ -140,8 +154,8 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 	// more for age than it ever did for vault: an age value records nothing about which recipients
 	// it was encrypted to, so this is the only check that catches a configuration encrypted to a
 	// key nobody on this machine holds.
-	if err := clustercfg.VerifyRegistryAuth(manager.Config, keyring); err != nil {
-		return err
+	if runErr = clustercfg.VerifyRegistryAuth(manager.Config, keyring); runErr != nil {
+		return runErr
 	}
 
 	applyOpts := action.ApplyOptions{
@@ -157,5 +171,6 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		Keyring:             keyring,
 	}
 
-	return action.NewApply(applyOpts).Run(ctx)
+	runErr = action.NewApply(applyOpts).Run(ctx)
+	return runErr
 }

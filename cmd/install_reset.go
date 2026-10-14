@@ -50,7 +50,7 @@ func newInstallResetCommand() *cobra.Command {
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
@@ -59,6 +59,7 @@ func newInstallResetCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.distro, InstallDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagResetDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
+	registerFlagReceiptPath(cmd, &o.receiptPath)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringSliceVar(&o.targetHosts, InstallTargetHosts, nil, lang.CmdInstallFlagResetTargetHosts)
 
@@ -81,39 +82,54 @@ func newInstallResetCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installResetOptions) run(ctx context.Context, _ []string) error {
-	if err := preflightReset(o.config, o.confirm, o.dryRun); err != nil {
-		return err
+func (o *installResetOptions) run(ctx context.Context, cmd *cobra.Command, _ []string) error {
+	// Opened before anything that can fail, so a run that never reaches its phases still leaves
+	// a receipt saying so. runErr is what the receipt records as the outcome, which is why every
+	// return below assigns it rather than returning directly.
+	//
+	// Reset loads no package, so it has no layout and the receipt carries no package block.
+	var (
+		manager *phase.Manager
+		runErr  error
+	)
+	ctx, finishReceipt := startReceipt(ctx, cmd, o.InstallCommon)
+	defer func() { finishReceipt(manager, "", nil, runErr) }()
+
+	if runErr = preflightReset(o.config, o.confirm, o.dryRun); runErr != nil {
+		return runErr
 	}
 
-	if err := riglogger.RigLogger(ctx); err != nil {
-		return err
+	if runErr = riglogger.RigLogger(ctx); runErr != nil {
+		return runErr
 	}
 
-	cluster, err := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
-	if err != nil {
-		return err
+	cluster, runErr := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
+	if runErr != nil {
+		return runErr
+	}
+
+	manager = &phase.Manager{
+		DistroID:          o.distro,
+		Concurrency:       o.concurrency,
+		ConcurrentUploads: o.concurrency,
+		Config:            &cluster,
+		// Reset does not load a package, so it builds its Manager here rather than through
+		// initManager, and this is the only place the flag reaches it.
+		DryRun: o.dryRun,
 	}
 
 	resetOpts := action.ResetOptions{
-		Manager: &phase.Manager{
-			DistroID:          o.distro,
-			Concurrency:       o.concurrency,
-			ConcurrentUploads: o.concurrency,
-			Config:            &cluster,
-			// Reset does not load a package, so it builds its Manager here rather than through
-			// initManager, and this is the only place the flag reaches it.
-			DryRun: o.dryRun,
-		},
+		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
 		TargetHosts:      o.targetHosts,
 		NoWait:           true,
 		NoDrain:          true,
 	}
 
-	reset, err := action.NewReset(resetOpts)
-	if err != nil {
-		return err
+	reset, runErr := action.NewReset(resetOpts)
+	if runErr != nil {
+		return runErr
 	}
-	return reset.Run(ctx)
+	runErr = reset.Run(ctx)
+	return runErr
 }
