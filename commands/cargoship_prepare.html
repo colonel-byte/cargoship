@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3482cbae.js";
+            window.path_to_searchindex_js = "../searchindex-802b75fa.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ef97ed17.js"></script>
+        <script src="../toc-13ddc617.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -221,7 +221,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
   -H, --hosts                                   Whether to update every host node's /etc/hosts file.
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
-      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.

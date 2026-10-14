@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3482cbae.js";
+            window.path_to_searchindex_js = "searchindex-802b75fa.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ef97ed17.js"></script>
+        <script src="toc-13ddc617.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -347,6 +347,23 @@ cargoship schema inventory -o ./inventory.schema.json
 # Checksum a file, or one file inside an archive
 cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
 </code></pre>
+<h3 id="10-record-a-run-for-audit"><a class="header" href="#10-record-a-run-for-audit">10. Record a Run for Audit</a></h3>
+<pre><code class="language-bash"># Write a structured record of the run: what ran, against which package, against which fleet,
+# and what changed. Written whether the run succeeds or fails, readable only by its owner.
+cargoship apply ./build/cargoship-distro-amd64.tar.zst \
+  --config ./cluster.yaml --confirm \
+  --receipt-path /var/log/cargoship/receipts/apply-20260928-143000.json
+
+# Strip everything that identifies the fleet, ready to attach to a bug report
+cargoship redact-receipt ./receipt.json -o ./share.json
+</code></pre>
+<p>The receipt carries the invocation and the cargoship that ran it, the package’s digests and signature status, the cluster inventory, and the phase-by-phase ledger with per-host change reasons and diffs. <code>redact-receipt</code> renumbers the hosts <code>host-01</code>, <code>host-02</code>, drops the diff bodies – an engine configuration diff carries join tokens – and removes the cluster name, operator and command line, leaving what a maintainer triages from.</p>
+<p>A fleet that keeps an audit trail sets the path once in the config file instead, under <code>.distro.receipt_path</code>, where <code>apply</code>, <code>prepare</code>, <code>reset</code> and <code>engine-config-sync</code> all pick it up:</p>
+<pre><code class="language-yaml">distro:
+  # {command} and {timestamp} expand per run, so each receipt lands in its own file
+  receipt_path: /var/log/cargoship/receipts/{command}-{timestamp}.json
+</code></pre>
+<p>Those two placeholders are the only ones accepted; anything else is rejected before the run starts, rather than written out literally. <code>--receipt-path</code> overrides the configured value and takes the same placeholders.</p>
 <hr>
 <h2 id="opentofu-and-terraform"><a class="header" href="#opentofu-and-terraform">OpenTofu and Terraform</a></h2>
 <p>The same phases run from an OpenTofu or Terraform provider, built from this repository as <code>terraform-provider-cargoship</code>. It drives <code>prepare</code> and <code>apply</code> against the hosts in its configuration and converges a cluster the way the CLI does, so a cluster can be managed from the same plan as the machines it runs on.</p>

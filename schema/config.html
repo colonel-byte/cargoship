@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3482cbae.js";
+            window.path_to_searchindex_js = "../searchindex-802b75fa.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ef97ed17.js"></script>
+        <script src="../toc-13ddc617.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -287,6 +287,7 @@
 <tr><td><code>output</code></td><td><code>string</code></td><td>no</td><td></td><td>the folder that we will create the distro tar balls in</td></tr>
 <tr><td><code>public_key</code></td><td><code>string</code></td><td>no</td><td></td><td>path to public key file for validating signed packages</td></tr>
 <tr><td><code>publish</code></td><td><a href="#distropublishoptions">DistroPublishOptions</a></td><td>no</td><td></td><td>are options used by the publish subcommand</td></tr>
+<tr><td><code>receipt_path</code></td><td><code>string</code></td><td>no</td><td></td><td>is where the lifecycle commands – apply, prepare, reset and<br>engine-config-sync – write the structured JSON record of a run, empty for no receipt.<br>Equivalent to –receipt-path, and templated the same way: {command} expands to the<br>command that ran and {timestamp} to when it started, so one configured value gives<br>every run its own file rather than overwriting the last.</td></tr>
 <tr><td><code>reset</code></td><td><a href="#resetoptions">ResetOptions</a></td><td>no</td><td></td><td>ResetOptions are options used by the reset subcommand</td></tr>
 <tr><td><code>retry</code></td><td><code>integer</code></td><td>no</td><td></td><td>number of retries we will try</td></tr>
 <tr><td><code>trusted_root</code></td><td><code>string</code></td><td>no</td><td></td><td>path to a Sigstore TrustedRoot JSON</td></tr>

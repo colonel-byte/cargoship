@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3482cbae.js";
+            window.path_to_searchindex_js = "searchindex-802b75fa.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ef97ed17.js"></script>
+        <script src="toc-13ddc617.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -345,6 +345,23 @@ cargoship schema inventory -o ./inventory.schema.json
 # Checksum a file, or one file inside an archive
 cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
 </code></pre>
+<h3 id="10-record-a-run-for-audit"><a class="header" href="#10-record-a-run-for-audit">10. Record a Run for Audit</a></h3>
+<pre><code class="language-bash"># Write a structured record of the run: what ran, against which package, against which fleet,
+# and what changed. Written whether the run succeeds or fails, readable only by its owner.
+cargoship apply ./build/cargoship-distro-amd64.tar.zst \
+  --config ./cluster.yaml --confirm \
+  --receipt-path /var/log/cargoship/receipts/apply-20260928-143000.json
+
+# Strip everything that identifies the fleet, ready to attach to a bug report
+cargoship redact-receipt ./receipt.json -o ./share.json
+</code></pre>
+<p>The receipt carries the invocation and the cargoship that ran it, the package’s digests and signature status, the cluster inventory, and the phase-by-phase ledger with per-host change reasons and diffs. <code>redact-receipt</code> renumbers the hosts <code>host-01</code>, <code>host-02</code>, drops the diff bodies – an engine configuration diff carries join tokens – and removes the cluster name, operator and command line, leaving what a maintainer triages from.</p>
+<p>A fleet that keeps an audit trail sets the path once in the config file instead, under <code>.distro.receipt_path</code>, where <code>apply</code>, <code>prepare</code>, <code>reset</code> and <code>engine-config-sync</code> all pick it up:</p>
+<pre><code class="language-yaml">distro:
+  # {command} and {timestamp} expand per run, so each receipt lands in its own file
+  receipt_path: /var/log/cargoship/receipts/{command}-{timestamp}.json
+</code></pre>
+<p>Those two placeholders are the only ones accepted; anything else is rejected before the run starts, rather than written out literally. <code>--receipt-path</code> overrides the configured value and takes the same placeholders.</p>
 <hr>
 <h2 id="opentofu-and-terraform"><a class="header" href="#opentofu-and-terraform">OpenTofu and Terraform</a></h2>
 <p>The same phases run from an OpenTofu or Terraform provider, built from this repository as <code>terraform-provider-cargoship</code>. It drives <code>prepare</code> and <code>apply</code> against the hosts in its configuration and converges a cluster the way the CLI does, so a cluster can be managed from the same plan as the machines it runs on.</p>
@@ -2613,7 +2630,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
       --label-nodes                             Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
-      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
@@ -2740,7 +2757,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
       --label-nodes                             Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
-      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
@@ -2908,7 +2925,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
   -H, --hosts                                   Whether to update every host node's /etc/hosts file.
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
-      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
@@ -3104,7 +3121,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
       --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help                      help for reset
-      --receipt-path string       Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --receipt-path string       Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --target-hosts strings      Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration.
   -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
 </code></pre>
@@ -4336,6 +4353,7 @@ $ cargoship version -o json
 <tr><td><code>output</code></td><td><code>string</code></td><td>no</td><td></td><td>the folder that we will create the distro tar balls in</td></tr>
 <tr><td><code>public_key</code></td><td><code>string</code></td><td>no</td><td></td><td>path to public key file for validating signed packages</td></tr>
 <tr><td><code>publish</code></td><td><a href="#distropublishoptions">DistroPublishOptions</a></td><td>no</td><td></td><td>are options used by the publish subcommand</td></tr>
+<tr><td><code>receipt_path</code></td><td><code>string</code></td><td>no</td><td></td><td>is where the lifecycle commands – apply, prepare, reset and<br>engine-config-sync – write the structured JSON record of a run, empty for no receipt.<br>Equivalent to –receipt-path, and templated the same way: {command} expands to the<br>command that ran and {timestamp} to when it started, so one configured value gives<br>every run its own file rather than overwriting the last.</td></tr>
 <tr><td><code>reset</code></td><td><a href="#resetoptions">ResetOptions</a></td><td>no</td><td></td><td>ResetOptions are options used by the reset subcommand</td></tr>
 <tr><td><code>retry</code></td><td><code>integer</code></td><td>no</td><td></td><td>number of retries we will try</td></tr>
 <tr><td><code>trusted_root</code></td><td><code>string</code></td><td>no</td><td></td><td>path to a Sigstore TrustedRoot JSON</td></tr>
@@ -14401,7 +14419,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions-1"><a class="header" href="#type-applyoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions-1"><a class="header" href="#type-applyoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194">ApplyOptions</a></a></h2>
 <p>ApplyOptions holds the values for the `.distro.apply` section of the config file</p>
 <pre><code class="language-go">type ApplyOptions struct{}
 </code></pre>
@@ -14432,7 +14450,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroCreateOptions"></a></p>
-<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L163-L171">DistroCreateOptions</a></a></h2>
+<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L169-L177">DistroCreateOptions</a></a></h2>
 <p>DistroCreateOptions holds the values for the `.distro.create` section of the config file</p>
 <pre><code class="language-go">type DistroCreateOptions struct {
     // RegistryOverride maps a source registry to the registry cargoship uses instead
@@ -14445,7 +14463,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroDeployOptions"></a></p>
-<h2 id="type-distrodeployoptions"><a class="header" href="#type-distrodeployoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L182-L185">DistroDeployOptions</a></a></h2>
+<h2 id="type-distrodeployoptions"><a class="header" href="#type-distrodeployoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188-L191">DistroDeployOptions</a></a></h2>
 <p>DistroDeployOptions holds the values for the `.distro.deploy` section of the config file</p>
 <pre><code class="language-go">type DistroDeployOptions struct {
     // Retries how many times we will try to push a package
@@ -14453,7 +14471,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroOptions"></a></p>
-<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L160">DistroOptions</a></a></h2>
+<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L166">DistroOptions</a></a></h2>
 <p>DistroOptions holds the values for the `.distro` section of the config file</p>
 <pre><code class="language-go">type DistroOptions struct {
     // CreateOpts are options used by the create subcommand
@@ -14489,6 +14507,12 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // KubeConfig path of the kubeconfig file the admin creds are merged into, the standard
     // location -- KUBECONFIG, else ~/.kube/config -- when empty
     KubeConfig string `json:"kubeconfig,omitempty" mapstructure:"kubeconfig"`
+    // ReceiptPath is where the lifecycle commands -- apply, prepare, reset and
+    // engine-config-sync -- write the structured JSON record of a run, empty for no receipt.
+    // Equivalent to --receipt-path, and templated the same way: {command} expands to the
+    // command that ran and {timestamp} to when it started, so one configured value gives
+    // every run its own file rather than overwriting the last.
+    ReceiptPath string `json:"receipt_path,omitempty" mapstructure:"receipt_path" jsonschema:"example=/var/log/cargoship/receipts/{command}-{timestamp}.json"`
     // WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
     // ("5") or a percentage of the batch ("25%")
     WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
@@ -14519,7 +14543,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroPublishOptions"></a></p>
-<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L174-L179">DistroPublishOptions</a></a></h2>
+<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L180-L185">DistroPublishOptions</a></a></h2>
 <p>DistroPublishOptions holds the values for the `.distro.publish` section of the config file</p>
 <pre><code class="language-go">type DistroPublishOptions struct {
     // SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package
@@ -14529,27 +14553,27 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="FileOverrideMap"></a></p>
-<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L213">FileOverrideMap</a></a></h2>
+<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L219">FileOverrideMap</a></a></h2>
 <p>FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.</p>
 <pre><code class="language-go">type FileOverrideMap map[string]string
 </code></pre>
 <p><a name="FileOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L218">JSONSchemaExtend</a></a></h3>
+<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L224">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonFileSources to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
 <p><a name="RegistryOverrideMap"></a></p>
-<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L197">RegistryOverrideMap</a></a></h2>
+<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L203">RegistryOverrideMap</a></a></h2>
 <p>RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It’s a named type (rather than a bare map[string]string) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.</p>
 <pre><code class="language-go">type RegistryOverrideMap map[string]string
 </code></pre>
 <p><a name="RegistryOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L202">JSONSchemaExtend</a></a></h3>
+<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L208">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonRegistries to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
 <p><a name="ResetOptions"></a></p>
-<h2 id="type-resetoptions-1"><a class="header" href="#type-resetoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L191">ResetOptions</a></a></h2>
+<h2 id="type-resetoptions-1"><a class="header" href="#type-resetoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L197">ResetOptions</a></a></h2>
 <p>ResetOptions holds the values for the `.distro.reset` section of the config file</p>
 <pre><code class="language-go">type ResetOptions struct{}
 </code></pre>
@@ -18777,6 +18801,32 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>The exception is a removal that leaves a single controller behind. There the member being removed has to still be up to form the majority of two that commits its own removal, so the engine stays running through the deletion and is uninstalled immediately after. <code>keepEngineForDelete</code> is that case, and it is the reason the ordering is decided in <code>Prepare</code> from the controller membership rather than being fixed.</p>
 <h2 id="what-is-not-covered"><a class="header" href="#what-is-not-covered">What is not covered</a></h2>
 <p>The refusals count controllers whose engine answers, not etcd’s own membership, so a cluster that is already one member down looks whole to them. A quorum check against etcd would be the stronger test and is not here.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="choice-what-a-run-receipt-records-and-what-it-refuses-to"><a class="header" href="#choice-what-a-run-receipt-records-and-what-it-refuses-to">Choice: what a run receipt records, and what it refuses to</a></h1>
+<p><code>cargoship apply --receipt-path</code> writes a structured record of a run, and <code>cargoship redact-receipt</code> projects it into something safe to attach to a public issue. Five decisions in that design look like oversights from the code alone. They are not.</p>
+<h2 id="host-records-are-an-allowlist-never-a-denylist"><a class="header" href="#host-records-are-an-allowlist-never-a-denylist">Host records are an allowlist, never a denylist</a></h2>
+<p><code>internal/receipt.Host</code> copies in a fixed set of fields by name, and nothing anywhere marshals <code>cluster.ZarfHost</code> into a receipt.</p>
+<p>That looks like needless transcription – the host object already has every field, and a <code>json:"-"</code> tag on the ones that must not appear would be less code. It is deliberate. <code>ZarfHost</code> embeds a live <code>rig.ClientWithConfig</code> and a <code>Metadata</code> struct full of connection state, and a receipt built by excluding what must not appear leaks the next field somebody adds to either. An allowlist fails closed: a new fact is absent from receipts until a person adds it to <code>Host</code>, which is the safe direction to be wrong in.</p>
+<p><code>TestHostFieldsAreAnAllowlist</code> pins the field set so that adding one fails the build until it is classified. The precedent is <code>internal/tofuprovider.factsOf</code>, which does the same thing for the provider’s attributes and for the same reason.</p>
+<p>If you are adding a host fact to a receipt, add it to <code>Host</code> and update that test. Do not reach for reflection over <code>ZarfHost</code>.</p>
+<h2 id="diffs-exist-only-where-a-phase-already-read-the-file"><a class="header" href="#diffs-exist-only-where-a-phase-already-read-the-file">Diffs exist only where a phase already read the file</a></h2>
+<p>Four phases carry a real unified diff – <code>25_modify_hosts_file</code>, <code>24_prepare_selinux_policy</code>, <code>70_engine_config_sync_common</code> and <code>89_reconfigure_survivors</code>. Four do not: <code>20_prepare_host</code> (sysctl), <code>22_prepare_fapolicyd</code>, <code>23_prepare_kernel_modules</code>, and the engine <code>config.yaml</code> written through <code>types/distrocfg</code>.</p>
+<p>The split is not an unfinished job. It is exactly the line between phases that fetch the prior content anyway and phases that do not. <code>driftedFiles</code> in the sync phase holds the host’s copy and the desired copy in the same scope, so a diff there costs nothing. The other four write without reading, and <code>ZarfHost.FileChanged</code> compares by sha256 without ever pulling the remote file down – so adding a diff to them means a new <code>ReadFile</code> per file per host, every run, on every host in the fleet. On a large fleet that is a real cost paid by every operator to benefit the few who read a diff.</p>
+<p>Those phases still report <em>that</em> they changed a host, with the file path and a reason. Only the body is missing. <code>HostChangeDetail.Diff</code> is documented to mean “not compared” when empty, never “no difference”.</p>
+<p>If you add a diff to one of the blind-write phases, that is a deliberate trade, not a cleanup – say so, and measure it against a fleet rather than a two-node test cluster.</p>
+<h2 id="redaction-happens-at-share-time-not-capture-time"><a class="header" href="#redaction-happens-at-share-time-not-capture-time">Redaction happens at share time, not capture time</a></h2>
+<p>There is no <code>--receipt-redact</code> flag, and <code>--receipt-path</code> never writes a second, safe file beside the real one.</p>
+<p>Both were considered. A pair of files one infix apart – <code>apply.json</code> and <code>apply.redacted.json</code>, one carrying join tokens and one not – is how the wrong one ends up attached to a public issue, and the failure is silent and unrecoverable once it is there. Redaction is also lossy and one way: the operator’s copy is the audit record and has to stay complete, and a reporter must not have to re-run a failed apply to get something shareable.</p>
+<p>So it is a post-processor. That also means it works on receipts already on disk, and can be tightened later without anybody re-running anything.</p>
+<h2 id="hosts-are-pseudonymised-not-hashed"><a class="header" href="#hosts-are-pseudonymised-not-hashed">Hosts are pseudonymised, not hashed</a></h2>
+<p><code>Redact</code> replaces each address with <code>host-01</code>, <code>host-02</code> in the order the receipt lists them.</p>
+<p>A digest of the real address would be the obvious choice and is the wrong one. Hostnames and RFC-1918 addresses come from a small enough space to enumerate exhaustively, so a hash of one is recoverable by anybody willing to spend an afternoon on it – while looking like a one-way function to everyone who reads the code. A sequential counter carries no information at all.</p>
+<p>The numbering follows the cluster configuration rather than the order phases reached hosts, so the alias a host gets in the host list is the alias it gets inside every phase, and a maintainer can still follow one machine through the ledger.</p>
+<h2 id="the-receipt-path-is-templated-and-only-two-placeholders-exist"><a class="header" href="#the-receipt-path-is-templated-and-only-two-placeholders-exist">The receipt path is templated, and only two placeholders exist</a></h2>
+<p><code>expandReceiptPath</code> substitutes <code>{command}</code> and <code>{timestamp}</code> into a receipt path, and rejects anything else. A flag value that is just a filename would be simpler, and for a flag it would be right.</p>
+<p>The templating exists for the config file, not the flag. <code>--receipt-path</code> names one file for one run; <code>.distro.receipt_path</code> is read by every <code>apply</code>, <code>prepare</code>, <code>reset</code> and <code>engine-config-sync</code> the operator ever runs, so a literal path configured there has each run truncate the record of the one before it. That failure is silent and leaves exactly one receipt on disk – the audit trail an operator thought they had turned on is instead a single file whose contents are whichever run happened last. The two placeholders together make the name unique per run, which is what somebody setting the key meant by setting it.</p>
+<p>An unrecognised placeholder is an error returned from <code>startReceipt</code>, before the run touches a host, rather than a literal written into the filename. Both halves are deliberate: a run that succeeds and records itself in <code>apply-{date}.json</code> is not discovered until somebody goes looking for a receipt that was written somewhere nobody expects, and failing after a fleet-wide change – when the run is cheap to repeat before it, not after – would be the wrong end to fail at.</p>
+<p>There is deliberately no <code>{phase}</code> alias for <code>{command}</code>. “Phase” in this repository means a numbered step inside a run (<code>25_modify_hosts_file</code> and its siblings), and a receipt spans all of them, so a <code>{phase}</code> that expanded to <code>apply</code> would name one thing after another. Adding more placeholders is cheap – a map entry in <code>expandReceiptPath</code> – but each one is a name an operator has to learn, so it should answer a question the two existing ones cannot.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-a-packages-selinux-policy-is-cil-applied-fatally-and-removed-from-a-record-on-the-host"><a class="header" href="#why-a-packages-selinux-policy-is-cil-applied-fatally-and-removed-from-a-record-on-the-host">Why a package’s SELinux policy is CIL, applied fatally, and removed from a record on the host</a></h1>
 <p><code>spec.config.os.selinux</code> lets a Cargo package carry the SELinux policy its workload needs: CIL policy modules, booleans, and file context mappings. <code>pkg/phase/24_prepare_selinux_policy.go</code> applies it, and <code>pkg/phase/89_remove_selinux_policy.go</code> takes it back off. Four decisions in there are not recoverable from the code, and this is the record of them.</p>
