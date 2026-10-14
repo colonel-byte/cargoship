@@ -155,6 +155,7 @@ func expandHomePaths(cfg *types.DistroConfig) error {
 		&cfg.CachePath,
 		&cfg.TempDirectory,
 		&cfg.DistroOpts.KubeConfig,
+		&cfg.DistroOpts.ReceiptPath,
 		&cfg.DistroOpts.Output,
 		&cfg.DistroOpts.PublicKey,
 		&cfg.DistroOpts.TrustedRoot,
@@ -257,6 +258,7 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
 	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
 	v.SetDefault(configPath("DistroOpts", "KubeConfig"), "")
+	v.SetDefault(configPath("DistroOpts", "ReceiptPath"), "")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")

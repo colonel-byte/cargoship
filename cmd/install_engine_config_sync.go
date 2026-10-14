@@ -99,7 +99,10 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		distroLayout *layout.DistroLayout
 		runErr       error
 	)
-	ctx, finishReceipt := startReceipt(ctx, cmd, o.InstallCommon)
+	ctx, finishReceipt, err := startReceipt(ctx, cmd, o.InstallCommon)
+	if err != nil {
+		return err
+	}
 	defer func() { finishReceipt(manager, args[0], distroLayout, runErr) }()
 
 	d, runErr := preflightInstall(args[0], o.config, o.confirm, o.dryRun)

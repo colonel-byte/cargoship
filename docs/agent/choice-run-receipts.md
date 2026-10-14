@@ -1,6 +1,6 @@
 # Choice: what a run receipt records, and what it refuses to
 
-`cargoship apply --receipt-path` writes a structured record of a run, and `cargoship redact-receipt` projects it into something safe to attach to a public issue. Four decisions in that design look like oversights from the code alone. They are not.
+`cargoship apply --receipt-path` writes a structured record of a run, and `cargoship redact-receipt` projects it into something safe to attach to a public issue. Five decisions in that design look like oversights from the code alone. They are not.
 
 ## Host records are an allowlist, never a denylist
 
@@ -37,3 +37,13 @@ So it is a post-processor. That also means it works on receipts already on disk,
 A digest of the real address would be the obvious choice and is the wrong one. Hostnames and RFC-1918 addresses come from a small enough space to enumerate exhaustively, so a hash of one is recoverable by anybody willing to spend an afternoon on it -- while looking like a one-way function to everyone who reads the code. A sequential counter carries no information at all.
 
 The numbering follows the cluster configuration rather than the order phases reached hosts, so the alias a host gets in the host list is the alias it gets inside every phase, and a maintainer can still follow one machine through the ledger.
+
+## The receipt path is templated, and only two placeholders exist
+
+`expandReceiptPath` substitutes `{command}` and `{timestamp}` into a receipt path, and rejects anything else. A flag value that is just a filename would be simpler, and for a flag it would be right.
+
+The templating exists for the config file, not the flag. `--receipt-path` names one file for one run; `.distro.receipt_path` is read by every `apply`, `prepare`, `reset` and `engine-config-sync` the operator ever runs, so a literal path configured there has each run truncate the record of the one before it. That failure is silent and leaves exactly one receipt on disk -- the audit trail an operator thought they had turned on is instead a single file whose contents are whichever run happened last. The two placeholders together make the name unique per run, which is what somebody setting the key meant by setting it.
+
+An unrecognised placeholder is an error returned from `startReceipt`, before the run touches a host, rather than a literal written into the filename. Both halves are deliberate: a run that succeeds and records itself in `apply-{date}.json` is not discovered until somebody goes looking for a receipt that was written somewhere nobody expects, and failing after a fleet-wide change -- when the run is cheap to repeat before it, not after -- would be the wrong end to fail at.
+
+There is deliberately no `{phase}` alias for `{command}`. "Phase" in this repository means a numbered step inside a run (`25_modify_hosts_file` and its siblings), and a receipt spans all of them, so a `{phase}` that expanded to `apply` would name one thing after another. Adding more placeholders is cheap -- a map entry in `expandReceiptPath` -- but each one is a name an operator has to learn, so it should answer a question the two existing ones cannot.

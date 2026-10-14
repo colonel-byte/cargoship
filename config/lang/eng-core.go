@@ -200,7 +200,7 @@ const (
 	// CmdVaultDecryptFileFlagDryRun flag description
 	CmdVaultDecryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdInstallFlagReceiptPath flag description
-	CmdInstallFlagReceiptPath = "Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket."
+	CmdInstallFlagReceiptPath = "Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket."
 	// CmdRedactReceiptShort redact-receipt short
 	CmdRedactReceiptShort = "Rewrites a run receipt so it can be attached to an issue"
 	// CmdRedactReceiptLong redact-receipt long
