@@ -38,6 +38,7 @@
   - [prepare](commands/cargoship_prepare.md)
   - [publish](commands/cargoship_publish.md)
   - [pull](commands/cargoship_pull.md)
+  - [redact-receipt](commands/cargoship_redact-receipt.md)
   - [reset](commands/cargoship_reset.md)
   - [schema](commands/cargoship_schema.md)
   - [sha256sum](commands/cargoship_sha256sum.md)

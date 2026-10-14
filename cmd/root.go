@@ -187,6 +187,7 @@ func NewCargoshipCommand() *cobra.Command {
 	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
+	rootCmd.AddCommand(newRedactReceiptCommand())
 	rootCmd.AddCommand(newSchemaCommand())
 	rootCmd.AddCommand(newInventoryCommand())
 	rootCmd.AddCommand(newValidateCommand())

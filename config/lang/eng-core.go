@@ -200,7 +200,13 @@ const (
 	// CmdVaultDecryptFileFlagDryRun flag description
 	CmdVaultDecryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdInstallFlagReceiptPath flag description
-	CmdInstallFlagReceiptPath = "Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so redact it before attaching it to a ticket."
+	CmdInstallFlagReceiptPath = "Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket."
+	// CmdRedactReceiptShort redact-receipt short
+	CmdRedactReceiptShort = "Rewrites a run receipt so it can be attached to an issue"
+	// CmdRedactReceiptLong redact-receipt long
+	CmdRedactReceiptLong = "Reads the run receipt at RECEIPT and writes a copy with everything that identifies the fleet removed, for attaching to a bug report. Hosts are renumbered host-01, host-02 in the order the receipt lists them, consistently across every phase, so it still reads as a sequence of events on particular machines without naming them. Diff bodies are dropped entirely -- an engine configuration diff carries join tokens and registry credentials -- leaving the file paths and the reasons they changed, which is what a maintainer triages from. The cluster name, the operator, the management node and the command line go with them. What stays is the phase ledger, the package provenance, the outcome, and the architecture and OS of each host. Redaction is one way: the original is left untouched, because it is the audit record and this is only a copy to send."
+	// CmdRedactReceiptFlagOutput flag description
+	CmdRedactReceiptFlagOutput = "Write the redacted receipt to this path instead of standard output. The file is created readable only by its owner."
 	// CmdViperErrLoadingConfigFile error text
 	CmdViperErrLoadingConfigFile = "failed to load config file"
 	// RootCmdFlagLogFormat log format

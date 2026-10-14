@@ -69,6 +69,19 @@ body:
       label: Error output
       description: The shortest decisive part of the output. Redact hostnames, tokens, and kubeconfig contents.
       render: shell
+  - type: textarea
+    id: receipt
+    attributes:
+      label: Run receipt
+      description: |
+        If the run was a phase or command group above, re-run it with `--receipt-path ./receipt.json`, then paste a redacted copy:
+
+        ```
+        cargoship redact-receipt ./receipt.json
+        ```
+
+        That strips the host addresses, the cluster name and the file contents, and leaves the phase-by-phase ledger with the failure point in it. Do not paste the unredacted receipt - it names every host and can carry join tokens.
+      render: json
   - type: input
     id: version
     attributes:
