@@ -49,6 +49,9 @@ const keyServer = "server"
 // package and so has nothing to render from. Only `server:` is touched.
 type ReconfigureSurvivors struct {
 	GenericPhase
+	// hostChanges carries Changed and HostsChanged. This phase reads the engine config before
+	// rewriting it, so it reports a real diff.
+	hostChanges
 	Distro      distrocfg.Distro
 	TargetHosts []string
 
@@ -138,6 +141,7 @@ func (p *ReconfigureSurvivors) repoint(ctx context.Context, h *cluster.Host) err
 		return nil
 	}
 	if got, gotSet := cfg[keyServer]; gotSet == wantSet && got == want {
+		p.observed(h)
 		return nil
 	}
 
@@ -156,6 +160,7 @@ func (p *ReconfigureSurvivors) repoint(ctx context.Context, h *cluster.Host) err
 	if err := h.WriteFile(path, string(out), "0600"); err != nil {
 		return fmt.Errorf("writing the engine config on %s: %w", h, err)
 	}
+	p.changedFile(h, path, reasonOutOfSync, unifiedDiff(path, content, string(out)))
 	return nil
 }
 

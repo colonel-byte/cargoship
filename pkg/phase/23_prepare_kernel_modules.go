@@ -26,6 +26,9 @@ import (
 // PrepareKernelModules enables the list of requested modules on the host, then reboots the box if modules are added
 type PrepareKernelModules struct {
 	GenericPhase
+	// hostChanges carries Changed and HostsChanged. A module file is written only when it is
+	// absent, so there is never a prior version to diff against.
+	hostChanges
 	Enabled bool
 	modules []string
 }
@@ -64,6 +67,7 @@ func (p *PrepareKernelModules) Run(ctx context.Context) error {
 }
 
 func (p *PrepareKernelModules) enableModules(ctx context.Context, h *cluster.Host) error {
+	p.observed(h)
 	for _, m := range p.modules {
 		load := fmt.Sprintf("/etc/modules-load.d/%s.conf", m)
 		if !h.FileExist(load) {
@@ -71,7 +75,9 @@ func (p *PrepareKernelModules) enableModules(ctx context.Context, h *cluster.Hos
 			logger.From(ctx).Info("enabling kernel module", "host", h, "modules", m)
 			if err := h.WriteFile(load, m, "0600"); err != nil {
 				logger.From(ctx).Warn("could not write", "host", h, "modules", m, "file", load)
+				continue
 			}
+			p.changedFile(h, load, reasonMissing, "")
 		}
 	}
 	return nil

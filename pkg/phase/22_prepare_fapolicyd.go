@@ -32,6 +32,10 @@ const (
 // PrepareFapolicy installs required packages and so on on the hosts.
 type PrepareFapolicy struct {
 	GenericPhase
+	// hostChanges carries Changed and HostsChanged. The rules file is written without reading
+	// what was there, so a change here is reported without a diff -- see the package note on
+	// HostChangeDetail.Diff.
+	hostChanges
 	fapolicydhosts cluster.Hosts
 }
 
@@ -71,6 +75,7 @@ func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.Host) erro
 	if err != nil {
 		return err
 	}
+	p.changedFile(h, FAPolicydRuleFile, reasonOutOfSync, "")
 	logger.From(ctx).Info("wrote fapolicyd file, restarting serivce", "host", h)
 	return h.RestartService(ctx, FAPOLICYD)
 }

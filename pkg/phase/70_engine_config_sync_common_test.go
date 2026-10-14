@@ -18,11 +18,13 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
+	"github.com/k0sproject/rig/v2/protocol/ssh"
 	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 )
@@ -106,6 +108,15 @@ func newSyncPhase(fsys *fileFS, desired map[string]distrocfg.DesiredFile) (*Engi
 	return p, h
 }
 
+// hostWithAddress builds a host the way a parsed configuration would, so ConfiguredAddress has
+// something to report. A host with no connection config renders an empty address, which would
+// make two hosts indistinguishable in a per-host report.
+func hostWithAddress(address string) *cluster.Host {
+	h := &cluster.Host{}
+	h.ConnectionConfig.SSH = &ssh.Config{Address: address}
+	return h
+}
+
 func TestDriftedFiles(t *testing.T) {
 	desired := map[string]distrocfg.DesiredFile{
 		registriesPath: {Content: []byte("---\nmirrors: {}\n"), Mode: "0640"},
@@ -114,6 +125,9 @@ func TestDriftedFiles(t *testing.T) {
 	cases := map[string]struct {
 		fsys *fileFS
 		want []string
+		// wantDiff is whether the drift carries a unified diff. Only a content difference
+		// has two versions to compare; missing, stale and wrong-mode have one or none.
+		wantDiff bool
 	}{
 		"in sync": {
 			fsys: &fileFS{
@@ -130,7 +144,8 @@ func TestDriftedFiles(t *testing.T) {
 				files: map[string]string{registriesPath: "---\n"},
 				modes: map[string]fs.FileMode{registriesPath: 0o640},
 			},
-			want: []string{"registries.yaml (out of sync)"},
+			want:     []string{"registries.yaml (out of sync)"},
+			wantDiff: true,
 		},
 		"someone widened the permissions": {
 			fsys: &fileFS{
@@ -150,7 +165,17 @@ func TestDriftedFiles(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			p, h := newSyncPhase(tc.fsys, desired)
-			require.Equal(t, tc.want, p.driftedFiles(h))
+			got := p.driftedFiles(h)
+			require.Equal(t, tc.want, driftLabels(got))
+
+			for _, d := range got {
+				if !tc.wantDiff {
+					require.Empty(t, d.diff, "%s should carry no diff", d.reason)
+					continue
+				}
+				require.Contains(t, d.diff, "+mirrors: {}", "the desired line is added")
+				require.Contains(t, d.diff, registriesPath, "the diff names the file")
+			}
 		})
 	}
 }
@@ -293,5 +318,91 @@ func TestSyncPhasesReportChange(t *testing.T) {
 	for _, p := range []Phase{&EngineConfigSyncController{}, &EngineConfigSyncWorker{}} {
 		_, ok := p.(changedReporter)
 		require.True(t, ok, "%s must report whether it changed the fleet", p.Title())
+	}
+}
+
+// TestHostsChangedReportsEveryCheckedHost pins the per-host answer this phase feeds into the run
+// receipt. A host that was checked and found in sync is reported as unchanged rather than left
+// out: absent means nothing looked, which is a weaker claim than looked and found nothing.
+func TestHostsChangedReportsEveryCheckedHost(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		registriesPath: {Content: []byte("---\nmirrors: {}\n"), Mode: "0640"},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+
+	inSync := hostWithAddress("10.0.0.1")
+	inSync.SetFS(&fileFS{
+		files: map[string]string{registriesPath: "---\nmirrors: {}\n"},
+		modes: map[string]fs.FileMode{registriesPath: 0o640},
+	})
+	drifted := hostWithAddress("10.0.0.2")
+	drifted.SetFS(&fileFS{
+		files: map[string]string{registriesPath: "---\n"},
+		modes: map[string]fs.FileMode{registriesPath: 0o640},
+	})
+
+	require.False(t, p.needsUpdate(context.Background(), inSync))
+	require.True(t, p.needsUpdate(context.Background(), drifted))
+
+	// Only the drifted host is acted on, which is what Run marks.
+	p.markChanged(drifted)
+
+	got := p.HostsChanged()
+	require.Len(t, got, 2)
+
+	// Sorted by address, so two identical runs report in the same order.
+	require.Equal(t, "10.0.0.1", got[0].Host)
+	require.False(t, got[0].Changed)
+	require.Empty(t, got[0].Details)
+
+	require.Equal(t, "10.0.0.2", got[1].Host)
+	require.True(t, got[1].Changed)
+	require.Len(t, got[1].Details, 1)
+	require.Equal(t, registriesPath, got[1].Details[0].Path)
+	require.Equal(t, reasonOutOfSync, got[1].Details[0].Reason)
+	require.Contains(t, got[1].Details[0].Diff, "+mirrors: {}")
+}
+
+// TestUnifiedDiffRefusesWhatItCannotRender pins the two guards. An empty diff always means "not
+// compared" -- the caller only asks once it knows the two differ -- so returning one for binary
+// or oversized content is the honest answer rather than a silent truncation.
+func TestUnifiedDiffRefusesWhatItCannotRender(t *testing.T) {
+	big := strings.Repeat("a", maxDiffInput+1)
+
+	for _, tc := range []struct {
+		name    string
+		current string
+		desired string
+		want    bool
+	}{
+		{
+			name:    "ordinary text is diffed",
+			current: "one\n",
+			desired: "two\n",
+			want:    true,
+		},
+		{
+			name:    "binary content is not",
+			current: "\xff\xfe\x00",
+			desired: "two\n",
+			want:    false,
+		},
+		{
+			name:    "oversized current is not",
+			current: big,
+			desired: "two\n",
+			want:    false,
+		},
+		{
+			name:    "oversized desired is not",
+			current: "one\n",
+			desired: big,
+			want:    false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := unifiedDiff("/etc/rancher/rke2/config.yaml", tc.current, tc.desired)
+			require.Equal(t, tc.want, got != "")
+		})
 	}
 }

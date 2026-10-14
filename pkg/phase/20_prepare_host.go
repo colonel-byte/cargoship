@@ -45,6 +45,10 @@ const sysctlConfPath = "/etc/sysctl.d/99-cargoship.conf"
 // PrepareHosts installs required packages and so on on the hosts.
 type PrepareHosts struct {
 	GenericPhase
+	// hostChanges carries Changed and HostsChanged. The sysctl file is rendered and written
+	// without reading what was there, so a change here is reported without a diff -- see the
+	// package note on HostChangeDetail.Diff.
+	hostChanges
 	d *distro.Distro
 }
 
@@ -152,5 +156,9 @@ func (p *PrepareHosts) updateSysctlConfig(ctx context.Context, h *cluster.Host) 
 		logger.From(ctx).Warn("failed to render sysctl tables")
 	}
 
-	return h.WriteFile(sysctlConfPath, sb.String(), "0644")
+	if err := h.WriteFile(sysctlConfPath, sb.String(), "0644"); err != nil {
+		return err
+	}
+	p.changedFile(h, sysctlConfPath, reasonOutOfSync, "")
+	return nil
 }

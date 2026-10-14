@@ -74,7 +74,7 @@ func (p *EngineConfigSyncWorker) Run(ctx context.Context) error {
 	// ShouldRun only lets this phase reach Run when Prepare found hosts to sync, and the
 	// first thing done to each of them is a drain. Marking here rather than after a
 	// success is deliberate: a run that fails halfway has still changed the fleet.
-	p.markChanged()
+	p.markChanged(p.hosts...)
 	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"syncing worker config",
