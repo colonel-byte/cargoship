@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.33.0](https://github.com/colonel-byte/cargoship/compare/v0.32.1...v0.33.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* record the colonel-byte.dev API group move and its transition window ([#798](https://github.com/colonel-byte/cargoship/issues/798))
+* **schema:** rename the generated schema files off the zarf- prefix ([#796](https://github.com/colonel-byte/cargoship/issues/796))
+* **api:** drop the Zarf prefix from the owned API types ([#794](https://github.com/colonel-byte/cargoship/issues/794))
+* **api:** move api/zarf.dev to api/colonel-byte.dev ([#793](https://github.com/colonel-byte/cargoship/issues/793))
+
+### Features
+
+* **api:** accept colonel-byte.dev/v1alpha1 with Cluster and Distro kinds ([#795](https://github.com/colonel-byte/cargoship/issues/795)) ([3b1ac3c](https://github.com/colonel-byte/cargoship/commit/3b1ac3ccdcd691f427ee0913efedf2f70213959a))
+* **cli:** add --receipt-path to the lifecycle commands ([#781](https://github.com/colonel-byte/cargoship/issues/781)) ([63ceeaa](https://github.com/colonel-byte/cargoship/commit/63ceeaa1315253555b6a1c11723e1082de0cfc80))
+* **cli:** add redact-receipt for sharing a run receipt ([#783](https://github.com/colonel-byte/cargoship/issues/783)) ([d03cc39](https://github.com/colonel-byte/cargoship/commit/d03cc395b1caf64e93928d26e9608d0efbac0787))
+* **cli:** print a per-host summary table and document run receipts ([#784](https://github.com/colonel-byte/cargoship/issues/784)) ([39cc614](https://github.com/colonel-byte/cargoship/commit/39cc614c37b4020ef4b63fcea64c63669c384b87))
+* **cli:** wire --receipt-path into the config file ([#815](https://github.com/colonel-byte/cargoship/issues/815)) ([9da1dc6](https://github.com/colonel-byte/cargoship/commit/9da1dc696b756d277c90aceffd75f0c344ff839c))
+* **phase:** report per-host changes and per-phase duration ([#779](https://github.com/colonel-byte/cargoship/issues/779)) ([6cf4e53](https://github.com/colonel-byte/cargoship/commit/6cf4e53796425e0dc0131c07ca4a4cf22bc7318d))
+* **phase:** report which hosts changed, with diffs where the file was read ([#782](https://github.com/colonel-byte/cargoship/issues/782)) ([5257c0e](https://github.com/colonel-byte/cargoship/commit/5257c0e9afd81e9f6f5db8179483d59fc34fb6f1))
+* **receipt:** add the run receipt document and its writer ([#780](https://github.com/colonel-byte/cargoship/issues/780)) ([4c81c0e](https://github.com/colonel-byte/cargoship/commit/4c81c0edf3904975591778616d9320d2b8ff9a7f))
+
+
+### Refactoring
+
+* **api:** drop the Zarf prefix from the owned API types ([#794](https://github.com/colonel-byte/cargoship/issues/794)) ([ed30c85](https://github.com/colonel-byte/cargoship/commit/ed30c854408bcaa00d1678836e1b24fc19e84834))
+* **api:** move api/zarf.dev to api/colonel-byte.dev ([#793](https://github.com/colonel-byte/cargoship/issues/793)) ([738c7dc](https://github.com/colonel-byte/cargoship/commit/738c7dcd7884dcff10e25e4a559837168c87dd37))
+* **schema:** rename the generated schema files off the zarf- prefix ([#796](https://github.com/colonel-byte/cargoship/issues/796)) ([29f5f69](https://github.com/colonel-byte/cargoship/commit/29f5f697f50b479dedd4025062968e184484e0f7))
+
+
+### Documentation
+
+* record the colonel-byte.dev API group move and its transition window ([#798](https://github.com/colonel-byte/cargoship/issues/798)) ([c9ce7f1](https://github.com/colonel-byte/cargoship/commit/c9ce7f102f1df92b1a66a9946cc08159fa071747))
+
+
+### Miscellaneous
+
+* **example:** regenerate example packages for the colonel-byte.dev group ([#797](https://github.com/colonel-byte/cargoship/issues/797)) ([0511fd3](https://github.com/colonel-byte/cargoship/commit/0511fd3cdde7cf12883c44c9df48b52ed3acf27d))
+
+
+### Build
+
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/ecrpublic from 1.47.3 to 1.47.4 ([#806](https://github.com/colonel-byte/cargoship/issues/806)) ([b05ecf7](https://github.com/colonel-byte/cargoship/commit/b05ecf74ca104990b6160f3f096256a7d8566350))
+* **deps:** bump github.com/aws/aws-sdk-go-v2/service/kms from 1.61.3 to 1.61.4 ([#808](https://github.com/colonel-byte/cargoship/issues/808)) ([9bb808b](https://github.com/colonel-byte/cargoship/commit/9bb808bbdc04b1b858753ac67f7e1e995f2262fe))
+* **deps:** bump github.com/fvbommel/sortorder from 1.2.0 to 1.2.1 ([#804](https://github.com/colonel-byte/cargoship/issues/804)) ([8007542](https://github.com/colonel-byte/cargoship/commit/800754286ed459350d1603b0a8b768483d78d0fd))
+* **deps:** bump github.com/nwaples/rardecode/v2 from 2.4.2 to 2.4.3 ([#812](https://github.com/colonel-byte/cargoship/issues/812)) ([8ce9758](https://github.com/colonel-byte/cargoship/commit/8ce9758727c373a8250d1d54ea7f3ba75b203b0c))
+* **deps:** bump github.com/prometheus/client_golang from 1.24.1 to 1.25.0 ([#811](https://github.com/colonel-byte/cargoship/issues/811)) ([632a2e4](https://github.com/colonel-byte/cargoship/commit/632a2e4496849478a71a2ef6bfbbd095dae1d15c))
+* **deps:** bump github.com/prometheus/common from 0.72.0 to 0.72.1 ([#805](https://github.com/colonel-byte/cargoship/issues/805)) ([782e76a](https://github.com/colonel-byte/cargoship/commit/782e76a32187a00e97f37dd9f99c82249871ab19))
+* **deps:** bump github.com/prometheus/procfs from 0.21.1 to 0.22.0 ([#802](https://github.com/colonel-byte/cargoship/issues/802)) ([ec06714](https://github.com/colonel-byte/cargoship/commit/ec06714f14eb91590b70b88f26b1ad10422c7c09))
+* **deps:** bump github.com/pterm/pterm from 0.12.83 to 0.12.84 ([#810](https://github.com/colonel-byte/cargoship/issues/810)) ([70e2beb](https://github.com/colonel-byte/cargoship/commit/70e2beb4e8713448fc9a097d2eeb229164ca3034))
+* **deps:** bump golang.org/x/vuln from 1.8.0 to 1.9.0 ([#803](https://github.com/colonel-byte/cargoship/issues/803)) ([c8dc4c8](https://github.com/colonel-byte/cargoship/commit/c8dc4c8e96a1a2edd4e4b08613bd8b04a678a02a))
+* **deps:** bump ossf/scorecard-action from 2.4.4 to 2.5.0 in the core group ([#807](https://github.com/colonel-byte/cargoship/issues/807)) ([31f6b39](https://github.com/colonel-byte/cargoship/commit/31f6b3978225a3fdc087a3a3b3b6c6c2f5e5cdba))
+
 ## [0.32.1](https://github.com/colonel-byte/cargoship/compare/v0.32.0...v0.32.1) (2026-10-13)
 
 
