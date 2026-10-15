@@ -23,7 +23,7 @@ require (
 	github.com/k0sproject/bootloose v0.9.6
 	github.com/k0sproject/dig v0.4.0
 	github.com/k0sproject/rig/v2 v2.2.1
-	github.com/klauspost/compress v1.20.1
+	github.com/klauspost/compress v1.20.3
 	github.com/magefile/mage v1.17.2
 	github.com/nao1215/markdown v1.1.1
 	github.com/opencontainers/go-digest v1.0.0
