@@ -1781,7 +1781,7 @@ github.com/natefinch/atomic
 # github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 ## explicit
 github.com/nozzle/throttler
-# github.com/nwaples/rardecode/v2 v2.4.3
+# github.com/nwaples/rardecode/v2 v2.4.4
 ## explicit; go 1.21
 github.com/nwaples/rardecode/v2
 # github.com/oklog/run v1.2.0
