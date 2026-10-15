@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb3da7af.js";
+            window.path_to_searchindex_js = "../searchindex-0b56e1f2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-13ddc617.js"></script>
+        <script src="../toc-63067bc1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,7 +193,7 @@
 <li><strong>Archives</strong> - <code>tar.gz</code> per OS/arch, named after <code>uname</code> conventions (<code>cargoship_Linux_x86_64.tar.gz</code>).</li>
 <li><strong>Packages</strong> - <code>apk</code>, <code>deb</code>, and <code>rpm</code>, from the <code>nfpms</code> section. Packages can be signed when the corresponding signing keys are configured.</li>
 <li><strong>Container images</strong> - four multi-platform manifests covering <code>linux/amd64</code> and <code>linux/arm64</code>: <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;</code> (Chainguard static, bare binary), <code>ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt;</code> (AlmaLinux, installs the RPM), <code>ghcr.io/colonel-byte/cargoship-deb:&lt;tag&gt;</code> (Debian slim, installs the DEB), and <code>ghcr.io/colonel-byte/cargoship-ansible:&lt;tag&gt;</code> (AlmaLinux, installs the RPM and Ansible dependencies).</li>
-<li><strong>Ansible collections</strong> - two tarballs, <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and <code>colonel_byte-zarf-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and <code>ansible/colonel_byte/zarf</code> and attached to the release, each with its own cosign bundle. Neither is published to Galaxy: the management node that runs the playbooks is inside the airlock and installs them from the tarballs.</li>
+<li><strong>Ansible collection</strong> - a tarball, <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and attached to the release with its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.</li>
 <li><strong>SBOMs</strong> - one per archive, via Syft.</li>
 <li><strong>Signatures</strong> - cosign <code>sigstore.json</code> bundles over the checksums file and every archive, plus registry signatures over every container image. Package signatures are configured separately through nfpm.</li>
 </ul>
@@ -206,7 +206,7 @@
   colonel_byte-cargoship-&lt;version&gt;.tar.gz
 </code></pre>
 <h2 id="build-matrix"><a class="header" href="#build-matrix">Build Matrix</a></h2>
-<p>The <code>builds</code> section has three entries. <code>cargoship</code> (<code>./cmd/cargoship</code>) compiles <code>linux</code>, <code>darwin</code> and <code>windows</code> against <code>amd64</code>, <code>arm64</code> and <code>riscv64</code>. <code>zarf_init</code> (<code>./cmd/zarf/init</code>) and <code>zarf_package_deploy</code> (<code>./cmd/zarf/deploy</code>) are the <code>colonel_byte.zarf</code> collection’s module files, built for <code>linux</code> only on the same three architectures; the packages install them to <code>/usr/bin</code> and the collection calls them. Three settings there matter more than they look:</p>
+<p>The <code>builds</code> section has one entry. <code>cargoship</code> (<code>./cmd/cargoship</code>) compiles <code>linux</code>, <code>darwin</code> and <code>windows</code> against <code>amd64</code>, <code>arm64</code> and <code>riscv64</code>. Three settings there matter more than they look:</p>
 <ul>
 <li><strong><code>CGO_ENABLED=0</code></strong> - produces a statically linked binary. This is what lets the default image sit on <code>cgr.dev/chainguard/static</code>, which ships no libc, no shell, and no package manager; a dynamically linked binary fails there with a confusing <code>no such file or directory</code> on exec.</li>
 <li><strong><code>ldflags -X</code></strong> - stamps <code>config.CLIVersion</code> and <code>config.CLICommit</code>, which is what <code>cargoship version</code> prints.</li>

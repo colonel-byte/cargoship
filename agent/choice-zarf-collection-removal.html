@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb3da7af.js";
+            window.path_to_searchindex_js = "../searchindex-0b56e1f2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-13ddc617.js"></script>
+        <script src="../toc-63067bc1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,61 +182,20 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed"><a class="header" href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">The zarf collection is a proof of concept, and is meant to be removed</a></h1>
-<p><code>ansible/colonel_byte/zarf</code>, <code>internal/zarfmod</code>, <code>cmd/zarf/</code>, and <code>test/e2e/zarf</code> exist to prove <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes native Ansible module support for zarf. They are not part of what cargoship does. Cargoship builds and installs offline Kubernetes distro packages and runs a cluster lifecycle over SSH; nothing in that needs a zarf module, and no cargoship command calls into any of this.</p>
-<p>They live here because the pattern the proposal describes is the one <code>colonel_byte.cargoship</code> already runs – see <a href="choice-ansible-module.html">choice-ansible-module</a> – so the cheapest place to find out whether the pattern holds for zarf was beside the implementation it copies. That was the whole reason, and it expires.</p>
-<p>This note exists so that whoever removes it does not have to work out whether it was load-bearing first.</p>
-<h2 id="when-to-remove-it"><a class="header" href="#when-to-remove-it">When to remove it</a></h2>
-<p>Any one of these is enough:</p>
-<ul>
-<li><strong>ZEP-0072 is accepted and implemented in zarf.</strong> Then the real thing exists, dispatch lives inside the <code>zarf</code> binary, and keeping wrappers that shell out to zarf means maintaining a worse copy of a shipped feature.</li>
-<li><strong>ZEP-0072 is rejected, or lands somewhere else.</strong> The maintainers’ own feedback on the pull request raised an isolated experimental repository and a plugin architecture as alternatives. If either is where this goes, the proof belongs in that repository rather than this one.</li>
-<li><strong>It stops being maintained here.</strong> The flag surfaces are recorded lists rather than reads of zarf’s command tree (see <a href="choice-zarf-ansible-module.html">choice-zarf-ansible-module</a>), and the e2e suite pulls packages from two registries. The first time a zarf release breaks it and nobody is willing to refresh it, delete it rather than skip it.</li>
-</ul>
-<p>Nothing about cargoship’s own roadmap forces the removal, and nothing breaks while it stays. It is dead weight rather than a hazard: a release artifact administrators carry through an airlock and never install, and a test suite with prerequisites most contributors do not have.</p>
-<h2 id="what-to-remove"><a class="header" href="#what-to-remove">What to remove</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Path</th><th>What it is</th></tr>
-</thead>
-<tbody>
-<tr><td><code>ansible/colonel_byte/zarf/</code></td><td>The collection: action plugins, the shared projection module, the example playbook</td></tr>
-<tr><td><code>internal/zarfmod/</code></td><td>Dispatch, the WANT_JSON intake, the response, the stdout guard, the heartbeat</td></tr>
-<tr><td><code>cmd/zarf/init/</code>, <code>cmd/zarf/deploy/</code></td><td>The two module file entry points</td></tr>
-<tr><td><code>test/e2e/zarf/</code></td><td>The k3d suite, both k3d configs, both playbooks, the package signing key</td></tr>
-<tr><td><code>docs/guides/zarf-ansible-module.md</code></td><td>The user guide</td></tr>
-<tr><td><code>docs/agent/choice-zarf-ansible-module.md</code>, this file</td><td>The decision records</td></tr>
-</tbody>
-</table>
-</div>
-<p>And these edits, each of which is the only thing in its file that mentions zarf-the-tool:</p>
-<ul>
-<li><code>.goreleaser.yaml</code>: the <code>zarf_init</code> and <code>zarf_package_deploy</code> builds, the <code>zarf_modules</code> archive, the second <code>before</code> hook, the collection tree and two module symlinks under <code>nfpms[0].contents</code>, the two <code>bin/ansible/colonel_byte-zarf-*</code> globs under <code>release.extra_files</code>, and the two wrapper ids in <code>nfpms[0].ids</code>. Leave the <code>ids: [cargoship]</code> on the first archive: it is right either way, and without it the cargoship archive silently absorbs whatever builds exist.</li>
-<li><code>containers/ansible/Dockerfile</code>: the <code>zarf</code> build stage, the <code>COPY --from=zarf</code> line, the <code>zarf version</code> check, the <code>/home/nonroot/.zarf-cache</code> directory, the <code>SHELL</code> line, and the whole smoke-check <code>RUN</code> block after it. The <code>cargoship version</code> check stays, and so does <code>/home/nonroot/.zarf</code> – cargoship’s own cache paths predate this. Dropping the stage takes about 200MB off the image.</li>
-<li><code>magefiles/pkg/build/zarfmodules.go</code>, and in <code>magefiles/pkg/testrunner/testrunner.go</code> the <code>RunE2EZarf</code>, <code>K3dClusters</code> and <code>DeleteK3dClusters</code> functions, and in <code>magefiles/test.go</code> the <code>EndToEndZarf</code> and <code>CleanZarfClusters</code> targets.</li>
-<li><code>hack/ansible-build-collection.sh</code>: the third positional argument and the namespace/name lookup can stay – they are a generalisation that costs nothing and the cargoship path does not care – or revert to the hardcoded collection. Do not leave the script accepting a collection directory that no longer exists while the before hook still names it.</li>
-<li><code>docs/dev/mage.md</code>, <code>docs/dev/e2e-tests.md</code>, <code>docs/workflows/test-build-containers.md</code>, <code>AGENTS.md</code>’s layout table, and <code>.gitignore</code>’s <code>__pycache__</code> entry. The <code>.gitignore</code> entry should <strong>stay</strong>: it is right for the cargoship collection on its own.</li>
-</ul>
-<p>Then <code>go run ./magefiles/core generate:document</code>, which rewrites <code>docs/SUMMARY.md</code>, and <code>pre-commit run --all-files</code>.</p>
-<h2 id="what-not-to-take-with-it"><a class="header" href="#what-not-to-take-with-it">What not to take with it</a></h2>
-<ul>
-<li><strong><code>internal/ansiblemod</code> and <code>ansible/colonel_byte/cargoship</code>.</strong> The zarf side is modeled on them and shares no code with them. Nothing in <code>internal/zarfmod</code> is imported by anything outside itself and <code>cmd/zarf/</code>, and nothing in the cargoship collection refers to the zarf one.</li>
-<li><strong><code>internal/heartbeat</code>.</strong> It predates this work, is used by the cargoship phases, and the zarf side deliberately writes its own rather than reusing it.</li>
-<li><strong>The <code>zarf-dev/zarf</code> dependency in <code>go.mod</code>.</strong> Cargoship depends on zarf as a library for package formats, architecture detection and OCI handling, and has since long before this. Removing the collection does not make it unused; <code>go mod tidy</code> will tell the truth about that on its own.</li>
-</ul>
-<h2 id="why-this-is-a-record-rather-than-a-todo"><a class="header" href="#why-this-is-a-record-rather-than-a-todo">Why this is a record rather than a TODO</a></h2>
-<p>The removal is a decision somebody should make deliberately, with the proposal’s outcome in hand, not a chore to be swept up by whoever next tidies the repository. A <code>todo-</code> note would invite the second reading. What makes it safe to remove on short notice is the list above, and what makes it safe to leave is that none of it is reachable from cargoship’s own code paths.</p>
+                        <h1 id="the-zarf-collection-was-removed-and-where-it-went"><a class="header" href="#the-zarf-collection-was-removed-and-where-it-went">The zarf collection was removed, and where it went</a></h1>
+<p><code>ansible/colonel_byte/zarf</code>, <code>internal/zarfmod</code>, <code>cmd/zarf/</code> and <code>test/e2e/zarf</code> used to live here. They were a proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes native Ansible module support for zarf, and they were built in this repository because the pattern the proposal describes is the one <code>colonel_byte.cargoship</code> already runs – see <a href="choice-ansible-module.html">choice-ansible-module</a> – so the cheapest place to find out whether the pattern held for zarf was beside the implementation it copies. That reason expired when the proof outgrew being a guest here. It now lives in <a href="https://github.com/colonel-byte/ansible-collection-zarf">colonel-byte/ansible-collection-zarf</a>, which released <a href="https://github.com/colonel-byte/ansible-collection-zarf/releases/tag/v0.87.0">v0.87.0</a> carrying the same signed collection tarball, module binaries and Linux packages that cargoship’s release used to, and the copy here was deleted in <a href="https://github.com/colonel-byte/cargoship/issues/822">#822</a> rather than maintained as a second, worse one.</p>
+<p>This file is kept, at the name the removal plan had, for two reasons. The page was published, so the name is a URL somebody may still hold; and a reader who finds <code>zarf</code> all over <code>go.mod</code>, <code>pkg/action</code> and <code>pkg/coci</code> and no zarf collection should not have to work out whether something was lost. Nothing was: cargoship depends on <code>zarf-dev/zarf</code> as a <em>library</em>, for package formats, architecture detection and OCI handling, and has since long before the collection existed. <code>go mod tidy</code> was run on the removal and changed nothing. The collection was never reachable from any cargoship code path – nothing outside <code>internal/zarfmod</code> and <code>cmd/zarf/</code> imported it, and the cargoship collection never referred to it – which is what made it safe to remove on short notice.</p>
+<p>The decision records that explained the proof went with it: <a href="https://colonel-byte.github.io/ansible-collection-zarf/agent/choice-zarf-ansible-module.html">choice-zarf-ansible-module</a>, on why the modules are wrapper binaries rather than zarf itself and what that costs, and <a href="https://colonel-byte.github.io/ansible-collection-zarf/agent/choice-zarf-info-modules.html">choice-zarf-info-modules</a>, on why the read-only modules are plain action plugins and why <code>zarf_state_info</code> withholds credentials by default.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../agent/choice-zarf-ansible-module.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../agent/choice-vault-library.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../agent/choice-zarf-info-modules.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../agent/design-config-codegen.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -246,11 +205,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../agent/choice-zarf-ansible-module.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../agent/choice-vault-library.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../agent/choice-zarf-info-modules.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../agent/design-config-codegen.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cb3da7af.js";
+            window.path_to_searchindex_js = "searchindex-0b56e1f2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-13ddc617.js"></script>
+        <script src="toc-63067bc1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -204,7 +204,7 @@ tar -xzf cargoship_Linux_x86_64.tar.gz cargoship
 install -m 0755 cargoship /usr/local/bin/cargoship
 </code></pre>
 <h3 id="linux-packages"><a class="header" href="#linux-packages">Linux packages</a></h3>
-<p>Releases also carry <code>.rpm</code>, <code>.deb</code>, and <code>.apk</code> packages. Each installs the binary, shell completions for bash, fish and zsh, both Ansible collections - <code>colonel_byte.cargoship</code> and <code>colonel_byte.zarf</code> - onto ansible-core’s default collection path, and the two zarf module files the second collection calls (<code>/usr/bin/zarf_init</code> and <code>/usr/bin/zarf_package_deploy</code>):</p>
+<p>Releases also carry <code>.rpm</code>, <code>.deb</code>, and <code>.apk</code> packages. Each installs the binary, shell completions for bash, fish and zsh, and the <code>colonel_byte.cargoship</code> Ansible collection onto ansible-core’s default collection path:</p>
 <pre><code class="language-bash">sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
 </code></pre>
 <h3 id="container-images"><a class="header" href="#container-images">Container images</a></h3>
@@ -370,9 +370,8 @@ cargoship redact-receipt ./receipt.json -o ./share.json
 <p>It is a separate binary with its own release workflow, and the CLI does not depend on it. See <a href="dev/tofu-provider.html">Developing the OpenTofu Provider</a> for how to build it, run it against a local mirror, and what its resource schema accepts.</p>
 <hr>
 <h2 id="ansible-integration"><a class="header" href="#ansible-integration">Ansible Integration</a></h2>
-<p>Cargoship ships two Ansible collections.</p>
 <p><code>colonel_byte.cargoship</code> runs the workflows above as ordinary playbook tasks: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_reset</code>, <code>cargoship_kube_config</code>, and <code>cargoship_engine_config_sync</code>, plus a <code>cluster</code> role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.</p>
-<p><code>colonel_byte.zarf</code> drives <a href="https://github.com/zarf-dev/zarf">zarf</a> from the same management node, for the layer above the cluster: <code>zarf_init</code>, <code>zarf_package_deploy</code>, <code>zarf_package_info</code>, <code>zarf_package_inspect</code> and <code>zarf_state_info</code>, with <code>packages</code>, <code>package_inspect</code> and <code>state</code> roles over them. See <a href="guides/zarf-ansible-module.html">Deploying Zarf Packages with Ansible</a>.</p>
+<p>For driving zarf itself from a playbook, the <code>colonel_byte.zarf</code> collection lives in <a href="https://github.com/colonel-byte/ansible-collection-zarf">colonel-byte/ansible-collection-zarf</a>. It grew up here and moved out; nothing in cargoship depends on it.</p>
 <ul>
 <li><a href="guides/ansible-module.html">Running Cargoship as an Ansible Module</a> - the modules, their parameters, check mode, and what <code>changed</code> means.</li>
 <li><a href="guides/ansible-inv.html">Generating an Inventory from Ansible</a> - the group and host-variable translation, usable with or without the modules.</li>

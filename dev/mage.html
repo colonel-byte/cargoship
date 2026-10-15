@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb3da7af.js";
+            window.path_to_searchindex_js = "../searchindex-0b56e1f2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-13ddc617.js"></script>
+        <script src="../toc-63067bc1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -236,8 +236,6 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <li><code>EndToEndCluster</code> - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
 <li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node. It provisions a different five machines rather than fewer: <code>stageOS</code> is one per OS family per role, including a Fedora controller and the upload-only Alpine host, where the full walk’s <code>k3sOS</code> is a single Ubuntu controller and four workers.</li>
 <li><code>EndToEndClusterDryRun</code> - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with <code>--dry-run</code> against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.</li>
-<li><code>EndToEndZarf</code> - Runs the zarf Ansible module suite: two k3d clusters – one with a storage provider, one without – and the <a href="https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-local-path/uds-bundle.yaml"><code>init-local-path</code> uds-bundle</a>’s four packages walked across each by <code>colonel_byte.zarf</code>. It builds both module wrapper binaries first. Needs <code>k3d</code>, a <code>zarf</code> on PATH, <code>ansible-playbook</code>, Docker, and the network to pull the packages the first time; every test skips with a reason when one is missing. See <a href="../guides/zarf-ansible-module.html">zarf-ansible-module</a>.</li>
-<li><code>CleanZarfClusters</code> - Removes the k3d clusters <code>EndToEndZarf</code> creates. That target does this before it runs; use this one for a run that was killed partway through.</li>
 <li><code>CleanCluster</code> - Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
 <li><code>Fuzz</code> - Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="fuzz-tests.html">fuzz-tests</a>.</li>
 </ul>
@@ -246,8 +244,6 @@ mage test:endToEndNonCluster    # run the misc/package command suites, no cluste
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
 mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
-mage test:endToEndZarf          # run the zarf Ansible module suite (needs k3d, zarf, ansible-playbook)
-mage test:cleanZarfClusters     # remove the k3d clusters left behind by a killed zarf run
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
 </code></pre>
@@ -273,9 +269,6 @@ mage release:tofuProvider 0.1.0           # build it and push it to the default 
 </li>
 <li>
 <p><code>Completion</code> - Generates shell tab completion scripts for bash, zsh, fish, and powershell into <code>hack/completion/</code>.</p>
-</li>
-<li>
-<p><code>ZarfFlags</code> - Rewrites <code>internal/zarfmod/testdata/zarf-*-flags.txt</code>, the flag surface the Ansible module wrappers are held against, by parsing <code>zarf &lt;command&gt; --help</code> on the installed zarf. Each file records the zarf version it came from. <code>TestInitArgsAreKnownFlags</code> and <code>TestDeployArgsAreKnownFlags</code> read those files rather than the binary, so the unit tests still run on a machine with no zarf; this target is how the lists are refreshed when the zarf the collection targets moves. Needs <code>zarf</code> on <code>PATH</code>, or <code>CARGOSHIP_ZARF_BINARY</code> naming one.</p>
 </li>
 <li>
 <p><code>PullEngineSource</code> - Fetches raw k3s/RKE2 source at the tags pinned in <code>thirdparty-src/pins.json</code> into <code>thirdparty-src/</code> (see <a href="thirdparty-src.html">thirdparty-src</a>). Touches the network.</p>
@@ -340,7 +333,7 @@ mage generate:examples
 <li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterDryRun</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.EndToEndZarf</code>, <code>Test.CleanCluster</code>, <code>Test.CleanZarfClusters</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
 <li><strong><code>pkg/build/</code>:</strong> Binary compilation logic, flag assembly, and example package builds.</li>
 <li><strong><code>pkg/devtools/</code>:</strong> Developer tooling packages, including <code>dnfpins</code> (AlmaLinux repomd XML parser and pin updater) and <code>osv</code> (OpenSSF Scorecard vendor overrides).</li>
-<li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), <code>schema/</code> (JSON schema reflection and docs), and <code>zarfflags/</code> (the zarf flag fixtures under <code>internal/zarfmod/testdata</code>).</li>
+<li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), and <code>schema/</code> (JSON schema reflection and docs).</li>
 <li><strong><code>pkg/testrunner/</code>:</strong> Test runner implementations for e2e suites and fuzz corpus replay.</li>
 <li><strong><code>pkg/util/</code>:</strong> Shared helpers for aligned table formatting, git commit resolution, and clean build tasks.</li>
 <li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code>, <code>k3s-distro.yaml.tmpl</code>, and <code>upstream-distro.yaml.tmpl</code> (rendered once per CNI flavor), plus the per-distro values templates a flavor ships beside its <code>distro.yaml</code> (<code>rke2/values.yaml.tmpl</code>, <code>rke2/values.schema.json.tmpl</code>, and the <code>k3s/</code> equivalents).</li>

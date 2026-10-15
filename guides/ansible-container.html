@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb3da7af.js";
+            window.path_to_searchindex_js = "../searchindex-0b56e1f2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-13ddc617.js"></script>
+        <script src="../toc-63067bc1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="running-the-collection-from-the-container"><a class="header" href="#running-the-collection-from-the-container">Running the Collection from the Container</a></h1>
-<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and both the <code>colonel_byte.cargoship</code> and <code>colonel_byte.zarf</code> collections, plus a <code>zarf</code> binary copied from the signed <code>ghcr.io/zarf-dev/zarf/agent</code> image. The zarf collection’s modules run that binary, so without it every task in that collection would fail on a command it cannot find; see <a href="zarf-ansible-module.html">zarf-ansible-module</a>. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
+<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
 <p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="ansible-module.html">ansible-module</a>, and for the inventory they translate, <a href="ansible-inv.html">ansible-inv</a>. Nothing about either changes inside the container.</p>
 <!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.33.0
@@ -212,7 +212,7 @@
 <p>An apply leaves <code>update_kubeconfig</code> on by default, which merges the cluster’s admin credentials into <code>KUBECONFIG</code> when it is set and <code>~/.kube/config</code> otherwise – inside the container, a file under <code>/home/nonroot</code> that goes away with the container. Mount a kubeconfig, name one with the <code>kubeconfig</code> parameter, or pass <code>update_kubeconfig: false</code> and fetch it deliberately with <code>cargoship_kube_config</code>; what you should not do is leave the default and wonder where the credentials went.</p>
 <p>Everything under <code>/home/nonroot</code> is already created and owned by 65532 in the image, so a run with none of the optional mounts works – it just starts cold each time and keeps nothing. The cache is the one worth adding first, and it has a section of its own below.</p>
 <h2 id="reaching-a-cluster-on-the-same-host"><a class="header" href="#reaching-a-cluster-on-the-same-host">Reaching a Cluster on the Same Host</a></h2>
-<p>The same rule catches addresses, not just paths, and a local k3d cluster is where it bites first. <code>k3d kubeconfig get zarf</code> writes <code>server: https://0.0.0.0:41609</code>, naming the port k3d published on the host; <code>0.0.0.0</code> inside the container is the container’s own network namespace, where nothing is listening. The first <code>colonel_byte.zarf</code> task then fails on a connection refused that reads like a cluster that is down, and the cluster is fine – see <a href="zarf-ansible-module.html">zarf-ansible-module</a> for the modules themselves.</p>
+<p>The same rule catches addresses, not just paths, and a local k3d cluster is where it bites first. <code>k3d kubeconfig get &lt;name&gt;</code> writes <code>server: https://0.0.0.0:41609</code>, naming the port k3d published on the host; <code>0.0.0.0</code> inside the container is the container’s own network namespace, where nothing is listening. A task given that kubeconfig fails on a connection refused that reads like a cluster that is down, and the cluster is fine.</p>
 <p>Two addresses do reach it, and the serving certificate is what limits it to two. k3d starts k3s with <code>--tls-san 0.0.0.0</code> and <code>--tls-san k3d-zarf-serverlb</code>, on top of k3s’s own <code>127.0.0.1</code> and <code>localhost</code>, so a name the certificate does not carry – <code>host.docker.internal</code>, or the bridge gateway address – fails verification even once it routes.</p>
 <p>Joining the cluster’s own network is the arrangement to prefer. Rewrite the server to the load balancer’s name inside that network:</p>
 <pre><code class="language-sh">mkdir -p build/tmp

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cb3da7af.js";
+            window.path_to_searchindex_js = "../searchindex-0b56e1f2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-13ddc617.js"></script>
+        <script src="../toc-63067bc1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -242,16 +242,6 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UP
     go test -mod=vendor -timeout=3h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 </code></pre>
 <p>No CI job runs this; it is the only way to cover the upgrade phases.</p>
-<h2 id="testendtoendzarf"><a class="header" href="#testendtoendzarf"><code>Test.EndToEndZarf</code></a></h2>
-<p>Deletes any leftover k3d clusters, builds the two zarf module wrapper binaries (<code>ZarfModules</code> in <code>magefiles/pkg/build/zarfmodules.go</code> - no version is stamped in, since a module file reports what zarf did), then runs the zarf module suite on a 90-minute budget:</p>
-<pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
-$ CGO_ENABLED=0 go build -trimpath -o build/zarf_init ./cmd/zarf/init
-$ CGO_ENABLED=0 go build -trimpath -o build/zarf_package_deploy ./cmd/zarf/deploy
-$ mkdir -p build/tmp
-$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
-    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/zarf/...
-</code></pre>
-<p>Needs <code>k3d</code>, a <code>zarf</code> on PATH, <code>ansible-playbook</code>, Docker, and the network on the first run to pull the packages. Every test skips with a reason when one is missing.</p>
 <h2 id="testcleanzarfclusters"><a class="header" href="#testcleanzarfclusters"><code>Test.CleanZarfClusters</code></a></h2>
 <pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
 </code></pre>
