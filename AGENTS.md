@@ -72,7 +72,7 @@ Hand-written files inside a generated tree stay unmarked, and there are several:
 Check a specific file rather than reasoning about the patterns:
 
 ```sh
-git check-attr linguist-generated -- docs/ansible/zarf/module_init.md
+git check-attr linguist-generated -- docs/ansible/cargoship/module_apply.md
 ```
 
 ## Keeping `README.md` current

@@ -50,6 +50,24 @@ enable     = true
 # Keep an entry for as long as anything outside this repository might still hold the old link --
 # a bookmark, an older release's galaxy.yml, a Galaxy listing. They cost one file each.
 [output.html.redirect]
+
+# The zarf collection moved to colonel-byte/ansible-collection-zarf, and its pages went with it.
+# These were published, so the old URLs keep working by pointing at the new site -- an absolute
+# URL rather than a path, because the target is no longer in this book.
+"/ansible/zarf/collection.html"           = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/collection.html"
+"/ansible/zarf/modules.html"              = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/modules.html"
+"/ansible/zarf/roles.html"                = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/roles.html"
+"/ansible/zarf/module_init.html"          = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/module_init.html"
+"/ansible/zarf/module_package_deploy.html" = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/module_package_deploy.html"
+"/ansible/zarf/module_package_info.html"  = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/module_package_info.html"
+"/ansible/zarf/module_package_inspect.html" = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/module_package_inspect.html"
+"/ansible/zarf/module_state_info.html"    = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/module_state_info.html"
+"/ansible/zarf/role_packages.html"        = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/role_packages.html"
+"/ansible/zarf/role_package_inspect.html" = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/role_package_inspect.html"
+"/ansible/zarf/role_state.html"           = "https://colonel-byte.github.io/ansible-collection-zarf/ansible/role_state.html"
+"/guides/zarf-ansible-module.html"        = "https://colonel-byte.github.io/ansible-collection-zarf/guides/zarf-ansible-module.html"
+"/agent/choice-zarf-ansible-module.html"  = "https://colonel-byte.github.io/ansible-collection-zarf/agent/choice-zarf-ansible-module.html"
+"/agent/choice-zarf-info-modules.html"    = "https://colonel-byte.github.io/ansible-collection-zarf/agent/choice-zarf-info-modules.html"
 "/ansible/collection.html"                = "cargoship/collection.html"
 "/ansible/modules.html"                   = "cargoship/modules.html"
 "/ansible/roles.html"                     = "cargoship/roles.html"

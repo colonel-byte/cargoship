@@ -1,6 +1,6 @@
 # Running the Collection from the Container
 
-The `cargoship-ansible` image is a management node in a container: `ansible-core` on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and both the `colonel_byte.cargoship` and `colonel_byte.zarf` collections, plus a `zarf` binary copied from the signed `ghcr.io/zarf-dev/zarf/agent` image. The zarf collection's modules run that binary, so without it every task in that collection would fail on a command it cannot find; see [zarf-ansible-module](zarf-ansible-module.md). It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.
+The `cargoship-ansible` image is a management node in a container: `ansible-core` on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the `colonel_byte.cargoship` collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.
 
 For the modules themselves -- their parameters and what `changed` means -- see [ansible-module](ansible-module.md), and for the inventory they translate, [ansible-inv](ansible-inv.md). Nothing about either changes inside the container.
 
@@ -34,7 +34,7 @@ Everything under `/home/nonroot` is already created and owned by 65532 in the im
 
 ## Reaching a Cluster on the Same Host
 
-The same rule catches addresses, not just paths, and a local k3d cluster is where it bites first. `k3d kubeconfig get zarf` writes `server: https://0.0.0.0:41609`, naming the port k3d published on the host; `0.0.0.0` inside the container is the container's own network namespace, where nothing is listening. The first `colonel_byte.zarf` task then fails on a connection refused that reads like a cluster that is down, and the cluster is fine -- see [zarf-ansible-module](zarf-ansible-module.md) for the modules themselves.
+The same rule catches addresses, not just paths, and a local k3d cluster is where it bites first. `k3d kubeconfig get <name>` writes `server: https://0.0.0.0:41609`, naming the port k3d published on the host; `0.0.0.0` inside the container is the container's own network namespace, where nothing is listening. A task given that kubeconfig fails on a connection refused that reads like a cluster that is down, and the cluster is fine.
 
 Two addresses do reach it, and the serving certificate is what limits it to two. k3d starts k3s with `--tls-san 0.0.0.0` and `--tls-san k3d-zarf-serverlb`, on top of k3s's own `127.0.0.1` and `localhost`, so a name the certificate does not carry -- `host.docker.internal`, or the bridge gateway address -- fails verification even once it routes.
 

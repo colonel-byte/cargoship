@@ -30,7 +30,7 @@ install -m 0755 cargoship /usr/local/bin/cargoship
 
 ### Linux packages
 
-Releases also carry `.rpm`, `.deb`, and `.apk` packages. Each installs the binary, shell completions for bash, fish and zsh, both Ansible collections - `colonel_byte.cargoship` and `colonel_byte.zarf` - onto ansible-core's default collection path, and the two zarf module files the second collection calls (`/usr/bin/zarf_init` and `/usr/bin/zarf_package_deploy`):
+Releases also carry `.rpm`, `.deb`, and `.apk` packages. Each installs the binary, shell completions for bash, fish and zsh, and the `colonel_byte.cargoship` Ansible collection onto ansible-core's default collection path:
 
 ```bash
 sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
@@ -273,11 +273,9 @@ It is a separate binary with its own release workflow, and the CLI does not depe
 
 ## Ansible Integration
 
-Cargoship ships two Ansible collections.
-
 `colonel_byte.cargoship` runs the workflows above as ordinary playbook tasks: `cargoship_apply`, `cargoship_prepare`, `cargoship_reset`, `cargoship_kube_config`, and `cargoship_engine_config_sync`, plus a `cluster` role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.
 
-`colonel_byte.zarf` drives [zarf](https://github.com/zarf-dev/zarf) from the same management node, for the layer above the cluster: `zarf_init`, `zarf_package_deploy`, `zarf_package_info`, `zarf_package_inspect` and `zarf_state_info`, with `packages`, `package_inspect` and `state` roles over them. See [Deploying Zarf Packages with Ansible](guides/zarf-ansible-module.md).
+For driving zarf itself from a playbook, the `colonel_byte.zarf` collection lives in [colonel-byte/ansible-collection-zarf](https://github.com/colonel-byte/ansible-collection-zarf). It grew up here and moved out; nothing in cargoship depends on it.
 
 *   [Running Cargoship as an Ansible Module](guides/ansible-module.md) - the modules, their parameters, check mode, and what `changed` means.
 *   [Generating an Inventory from Ansible](guides/ansible-inv.md) - the group and host-variable translation, usable with or without the modules.

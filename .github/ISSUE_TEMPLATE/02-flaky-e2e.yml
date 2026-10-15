@@ -13,7 +13,6 @@ body:
       options:
         - test/e2e/noncluster - misc and package commands
         - test/e2e/cluster - the install group, needs Docker and bootloose
-        - test/e2e/zarf - the zarf collection, needs k3d and ansible-playbook
     validations:
       required: true
   - type: input
