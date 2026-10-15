@@ -90,21 +90,6 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UP
 
 No CI job runs this; it is the only way to cover the upgrade phases.
 
-## `Test.EndToEndZarf`
-
-Deletes any leftover k3d clusters, builds the two zarf module wrapper binaries (`ZarfModules` in `magefiles/pkg/build/zarfmodules.go` - no version is stamped in, since a module file reports what zarf did), then runs the zarf module suite on a 90-minute budget:
-
-```console
-$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2>/dev/null; done
-$ CGO_ENABLED=0 go build -trimpath -o build/zarf_init ./cmd/zarf/init
-$ CGO_ENABLED=0 go build -trimpath -o build/zarf_package_deploy ./cmd/zarf/deploy
-$ mkdir -p build/tmp
-$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
-    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/zarf/...
-```
-
-Needs `k3d`, a `zarf` on PATH, `ansible-playbook`, Docker, and the network on the first run to pull the packages. Every test skips with a reason when one is missing.
-
 ## `Test.CleanZarfClusters`
 
 ```console

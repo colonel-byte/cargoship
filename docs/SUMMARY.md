@@ -21,7 +21,6 @@
 - [setup-inv](guides/setup-inv.md)
 - [signing-packages](guides/signing-packages.md)
 - [vault-encryption](guides/vault-encryption.md)
-- [zarf-ansible-module](guides/zarf-ansible-module.md)
 
 
 -----------
@@ -79,17 +78,6 @@
   - [reset](ansible/cargoship/module_reset.md)
 - [cargoship roles](ansible/cargoship/roles.md)
   - [cluster](ansible/cargoship/role_cluster.md)
-- [zarf collection](ansible/zarf/collection.md)
-- [zarf modules](ansible/zarf/modules.md)
-  - [init](ansible/zarf/module_init.md)
-  - [package_deploy](ansible/zarf/module_package_deploy.md)
-  - [package_info](ansible/zarf/module_package_info.md)
-  - [package_inspect](ansible/zarf/module_package_inspect.md)
-  - [state_info](ansible/zarf/module_state_info.md)
-- [zarf roles](ansible/zarf/roles.md)
-  - [package_inspect](ansible/zarf/role_package_inspect.md)
-  - [packages](ansible/zarf/role_packages.md)
-  - [state](ansible/zarf/role_state.md)
 
 
 -----------
@@ -236,9 +224,7 @@
 - [choice-upstream-cni-manifests](agent/choice-upstream-cni-manifests.md)
 - [choice-v1alpha1-action-conversion](agent/choice-v1alpha1-action-conversion.md)
 - [choice-vault-library](agent/choice-vault-library.md)
-- [choice-zarf-ansible-module](agent/choice-zarf-ansible-module.md)
 - [choice-zarf-collection-removal](agent/choice-zarf-collection-removal.md)
-- [choice-zarf-info-modules](agent/choice-zarf-info-modules.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 - [design-tofu-provider-install](agent/design-tofu-provider-install.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)

@@ -88,15 +88,6 @@ var ansibleCollections = []ansibleCollection{
 		roles:        true,
 		summaryLabel: "cargoship",
 	},
-	{
-		dir:          "ansible/colonel_byte/zarf",
-		docsDir:      filepath.Join(ansibleDocsDir, "zarf"),
-		fqcn:         "colonel_byte.zarf",
-		modulePrefix: "zarf_",
-		tagline:      "It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster's nodes.",
-		roles:        true,
-		summaryLabel: "zarf",
-	},
 }
 
 var (

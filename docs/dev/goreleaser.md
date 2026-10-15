@@ -15,7 +15,7 @@ A single `goreleaser release` run produces:
 *   **Archives** - `tar.gz` per OS/arch, named after `uname` conventions (`cargoship_Linux_x86_64.tar.gz`).
 *   **Packages** - `apk`, `deb`, and `rpm`, from the `nfpms` section. Packages can be signed when the corresponding signing keys are configured.
 *   **Container images** - four multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary), `ghcr.io/colonel-byte/cargoship-ubi:<tag>` (AlmaLinux, installs the RPM), `ghcr.io/colonel-byte/cargoship-deb:<tag>` (Debian slim, installs the DEB), and `ghcr.io/colonel-byte/cargoship-ansible:<tag>` (AlmaLinux, installs the RPM and Ansible dependencies).
-*   **Ansible collections** - two tarballs, `colonel_byte-cargoship-<version>.tar.gz` and `colonel_byte-zarf-<version>.tar.gz`, built from `ansible/colonel_byte/cargoship` and `ansible/colonel_byte/zarf` and attached to the release, each with its own cosign bundle. Neither is published to Galaxy: the management node that runs the playbooks is inside the airlock and installs them from the tarballs.
+*   **Ansible collection** - a tarball, `colonel_byte-cargoship-<version>.tar.gz`, built from `ansible/colonel_byte/cargoship` and attached to the release with its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.
 *   **SBOMs** - one per archive, via Syft.
 *   **Signatures** - cosign `sigstore.json` bundles over the checksums file and every archive, plus registry signatures over every container image. Package signatures are configured separately through nfpm.
 
@@ -35,7 +35,7 @@ cosign verify-blob --key cosign.pub \
 
 ## Build Matrix
 
-The `builds` section has three entries. `cargoship` (`./cmd/cargoship`) compiles `linux`, `darwin` and `windows` against `amd64`, `arm64` and `riscv64`. `zarf_init` (`./cmd/zarf/init`) and `zarf_package_deploy` (`./cmd/zarf/deploy`) are the `colonel_byte.zarf` collection's module files, built for `linux` only on the same three architectures; the packages install them to `/usr/bin` and the collection calls them. Three settings there matter more than they look:
+The `builds` section has one entry. `cargoship` (`./cmd/cargoship`) compiles `linux`, `darwin` and `windows` against `amd64`, `arm64` and `riscv64`. Three settings there matter more than they look:
 
 *   **`CGO_ENABLED=0`** - produces a statically linked binary. This is what lets the default image sit on `cgr.dev/chainguard/static`, which ships no libc, no shell, and no package manager; a dynamically linked binary fails there with a confusing `no such file or directory` on exec.
 *   **`ldflags -X`** - stamps `config.CLIVersion` and `config.CLICommit`, which is what `cargoship version` prints.
