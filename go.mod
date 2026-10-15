@@ -331,7 +331,7 @@ require (
 	github.com/olekukonko/errors v1.3.0 // indirect
 	github.com/olekukonko/ll v0.1.9 // indirect
 	github.com/olekukonko/tablewriter v1.1.5 // indirect
-	github.com/open-policy-agent/opa v1.21.1 // indirect
+	github.com/open-policy-agent/opa v1.21.2 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pb33f/go-yaml v0.1.1 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
