@@ -47,12 +47,15 @@ kw1   worker      running (pid 197714)  127.0.0.1:26243  10.73.156.13
 Inventory: build/microvm/dev/inventory.yaml
 ```
 
-Then drive cargoship at it the way you would any other inventory:
+Then drive cargoship at it the way you would any other inventory. `prepare` and `apply` take a built package rather than the definition directory it was built from, so `create` comes first -- that is the one step that needs a network, and the one the fleet itself does not:
 
 ```sh
-cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
-cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+cargoship create ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1 -o ./build/
+cargoship prepare ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
+cargoship apply ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
 ```
+
+`prepare` is optional -- an apply runs the same preparation phases itself. Both change every host they are pointed at, which is what `--confirm` acknowledges; pass `--dry-run` instead to see what they would change.
 
 ## What a bring-up is doing while it waits
 
