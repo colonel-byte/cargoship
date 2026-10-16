@@ -19,6 +19,35 @@ updates:
     allow:
       - dependency-type: "all"
     open-pull-requests-limit: 50
+    groups:
+      k8s:
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/*"
+      sigstore:
+        patterns:
+          - "github.com/sigstore/*"
+      golang:
+        patterns:
+          - "golang.org/x/*"
+      docker:
+        patterns:
+          - "github.com/docker/*"
+          - "github.com/moby/*"
+          - "github.com/containerd/*"
+      cloud-kms:
+        patterns:
+          - "github.com/aws/*"
+          - "github.com/Azure/*"
+          - "github.com/alibabacloud-go/*"
+          - "github.com/AliyunContainerService/*"
+          - "cloud.google.com/go/*"
+      openapi:
+        patterns:
+          - "github.com/go-openapi/*"
     ignore:
       # gobwas/glob v1.0.0 removed the Glob interface type; vendored
       # open-policy-agent/opa (transitive via sigstore/cosign) still uses it.
