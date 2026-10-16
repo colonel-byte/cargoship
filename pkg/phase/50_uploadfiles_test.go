@@ -25,6 +25,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	carch "github.com/colonel-byte/cargoship/pkg/oci/archive"
@@ -369,4 +370,54 @@ func TestDistroFilesForKeepsTheAssembledIndex(t *testing.T) {
 	require.Len(t, got, 1)
 	require.Equal(t, "2", filepath.Base(filepath.Dir(got[0].LocalSource.Path)),
 		"third is the third file in the package, so it was assembled into directory 2 regardless of what was skipped")
+}
+
+// TestDistroFilesForSelectsByProfile covers selector.profile on spec.config.files, which this
+// phase ignored. These are the package's own files rather than an install method's, so nothing
+// runs after this phase to rename a staged file into place -- an executable here goes straight
+// to its target.
+func TestDistroFilesForSelectsByProfile(t *testing.T) {
+	etcdctl := v1alpha1.File{
+		Target:     "/usr/local/bin/etcdctl",
+		Executable: true,
+	}
+	etcdctl.Selector.Profile = cluster.RoleController
+
+	always := v1alpha1.File{Target: "/usr/local/bin/always"}
+
+	for _, tt := range []struct {
+		name string
+		host *cluster.Host
+		want []string
+	}{
+		{
+			name: "a controller takes a controller file",
+			host: &cluster.Host{Role: cluster.RoleController},
+			want: []string{"etcdctl", "always"},
+		},
+		{
+			name: "a worker does not",
+			host: &cluster.Host{Role: cluster.RoleWorker},
+			want: []string{"always"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &UploadFiles{}
+			p.SetManager(&Manager{TempDirectory: t.TempDir()})
+			p.disFiles = v1alpha1.Files{&etcdctl, &always}
+
+			got, err := p.distroFilesFor(context.Background(), tt.host, api.ArchAMD64)
+			require.NoError(t, err)
+
+			names := make([]string, 0, len(got))
+			for _, f := range got {
+				names = append(names, f.Name)
+				require.Equal(t, f.OriginalTarget, f.Target,
+					"nothing renames a file from this list, so it is not uploaded under a staging name")
+				require.Equal(t, "file", f.Category,
+					"the category is what puts this in the host manifest, which is how a reset finds it again")
+			}
+			require.Equal(t, tt.want, names)
+		})
+	}
 }
