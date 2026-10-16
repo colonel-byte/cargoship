@@ -112,6 +112,30 @@ spec:
                   - kube-system
                   - rook-ceph
                   - zarf
+    # Files that are not part of an install method. Phase 50 uploads these to every host the
+    # selector matches, and no later phase renames or installs them, so a tool here is in place
+    # as soon as the upload finishes.
+    files:
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.7.1/etcd-v3.7.1-linux-amd64.tar.gz
+        extractPath: etcd-v3.7.1-linux-amd64/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+        shasum: ef161d78fbf2941e9d0e8ba4cc474b0ea2263c57cad8ee653730796e8f15f768
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
+          arch:
+            - amd64
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.7.1/etcd-v3.7.1-linux-arm64.tar.gz
+        extractPath: etcd-v3.7.1-linux-arm64/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+        shasum: a1fe34bce459d21caf7f291084c159a70b11b9570f9b00e4bd1cc0ee4ae9c47c
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
+          arch:
+            - arm64
     os:
       env:
         CRI_CONFIG_FILE: |-

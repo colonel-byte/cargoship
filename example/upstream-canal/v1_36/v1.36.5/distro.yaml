@@ -123,9 +123,9 @@ spec:
             package: apt
             arch:
               - amd64
-        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.1-2~debian.13~trixie_amd64.deb
-          target: /var/lib/kubernetes/deb/containerd.io_2.4.1-2~debian.13~trixie_amd64.deb
-          shasum: ebcffac9d869e111054abf235042afd5d908a9e1a009f9c99776428dd80f2620
+        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.2-2~debian.13~trixie_amd64.deb
+          target: /var/lib/kubernetes/deb/containerd.io_2.4.2-2~debian.13~trixie_amd64.deb
+          shasum: a3e696cb98baafbb63895dc18b53f143088a2ead95c57820ac90dc5e1d61b05d
           selector:
             package: apt
             arch:
@@ -165,9 +165,9 @@ spec:
             package: apt
             arch:
               - arm64
-        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.1-2~debian.13~trixie_arm64.deb
-          target: /var/lib/kubernetes/deb/containerd.io_2.4.1-2~debian.13~trixie_arm64.deb
-          shasum: 03af94dfe2b8f291a9a50e37276c14e87ad418fd1625544ad52040989c39350b
+        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.2-2~debian.13~trixie_arm64.deb
+          target: /var/lib/kubernetes/deb/containerd.io_2.4.2-2~debian.13~trixie_arm64.deb
+          shasum: ec62600bdae178642eb3a6bc9817ff9ccd95a5891b6c3076ffbba11f3b4d1da6
           selector:
             package: apt
             arch:
@@ -207,9 +207,9 @@ spec:
             package: rpm
             arch:
               - amd64
-        - source: https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.1-2.el9.x86_64.rpm
-          target: /var/lib/kubernetes/rpm/containerd.io-2.4.1-2.el9.x86_64.rpm
-          shasum: 725168d015f5bf4b7faa78405786888527ce4368996bc7e83bee2c933f08aa70
+        - source: https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.2-2.el9.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/containerd.io-2.4.2-2.el9.x86_64.rpm
+          shasum: 47133d0f38737e184a245ae4269ab64d8d45ad4875b650d02480329eeca2036e
           selector:
             package: rpm
             arch:
@@ -249,9 +249,9 @@ spec:
             package: rpm
             arch:
               - arm64
-        - source: https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.1-2.el9.aarch64.rpm
-          target: /var/lib/kubernetes/rpm/containerd.io-2.4.1-2.el9.aarch64.rpm
-          shasum: fb4f4c35d974d26ccce98eee9bd62a43ab95b6e62559bec493842ad9149c2137
+        - source: https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.2-2.el9.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/containerd.io-2.4.2-2.el9.aarch64.rpm
+          shasum: 34416f488258345e9328fd815c5677f9fe35f0d9d4c63414cdcde345ee1665d2
           selector:
             package: rpm
             arch:
