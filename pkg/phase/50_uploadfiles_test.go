@@ -372,38 +372,56 @@ func TestDistroFilesForKeepsTheAssembledIndex(t *testing.T) {
 		"third is the third file in the package, so it was assembled into directory 2 regardless of what was skipped")
 }
 
-// TestDistroFilesForSelectsByProfile covers selector.profile on spec.config.files, which this
-// phase ignored. These are the package's own files rather than an install method's, so nothing
-// runs after this phase to rename a staged file into place -- an executable here goes straight
-// to its target.
-func TestDistroFilesForSelectsByProfile(t *testing.T) {
+// TestDistroFilesForSelectsByProfileAndWhen covers the two gates on spec.config.files. These are
+// the package's own files rather than an install method's, so nothing runs after this phase to
+// rename a staged file into place -- an executable here goes straight to its target.
+func TestDistroFilesForSelectsByProfileAndWhen(t *testing.T) {
 	etcdctl := v1alpha1.File{
 		Target:     "/usr/local/bin/etcdctl",
 		Executable: true,
 	}
 	etcdctl.Selector.Profile = cluster.RoleController
+	etcdctl.Selector.When = ".tools.etcdctl.enabled"
 
 	always := v1alpha1.File{Target: "/usr/local/bin/always"}
 
 	for _, tt := range []struct {
-		name string
-		host *cluster.Host
-		want []string
+		name    string
+		host    *cluster.Host
+		enabled bool
+		want    []string
 	}{
 		{
-			name: "a controller takes a controller file",
-			host: &cluster.Host{Role: cluster.RoleController},
-			want: []string{"etcdctl", "always"},
+			name:    "a controller with the tool enabled",
+			host:    &cluster.Host{Role: cluster.RoleController},
+			enabled: true,
+			want:    []string{"etcdctl", "always"},
 		},
 		{
-			name: "a worker does not",
-			host: &cluster.Host{Role: cluster.RoleWorker},
-			want: []string{"always"},
+			name:    "a controller with the tool disabled",
+			host:    &cluster.Host{Role: cluster.RoleController},
+			enabled: false,
+			want:    []string{"always"},
+		},
+		{
+			name:    "a worker never takes a controller file, enabled or not",
+			host:    &cluster.Host{Role: cluster.RoleWorker},
+			enabled: true,
+			want:    []string{"always"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &UploadFiles{}
-			p.SetManager(&Manager{TempDirectory: t.TempDir()})
+			p.SetManager(&Manager{
+				TempDirectory: t.TempDir(),
+				Values: map[string]any{
+					"tools": map[string]any{
+						"etcdctl": map[string]any{
+							"enabled": tt.enabled,
+						},
+					},
+				},
+			})
 			p.disFiles = v1alpha1.Files{&etcdctl, &always}
 
 			got, err := p.distroFilesFor(context.Background(), tt.host, api.ArchAMD64)

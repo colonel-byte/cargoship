@@ -44,6 +44,7 @@ selects which files to upload to a host, based on host role and install method.
 | `package` | `string`          | no       |         | selects which install method receives this file: rpm, apt, or binary. One of `rpm`, `apt`, `binary`.          |
 | `profile` | `string`          | no       |         | selects which host role receives this file: worker or controller. One of `worker`, `controller`.              |
 | `roles`   | array of `string` | no       |         | lists the host roles this file applies to.                                                                    |
+| `when`    | `string`          | no       |         | is an optional values path (e.g. ".tools.etcdctl.enabled") gating whether this file is uploaded.              |
 
 </div>
 

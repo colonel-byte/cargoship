@@ -93,6 +93,8 @@ type BinarySelector struct {
 	Package string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
 	// Arch lists the CPU architectures this file applies to. An empty list means every architecture the package targets.
 	Arch api.Arches `json:"arch,omitempty"`
+	// When is an optional values path (e.g. ".tools.etcdctl.enabled") gating whether this file is uploaded.
+	When string `json:"when,omitempty"`
 }
 
 // MatchesArch reports whether this selector applies to arch. An empty Arch list matches every

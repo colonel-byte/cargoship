@@ -358,6 +358,9 @@ func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.Host, arch 
 			logger.From(ctx).Debug("file is not for this host profile", "file", filepath.Base(f.Target), "host", h, "profile", f.Selector.Profile)
 			continue
 		}
+		if !whenEnabled(ctx, p.manager.Values, f.Selector.When, filepath.Base(f.Target)) {
+			continue
+		}
 		// No staging here. These are the package's own files rather than an install
 		// method's, so no phase runs after this one to rename a staged file into place --
 		// see the comment in profileFilesForArch. An executable goes straight to its target,

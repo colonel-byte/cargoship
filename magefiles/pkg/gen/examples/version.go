@@ -58,6 +58,9 @@ type exampleVersion struct {
 	// architecture. It is built here rather than in the templates so that the URL checked
 	// against upstream is the same one the example carries.
 	SelinuxRPM string
+
+	// EtcdVersion is the release tag of etcd for optional debug tooling.
+	EtcdVersion string
 }
 
 // exampleArch is one architecture's share of an example: the files a distro publishes once
@@ -70,11 +73,13 @@ type exampleArch struct {
 	// RKE2 installs from RPMs, plus a release tarball its binaries, scripts and unit files
 	// are extracted from. The tarball is named and addressed here rather than in the
 	// templates so that the URL hashed is the same one the example carries.
-	CommonRPM  string
-	ServerRPM  string
-	AgentRPM   string
-	Tarball    string // rke2.linux-amd64.tar.gz
-	TarballURL string // https://github.com/rancher/rke2/releases/download/<tag>/<tarball>
+	CommonRPM   string
+	ServerRPM   string
+	AgentRPM    string
+	Tarball     string // rke2.linux-amd64.tar.gz
+	TarballURL  string // https://github.com/rancher/rke2/releases/download/<tag>/<tarball>
+	EtcdTarball string // etcd-v3.5.17-linux-amd64.tar.gz
+	EtcdURL     string // https://github.com/etcd-io/etcd/releases/download/<version>/<tarball>
 
 	// k3s installs a single binary, whose digest the release publishes for us.
 	BinaryURL string

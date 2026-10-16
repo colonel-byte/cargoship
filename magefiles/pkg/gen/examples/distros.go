@@ -20,6 +20,7 @@ package examples
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -145,6 +146,7 @@ var exampleDistros = []exampleDistroSpec{
 					v.TagURL, a.Tarball)
 			}
 		},
+		fetch: fetchRKE2EtcdVersion,
 		// RKE2 installs from RPMs, and Rancher removes an rke2rN's RPMs once the next
 		// revision supersedes it, long before the git tag goes anywhere. Every architecture
 		// of a build is published and pulled together, so the first one answers for all.
@@ -184,6 +186,39 @@ var exampleDistros = []exampleDistroSpec{
 func exampleRKE2RPM(pkg, minor, rpmVersion, rpmArch string) string {
 	return fmt.Sprintf("https://rpm.rancher.io/rke2/latest/%s/centos/9/%s/rke2-%s-%s-0.el9.%s.rpm",
 		minor, rpmArch, pkg, rpmVersion, rpmArch)
+}
+
+// rke2HardenedEtcd matches the etcd version out of RKE2's hardened-etcd image reference, e.g.
+// rancher/hardened-etcd:v3.5.21-k3s1 -> v3.5.21.
+var rke2HardenedEtcd = regexp.MustCompile(`hardened-etcd:(v[0-9]+\.[0-9]+\.[0-9]+)`)
+
+// fetchRKE2EtcdVersion takes the upstream etcd version bundled in the RKE2 release from the
+// hardened-etcd image in its core image list, and builds the etcdctl download URLs per
+// architecture.
+//
+// A release whose image list carries no hardened-etcd reference is an error rather than a
+// fallback to some version pinned here: a pin in this file is one nobody bumps, and the etcdctl
+// it named would be hashed and shipped as if it were the one this release runs.
+func fetchRKE2EtcdVersion(v *exampleVersion, _ string) error {
+	var etcdVer string
+	for _, img := range v.CoreImages {
+		if m := rke2HardenedEtcd.FindStringSubmatch(img); len(m) > 1 {
+			etcdVer = m[1]
+			break
+		}
+	}
+	if etcdVer == "" {
+		return fmt.Errorf("no hardened-etcd image in the core image list for %s", v.TagURL)
+	}
+	v.EtcdVersion = etcdVer
+
+	for i := range v.Arches {
+		a := &v.Arches[i]
+		a.EtcdTarball = fmt.Sprintf("etcd-%s-linux-%s.tar.gz", etcdVer, a.Arch)
+		a.EtcdURL = fmt.Sprintf("https://github.com/etcd-io/etcd/releases/download/%s/%s",
+			etcdVer, a.EtcdTarball)
+	}
+	return nil
 }
 
 // exampleK3sBinary is the name a k3s release publishes its binary for an architecture under.

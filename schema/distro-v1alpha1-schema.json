@@ -60,6 +60,10 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "when": {
+          "description": "is an optional values path (e.g. \".tools.etcdctl.enabled\") gating whether this file is uploaded.",
+          "type": "string"
         }
       },
       "type": "object"

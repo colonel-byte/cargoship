@@ -29,8 +29,57 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
+
+// whenEnabled reports whether a file's Selector.When gate is satisfied by the package's values.
+// An empty path is no gate at all and always passes, as does a path holding true.
+//
+// A path absent from values reads as disabled, which is also exactly what a typo in a distro's
+// when path looks like. The symptom either way is a file that never arrives, so an absent path is
+// logged at warn rather than debug - a path that is present and false is the normal way to leave
+// an optional file switched off, and stays quiet.
+func whenEnabled(ctx context.Context, values map[string]any, path string, name string) bool {
+	if path == "" {
+		return true
+	}
+
+	v, ok, err := helmvalues.GetValuePath(values, path)
+	switch {
+	case err != nil:
+		logger.From(ctx).Warn("file skipped: malformed when path", "file", name, "when", path, "error", err)
+		return false
+	case !ok:
+		logger.From(ctx).Warn("file skipped: when path is not set in the package's values", "file", name, "when", path)
+		return false
+	}
+
+	enabled, err := truthy(v)
+	if err != nil {
+		logger.From(ctx).Warn("file skipped: when path is not a boolean", "file", name, "when", path, "error", err)
+		return false
+	}
+	if !enabled {
+		logger.From(ctx).Debug("file skipped: when path is false", "file", name, "when", path)
+	}
+
+	return enabled
+}
+
+// truthy reads a when path's value as a boolean. The schema types these as booleans, but values
+// reach here from a YAML decoder or from a --set on the command line, so a string spelling of one
+// is accepted too.
+func truthy(v any) (bool, error) {
+	switch val := v.(type) {
+	case bool:
+		return val, nil
+	case string:
+		return strconv.ParseBool(val)
+	default:
+		return false, fmt.Errorf("want a boolean, got %T", v)
+	}
+}
 
 // hostProfile is the Selector.Profile value a host matches. The selector names a role rather
 // than a host's own profile, which may be anything a cluster config gives it -- an infra node
@@ -241,6 +290,9 @@ func (p *UploadFilesCommon) profileFilesForArch(ctx context.Context, selector st
 		}
 		if !f.Selector.MatchesArch(arch) {
 			logger.From(ctx).Debug("file is not for this architecture", "file", filepath.Base(f.Target), "arch", arch)
+			continue
+		}
+		if !whenEnabled(ctx, p.manager.Values, f.Selector.When, filepath.Base(f.Target)) {
 			continue
 		}
 

@@ -290,3 +290,103 @@ func TestHostProfile(t *testing.T) {
 	require.Equal(t, cluster.RoleController, hostProfile(controller))
 	require.Equal(t, cluster.RoleWorker, hostProfile(worker))
 }
+
+func TestProfileFilesForArchEvaluatesWhen(t *testing.T) {
+	fileEnabled := newDistroFile("/usr/bin/etcdctl", api.ArchAMD64)
+	fileEnabled.Selector.When = ".tools.etcdctl.enabled"
+
+	fileOther := newDistroFile("/usr/bin/debugtool", api.ArchAMD64)
+	fileOther.Selector.When = ".tools.debugtool.enabled"
+
+	p := newFileUploader(t, fileEnabled, fileOther, newDistroFile("/usr/bin/always", api.ArchAMD64))
+
+	// A package with no values at all leaves every gated file off.
+	got := p.profileFilesForArch(context.Background(), "binary", cluster.RoleController, api.ArchAMD64)
+	require.Equal(t, []string{"always"}, fileNames(got))
+
+	p.manager.Values = map[string]any{
+		"tools": map[string]any{
+			"etcdctl": map[string]any{
+				"enabled": true,
+			},
+			"debugtool": map[string]any{
+				"enabled": false,
+			},
+		},
+	}
+	got = p.profileFilesForArch(context.Background(), "binary", cluster.RoleController, api.ArchAMD64)
+	require.Equal(t, []string{"etcdctl", "always"}, fileNames(got))
+}
+
+func TestWhenEnabled(t *testing.T) {
+	values := map[string]any{
+		"tools": map[string]any{
+			"on":     true,
+			"off":    false,
+			"spelt":  "true",
+			"count":  0,
+			"nested": map[string]any{"on": true},
+		},
+	}
+
+	for _, tt := range []struct {
+		name string
+		path string
+		want bool
+	}{
+		{
+			name: "no gate at all",
+			path: "",
+			want: true,
+		},
+		{
+			name: "true",
+			path: ".tools.on",
+			want: true,
+		},
+		{
+			name: "false",
+			path: ".tools.off",
+			want: false,
+		},
+		{
+			name: "nested true",
+			path: ".tools.nested.on",
+			want: true,
+		},
+		{
+			name: "a string spelling of true",
+			path: ".tools.spelt",
+			want: true,
+		},
+		{
+			name: "a number is not a boolean",
+			path: ".tools.count",
+			want: false,
+		},
+		{
+			name: "a path the values do not set",
+			path: ".tools.typo",
+			want: false,
+		},
+		{
+			name: "a path through a scalar",
+			path: ".tools.on.deeper",
+			want: false,
+		},
+		{
+			name: "a malformed path",
+			path: "tools.on",
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, whenEnabled(context.Background(), values, tt.path, "etcdctl"))
+		})
+	}
+}
+
+func TestWhenEnabledWithoutValues(t *testing.T) {
+	require.True(t, whenEnabled(context.Background(), nil, "", "always"))
+	require.False(t, whenEnabled(context.Background(), nil, ".tools.on", "gated"))
+}
