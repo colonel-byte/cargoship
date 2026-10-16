@@ -47,6 +47,11 @@ type hostVars struct {
 	KeyPath  string `json:"key_path"`
 	Hostname string `json:"hostname"`
 	Profile  string `json:"profile"`
+	// PrivateAddress and PrivateInterface name the host on a segment that is not the one the
+	// suite reaches it over. They are omitted while empty, which is every container run: a
+	// bootloose machine has one address and the phases discover it. See vmFleetVars.
+	PrivateAddress   string `json:"private_address,omitempty"`
+	PrivateInterface string `json:"private_interface,omitempty"`
 	// State is the lifecycle marker a removal sets. It is omitted while it is empty so that the
 	// ordinary case writes no `state` at all, the way a configuration that has never removed
 	// anything is written.
@@ -125,6 +130,23 @@ var (
 	controllerPrefix = strings.TrimSuffix(bootKC, "%d") //nolint:gochecknoglobals
 	workerPrefix     = strings.TrimSuffix(bootKW, "%d") //nolint:gochecknoglobals
 )
+
+// controllerName and workerName are the i-th machine of each role, under whichever backend is
+// running. The two fleets do not share a naming scheme -- bootloose takes the templates this
+// suite hands it, and internal/microvm uses its own -- so the walk asks rather than formats.
+func controllerName(i int) string {
+	if onMicroVM() {
+		return fmt.Sprintf(vmKC, i)
+	}
+	return fmt.Sprintf(bootKC, i)
+}
+
+func workerName(i int) string {
+	if onMicroVM() {
+		return fmt.Sprintf(vmKW, i)
+	}
+	return fmt.Sprintf(bootKW, i)
+}
 
 // absKeyPath is the private key bootloose generated, as an absolute path. The provider resolves
 // a key path in its own process with its own working directory, so a relative one would be read
@@ -380,6 +402,9 @@ func loadKernelModules(modules []string) error {
 // so the machine is looked up rather than named, and a hostname nothing matches is an error
 // rather than a `docker exec` that fails for the wrong reason.
 func machineExec(hostname string, args ...string) (string, error) {
+	if onMicroVM() {
+		return vmExec(hostname, args...)
+	}
 	container, err := containerFor(hostname)
 	if err != nil {
 		return "", err

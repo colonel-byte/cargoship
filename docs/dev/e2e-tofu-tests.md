@@ -6,6 +6,8 @@ That layer is what has no coverage anywhere else. The [phase suite](e2e-phase-te
 
 ## What it provisions
 
+Three machines, as containers by default and as local virtual machines when asked. `CARGOSHIP_E2E_BACKEND=microvm`, or `mage test:endToEndTofuVM`, picks the second; everything downstream of the fleet is the same walk either way. The sections below describe the container fleet unless they say otherwise, and [the two backends](#the-two-backends) covers what differs.
+
 Three bootloose machines on one image - `tkc0`, a controller, and `tkw0`/`tkw1`, workers - each privileged, each with a Docker volume over `/var/lib/rancher`. The reasons are the ones [e2e-phase-tests](e2e-phase-tests.md) sets out for the larger cluster: the engine loads modules and runs its own containerd, and overlayfs cannot be stacked on itself.
 
 One image rather than three, because nothing in this suite routes on the OS family; that is the phase suite's job, and repeating it here would cost a second and third engine install for assertions already held. Three machines rather than one, because a removal needs a worker to remove and a controller that stays to drive it.
@@ -28,6 +30,7 @@ The version is `0.1.0` rather than `0.0.0` because OpenTofu refuses `0.0.0` - it
 
 ```console
 $ mage test:endToEndTofu                    # builds the mirror, removes stale bootloose containers, runs the suite
+$ mage test:endToEndTofuVM                  # the same walk against local virtual machines (needs KVM)
 $ go run ./magefiles/core test:endToEndTofu # same, with no mage binary installed
 ```
 
@@ -56,6 +59,28 @@ One test with ordered subtests, because every step starts from what the one befo
 
 The node counts come from the controller's own `kubectl` rather than from the provider's `nodes` attribute. The attribute is what the provider believes, and a provider that believed the wrong thing is the failure worth catching.
 
+## The two backends
+
+|                      | `bootloose` (default)                                         | `microvm`                       |
+| -------------------- | ------------------------------------------------------------- | ------------------------------- |
+| Machines             | `tkc0`, `tkw0`, `tkw1`                                        | `kc0`, `kw0`, `kw1`             |
+| Guest                | Ubuntu 26 containers                                          | Rocky 10 virtual machines       |
+| Needs                | Docker, container-to-container TCP, the host's kernel modules | KVM                             |
+| Bring-up             | seconds                                                       | a minute or two                 |
+| Node-to-node traffic | Docker's bridge                                               | the fleet's own layer 2 segment |
+
+The reason to have the second is not coverage but reachability. A worker joins by reaching the controller's supervisor, and a host whose firewall drops forwarded traffic between containers cannot run that -- while host-to-container keeps working, so the failure arrives twenty minutes in, at the worker join. A VM fleet never asks Docker for anything: the nodes are on a segment of their own, so that whole class of host problem does not apply.
+
+What it costs is the preflights' subject matter. A VM has its own kernel, so what the engine needs loaded is the guest image's business rather than this machine's, and none of `requireKernelModules`, `requireContainerNetworking` or `detachHostsFile` runs. It also means the two backends run different distributions -- Ubuntu against Rocky -- so they are worth running as a pair rather than as alternatives.
+
+Two attributes are off on the VM path: `label_nodes` and `export_kubeconfig`. Both need a route from the management node to the cluster's API server, and a VM fleet does not have one -- its load balancer is the leader's address on a segment private to the qemu processes, which is what the other nodes join through and not an address this host is on. Asking for them anyway fails the apply inside the labelling phase, which says nothing about the provider. The phase suite probes for the route instead of deciding per backend, but it can only do that after an install; `label_nodes` is an attribute the apply carries, so it has to be decided before one. The `kubeconfig` step skips for the same reason, with the reason logged.
+
+Everything the node counts assert still runs, because they go through the controller's own `kubectl` over SSH rather than from here. The firewall phase, by contrast, only does anything on this backend: Rocky boots with firewalld up, so `modify_firewall` is the difference between a worker that joins and one whose join is refused outright.
+
+One thing is set only on the VM path: each host's `private_address` and `private_interface`. A VM is reached on a forwarded loopback port, but its default route is the slirp management interface, whose address is the same on every node and reachable from none of them. Without naming the segment address explicitly, every peer address the phases distribute would be one that does not work. The fleet comes from `microvm.Inventory`, which is the same document `cargoship apply --config` takes, so the suite and the CLI hand the phases the same hosts.
+
+The fleet is called `tofu`, which is neither the phase suite's nor `dev:vmUp`'s. All three derive their loopback ports from the fleet name, so two fleets sharing one cannot be up at the same time -- a run that finds its ports taken is usually a `dev:vmUp` fleet still up, and `mage dev:vmDown` takes it away.
+
 ## Why the root module is a fixture and the fleet is not
 
 `test/e2e/tofu/testdata/main.tf` is the root module, copied into a temp directory beside a symlink named `module` that points at the shipped module. The fleet, the package path and the per-step settings arrive as a generated `terraform.tfvars.json`.
@@ -66,6 +91,7 @@ It consumes the shipped module rather than declaring the resource itself, which 
 
 ## Environment variables
 
+*   **`CARGOSHIP_E2E_BACKEND`** - `bootloose` (default) or `microvm`, as above. Anything else stops the run naming what it was given, rather than quietly provisioning the default. The phase suite reads the same variable and means the same thing by it, except that it has a third backend, `inventory`, which this suite does not.
 *   **`CARGOSHIP_E2E_TOFU_BINARY`** - the binary to run instead of `tofu`.
 *   **`CARGOSHIP_E2E_SKIP_MODPROBE`** - do not load kernel modules. The check that they are loaded is not turned off with it, so a missing module fails the run naming `sudo modprobe ...` rather than being discovered twenty minutes later in a journal. Worth setting on a machine whose kernel is not a test's to change.
 *   **`CARGOSHIP_E2E_TOFU_PHASE_TIMEOUT`** - how long a phase waits on a host, as a Go duration (default `20m`). Lower it when investigating a failure: a phase that is going to fail waits out the whole timeout first, so the default costs twenty minutes to arrive at the same error `6m` reaches in six.
@@ -78,7 +104,7 @@ Both failures they catch were found the expensive way, and both look like someth
 
 A missing kernel module lets the engine start, notify readiness, and shut itself down a few seconds later -- which systemd repeats for the whole phase timeout, so the symptom is twenty minutes of restarts and no error from cargoship. Blocked inter-container traffic lets everything up to the worker join succeed, so the symptom is one worker timing out with `service k3s-agent is not running` and nothing to say why.
 
-Neither is cargoship's to fix: the first is what the machine image carries, the second is the host's firewall. What the suite owes a contributor is to say so in seconds rather than after a phase timeout, which is what `requireKernelModules` and `requireContainerNetworking` are for. They run before the machines, so a host that cannot run the suite starts no container.
+Neither runs on the microvm backend, where neither applies. Neither is cargoship's to fix either: the first is what the machine image carries, the second is the host's firewall. What the suite owes a contributor is to say so in seconds rather than after a phase timeout, which is what `requireKernelModules` and `requireContainerNetworking` are for. They run before the machines, so a host that cannot run the suite starts no container.
 
 ## Debugging a failure
 
@@ -93,10 +119,19 @@ $ docker exec cargoship-e2e-tofu-tkw1 systemctl status k3s-agent
 
 The container name is the cluster name and the machine name, not the hostname -- `docker ps --filter label=io.k0sproject.bootloose.owner=bootloose` lists them.
 
+On the microvm backend the equivalent is a shell on the node, and the fleet outlives a failed run the same way:
+
+```console
+$ mage dev:vmList -fleet=tofu
+$ mage dev:vmShell kc0 -fleet=tofu
+$ mage dev:vmDown -fleet=tofu
+```
+
 The OpenTofu working directory is a `t.TempDir()`, which `go test` removes at the end of the test - including the state file. A failure that needs the state inspected is the case to copy it out from inside the test rather than to go looking for it afterwards.
 
 ## What it does not cover
 
+*   **Node labelling and the exported kubeconfig, on the microvm backend.** Both need a route to the API server that a VM fleet does not have; see [the two backends](#the-two-backends). The container backend covers them.
 *   **The data source.** `cargoship_cluster_facts` reads a fleet and is covered by the provider's unit tests only; it still takes `host` blocks rather than a map, which this suite never exercises.
 *   **Terragrunt.** The suite runs `tofu` directly. The terragrunt layout in `example/terragrunt` is checked by `terragrunt validate` by hand; nothing automated reads `terragrunt.hcl`.
 *   **A controller removal.** The removal step removes a worker. Removing a controller is the dangerous case - it gives up an etcd member - and the rules around it are unit-tested and documented rather than proven here. See [`docs/agent/choice-tofu-host-removal.md`](https://github.com/colonel-byte/cargoship/blob/main/docs/agent/choice-tofu-host-removal.md).

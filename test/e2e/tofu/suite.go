@@ -66,9 +66,13 @@ const providerVersion = "0.1.0"
 var enginePackage = struct { //nolint:gochecknoglobals
 	path    string
 	version string
+	// distro is the engine that definition carries. The microvm backend needs it by name,
+	// because which engine ports a fleet forwards to the host is decided at bring-up.
+	distro string
 }{
 	path:    "example/k3s-flannel/v1_36/v1.36.4-k3s1",
 	version: "1.36.4-k3s1",
+	distro:  "k3s",
 }
 
 // phaseTimeoutEnvVar is how long a phase waits on a host, as a Go duration. It is the `timeout`
