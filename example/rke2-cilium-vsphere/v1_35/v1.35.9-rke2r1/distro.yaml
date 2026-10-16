@@ -200,6 +200,18 @@ spec:
             name: vsphere-csi-sc
             isDefault: true
             datastoreURL: ""
+    # Files that are not part of an install method. Phase 50 uploads these to every host the
+    # selector matches, and no later phase renames or installs them, so a tool here is in place
+    # as soon as the upload finishes.
+    files:
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz
+        extractPath: etcd-v3.6.14-linux-amd64/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+        shasum: dba085f02f045d6fc0cd59c533ef2a8dc922ad82418c0e538b194525c715450b
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
     os:
       env:
         CRI_CONFIG_FILE: |-

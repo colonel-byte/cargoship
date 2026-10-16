@@ -169,6 +169,30 @@ spec:
           hubble:
             enabled: false
           {{- end }}
+    # Files that are not part of an install method. Phase 50 uploads these to every host the
+    # selector matches, and no later phase renames or installs them, so a tool here is in place
+    # as soon as the upload finishes.
+    files:
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz
+        extractPath: etcd-v3.6.7-linux-amd64/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+        shasum: a14e39a212e828313da156dc1c261374247cbf32a20aa8aa15e12203318d7fef
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
+          arch:
+            - amd64
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-arm64.tar.gz
+        extractPath: etcd-v3.6.7-linux-arm64/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+        shasum: 538052f45e8efbe06f66ea1f387fcde5a8d6e1a3cedbae7b18574492de44ff38
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
+          arch:
+            - arm64
     os:
       env:
         CRI_CONFIG_FILE: |-
