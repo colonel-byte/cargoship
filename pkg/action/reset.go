@@ -22,12 +22,9 @@ package action
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/colonel-byte/cargoship/pkg/phase"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -62,13 +59,9 @@ type Reset struct {
 
 // NewReset an apply action object
 func NewReset(opts ResetOptions) (*Reset, error) {
-	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
+	d, err := distroModule(opts.Manager.DistroID)
 	if err != nil {
-		return nil, fmt.Errorf("no distro module for %q: %w", opts.Manager.DistroID, err)
-	}
-	d, ok := disBuilder().(distrocfg.Distro)
-	if !ok {
-		return nil, fmt.Errorf("the distro module for %q does not implement the distro interface", opts.Manager.DistroID)
+		return nil, err
 	}
 
 	// A target that names no host would otherwise filter every phase down to nothing and report a

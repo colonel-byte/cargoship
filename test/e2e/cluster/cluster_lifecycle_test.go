@@ -129,14 +129,17 @@ func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
 	// from here -- the VM fleet, by construction -- leaving it on would fail this step for a
 	// reason that has nothing to do with whether an apply is idempotent, which is what it is
 	// here to find out. Test_81 covers the labelling itself, and skips for the same reason.
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       reachesClusterAPI(manager.Config.Spec.Config.LoadBalancer),
-	}).Run(s.ctx)
+	})
+	s.Require().NoError(err)
+
+	err = apply.Run(s.ctx)
 	s.Require().NoError(err)
 }
 
@@ -160,14 +163,17 @@ func (s *ApplyPhaseSuite) Test_ZZ3_ApplyDryRunConverges() {
 	manager.DryRun = true
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(ctx)
+	})
+	s.Require().NoError(err)
+
+	err = apply.Run(ctx)
 	s.Require().NoError(err)
 
 	planned := len(sink.Result().Planned)
@@ -331,7 +337,10 @@ func (s *ResetSuite) Test_3_PostReset() {
 		}
 	}()
 
-	err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager}).Run(s.ctx)
+	kubeConfig, err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager})
+	s.Require().NoError(err)
+
+	err = kubeConfig.Run(s.ctx)
 	s.Require().Error(err)
 
 	_, err = os.Stat(kubeconfigPath)

@@ -120,14 +120,17 @@ func (s *DryRunSuite) Test_2_ApplyDryRunLeavesTheHostsAlone() {
 	defer cleanup()
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(ctx)
+	})
+	s.Require().NoError(err)
+
+	err = apply.Run(ctx)
 	s.Require().NoError(err)
 
 	result := sink.Result()

@@ -144,6 +144,10 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		AllowDowngrade:   o.allowDowngrade,
 	}
 
-	runErr = action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)
-	return runErr
+	engineConfigSync, runErr := action.NewEngineConfigSync(engineConfigSyncOpts)
+	if runErr != nil {
+		return runErr
+	}
+
+	return engineConfigSync.Run(ctx)
 }

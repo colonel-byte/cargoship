@@ -63,12 +63,31 @@ func phaseDocs() ([]phaseDoc, error) {
 		return nil, fmt.Errorf("building the reset action for its phase reference: %w", err)
 	}
 
+	apply, err := action.NewApply(action.ApplyOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("building the apply action for its phase reference: %w", err)
+	}
+
+	kubeConfig, err := action.NewKubeConfig(action.KubeConfigOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("building the kube-config action for its phase reference: %w", err)
+	}
+
+	engineConfigSync, err := action.NewEngineConfigSync(action.EngineConfigSyncOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("building the engine-config-sync action for its phase reference: %w", err)
+	}
+
 	return []phaseDoc{
 		{
-			name: "apply",
-			phases: action.NewApply(action.ApplyOptions{
-				Manager: genDocsManager,
-			}).Phases,
+			name:   "apply",
+			phases: apply.Phases,
 			dryRun: true,
 		},
 		{
@@ -77,10 +96,8 @@ func phaseDocs() ([]phaseDoc, error) {
 			dryRun: true,
 		},
 		{
-			name: "kube-config",
-			phases: action.NewKubeConfig(action.KubeConfigOptions{
-				Manager: genDocsManager,
-			}).Phases,
+			name:   "kube-config",
+			phases: kubeConfig.Phases,
 		},
 		{
 			name:   "prepare",
@@ -88,10 +105,8 @@ func phaseDocs() ([]phaseDoc, error) {
 			dryRun: true,
 		},
 		{
-			name: "engine-config-sync",
-			phases: action.NewEngineConfigSync(action.EngineConfigSyncOptions{
-				Manager: genDocsManager,
-			}).Phases,
+			name:   "engine-config-sync",
+			phases: engineConfigSync.Phases,
 			dryRun: true,
 		},
 	}, nil
