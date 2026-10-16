@@ -32,6 +32,16 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// hostProfile is the Selector.Profile value a host matches. The selector names a role rather
+// than a host's own profile, which may be anything a cluster config gives it -- an infra node
+// joins as a worker and takes worker files.
+func hostProfile(h *cluster.Host) string {
+	if h.IsController() {
+		return cluster.RoleController
+	}
+	return cluster.RoleWorker
+}
+
 func getPath(files []v1alpha1.File) []string {
 	filePath := []string{}
 
@@ -240,8 +250,13 @@ func (p *UploadFilesCommon) profileFilesForArch(ctx context.Context, selector st
 		if err != nil {
 			logger.From(ctx).Warn("failed to change the file time", "error", err)
 		}
+		// Only the BIN selector stages: phase 59 is the one install phase that renames a
+		// staged file into place, and it stages so that an upgrade swaps a running engine
+		// binary atomically rather than writing over it mid-upload. An rpm or apt selector
+		// has no such step, so a file staged there would sit under its .tmp.<nonce> name
+		// until the next run's cleanUpOldTmpFiles deleted it.
 		target := f.Target
-		if f.Executable {
+		if f.Executable && selector == config.SelectorBIN {
 			target = stageTempPath(false, f.Target)
 		}
 		files = append(files, v1alpha1.File{

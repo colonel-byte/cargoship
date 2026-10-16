@@ -22,6 +22,7 @@ import (
 	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/config"
 	hostos "github.com/colonel-byte/cargoship/types/os"
 	"github.com/stretchr/testify/require"
 )
@@ -235,4 +236,57 @@ func fileNames(files []v1alpha1.File) []string {
 		names = append(names, f.Name)
 	}
 	return names
+}
+
+// TestProfileFilesForArchStagesOnlyBinaries is the regression test for a file left stranded under
+// its staging name. Only phase 59 renames a staged file into place, and it runs for the binary
+// selector alone, so an executable selected by rpm or apt must be uploaded to its real target.
+func TestProfileFilesForArchStagesOnlyBinaries(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		selector string
+		want     string
+	}{
+		{
+			name:     "a binary is staged for phase 59 to rename",
+			selector: config.SelectorBIN,
+			want:     "staged",
+		},
+		{
+			name:     "an rpm selector has no phase that would rename it",
+			selector: config.SelectorRPM,
+			want:     "/usr/local/bin/etcdctl",
+		},
+		{
+			name:     "an apt selector has no phase that would rename it",
+			selector: config.SelectorAPT,
+			want:     "/usr/local/bin/etcdctl",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newDistroFile("/usr/local/bin/etcdctl", api.ArchAMD64)
+			f.Selector.Package = tt.selector
+			f.Executable = true
+
+			p := newFileUploader(t, f)
+			got := p.profileFilesForArch(context.Background(), tt.selector, cluster.RoleController, api.ArchAMD64)
+			require.Len(t, got, 1)
+
+			if tt.want == "staged" {
+				require.NotEqual(t, f.Target, got[0].Target, "a binary is uploaded under a staging name")
+				require.Contains(t, got[0].Target, f.Target+".tmp.")
+				require.Equal(t, f.Target, got[0].OriginalTarget)
+				return
+			}
+			require.Equal(t, tt.want, got[0].Target, "nothing would rename this, so it goes straight to its target")
+		})
+	}
+}
+
+func TestHostProfile(t *testing.T) {
+	controller := &cluster.Host{Role: cluster.RoleController}
+	worker := &cluster.Host{Role: cluster.RoleWorker}
+
+	require.Equal(t, cluster.RoleController, hostProfile(controller))
+	require.Equal(t, cluster.RoleWorker, hostProfile(worker))
 }

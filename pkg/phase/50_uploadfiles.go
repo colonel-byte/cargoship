@@ -354,11 +354,15 @@ func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.Host, arch 
 			logger.From(ctx).Debug("file is not for this host architecture", "file", filepath.Base(f.Target), "host", h, "arch", arch)
 			continue
 		}
-		target := f.Target
-		if f.Executable {
-			target = stageTempPath(h.IsWindows(), f.Target)
-			f.OriginalTarget = target
+		if f.Selector.Profile != "" && f.Selector.Profile != hostProfile(h) {
+			logger.From(ctx).Debug("file is not for this host profile", "file", filepath.Base(f.Target), "host", h, "profile", f.Selector.Profile)
+			continue
 		}
+		// No staging here. These are the package's own files rather than an install
+		// method's, so no phase runs after this one to rename a staged file into place --
+		// see the comment in profileFilesForArch. An executable goes straight to its target,
+		// where uploadFile's permission handling already makes it executable.
+		target := f.Target
 		logger.From(ctx).Debug("need to upload from distro package", "source", filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)), "target", target)
 		files = append(files, v1alpha1.File{
 			Name:           filepath.Base(f.Target),
