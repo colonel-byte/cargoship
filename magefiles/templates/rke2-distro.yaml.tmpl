@@ -275,6 +275,26 @@ spec:
             isDefault: true
             datastoreURL: ""
 {{- end }}
+    # Files that are not part of an install method. Phase 50 uploads these to every host the
+    # selector matches, and no later phase renames or installs them, so a tool here is in place
+    # as soon as the upload finishes.
+    files:
+{{- range $arch := .Arches }}
+      - source: {{ $arch.EtcdURL }}
+        extractPath: etcd-{{ $.EtcdVersion }}-linux-{{ $arch.Arch }}/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+{{- with sha256member $arch.EtcdURL (printf "etcd-%s-linux-%s/etcdctl" $.EtcdVersion $arch.Arch) }}
+        shasum: {{ . }}
+{{- end }}
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
+{{- if $.MultiArch }}
+          arch:
+            - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
     os:
       env:
         CRI_CONFIG_FILE: |-

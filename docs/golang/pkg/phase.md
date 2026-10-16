@@ -3115,7 +3115,7 @@ func (p *UploadFiles) Title() string
 Title for the phase
 
 <a name="UploadFilesCommon"></a>
-## type [UploadFilesCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L56-L73>)
+## type [UploadFilesCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L105-L122>)
 
 UploadFilesCommon implements a phase which upload files to hosts
 
@@ -3127,7 +3127,7 @@ type UploadFilesCommon struct {
 ```
 
 <a name="UploadFilesCommon.CleanUp"></a>
-### func \(\*UploadFilesCommon\) [CleanUp](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L277>)
+### func \(\*UploadFilesCommon\) [CleanUp](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L329>)
 
 ```go
 func (p *UploadFilesCommon) CleanUp(ctx context.Context)
@@ -3136,7 +3136,7 @@ func (p *UploadFilesCommon) CleanUp(ctx context.Context)
 CleanUp the phase
 
 <a name="UploadFilesCommon.Prepare"></a>
-### func \(\*UploadFilesCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L76>)
+### func \(\*UploadFilesCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L125>)
 
 ```go
 func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -3145,7 +3145,7 @@ func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *di
 Prepare the phase
 
 <a name="UploadFilesCommon.Run"></a>
-### func \(\*UploadFilesCommon\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L97>)
+### func \(\*UploadFilesCommon\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L146>)
 
 ```go
 func (p *UploadFilesCommon) Run(ctx context.Context) (err error)
@@ -3154,7 +3154,7 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error)
 Run the phase
 
 <a name="UploadFilesCommon.ShouldRun"></a>
-### func \(\*UploadFilesCommon\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L207>)
+### func \(\*UploadFilesCommon\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L256>)
 
 ```go
 func (p *UploadFilesCommon) ShouldRun() bool

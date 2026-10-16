@@ -43,7 +43,7 @@ const (
 ```
 
 <a name="BinarySelector"></a>
-## type [BinarySelector](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L96>)
+## type [BinarySelector](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L98>)
 
 BinarySelector selects which files to upload to a host, based on host role and install method.
 
@@ -57,11 +57,13 @@ type BinarySelector struct {
     Package string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
     // Arch lists the CPU architectures this file applies to. An empty list means every architecture the package targets.
     Arch api.Arches `json:"arch,omitempty"`
+    // When is an optional values path (e.g. ".tools.etcdctl.enabled") gating whether this file is uploaded.
+    When string `json:"when,omitempty"`
 }
 ```
 
 <a name="BinarySelector.MatchesArch"></a>
-### func \(BinarySelector\) [MatchesArch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L100>)
+### func \(BinarySelector\) [MatchesArch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L102>)
 
 ```go
 func (s BinarySelector) MatchesArch(arch api.Arch) bool
@@ -120,7 +122,7 @@ type File struct {
 ```
 
 <a name="File.HasData"></a>
-### func \(\*File\) [HasData](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L146>)
+### func \(\*File\) [HasData](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L148>)
 
 ```go
 func (u *File) HasData() bool
@@ -129,7 +131,7 @@ func (u *File) HasData() bool
 HasData reports whether Data holds non\-blank content.
 
 <a name="File.IsTemplate"></a>
-### func \(\*File\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L110>)
+### func \(\*File\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L112>)
 
 ```go
 func (u *File) IsTemplate() bool
@@ -138,7 +140,7 @@ func (u *File) IsTemplate() bool
 IsTemplate reports whether this file's contents are rendered against the package's values before upload. Unset means no, so a package that says nothing about templating ships the bytes it was built with.
 
 <a name="File.Owner"></a>
-### func \(\*File\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L123>)
+### func \(\*File\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L125>)
 
 ```go
 func (u *File) Owner() string
@@ -147,7 +149,7 @@ func (u *File) Owner() string
 Owner returns a chown\-compatible "user:group" string built from User and Group. It returns an empty string when both are empty.
 
 <a name="File.String"></a>
-### func \(\*File\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L115>)
+### func \(\*File\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L117>)
 
 ```go
 func (u *File) String() string
@@ -156,7 +158,7 @@ func (u *File) String() string
 String returns Name. If Name is empty, it returns Source instead.
 
 <a name="File.TargetDirectory"></a>
-### func \(\*File\) [TargetDirectory](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L151>)
+### func \(\*File\) [TargetDirectory](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L153>)
 
 ```go
 func (u *File) TargetDirectory() string
@@ -165,7 +167,7 @@ func (u *File) TargetDirectory() string
 TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.
 
 <a name="File.UnmarshalYAML"></a>
-### func \(\*File\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L128>)
+### func \(\*File\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L130>)
 
 ```go
 func (u *File) UnmarshalYAML(unmarshal func(any) error) error
