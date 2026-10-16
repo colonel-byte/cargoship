@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b04ef7c7.js";
+            window.path_to_searchindex_js = "searchindex-76812937.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-63067bc1.js"></script>
@@ -4329,6 +4329,7 @@ $ cargoship version -o json
 <tr><td><code>package</code></td><td><code>string</code></td><td>no</td><td></td><td>selects which install method receives this file: rpm, apt, or binary. One of <code>rpm</code>, <code>apt</code>, <code>binary</code>.</td></tr>
 <tr><td><code>profile</code></td><td><code>string</code></td><td>no</td><td></td><td>selects which host role receives this file: worker or controller. One of <code>worker</code>, <code>controller</code>.</td></tr>
 <tr><td><code>roles</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the host roles this file applies to.</td></tr>
+<tr><td><code>when</code></td><td><code>string</code></td><td>no</td><td></td><td>is an optional values path (e.g. “.tools.etcdctl.enabled”) gating whether this file is uploaded.</td></tr>
 </tbody>
 </table>
 </div>
@@ -5731,7 +5732,7 @@ $ cargoship version -o json
 )
 </code></pre>
 <p><a name="BinarySelector"></a></p>
-<h2 id="type-binaryselector"><a class="header" href="#type-binaryselector">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L96">BinarySelector</a></a></h2>
+<h2 id="type-binaryselector"><a class="header" href="#type-binaryselector">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L98">BinarySelector</a></a></h2>
 <p>BinarySelector selects which files to upload to a host, based on host role and install method.</p>
 <pre><code class="language-go">type BinarySelector struct {
     // Roles lists the host roles this file applies to.
@@ -5742,10 +5743,12 @@ $ cargoship version -o json
     Package string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
     // Arch lists the CPU architectures this file applies to. An empty list means every architecture the package targets.
     Arch api.Arches `json:"arch,omitempty"`
+    // When is an optional values path (e.g. ".tools.etcdctl.enabled") gating whether this file is uploaded.
+    When string `json:"when,omitempty"`
 }
 </code></pre>
 <p><a name="BinarySelector.MatchesArch"></a></p>
-<h3 id="func-binaryselector-matchesarch"><a class="header" href="#func-binaryselector-matchesarch">func (BinarySelector) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L100">MatchesArch</a></a></h3>
+<h3 id="func-binaryselector-matchesarch"><a class="header" href="#func-binaryselector-matchesarch">func (BinarySelector) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L102">MatchesArch</a></a></h3>
 <pre><code class="language-go">func (s BinarySelector) MatchesArch(arch api.Arch) bool
 </code></pre>
 <p>MatchesArch reports whether this selector applies to arch. An empty Arch list matches every architecture, mirroring how an empty Profile matches every profile.</p>
@@ -5796,32 +5799,32 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="File.HasData"></a></p>
-<h3 id="func-file-hasdata"><a class="header" href="#func-file-hasdata">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L146">HasData</a></a></h3>
+<h3 id="func-file-hasdata"><a class="header" href="#func-file-hasdata">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L148">HasData</a></a></h3>
 <pre><code class="language-go">func (u *File) HasData() bool
 </code></pre>
 <p>HasData reports whether Data holds non-blank content.</p>
 <p><a name="File.IsTemplate"></a></p>
-<h3 id="func-file-istemplate"><a class="header" href="#func-file-istemplate">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L110">IsTemplate</a></a></h3>
+<h3 id="func-file-istemplate"><a class="header" href="#func-file-istemplate">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L112">IsTemplate</a></a></h3>
 <pre><code class="language-go">func (u *File) IsTemplate() bool
 </code></pre>
 <p>IsTemplate reports whether this file’s contents are rendered against the package’s values before upload. Unset means no, so a package that says nothing about templating ships the bytes it was built with.</p>
 <p><a name="File.Owner"></a></p>
-<h3 id="func-file-owner"><a class="header" href="#func-file-owner">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L123">Owner</a></a></h3>
+<h3 id="func-file-owner"><a class="header" href="#func-file-owner">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L125">Owner</a></a></h3>
 <pre><code class="language-go">func (u *File) Owner() string
 </code></pre>
 <p>Owner returns a chown-compatible “user:group” string built from User and Group. It returns an empty string when both are empty.</p>
 <p><a name="File.String"></a></p>
-<h3 id="func-file-string"><a class="header" href="#func-file-string">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L115">String</a></a></h3>
+<h3 id="func-file-string"><a class="header" href="#func-file-string">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L117">String</a></a></h3>
 <pre><code class="language-go">func (u *File) String() string
 </code></pre>
 <p>String returns Name. If Name is empty, it returns Source instead.</p>
 <p><a name="File.TargetDirectory"></a></p>
-<h3 id="func-file-targetdirectory"><a class="header" href="#func-file-targetdirectory">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L151">TargetDirectory</a></a></h3>
+<h3 id="func-file-targetdirectory"><a class="header" href="#func-file-targetdirectory">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L153">TargetDirectory</a></a></h3>
 <pre><code class="language-go">func (u *File) TargetDirectory() string
 </code></pre>
 <p>TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.</p>
 <p><a name="File.UnmarshalYAML"></a></p>
-<h3 id="func-file-unmarshalyaml"><a class="header" href="#func-file-unmarshalyaml">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L128">UnmarshalYAML</a></a></h3>
+<h3 id="func-file-unmarshalyaml"><a class="header" href="#func-file-unmarshalyaml">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L130">UnmarshalYAML</a></a></h3>
 <pre><code class="language-go">func (u *File) UnmarshalYAML(unmarshal func(any) error) error
 </code></pre>
 <p>UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.</p>
@@ -13281,7 +13284,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UploadFilesCommon"></a></p>
-<h2 id="type-uploadfilescommon"><a class="header" href="#type-uploadfilescommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L46-L63">UploadFilesCommon</a></a></h2>
+<h2 id="type-uploadfilescommon"><a class="header" href="#type-uploadfilescommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L105-L122">UploadFilesCommon</a></a></h2>
 <p>UploadFilesCommon implements a phase which upload files to hosts</p>
 <pre><code class="language-go">type UploadFilesCommon struct {
     GenericPhase
@@ -13289,22 +13292,22 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="UploadFilesCommon.CleanUp"></a></p>
-<h3 id="func-uploadfilescommon-cleanup"><a class="header" href="#func-uploadfilescommon-cleanup">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L262">CleanUp</a></a></h3>
+<h3 id="func-uploadfilescommon-cleanup"><a class="header" href="#func-uploadfilescommon-cleanup">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L329">CleanUp</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) CleanUp(ctx context.Context)
 </code></pre>
 <p>CleanUp the phase</p>
 <p><a name="UploadFilesCommon.Prepare"></a></p>
-<h3 id="func-uploadfilescommon-prepare"><a class="header" href="#func-uploadfilescommon-prepare">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L66">Prepare</a></a></h3>
+<h3 id="func-uploadfilescommon-prepare"><a class="header" href="#func-uploadfilescommon-prepare">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L125">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UploadFilesCommon.Run"></a></p>
-<h3 id="func-uploadfilescommon-run"><a class="header" href="#func-uploadfilescommon-run">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L87">Run</a></a></h3>
+<h3 id="func-uploadfilescommon-run"><a class="header" href="#func-uploadfilescommon-run">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L146">Run</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) Run(ctx context.Context) (err error)
 </code></pre>
 <p>Run the phase</p>
 <p><a name="UploadFilesCommon.ShouldRun"></a></p>
-<h3 id="func-uploadfilescommon-shouldrun"><a class="header" href="#func-uploadfilescommon-shouldrun">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L197">ShouldRun</a></a></h3>
+<h3 id="func-uploadfilescommon-shouldrun"><a class="header" href="#func-uploadfilescommon-shouldrun">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L256">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
@@ -16484,10 +16487,12 @@ kw1   worker      running (pid 197714)  127.0.0.1:26243  10.73.156.13
 
 Inventory: build/microvm/dev/inventory.yaml
 </code></pre>
-<p>Then drive cargoship at it the way you would any other inventory:</p>
-<pre><code class="language-sh">cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
-cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+<p>Then drive cargoship at it the way you would any other inventory. <code>prepare</code> and <code>apply</code> take a built package rather than the definition directory it was built from, so <code>create</code> comes first – that is the one step that needs a network, and the one the fleet itself does not:</p>
+<pre><code class="language-sh">cargoship create ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1 -o ./build/
+cargoship prepare ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
+cargoship apply ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
 </code></pre>
+<p><code>prepare</code> is optional – an apply runs the same preparation phases itself. Both change every host they are pointed at, which is what <code>--confirm</code> acknowledges; pass <code>--dry-run</code> instead to see what they would change.</p>
 <h2 id="what-a-bring-up-is-doing-while-it-waits"><a class="header" href="#what-a-bring-up-is-doing-while-it-waits">What a bring-up is doing while it waits</a></h2>
 <p><code>dev:vmUp</code> blocks until the fleet is usable, and on a six-node fleet that is minutes. It reports what it is waiting on so a long wait does not read as a hung shell:</p>
 <pre><code class="language-console">$ mage dev:vmUp -control=3 -worker=3

@@ -37,7 +37,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-b04ef7c7.js";
+            window.path_to_searchindex_js = "../../../searchindex-76812937.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-63067bc1.js"></script>
@@ -226,7 +226,7 @@
 )
 </code></pre>
 <p><a name="BinarySelector"></a></p>
-<h2 id="type-binaryselector"><a class="header" href="#type-binaryselector">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L96">BinarySelector</a></a></h2>
+<h2 id="type-binaryselector"><a class="header" href="#type-binaryselector">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L98">BinarySelector</a></a></h2>
 <p>BinarySelector selects which files to upload to a host, based on host role and install method.</p>
 <pre><code class="language-go">type BinarySelector struct {
     // Roles lists the host roles this file applies to.
@@ -237,10 +237,12 @@
     Package string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
     // Arch lists the CPU architectures this file applies to. An empty list means every architecture the package targets.
     Arch api.Arches `json:"arch,omitempty"`
+    // When is an optional values path (e.g. ".tools.etcdctl.enabled") gating whether this file is uploaded.
+    When string `json:"when,omitempty"`
 }
 </code></pre>
 <p><a name="BinarySelector.MatchesArch"></a></p>
-<h3 id="func-binaryselector-matchesarch"><a class="header" href="#func-binaryselector-matchesarch">func (BinarySelector) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L100">MatchesArch</a></a></h3>
+<h3 id="func-binaryselector-matchesarch"><a class="header" href="#func-binaryselector-matchesarch">func (BinarySelector) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L102">MatchesArch</a></a></h3>
 <pre><code class="language-go">func (s BinarySelector) MatchesArch(arch api.Arch) bool
 </code></pre>
 <p>MatchesArch reports whether this selector applies to arch. An empty Arch list matches every architecture, mirroring how an empty Profile matches every profile.</p>
@@ -291,32 +293,32 @@
 }
 </code></pre>
 <p><a name="File.HasData"></a></p>
-<h3 id="func-file-hasdata"><a class="header" href="#func-file-hasdata">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L146">HasData</a></a></h3>
+<h3 id="func-file-hasdata"><a class="header" href="#func-file-hasdata">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L148">HasData</a></a></h3>
 <pre><code class="language-go">func (u *File) HasData() bool
 </code></pre>
 <p>HasData reports whether Data holds non-blank content.</p>
 <p><a name="File.IsTemplate"></a></p>
-<h3 id="func-file-istemplate"><a class="header" href="#func-file-istemplate">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L110">IsTemplate</a></a></h3>
+<h3 id="func-file-istemplate"><a class="header" href="#func-file-istemplate">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L112">IsTemplate</a></a></h3>
 <pre><code class="language-go">func (u *File) IsTemplate() bool
 </code></pre>
 <p>IsTemplate reports whether this file’s contents are rendered against the package’s values before upload. Unset means no, so a package that says nothing about templating ships the bytes it was built with.</p>
 <p><a name="File.Owner"></a></p>
-<h3 id="func-file-owner"><a class="header" href="#func-file-owner">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L123">Owner</a></a></h3>
+<h3 id="func-file-owner"><a class="header" href="#func-file-owner">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L125">Owner</a></a></h3>
 <pre><code class="language-go">func (u *File) Owner() string
 </code></pre>
 <p>Owner returns a chown-compatible “user:group” string built from User and Group. It returns an empty string when both are empty.</p>
 <p><a name="File.String"></a></p>
-<h3 id="func-file-string"><a class="header" href="#func-file-string">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L115">String</a></a></h3>
+<h3 id="func-file-string"><a class="header" href="#func-file-string">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L117">String</a></a></h3>
 <pre><code class="language-go">func (u *File) String() string
 </code></pre>
 <p>String returns Name. If Name is empty, it returns Source instead.</p>
 <p><a name="File.TargetDirectory"></a></p>
-<h3 id="func-file-targetdirectory"><a class="header" href="#func-file-targetdirectory">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L151">TargetDirectory</a></a></h3>
+<h3 id="func-file-targetdirectory"><a class="header" href="#func-file-targetdirectory">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L153">TargetDirectory</a></a></h3>
 <pre><code class="language-go">func (u *File) TargetDirectory() string
 </code></pre>
 <p>TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.</p>
 <p><a name="File.UnmarshalYAML"></a></p>
-<h3 id="func-file-unmarshalyaml"><a class="header" href="#func-file-unmarshalyaml">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L128">UnmarshalYAML</a></a></h3>
+<h3 id="func-file-unmarshalyaml"><a class="header" href="#func-file-unmarshalyaml">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L130">UnmarshalYAML</a></a></h3>
 <pre><code class="language-go">func (u *File) UnmarshalYAML(unmarshal func(any) error) error
 </code></pre>
 <p>UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.</p>

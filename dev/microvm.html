@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b04ef7c7.js";
+            window.path_to_searchindex_js = "../searchindex-76812937.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-63067bc1.js"></script>
@@ -220,10 +220,12 @@ kw1   worker      running (pid 197714)  127.0.0.1:26243  10.73.156.13
 
 Inventory: build/microvm/dev/inventory.yaml
 </code></pre>
-<p>Then drive cargoship at it the way you would any other inventory:</p>
-<pre><code class="language-sh">cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
-cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+<p>Then drive cargoship at it the way you would any other inventory. <code>prepare</code> and <code>apply</code> take a built package rather than the definition directory it was built from, so <code>create</code> comes first – that is the one step that needs a network, and the one the fleet itself does not:</p>
+<pre><code class="language-sh">cargoship create ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1 -o ./build/
+cargoship prepare ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
+cargoship apply ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
 </code></pre>
+<p><code>prepare</code> is optional – an apply runs the same preparation phases itself. Both change every host they are pointed at, which is what <code>--confirm</code> acknowledges; pass <code>--dry-run</code> instead to see what they would change.</p>
 <h2 id="what-a-bring-up-is-doing-while-it-waits"><a class="header" href="#what-a-bring-up-is-doing-while-it-waits">What a bring-up is doing while it waits</a></h2>
 <p><code>dev:vmUp</code> blocks until the fleet is usable, and on a six-node fleet that is minutes. It reports what it is waiting on so a long wait does not read as a hung shell:</p>
 <pre><code class="language-console">$ mage dev:vmUp -control=3 -worker=3

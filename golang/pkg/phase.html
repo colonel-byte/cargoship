@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-b04ef7c7.js";
+            window.path_to_searchindex_js = "../../searchindex-76812937.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-63067bc1.js"></script>
@@ -2316,7 +2316,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UploadFilesCommon"></a></p>
-<h2 id="type-uploadfilescommon"><a class="header" href="#type-uploadfilescommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L46-L63">UploadFilesCommon</a></a></h2>
+<h2 id="type-uploadfilescommon"><a class="header" href="#type-uploadfilescommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L105-L122">UploadFilesCommon</a></a></h2>
 <p>UploadFilesCommon implements a phase which upload files to hosts</p>
 <pre><code class="language-go">type UploadFilesCommon struct {
     GenericPhase
@@ -2324,22 +2324,22 @@
 }
 </code></pre>
 <p><a name="UploadFilesCommon.CleanUp"></a></p>
-<h3 id="func-uploadfilescommon-cleanup"><a class="header" href="#func-uploadfilescommon-cleanup">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L262">CleanUp</a></a></h3>
+<h3 id="func-uploadfilescommon-cleanup"><a class="header" href="#func-uploadfilescommon-cleanup">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L329">CleanUp</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) CleanUp(ctx context.Context)
 </code></pre>
 <p>CleanUp the phase</p>
 <p><a name="UploadFilesCommon.Prepare"></a></p>
-<h3 id="func-uploadfilescommon-prepare"><a class="header" href="#func-uploadfilescommon-prepare">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L66">Prepare</a></a></h3>
+<h3 id="func-uploadfilescommon-prepare"><a class="header" href="#func-uploadfilescommon-prepare">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L125">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UploadFilesCommon.Run"></a></p>
-<h3 id="func-uploadfilescommon-run"><a class="header" href="#func-uploadfilescommon-run">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L87">Run</a></a></h3>
+<h3 id="func-uploadfilescommon-run"><a class="header" href="#func-uploadfilescommon-run">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L146">Run</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) Run(ctx context.Context) (err error)
 </code></pre>
 <p>Run the phase</p>
 <p><a name="UploadFilesCommon.ShouldRun"></a></p>
-<h3 id="func-uploadfilescommon-shouldrun"><a class="header" href="#func-uploadfilescommon-shouldrun">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L197">ShouldRun</a></a></h3>
+<h3 id="func-uploadfilescommon-shouldrun"><a class="header" href="#func-uploadfilescommon-shouldrun">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L256">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UploadFilesCommon) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
