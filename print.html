@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0b56e1f2.js";
+            window.path_to_searchindex_js = "searchindex-b04ef7c7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-63067bc1.js"></script>
@@ -7121,23 +7121,24 @@ $ cargoship version -o json
 <p>Package action are various actions used by the package</p>
 <h2 id="index-4"><a class="header" href="#index-4">Index</a></h2>
 <ul>
+<li><a href="#variables-3">Variables</a></li>
 <li><a href="#Apply">type Apply</a>
 <ul>
-<li><a href="#NewApply">func NewApply(opts ApplyOptions) *Apply</a></li>
+<li><a href="#NewApply">func NewApply(opts ApplyOptions) (*Apply, error)</a></li>
 <li><a href="#Apply.Run">func (a Apply) Run(ctx context.Context) error</a></li>
 </ul>
 </li>
 <li><a href="#ApplyOptions">type ApplyOptions</a></li>
 <li><a href="#EngineConfigSync">type EngineConfigSync</a>
 <ul>
-<li><a href="#NewEngineConfigSync">func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync</a></li>
+<li><a href="#NewEngineConfigSync">func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error)</a></li>
 <li><a href="#EngineConfigSync.Run">func (r EngineConfigSync) Run(ctx context.Context) error</a></li>
 </ul>
 </li>
 <li><a href="#EngineConfigSyncOptions">type EngineConfigSyncOptions</a></li>
 <li><a href="#KubeConfig">type KubeConfig</a>
 <ul>
-<li><a href="#NewKubeConfig">func NewKubeConfig(opts KubeConfigOptions) *KubeConfig</a></li>
+<li><a href="#NewKubeConfig">func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)</a></li>
 <li><a href="#KubeConfig.Run">func (a KubeConfig) Run(ctx context.Context) error</a></li>
 </ul>
 </li>
@@ -7157,8 +7158,12 @@ $ cargoship version -o json
 </li>
 <li><a href="#ResetOptions">type ResetOptions</a></li>
 </ul>
+<h2 id="variables-3"><a class="header" href="#variables-3">Variables</a></h2>
+<p><a name="ErrNoDistroSelected"></a>ErrNoDistroSelected is returned when an action is built with no distro at all, rather than with one no module claims.</p>
+<pre><code class="language-go">var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
+</code></pre>
 <p><a name="Apply"></a></p>
-<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L68-L71">Apply</a></a></h2>
+<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L66-L69">Apply</a></a></h2>
 <p>Apply state logic</p>
 <pre><code class="language-go">type Apply struct {
     ApplyOptions
@@ -7166,17 +7171,17 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="NewApply"></a></p>
-<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L74">NewApply</a></a></h3>
-<pre><code class="language-go">func NewApply(opts ApplyOptions) *Apply
+<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L72">NewApply</a></a></h3>
+<pre><code class="language-go">func NewApply(opts ApplyOptions) (*Apply, error)
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L192">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L65">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L63">ApplyOptions</a></a></h2>
 <p>ApplyOptions struct</p>
 <pre><code class="language-go">type ApplyOptions struct {
     // Manager is the phase manager
@@ -7210,7 +7215,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="EngineConfigSync"></a></p>
-<h2 id="type-engineconfigsync"><a class="header" href="#type-engineconfigsync">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L50-L53">EngineConfigSync</a></a></h2>
+<h2 id="type-engineconfigsync"><a class="header" href="#type-engineconfigsync">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L48-L51">EngineConfigSync</a></a></h2>
 <p>EngineConfigSync state logic</p>
 <pre><code class="language-go">type EngineConfigSync struct {
     EngineConfigSyncOptions
@@ -7218,17 +7223,17 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="NewEngineConfigSync"></a></p>
-<h3 id="func-newengineconfigsync"><a class="header" href="#func-newengineconfigsync">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L56">NewEngineConfigSync</a></a></h3>
-<pre><code class="language-go">func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync
+<h3 id="func-newengineconfigsync"><a class="header" href="#func-newengineconfigsync">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L54">NewEngineConfigSync</a></a></h3>
+<pre><code class="language-go">func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error)
 </code></pre>
 <p>NewEngineConfigSync an engine-config-sync action object</p>
 <p><a name="EngineConfigSync.Run"></a></p>
-<h3 id="func-engineconfigsync-run"><a class="header" href="#func-engineconfigsync-run">func (EngineConfigSync) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L115">Run</a></a></h3>
+<h3 id="func-engineconfigsync-run"><a class="header" href="#func-engineconfigsync-run">func (EngineConfigSync) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L111">Run</a></a></h3>
 <pre><code class="language-go">func (r EngineConfigSync) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="EngineConfigSyncOptions"></a></p>
-<h2 id="type-engineconfigsyncoptions"><a class="header" href="#type-engineconfigsyncoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L47">EngineConfigSyncOptions</a></a></h2>
+<h2 id="type-engineconfigsyncoptions"><a class="header" href="#type-engineconfigsyncoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L27-L45">EngineConfigSyncOptions</a></a></h2>
 <p>EngineConfigSyncOptions struct</p>
 <pre><code class="language-go">type EngineConfigSyncOptions struct {
     // Manager is the phase manager
@@ -7251,7 +7256,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="KubeConfig"></a></p>
-<h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L43-L46">KubeConfig</a></a></h2>
+<h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L41-L44">KubeConfig</a></a></h2>
 <p>KubeConfig state logic</p>
 <pre><code class="language-go">type KubeConfig struct {
     KubeConfigOptions
@@ -7259,17 +7264,17 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="NewKubeConfig"></a></p>
-<h3 id="func-newkubeconfig"><a class="header" href="#func-newkubeconfig">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L49">NewKubeConfig</a></a></h3>
-<pre><code class="language-go">func NewKubeConfig(opts KubeConfigOptions) *KubeConfig
+<h3 id="func-newkubeconfig"><a class="header" href="#func-newkubeconfig">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L47">NewKubeConfig</a></a></h3>
+<pre><code class="language-go">func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)
 </code></pre>
 <p>NewKubeConfig pulls the admin cert from a control-plane node and updates the local kube-config</p>
 <p><a name="KubeConfig.Run"></a></p>
-<h3 id="func-kubeconfig-run"><a class="header" href="#func-kubeconfig-run">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L79">Run</a></a></h3>
+<h3 id="func-kubeconfig-run"><a class="header" href="#func-kubeconfig-run">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L75">Run</a></a></h3>
 <pre><code class="language-go">func (a KubeConfig) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="KubeConfigOptions"></a></p>
-<h2 id="type-kubeconfigoptions"><a class="header" href="#type-kubeconfigoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L34-L40">KubeConfigOptions</a></a></h2>
+<h2 id="type-kubeconfigoptions"><a class="header" href="#type-kubeconfigoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L32-L38">KubeConfigOptions</a></a></h2>
 <p>KubeConfigOptions struct</p>
 <pre><code class="language-go">type KubeConfigOptions struct {
     // Manager is the phase manager
@@ -7316,7 +7321,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="Reset"></a></p>
-<h2 id="type-reset"><a class="header" href="#type-reset">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L58-L61">Reset</a></a></h2>
+<h2 id="type-reset"><a class="header" href="#type-reset">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L55-L58">Reset</a></a></h2>
 <p>Reset state logic</p>
 <pre><code class="language-go">type Reset struct {
     ResetOptions
@@ -7324,17 +7329,17 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="NewReset"></a></p>
-<h3 id="func-newreset"><a class="header" href="#func-newreset">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L64">NewReset</a></a></h3>
+<h3 id="func-newreset"><a class="header" href="#func-newreset">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L61">NewReset</a></a></h3>
 <pre><code class="language-go">func NewReset(opts ResetOptions) (*Reset, error)
 </code></pre>
 <p>NewReset an apply action object</p>
 <p><a name="Reset.Run"></a></p>
-<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L140">Run</a></a></h3>
+<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L133">Run</a></a></h3>
 <pre><code class="language-go">func (r Reset) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ResetOptions"></a></p>
-<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L35-L55">ResetOptions</a></a></h2>
+<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L52">ResetOptions</a></a></h2>
 <p>ResetOptions struct</p>
 <pre><code class="language-go">type ResetOptions struct {
     // Manager is the phase manager
@@ -7367,7 +7372,7 @@ $ cargoship version -o json
 <h2 id="index-5"><a class="header" href="#index-5">Index</a></h2>
 <ul>
 <li><a href="#constants-4">Constants</a></li>
-<li><a href="#variables-3">Variables</a></li>
+<li><a href="#variables-4">Variables</a></li>
 <li><a href="#AssembleLayers">func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, include …layers.LayerType) ([]ocispec.Descriptor, error)</a></li>
 <li><a href="#CopyPackage">func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOptions) (err error)</a></li>
 <li><a href="#FetchDistroYAML">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.Distro, error)</a></li>
@@ -7406,7 +7411,7 @@ $ cargoship version -o json
 <p><a name="OCITimestampFormat"></a>OCITimestampFormat is the format used for the OCI timestamp annotation</p>
 <pre><code class="language-go">const OCITimestampFormat = time.RFC3339
 </code></pre>
-<h2 id="variables-3"><a class="header" href="#variables-3">Variables</a></h2>
+<h2 id="variables-4"><a class="header" href="#variables-4">Variables</a></h2>
 <p><a name="PackageAlwaysPull"></a></p>
 <pre><code class="language-go">var (
     // PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
@@ -7828,7 +7833,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package gen turns an extract.Manifest into a Go struct source file: one field per resolved, non-alias flag, tagged with the flag’s real kebab-case name as its yaml key. See docs/agent/design-config-codegen.md -- the flag name, not the Go field name, is the source of truth for what a valid config.yaml key looks like.</p>
 <h2 id="index-9"><a class="header" href="#index-9">Index</a></h2>
 <ul>
-<li><a href="#variables-4">Variables</a></li>
+<li><a href="#variables-5">Variables</a></li>
 <li><a href="#Generate">func Generate(opts Options) ([]byte, error)</a></li>
 <li><a href="#GenerateComponents">func GenerateComponents(opts ComponentsOptions) ([]byte, error)</a></li>
 <li><a href="#GenerateNestedKeys">func GenerateNestedKeys(opts NestedKeysOptions) ([]byte, error)</a></li>
@@ -7843,7 +7848,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#NestedKeysOptions">type NestedKeysOptions</a></li>
 <li><a href="#Options">type Options</a></li>
 </ul>
-<h2 id="variables-4"><a class="header" href="#variables-4">Variables</a></h2>
+<h2 id="variables-5"><a class="header" href="#variables-5">Variables</a></h2>
 <p><a name="Registry"></a>Registry maps distro id (e.g. “k3s”, “rke2”) -&gt; sanitized minor version package name (e.g. “v1_35”) -&gt; Entry. See Lookup in lookup.go for the consumer-facing API.</p>
 <pre><code class="language-go">var Registry = map[string]map[string]Entry{
     "k3s": {
@@ -7950,11 +7955,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-10"><a class="header" href="#index-10">Index</a></h2>
 <ul>
-<li><a href="#variables-5">Variables</a></li>
+<li><a href="#variables-6">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-5"><a class="header" href="#variables-5">Variables</a></h2>
+<h2 id="variables-6"><a class="header" href="#variables-6">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_31 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8156,11 +8161,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-11"><a class="header" href="#index-11">Index</a></h2>
 <ul>
-<li><a href="#variables-6">Variables</a></li>
+<li><a href="#variables-7">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-6"><a class="header" href="#variables-6">Variables</a></h2>
+<h2 id="variables-7"><a class="header" href="#variables-7">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8363,11 +8368,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-12"><a class="header" href="#index-12">Index</a></h2>
 <ul>
-<li><a href="#variables-7">Variables</a></li>
+<li><a href="#variables-8">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-7"><a class="header" href="#variables-7">Variables</a></h2>
+<h2 id="variables-8"><a class="header" href="#variables-8">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8570,11 +8575,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-13"><a class="header" href="#index-13">Index</a></h2>
 <ul>
-<li><a href="#variables-8">Variables</a></li>
+<li><a href="#variables-9">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-8"><a class="header" href="#variables-8">Variables</a></h2>
+<h2 id="variables-9"><a class="header" href="#variables-9">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8778,11 +8783,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-14"><a class="header" href="#index-14">Index</a></h2>
 <ul>
-<li><a href="#variables-9">Variables</a></li>
+<li><a href="#variables-10">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-9"><a class="header" href="#variables-9">Variables</a></h2>
+<h2 id="variables-10"><a class="header" href="#variables-10">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_31 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -8992,11 +8997,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-15"><a class="header" href="#index-15">Index</a></h2>
 <ul>
-<li><a href="#variables-10">Variables</a></li>
+<li><a href="#variables-11">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-10"><a class="header" href="#variables-10">Variables</a></h2>
+<h2 id="variables-11"><a class="header" href="#variables-11">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -9209,11 +9214,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-16"><a class="header" href="#index-16">Index</a></h2>
 <ul>
-<li><a href="#variables-11">Variables</a></li>
+<li><a href="#variables-12">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-11"><a class="header" href="#variables-11">Variables</a></h2>
+<h2 id="variables-12"><a class="header" href="#variables-12">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -9426,11 +9431,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-17"><a class="header" href="#index-17">Index</a></h2>
 <ul>
-<li><a href="#variables-12">Variables</a></li>
+<li><a href="#variables-13">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-12"><a class="header" href="#variables-12">Variables</a></h2>
+<h2 id="variables-13"><a class="header" href="#variables-13">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -9647,9 +9652,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-18"><a class="header" href="#index-18">Index</a></h2>
 <ul>
-<li><a href="#variables-13">Variables</a></li>
+<li><a href="#variables-14">Variables</a></li>
 </ul>
-<h2 id="variables-13"><a class="header" href="#variables-13">Variables</a></h2>
+<h2 id="variables-14"><a class="header" href="#variables-14">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -9726,9 +9731,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-19"><a class="header" href="#index-19">Index</a></h2>
 <ul>
-<li><a href="#variables-14">Variables</a></li>
+<li><a href="#variables-15">Variables</a></li>
 </ul>
-<h2 id="variables-14"><a class="header" href="#variables-14">Variables</a></h2>
+<h2 id="variables-15"><a class="header" href="#variables-15">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -9805,9 +9810,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-20"><a class="header" href="#index-20">Index</a></h2>
 <ul>
-<li><a href="#variables-15">Variables</a></li>
+<li><a href="#variables-16">Variables</a></li>
 </ul>
-<h2 id="variables-15"><a class="header" href="#variables-15">Variables</a></h2>
+<h2 id="variables-16"><a class="header" href="#variables-16">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -10726,7 +10731,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-29"><a class="header" href="#index-29">Index</a></h2>
 <ul>
 <li><a href="#constants-9">Constants</a></li>
-<li><a href="#variables-16">Variables</a></li>
+<li><a href="#variables-17">Variables</a></li>
 <li><a href="#ValidateArch">func ValidateArch(format Arch) error</a></li>
 <li><a href="#Arch">type Arch</a></li>
 </ul>
@@ -10741,7 +10746,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     ArchRISCV = api.ArchRISCV
 )
 </code></pre>
-<h2 id="variables-16"><a class="header" href="#variables-16">Variables</a></h2>
+<h2 id="variables-17"><a class="header" href="#variables-17">Variables</a></h2>
 <p><a name="ErrUnknownArch"></a></p>
 <pre><code class="language-go">var (
     // ErrUnknownArch is returned when a Arch is not one of the supported architectures.
@@ -10807,7 +10812,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-31"><a class="header" href="#index-31">Index</a></h2>
 <ul>
 <li><a href="#constants-10">Constants</a></li>
-<li><a href="#variables-17">Variables</a></li>
+<li><a href="#variables-18">Variables</a></li>
 <li><a href="#AnnotationsFromMetadata">func AnnotationsFromMetadata(metadata distro.Metadata) map[string]string</a></li>
 <li><a href="#IsCleanPath">func IsCleanPath(s string) bool</a></li>
 <li><a href="#IsContainedPath">func IsContainedPath(s string) bool</a></li>
@@ -10872,7 +10877,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     OCITimestampFormat = time.RFC3339
 )
 </code></pre>
-<h2 id="variables-17"><a class="header" href="#variables-17">Variables</a></h2>
+<h2 id="variables-18"><a class="header" href="#variables-18">Variables</a></h2>
 <p><a name="ErrNoVerificationMaterial"></a>ErrNoVerificationMaterial is returned when there is nothing to verify against. VerifyIfPossible tolerates this; all other verification errors are always fatal.</p>
 <pre><code class="language-go">var ErrNoVerificationMaterial = errors.New("no verification material available")
 </code></pre>
@@ -11150,7 +11155,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-33"><a class="header" href="#index-33">Index</a></h2>
 <ul>
 <li><a href="#constants-11">Constants</a></li>
-<li><a href="#variables-18">Variables</a></li>
+<li><a href="#variables-19">Variables</a></li>
 <li><a href="#CheckTargetHosts">func CheckTargetHosts(hosts cluster.Hosts, targets []string) error</a></li>
 <li><a href="#DryRunNote">func DryRunNote(p Phase) string</a></li>
 <li><a href="#Titles">func Titles(results []PhaseResult) []string</a></li>
@@ -11626,7 +11631,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     UnknownVersion = "v0.0.0"
 )
 </code></pre>
-<h2 id="variables-18"><a class="header" href="#variables-18">Variables</a></h2>
+<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
 <p><a name="ErrControllersNotOneAtATime"></a>ErrControllersNotOneAtATime is returned when a run that keeps the cluster removes more than one running controller.</p>
 <p>Each removal is a raft reconfiguration that needs a majority of the membership it starts from, and cargoship takes the engine down on a controller before deleting its node so the member cannot vote or re-register behind the run. Two removals in one run therefore pass through a state the second one cannot commit from: three members, one already stopped, is a majority of two out of three; the next stop leaves one of two, and the removal hangs with the cluster unavailable rather than failing cleanly.</p>
 <p>Removing them in separate runs is safe because the cluster is whole again at the start of each.</p>
@@ -13339,13 +13344,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package retry provides simple retry wrappers for functions that return an error</p>
 <h2 id="index-34"><a class="header" href="#index-34">Index</a></h2>
 <ul>
-<li><a href="#variables-19">Variables</a></li>
+<li><a href="#variables-20">Variables</a></li>
 <li><a href="#Context">func Context(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Timeout">func Timeout(ctx context.Context, timeout time.Duration, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Times">func Times(ctx context.Context, times int, f func(context.Context) error) error</a></li>
 <li><a href="#WithDefaultTimeout">func WithDefaultTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 </ul>
-<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
+<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
 <p><a name="DefaultTimeout"></a></p>
 <pre><code class="language-go">var (
     // DefaultTimeout is a default timeout for retry operations
@@ -13675,7 +13680,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package types is a little bit of a hacky way to generate the cargo-ship-config jsonschema</p>
 <h2 id="index-38"><a class="header" href="#index-38">Index</a></h2>
 <ul>
-<li><a href="#variables-20">Variables</a></li>
+<li><a href="#variables-21">Variables</a></li>
 <li><a href="#AgeOptions">type AgeOptions</a></li>
 <li><a href="#ApplyOptions">type ApplyOptions</a></li>
 <li><a href="#DistroConfig">type DistroConfig</a></li>
@@ -13695,7 +13700,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#ResetOptions">type ResetOptions</a></li>
 </ul>
-<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
+<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
 <p><a name="CommonFileSources"></a>CommonFileSources are suggested, non-exhaustive URL prefixes used in generated schemas as autocomplete for FileOverrideMap’s file_override keys, the same way CommonRegistries is used for registry_override. They are the hosts a distro definition most often downloads from.</p>
 <pre><code class="language-go">var CommonFileSources = []string{
     "https://rpm.rancher.io",
@@ -13903,7 +13908,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-39"><a class="header" href="#index-39">Index</a></h2>
 <ul>
 <li><a href="#constants-13">Constants</a></li>
-<li><a href="#variables-21">Variables</a></li>
+<li><a href="#variables-22">Variables</a></li>
 <li><a href="#NodeLabelsMapToList">func NodeLabelsMapToList(m map[string]string) []string</a></li>
 <li><a href="#RemoveStaleFiles">func RemoveStaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) error</a></li>
 <li><a href="#StaleFiles">func StaleFiles(h *cluster.Host, dirs []ManagedDir, desired map[string]DesiredFile) []string</a></li>
@@ -14032,7 +14037,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="StateDir"></a>StateDir is where cargoship records state files describing the applied distro package.</p>
 <pre><code class="language-go">const StateDir = "/etc/cargoship"
 </code></pre>
-<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
+<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
 <p><a name="ErrVersionNotDetected"></a></p>
 <pre><code class="language-go">var (
     // ErrVersionNotDetected if a version is not detected
@@ -14527,7 +14532,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package registry is used to register a distro</p>
 <h2 id="index-40"><a class="header" href="#index-40">Index</a></h2>
 <ul>
-<li><a href="#variables-22">Variables</a></li>
+<li><a href="#variables-23">Variables</a></li>
 <li><a href="#RegisterDistroModule">func RegisterDistroModule(mf MatchFunc, bf BuildFunc)</a></li>
 <li><a href="#BuildFunc">type BuildFunc</a>
 <ul>
@@ -14536,7 +14541,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#MatchFunc">type MatchFunc</a></li>
 </ul>
-<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
+<h2 id="variables-23"><a class="header" href="#variables-23">Variables</a></h2>
 <p><a name="ErrDistroModuleNotFound"></a>ErrDistroModuleNotFound is used when a distro module is not found in the registry</p>
 <pre><code class="language-go">var ErrDistroModuleNotFound = errors.New("distro support not found")
 </code></pre>
