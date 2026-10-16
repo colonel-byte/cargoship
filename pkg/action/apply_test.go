@@ -28,13 +28,13 @@ import (
 func newTestApply(t *testing.T) *Apply {
 	t.Helper()
 
-	a := NewApply(ApplyOptions{
+	a, err := NewApply(ApplyOptions{
 		Manager: &phase.Manager{
 			DistroID: "k3s",
 			Config:   &cluster.Cluster{},
 		},
 	})
-	require.NotNil(t, a, "NewApply returned nil, which it only does for an unknown distro")
+	require.NoError(t, err)
 	return a
 }
 
@@ -91,13 +91,14 @@ func TestApplyRefusesADowngradeBeforeTheLock(t *testing.T) {
 // TestApplyPassesAllowDowngrade pins the flag reaching the phase that reads it. The option was a
 // struct field wired to nothing for long enough that the dead end is worth a test.
 func TestApplyPassesAllowDowngrade(t *testing.T) {
-	a := NewApply(ApplyOptions{
+	a, err := NewApply(ApplyOptions{
 		Manager: &phase.Manager{
 			DistroID: "k3s",
 			Config:   &cluster.Cluster{},
 		},
 		AllowDowngrade: true,
 	})
+	require.NoError(t, err)
 	require.NotNil(t, a)
 
 	for _, p := range a.Phases {

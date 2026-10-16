@@ -27,8 +27,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/pkg/phase"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -71,17 +69,15 @@ type Apply struct {
 }
 
 // NewApply an apply action object
-func NewApply(opts ApplyOptions) *Apply {
-	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
+func NewApply(opts ApplyOptions) (*Apply, error) {
+	d, err := distroModule(opts.Manager.DistroID)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	if opts.Manager.Concurrency < 0 {
 		opts.Manager.Concurrency = 0
 	}
-
-	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
 
 	lockPhase := &phase.Lock{}
 	return &Apply{
@@ -185,7 +181,7 @@ func NewApply(opts ApplyOptions) *Apply {
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
-	}
+	}, nil
 }
 
 // Run the actions

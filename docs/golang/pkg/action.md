@@ -10,16 +10,17 @@ Package action are various actions used by the package
 
 ## Index
 
+- [Variables](<#variables>)
 - [type Apply](<#Apply>)
-  - [func NewApply\(opts ApplyOptions\) \*Apply](<#NewApply>)
+  - [func NewApply\(opts ApplyOptions\) \(\*Apply, error\)](<#NewApply>)
   - [func \(a Apply\) Run\(ctx context.Context\) error](<#Apply.Run>)
 - [type ApplyOptions](<#ApplyOptions>)
 - [type EngineConfigSync](<#EngineConfigSync>)
-  - [func NewEngineConfigSync\(opts EngineConfigSyncOptions\) \*EngineConfigSync](<#NewEngineConfigSync>)
+  - [func NewEngineConfigSync\(opts EngineConfigSyncOptions\) \(\*EngineConfigSync, error\)](<#NewEngineConfigSync>)
   - [func \(r EngineConfigSync\) Run\(ctx context.Context\) error](<#EngineConfigSync.Run>)
 - [type EngineConfigSyncOptions](<#EngineConfigSyncOptions>)
 - [type KubeConfig](<#KubeConfig>)
-  - [func NewKubeConfig\(opts KubeConfigOptions\) \*KubeConfig](<#NewKubeConfig>)
+  - [func NewKubeConfig\(opts KubeConfigOptions\) \(\*KubeConfig, error\)](<#NewKubeConfig>)
   - [func \(a KubeConfig\) Run\(ctx context.Context\) error](<#KubeConfig.Run>)
 - [type KubeConfigOptions](<#KubeConfigOptions>)
 - [type Prepare](<#Prepare>)
@@ -32,8 +33,16 @@ Package action are various actions used by the package
 - [type ResetOptions](<#ResetOptions>)
 
 
+## Variables
+
+<a name="ErrNoDistroSelected"></a>ErrNoDistroSelected is returned when an action is built with no distro at all, rather than with one no module claims.
+
+```go
+var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
+```
+
 <a name="Apply"></a>
-## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L68-L71>)
+## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L66-L69>)
 
 Apply state logic
 
@@ -45,16 +54,16 @@ type Apply struct {
 ```
 
 <a name="NewApply"></a>
-### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L74>)
+### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L72>)
 
 ```go
-func NewApply(opts ApplyOptions) *Apply
+func NewApply(opts ApplyOptions) (*Apply, error)
 ```
 
 NewApply an apply action object
 
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L192>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error
@@ -63,7 +72,7 @@ func (a Apply) Run(ctx context.Context) error
 Run the actions
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L65>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L63>)
 
 ApplyOptions struct
 
@@ -101,7 +110,7 @@ type ApplyOptions struct {
 ```
 
 <a name="EngineConfigSync"></a>
-## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L50-L53>)
+## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L48-L51>)
 
 EngineConfigSync state logic
 
@@ -113,16 +122,16 @@ type EngineConfigSync struct {
 ```
 
 <a name="NewEngineConfigSync"></a>
-### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L56>)
+### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L54>)
 
 ```go
-func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync
+func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error)
 ```
 
 NewEngineConfigSync an engine\-config\-sync action object
 
 <a name="EngineConfigSync.Run"></a>
-### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L115>)
+### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L111>)
 
 ```go
 func (r EngineConfigSync) Run(ctx context.Context) error
@@ -131,7 +140,7 @@ func (r EngineConfigSync) Run(ctx context.Context) error
 Run the actions
 
 <a name="EngineConfigSyncOptions"></a>
-## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L47>)
+## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L27-L45>)
 
 EngineConfigSyncOptions struct
 
@@ -158,7 +167,7 @@ type EngineConfigSyncOptions struct {
 ```
 
 <a name="KubeConfig"></a>
-## type [KubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L43-L46>)
+## type [KubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L41-L44>)
 
 KubeConfig state logic
 
@@ -170,16 +179,16 @@ type KubeConfig struct {
 ```
 
 <a name="NewKubeConfig"></a>
-### func [NewKubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L49>)
+### func [NewKubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L47>)
 
 ```go
-func NewKubeConfig(opts KubeConfigOptions) *KubeConfig
+func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)
 ```
 
 NewKubeConfig pulls the admin cert from a control\-plane node and updates the local kube\-config
 
 <a name="KubeConfig.Run"></a>
-### func \(KubeConfig\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L79>)
+### func \(KubeConfig\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L75>)
 
 ```go
 func (a KubeConfig) Run(ctx context.Context) error
@@ -188,7 +197,7 @@ func (a KubeConfig) Run(ctx context.Context) error
 Run the actions
 
 <a name="KubeConfigOptions"></a>
-## type [KubeConfigOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L34-L40>)
+## type [KubeConfigOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L32-L38>)
 
 KubeConfigOptions struct
 
@@ -255,7 +264,7 @@ type PrepareOptions struct {
 ```
 
 <a name="Reset"></a>
-## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L58-L61>)
+## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L55-L58>)
 
 Reset state logic
 
@@ -267,7 +276,7 @@ type Reset struct {
 ```
 
 <a name="NewReset"></a>
-### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L64>)
+### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L61>)
 
 ```go
 func NewReset(opts ResetOptions) (*Reset, error)
@@ -276,7 +285,7 @@ func NewReset(opts ResetOptions) (*Reset, error)
 NewReset an apply action object
 
 <a name="Reset.Run"></a>
-### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L140>)
+### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L133>)
 
 ```go
 func (r Reset) Run(ctx context.Context) error
@@ -285,7 +294,7 @@ func (r Reset) Run(ctx context.Context) error
 Run the actions
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L35-L55>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L52>)
 
 ResetOptions struct
 

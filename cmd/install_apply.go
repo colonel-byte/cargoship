@@ -174,6 +174,10 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		Keyring:             keyring,
 	}
 
-	runErr = action.NewApply(applyOpts).Run(ctx)
-	return runErr
+	apply, runErr := action.NewApply(applyOpts)
+	if runErr != nil {
+		return runErr
+	}
+
+	return apply.Run(ctx)
 }
