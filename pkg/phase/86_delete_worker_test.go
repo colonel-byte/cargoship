@@ -468,3 +468,113 @@ func TestStopAgentBeforeDeleteIgnoresControllerQuorum(t *testing.T) {
 	}
 	require.NoError(t, p.stopAgentBeforeDelete(context.Background(), worker))
 }
+
+// TestDeleteWorkersPropagatesTheRefusals is the half of the subset rules that never reached a run.
+//
+// DeleteCommon.Prepare returns two refusals that exist to stop a reset -- no controller left to
+// drive the deletions, and more than one controller removed in a pass -- and both callers logged
+// them as warnings and carried on with a nil leader, which ShouldRun reads as nothing to do. The
+// run then uninstalled the targeted host and reported success, having never deleted its node.
+func TestDeleteWorkersPropagatesTheRefusals(t *testing.T) {
+	builder, err := registry.GetDistroModuleBuilder("rke2")
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	controller := &cluster.Host{
+		Hostname: "controller1",
+		Role:     cluster.RoleController,
+	}
+	controller.SetServices(fakeRunningServices{})
+	worker := &cluster.Host{
+		Hostname: "worker1",
+		Role:     cluster.RoleWorker,
+	}
+	worker.SetServices(fakeRunningServices{})
+
+	m := &Manager{
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
+				Hosts: cluster.Hosts{controller, worker},
+			},
+		},
+	}
+
+	workers := &DeleteWorkers{
+		DeleteCommon: DeleteCommon{
+			Distro:      dis,
+			TargetHosts: []string{"controller1"},
+		},
+	}
+	workers.SetManager(m)
+	require.ErrorIs(t, workers.Prepare(context.Background(), m.Config, nil), ErrNoSurvivingController)
+
+	controllers := &DeleteControllers{
+		DeleteCommon: DeleteCommon{
+			Distro:      dis,
+			TargetHosts: []string{"controller1"},
+		},
+	}
+	controllers.SetManager(m)
+	require.ErrorIs(t, controllers.Prepare(context.Background(), m.Config, nil), ErrNoSurvivingController)
+}
+
+// TestDeleteCommonRefusesASubsetWithNothingRunning is the wrong-engine footgun.
+//
+// A reset reads the controller service name off the engine it was told to remove, so a k3s fleet
+// reset as rke2 finds no controller running and looks exactly like a cluster whose control plane
+// is down. That used to skip the node deletions silently: the targeted host had its files removed
+// while its engine kept running and its node stayed in the cluster, and the run reported success.
+func TestDeleteCommonRefusesASubsetWithNothingRunning(t *testing.T) {
+	builder, err := registry.GetDistroModuleBuilder("rke2")
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	// No SetServices, so nothing answers for the engine's controller service.
+	hosts := cluster.Hosts{
+		{
+			Hostname: "controller1",
+			Role:     cluster.RoleController,
+		},
+		{
+			Hostname: "worker1",
+			Role:     cluster.RoleWorker,
+		},
+	}
+	m := &Manager{
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
+				Hosts: hosts,
+			},
+		},
+	}
+
+	subset := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"worker1"},
+	}
+	subset.SetManager(m)
+	err = subset.Prepare(context.Background(), m.Config, nil)
+	require.ErrorIs(t, err, ErrNoRunningController)
+	require.Contains(t, err.Error(), dis.GetControllerService(),
+		"the refusal does not name the service it looked for, which is what points at --distro")
+
+	// A whole-cluster reset needs no survivor to drive anything, and a cluster that is already
+	// reset is the ordinary case for one.
+	whole := &DeleteCommon{Distro: dis}
+	whole.SetManager(m)
+	require.NoError(t, whole.Prepare(context.Background(), m.Config, nil))
+	require.Nil(t, whole.leader)
+
+	// A dry run never started an engine, so finding none is not a failure.
+	dry := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"worker1"},
+	}
+	dry.SetManager(&Manager{
+		Config: m.Config,
+		DryRun: true,
+	})
+	require.NoError(t, dry.Prepare(context.Background(), m.Config, nil))
+}
