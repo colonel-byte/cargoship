@@ -100,7 +100,9 @@ func TestUpstreamBootstrapLeaderNotConnected(t *testing.T) {
 
 func TestUpstreamBootstrapJoinNoLeader(t *testing.T) {
 	d := newTestUpstream()
-	host := &cluster.Host{Role: cluster.RoleWorker}
+	// The runtime step Bootstrap starts with is not what this test is about, so the fake lets it
+	// succeed; see TestEnsureRuntimeBringsContainerdUp for that half.
+	host := (&fakeHost{allowServiceChanges: true}).attach(&cluster.Host{Role: cluster.RoleWorker})
 
 	err := d.Bootstrap(context.Background(), host, cluster.RuntimeMeta{}, distro.Distro{})
 
@@ -117,7 +119,10 @@ func TestUpstreamBootstrapJoinReadsTokenAndHashFromLeader(t *testing.T) {
 	}, fileExist: map[string]bool{}}
 	leader := leaderCfg.attach(&cluster.Host{Hostname: "leader-1", Metadata: cluster.HostMetadata{IsLeader: true}})
 
-	workerCfg := &fakeHost{fileExist: map[string]bool{}}
+	workerCfg := &fakeHost{
+		fileExist:           map[string]bool{},
+		allowServiceChanges: true,
+	}
 	worker := workerCfg.attach(&cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker})
 
 	run := cluster.RuntimeMeta{Leader: leader, LoadBalancer: "lb.example.com"}
@@ -142,7 +147,7 @@ func TestUpstreamBootstrapJoinReadsTokenAndHashFromLeader(t *testing.T) {
 
 func TestUpstreamBootstrapJoinControllerNoLeader(t *testing.T) {
 	d := newTestUpstream()
-	host := &cluster.Host{Role: cluster.RoleController}
+	host := (&fakeHost{allowServiceChanges: true}).attach(&cluster.Host{Role: cluster.RoleController})
 
 	err := d.Bootstrap(context.Background(), host, cluster.RuntimeMeta{}, distro.Distro{})
 
@@ -166,7 +171,10 @@ func TestUpstreamBootstrapAdditionalControllerFetchesCertsBeforeWriting(t *testi
 	}, fileExist: map[string]bool{}}
 	leader := leaderCfg.attach(&cluster.Host{Hostname: "leader-1", Metadata: cluster.HostMetadata{IsLeader: true}})
 
-	controllerCfg := &fakeHost{fileExist: map[string]bool{}}
+	controllerCfg := &fakeHost{
+		fileExist:           map[string]bool{},
+		allowServiceChanges: true,
+	}
 	controller := controllerCfg.attach(&cluster.Host{Hostname: "controller-2", Role: cluster.RoleController})
 
 	run := cluster.RuntimeMeta{Leader: leader, LoadBalancer: "lb.example.com"}

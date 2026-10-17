@@ -166,6 +166,54 @@ func TestUpstreamConfigureEngineWritesDesiredFiles(t *testing.T) {
 			t.Fatalf("ConfigureEngine() did not write %s, files = %+v", path, cfg.files)
 		}
 	}
+
+	// The runtime is not touched here. The packages that provide it are installed by the
+	// Initialize phases, after this one, so there is no containerd.service to enable yet -- the
+	// fake reports an unexpected service call as an error, which is what would have surfaced it.
+	if len(cfg.enabled)+len(cfg.started)+len(cfg.restarted) != 0 {
+		t.Fatalf("ConfigureEngine() touched services: enabled = %v, started = %v, restarted = %v",
+			cfg.enabled, cfg.started, cfg.restarted)
+	}
+}
+
+// TestEnsureRuntimeBringsContainerdUp is the gap that stopped an upstream apply dead: cargoship
+// installed containerd from the package and wrote its configuration, then ran `kubeadm init`
+// against a runtime nothing had started, which failed its own preflight on the CRI socket.
+//
+// Unlike rke2 and k3s, whose agent embeds a runtime and starts it, this one is cargoship's to
+// bring up. Bootstrap calls this, because that is the first point at which the package providing
+// the service is installed.
+func TestEnsureRuntimeBringsContainerdUp(t *testing.T) {
+	d := newTestUpstream()
+
+	stopped := &fakeHost{allowServiceChanges: true}
+	host := stopped.attach(&cluster.Host{Hostname: "control-1", Role: cluster.RoleController})
+	if err := d.ensureRuntime(context.Background(), host); err != nil {
+		t.Fatalf("ensureRuntime() error = %v, want nil", err)
+	}
+	if want := []string{containerdService}; !reflect.DeepEqual(stopped.enabled, want) {
+		t.Fatalf("enabled = %v, want %v: a node that reboots comes back without a runtime", stopped.enabled, want)
+	}
+	if want := []string{containerdService}; !reflect.DeepEqual(stopped.started, want) {
+		t.Fatalf("started = %v, want %v", stopped.started, want)
+	}
+
+	// A runtime that is already up is enabled and left alone: restarting it here would bounce
+	// the runtime under a kubelet on every host that rejoins.
+	running := &fakeHost{
+		serviceRunning:      true,
+		allowServiceChanges: true,
+	}
+	if err := d.ensureRuntime(context.Background(), running.attach(&cluster.Host{Hostname: "worker-1"})); err != nil {
+		t.Fatalf("ensureRuntime() error = %v, want nil", err)
+	}
+	if want := []string{containerdService}; !reflect.DeepEqual(running.enabled, want) {
+		t.Fatalf("enabled = %v, want %v", running.enabled, want)
+	}
+	if len(running.started)+len(running.restarted) != 0 {
+		t.Fatalf("started = %v, restarted = %v, want neither for a runtime already up",
+			running.started, running.restarted)
+	}
 }
 
 func TestUpstreamDesiredFilesRendersContainerdAndCrictl(t *testing.T) {

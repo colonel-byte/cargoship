@@ -60,7 +60,15 @@ func (d *Upstream) IsBootstrapped(host *cluster.Host) bool {
 // Bootstrap forms the cluster on the leader with `kubeadm init`, joins an additional controller
 // onto it with kubeadm's HA control-plane path, or joins a worker with a plain `kubeadm join`,
 // against the kubeadm-config.yaml ConfigureEngine already wrote to host.
-func (d *Upstream) Bootstrap(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error {
+//
+// The container runtime comes up first. kubeadm talks to the CRI socket in its own preflight, and
+// this is the first point in a run where the package that provides the runtime is installed -- see
+// ensureRuntime.
+func (d *Upstream) Bootstrap(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error {
+	if err := d.ensureRuntime(ctx, host); err != nil {
+		return err
+	}
+
 	switch {
 	case host.Metadata.IsLeader:
 		return d.bootstrapLeader(host)

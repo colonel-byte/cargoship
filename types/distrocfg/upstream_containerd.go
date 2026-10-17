@@ -35,6 +35,10 @@ const (
 	crictlConfigPath = "/etc/crictl.yaml"
 	// containerdSocket is containerd's default CRI socket, used by both crictl and kubelet.
 	containerdSocket = "unix:///run/containerd/containerd.sock"
+	// containerdService is the systemd unit the packaged runtime installs. Unlike rke2 and k3s,
+	// whose agent embeds its own containerd and starts it, an upstream host depends on this one
+	// and nothing but cargoship brings it up.
+	containerdService = "containerd"
 )
 
 // sandboxImage returns the packaged pause image, if one is bundled. Nothing here invents a
