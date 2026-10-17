@@ -60,7 +60,7 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*RancherCommon\) RunningVersion\(host \*cluster.Host\) \(string, error\)](<#RancherCommon.RunningVersion>)
 - [type Upstream](<#Upstream>)
   - [func \(d \*Upstream\) AdminCredentials\(host \*cluster.Host, dataDir string\) \(AdminCredentials, error\)](<#Upstream.AdminCredentials>)
-  - [func \(d \*Upstream\) Bootstrap\(\_ context.Context, host \*cluster.Host, run cluster.RuntimeMeta, \_ distro.Distro\) error](<#Upstream.Bootstrap>)
+  - [func \(d \*Upstream\) Bootstrap\(ctx context.Context, host \*cluster.Host, run cluster.RuntimeMeta, \_ distro.Distro\) error](<#Upstream.Bootstrap>)
   - [func \(d \*Upstream\) CleanupPaths\(\) \[\]string](<#Upstream.CleanupPaths>)
   - [func \(d \*Upstream\) ConfigureEngine\(ctx context.Context, host \*cluster.Host, run cluster.RuntimeMeta, dis distro.Distro\) error](<#Upstream.ConfigureEngine>)
   - [func \(d \*Upstream\) DesiredFiles\(ctx context.Context, host \*cluster.Host, run cluster.RuntimeMeta, dis distro.Distro\) \(map\[string\]DesiredFile, error\)](<#Upstream.DesiredFiles>)
@@ -74,7 +74,7 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*Upstream\) ManagedDirs\(\) \[\]ManagedDir](<#Upstream.ManagedDirs>)
   - [func \(d \*Upstream\) ManifestPaths\(dis distro.Distro\) \[\]string](<#Upstream.ManifestPaths>)
   - [func \(d \*Upstream\) PreStartUpgrade\(ctx context.Context, host \*cluster.Host, dis distro.Distro\) error](<#Upstream.PreStartUpgrade>)
-  - [func \(d \*Upstream\) PreUninstallReset\(\_ context.Context, host \*cluster.Host\) error](<#Upstream.PreUninstallReset>)
+  - [func \(d \*Upstream\) PreUninstallReset\(ctx context.Context, host \*cluster.Host\) error](<#Upstream.PreUninstallReset>)
   - [func \(d \*Upstream\) RunningVersion\(host \*cluster.Host\) \(string, error\)](<#Upstream.RunningVersion>)
   - [func \(d \*Upstream\) StopControllerService\(h \*cluster.Host\) error](<#Upstream.StopControllerService>)
   - [func \(d \*Upstream\) StopWorkerService\(h \*cluster.Host\) error](<#Upstream.StopWorkerService>)
@@ -743,16 +743,18 @@ func (d *Upstream) AdminCredentials(host *cluster.Host, dataDir string) (AdminCr
 AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.
 
 <a name="Upstream.Bootstrap"></a>
-### func \(\*Upstream\) [Bootstrap](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L63>)
+### func \(\*Upstream\) [Bootstrap](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L67>)
 
 ```go
-func (d *Upstream) Bootstrap(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error
+func (d *Upstream) Bootstrap(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error
 ```
 
 Bootstrap forms the cluster on the leader with \`kubeadm init\`, joins an additional controller onto it with kubeadm's HA control\-plane path, or joins a worker with a plain \`kubeadm join\`, against the kubeadm\-config.yaml ConfigureEngine already wrote to host.
 
+The container runtime comes up first. kubeadm talks to the CRI socket in its own preflight, and this is the first point in a run where the package that provides the runtime is installed \-\- see ensureRuntime.
+
 <a name="Upstream.CleanupPaths"></a>
-### func \(\*Upstream\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L289>)
+### func \(\*Upstream\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L322>)
 
 ```go
 func (d *Upstream) CleanupPaths() []string
@@ -770,7 +772,7 @@ func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.Host, run 
 ConfigureEngine writes DesiredFiles' output to host: containerd's config, crictl.yaml, registry hosts.toml, and the kubeadm\-config.yaml this host's role needs. Unlike RancherCommon.ConfigureEngine there is no already\-running guard \-\- kubeadm\-config.yaml is meant to be rewritten every run \(Bootstrap rewrites it again with the real join token right before \`kubeadm join\`\), so an unconditional overwrite is correct here, not a gap.
 
 <a name="Upstream.DesiredFiles"></a>
-### func \(\*Upstream\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L175>)
+### func \(\*Upstream\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L208>)
 
 ```go
 func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)
@@ -797,7 +799,7 @@ func (d *Upstream) GetClusterCIDR(dis distro.Distro) []string
 GetClusterCIDR returns the known cluster CIDR blocks. kubeadm's service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default \-\- that is entirely CNI dependent \-\- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.
 
 <a name="Upstream.ImportImages"></a>
-### func \(\*Upstream\) [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L259>)
+### func \(\*Upstream\) [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L292>)
 
 ```go
 func (d *Upstream) ImportImages(host *cluster.Host, path string) error
@@ -815,7 +817,7 @@ func (d *Upstream) IsBootstrapped(host *cluster.Host) bool
 IsBootstrapped reports whether host has already run \`kubeadm init\` or \`kubeadm join\`.
 
 <a name="Upstream.JoinTokenPathAgent"></a>
-### func \(\*Upstream\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L296>)
+### func \(\*Upstream\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L329>)
 
 ```go
 func (d *Upstream) JoinTokenPathAgent() string
@@ -842,7 +844,7 @@ func (d *Upstream) KubectlCmdf(host *cluster.Host, dataDir string, s string, arg
 KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.
 
 <a name="Upstream.ManagedDirs"></a>
-### func \(\*Upstream\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L250>)
+### func \(\*Upstream\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L283>)
 
 ```go
 func (d *Upstream) ManagedDirs() []ManagedDir
@@ -851,7 +853,7 @@ func (d *Upstream) ManagedDirs() []ManagedDir
 ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per\-registry hosts.toml directories under containerdCertsDir are not included \-\- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry's own subdirectory, so a removed registry's hosts.toml is left behind rather than risk pruning the wrong thing.
 
 <a name="Upstream.ManifestPaths"></a>
-### func \(\*Upstream\) [ManifestPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L282>)
+### func \(\*Upstream\) [ManifestPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L315>)
 
 ```go
 func (d *Upstream) ManifestPaths(dis distro.Distro) []string
@@ -869,13 +871,15 @@ func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.Host, dis 
 PreStartUpgrade runs kubeadm's own upgrade sequence between the shared upgrade phase's package install and service restart steps. kubeadm, unlike rke2/k3s, refuses to move the control plane forward on a plain kubelet restart \-\- it must install the new kubeadm binary and run its own upgrade command first, and the first controller runs a different command than every other node.
 
 <a name="Upstream.PreUninstallReset"></a>
-### func \(\*Upstream\) [PreUninstallReset](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L29>)
+### func \(\*Upstream\) [PreUninstallReset](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L34>)
 
 ```go
-func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) error
+func (d *Upstream) PreUninstallReset(ctx context.Context, host *cluster.Host) error
 ```
 
 PreUninstallReset runs kubeadm's own teardown before packages are removed, then cleans up what kubeadm reset deliberately leaves behind: it prints a reminder about CNI state and iptables/ipvs rules rather than removing them itself. Each post\-reset command is best\-effort \-\- a link that does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected common case, not a failure worth reporting.
+
+The container runtime goes last. \`kubeadm reset\` needs it to tear the control\-plane containers down, so it is stopped only once that has run \-\- and it is stopped at all because nothing else on an upstream host started it: leaving it enabled means a decommissioned machine still comes back with a runtime serving a CRI socket for a cluster it is no longer part of.
 
 <a name="Upstream.RunningVersion"></a>
 ### func \(\*Upstream\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L119>)
@@ -887,7 +891,7 @@ func (d *Upstream) RunningVersion(host *cluster.Host) (string, error)
 RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an "ErrVersionNotDetected" error
 
 <a name="Upstream.StopControllerService"></a>
-### func \(\*Upstream\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L303>)
+### func \(\*Upstream\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L336>)
 
 ```go
 func (d *Upstream) StopControllerService(h *cluster.Host) error
@@ -896,7 +900,7 @@ func (d *Upstream) StopControllerService(h *cluster.Host) error
 StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.
 
 <a name="Upstream.StopWorkerService"></a>
-### func \(\*Upstream\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L308>)
+### func \(\*Upstream\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L341>)
 
 ```go
 func (d *Upstream) StopWorkerService(h *cluster.Host) error

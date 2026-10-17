@@ -376,6 +376,16 @@ type fakeHost struct {
 
 	serviceRunning bool
 	stopServiceErr error
+	stopped        []string
+
+	// allowServiceChanges opts a test into starting, restarting and enabling services. Without
+	// it those calls are errors naming the service, so a distro module that touches one
+	// unexpectedly is caught rather than silently succeeding.
+	allowServiceChanges bool
+	started             []string
+	restarted           []string
+	enabled             []string
+	startServiceErr     error
 
 	deleteFileErr error
 
@@ -458,20 +468,33 @@ func (f *fakeServices) ServiceIsRunning(_ context.Context, _ string) bool {
 	return f.fake.serviceRunning
 }
 
-func (f *fakeServices) StopService(_ context.Context, _ string) error {
+func (f *fakeServices) StopService(_ context.Context, name string) error {
+	f.fake.stopped = append(f.fake.stopped, name)
 	return f.fake.stopServiceErr
 }
 
 func (f *fakeServices) StartService(_ context.Context, name string) error {
-	return fmt.Errorf("fakeServices: unexpected start of %s", name)
+	f.fake.started = append(f.fake.started, name)
+	if !f.fake.allowServiceChanges {
+		return fmt.Errorf("fakeServices: unexpected start of %s", name)
+	}
+	return f.fake.startServiceErr
 }
 
 func (f *fakeServices) RestartService(_ context.Context, name string) error {
-	return fmt.Errorf("fakeServices: unexpected restart of %s", name)
+	f.fake.restarted = append(f.fake.restarted, name)
+	if !f.fake.allowServiceChanges {
+		return fmt.Errorf("fakeServices: unexpected restart of %s", name)
+	}
+	return nil
 }
 
 func (f *fakeServices) EnableService(_ context.Context, name string) error {
-	return fmt.Errorf("fakeServices: unexpected enable of %s", name)
+	f.fake.enabled = append(f.fake.enabled, name)
+	if !f.fake.allowServiceChanges {
+		return fmt.Errorf("fakeServices: unexpected enable of %s", name)
+	}
+	return nil
 }
 
 // fakeConfigurer implements hostos.Configurer, overriding only the method the distro modules

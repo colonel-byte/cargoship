@@ -161,10 +161,43 @@ func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.Host, run 
 	if err != nil {
 		return err
 	}
+
 	for path, file := range desired {
 		if err := host.WriteFile(path, string(file.Content), file.Mode); err != nil {
 			return fmt.Errorf("writing %s: %w", path, err)
 		}
+	}
+	return nil
+}
+
+// ensureRuntime enables the container runtime and leaves it running.
+//
+// Unlike rke2 and k3s, whose agent embeds its own containerd and starts it, an upstream host
+// depends on a runtime cargoship installs from the package and nothing else brings up. Without it
+// `kubeadm init` fails its own preflight -- "could not connect to the container runtime ... dial
+// unix /run/containerd/containerd.sock: connect: no such file or directory" -- having installed
+// the package and written its configuration, which reads as a cargoship failure rather than as
+// the missing service it is.
+//
+// It is called from Bootstrap rather than from ConfigureEngine, which is the earlier and more
+// obvious place and the wrong one: the packages are installed by the Initialize phases, per role,
+// after every configuration file has been written, so a host reaching ConfigureEngine has no
+// containerd.service to enable yet. A worker shows this plainly -- its packages are not installed
+// until the controller is up.
+//
+// The service is enabled whether or not it is running, so a node that reboots comes back with a
+// runtime, and it is started only when it is not already up. Picking up a configuration change on
+// a cluster that is already bootstrapped belongs to the engine-config-sync phases, which is where
+// drift is detected; this is the lifecycle, not the drift.
+func (d *Upstream) ensureRuntime(ctx context.Context, host *cluster.Host) error {
+	if err := host.EnableService(ctx, containerdService); err != nil {
+		return fmt.Errorf("enabling %s: %w", containerdService, err)
+	}
+	if host.ServiceIsRunning(ctx, containerdService) {
+		return nil
+	}
+	if err := host.StartService(ctx, containerdService); err != nil {
+		return fmt.Errorf("starting %s: %w", containerdService, err)
 	}
 	return nil
 }

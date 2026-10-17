@@ -26,7 +26,12 @@ import (
 // rules rather than removing them itself. Each post-reset command is best-effort -- a link that
 // does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected
 // common case, not a failure worth reporting.
-func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) error {
+//
+// The container runtime goes last. `kubeadm reset` needs it to tear the control-plane containers
+// down, so it is stopped only once that has run -- and it is stopped at all because nothing else
+// on an upstream host started it: leaving it enabled means a decommissioned machine still comes
+// back with a runtime serving a CRI socket for a cluster it is no longer part of.
+func (d *Upstream) PreUninstallReset(ctx context.Context, host *cluster.Host) error {
 	if _, err := host.SudoExecOutput("kubeadm reset -f"); err != nil {
 		return fmt.Errorf("kubeadm reset: %w", err)
 	}
@@ -41,5 +46,23 @@ func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) erro
 	} {
 		_ = host.SudoExec(cmd) //nolint:errcheck // best-effort teardown; these fail on a host that never came fully up
 	}
+
+	return d.stopRuntime(ctx, host)
+}
+
+// stopRuntime takes the container runtime back down, which is the counterpart of the start in
+// ConfigureEngine: nothing else on an upstream host brought it up, so nothing else will stop it.
+//
+// Disabling has no typed equivalent on a host, and it is the same shape of best-effort cleanup as
+// the commands above -- a runtime that was never enabled is the ordinary case on a host that never
+// came fully up -- so only the stop is reported.
+func (d *Upstream) stopRuntime(ctx context.Context, host *cluster.Host) error {
+	if host.ServiceIsRunning(ctx, containerdService) {
+		if err := host.StopService(ctx, containerdService); err != nil {
+			return fmt.Errorf("stopping %s: %w", containerdService, err)
+		}
+	}
+	_ = host.SudoExec("systemctl disable " + containerdService) //nolint:errcheck // best-effort
+
 	return nil
 }
