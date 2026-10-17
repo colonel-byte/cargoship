@@ -200,17 +200,17 @@ func TestSelinuxFcontextCommand(t *testing.T) {
 		{
 			name: "add",
 			op:   "-a",
-			want: `semanage fcontext -a -t 'container_var_lib_t' -f 'all' '/var/lib/rancher(/.*)?'`,
+			want: `semanage fcontext -a -t 'container_var_lib_t' -f 'a' '/var/lib/rancher(/.*)?'`,
 		},
 		{
 			name: "modify",
 			op:   "-m",
-			want: `semanage fcontext -m -t 'container_var_lib_t' -f 'all' '/var/lib/rancher(/.*)?'`,
+			want: `semanage fcontext -m -t 'container_var_lib_t' -f 'a' '/var/lib/rancher(/.*)?'`,
 		},
 		{
 			name: "delete",
 			op:   "-d",
-			want: `semanage fcontext -d -t 'container_var_lib_t' -f 'all' '/var/lib/rancher(/.*)?'`,
+			want: `semanage fcontext -d -t 'container_var_lib_t' -f 'a' '/var/lib/rancher(/.*)?'`,
 		},
 	}
 
@@ -223,6 +223,8 @@ func TestSelinuxFcontextCommand(t *testing.T) {
 
 // TestSelinuxFcontextCommandUsesTheConfiguredFileType makes sure an explicit file type reaches
 // semanage, since a mapping restricted to directories behaves differently from one that is not.
+// It reaches semanage as the letter semanage takes, not as the word the package declared: see
+// TestSelinuxFileTypeTranslatesTheSchemaWords.
 func TestSelinuxFcontextCommandUsesTheConfiguredFileType(t *testing.T) {
 	fc := distro.SELinuxFileContext{
 		Path:     "/var/lib/kubelet",
@@ -232,7 +234,7 @@ func TestSelinuxFcontextCommandUsesTheConfiguredFileType(t *testing.T) {
 
 	require.Equal(
 		t,
-		`semanage fcontext -a -t 'container_var_lib_t' -f 'dir' '/var/lib/kubelet'`,
+		`semanage fcontext -a -t 'container_var_lib_t' -f 'd' '/var/lib/kubelet'`,
 		selinuxFcontextCommand("-a", fc),
 	)
 }
@@ -310,4 +312,102 @@ func TestShellQuote(t *testing.T) {
 			require.Equal(t, tt.want, shellQuote(tt.input))
 		})
 	}
+}
+
+// TestSelinuxFileTypeTranslatesTheSchemaWords is a defect that made the whole SELinux policy
+// phase fail on any package carrying file contexts.
+//
+// The package schema documents the file type as a word -- all, file, dir -- and `semanage
+// fcontext -f` takes the letter ls shows in its mode field, rejecting everything else with
+// "argument -f/--ftype: invalid choice". The default was "all", so a package that declared a
+// mapping and set no file type could not apply one at all: the upstream examples failed on every
+// host, while k3s and rke2 never noticed because they stage a *-selinux RPM instead.
+func TestSelinuxFileTypeTranslatesTheSchemaWords(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		fileType string
+		want     string
+	}{
+		{
+			name:     "unset is every kind of file",
+			fileType: "",
+			want:     "a",
+		},
+		{
+			name:     "all",
+			fileType: "all",
+			want:     "a",
+		},
+		{
+			name:     "file",
+			fileType: "file",
+			want:     "f",
+		},
+		{
+			name:     "dir",
+			fileType: "dir",
+			want:     "d",
+		},
+		{
+			name:     "symlink is l, which is the one no abbreviation would have guessed",
+			fileType: "symlink",
+			want:     "l",
+		},
+		{
+			name:     "socket",
+			fileType: "socket",
+			want:     "s",
+		},
+		{
+			name:     "pipe",
+			fileType: "pipe",
+			want:     "p",
+		},
+		{
+			name:     "block",
+			fileType: "block",
+			want:     "b",
+		},
+		{
+			name:     "char",
+			fileType: "char",
+			want:     "c",
+		},
+		{
+			name:     "a letter semanage already takes is passed through",
+			fileType: "d",
+			want:     "d",
+		},
+		{
+			name:     "and so is anything neither vocabulary knows, so semanage names it",
+			fileType: "directory",
+			want:     "directory",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := selinuxFileType(distro.SELinuxFileContext{
+				Path:     "/var/lib/kubelet(/.*)?",
+				Type:     "container_var_lib_t",
+				FileType: tc.fileType,
+			})
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// TestSelinuxFcontextCommandUsesTheTranslatedType holds the rendered command, which is what the
+// host actually rejected.
+func TestSelinuxFcontextCommandUsesTheTranslatedType(t *testing.T) {
+	t.Parallel()
+
+	cmd := selinuxFcontextCommand("-a", distro.SELinuxFileContext{
+		Path: "/var/lib/kubelet(/.*)?",
+		Type: "container_var_lib_t",
+	})
+	require.Contains(t, cmd, "-f 'a'")
+	require.NotContains(t, cmd, "all")
 }
