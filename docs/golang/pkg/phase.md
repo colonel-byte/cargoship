@@ -389,6 +389,19 @@ var ErrNoControllers = errors.New("no controllers are running")
 var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
 ```
 
+<a name="ErrNoRunningController"></a>ErrNoRunningController is returned when a reset of part of a cluster finds no controller running the engine it was told to remove.
+
+The deletions are kubectl commands run on a controller that stays, so with none answering there is nothing to drive them with. Skipping them instead \-\- which is what used to happen \-\- leaves the targeted host with its files removed, its engine still running and its node still in the cluster, and the run reports success over it.
+
+The usual cause is a run pointed at the wrong engine: the controller service it looks for is the one \`\-\-distro\` named, not the one the fleet runs, so a k3s cluster reset as rke2 looks exactly like a cluster whose control plane is down.
+
+```go
+var ErrNoRunningController = errors.New("no controller is running the engine this reset was told to remove: " +
+    "removing a subset of the hosts needs a controller that stays, to drain and delete their nodes through. " +
+    "Check that --distro, or distro.type in the cargoship config file, names the engine the fleet actually " +
+    "runs, or reset the whole cluster rather than a subset")
+```
+
 <a name="ErrNoSurvivingController"></a>ErrNoSurvivingController is returned when every running controller is being removed, but some host is not. Tearing a subset down works by driving kubectl through a controller that stays, so a run with no controller left to drive is a whole\-cluster teardown wearing a subset's clothes: it would drain and delete nodes through a machine it is about to uninstall, and whether that finished would depend on the order the hosts happened to be in.
 
 Removing every host is still allowed. That is a reset, and reset is what it is for.
@@ -438,7 +451,7 @@ var NoWait bool
 ```
 
 <a name="CheckTargetHosts"></a>
-## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L302>)
+## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L323>)
 
 ```go
 func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
@@ -840,7 +853,7 @@ type DeleteCommon struct {
 ```
 
 <a name="DeleteCommon.Prepare"></a>
-### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L88>)
+### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L104>)
 
 ```go
 func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -880,7 +893,7 @@ func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.Cluster, d *
 Prepare the phase
 
 <a name="DeleteControllers.Run"></a>
-### func \(\*DeleteControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L85>)
+### func \(\*DeleteControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L84>)
 
 ```go
 func (p *DeleteControllers) Run(ctx context.Context) error
@@ -939,7 +952,7 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.Cluster, d *dist
 Prepare the phase
 
 <a name="DeleteWorkers.Run"></a>
-### func \(\*DeleteWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L85>)
+### func \(\*DeleteWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L84>)
 
 ```go
 func (p *DeleteWorkers) Run(ctx context.Context) error
@@ -2097,7 +2110,7 @@ type ManagerDistroConfig struct {
 ```
 
 <a name="ManifestEntry"></a>
-## type [ManifestEntry](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L38-L43>)
+## type [ManifestEntry](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L40-L45>)
 
 ManifestEntry is a single file cargoship uploaded to a host, recorded so it can be found and removed later during an upgrade or uninstall.
 
@@ -2111,7 +2124,7 @@ type ManifestEntry struct {
 ```
 
 <a name="ParseManifest"></a>
-### func [ParseManifest](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L55>)
+### func [ParseManifest](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L57>)
 
 ```go
 func ParseManifest(content string) []ManifestEntry
@@ -2656,19 +2669,23 @@ func (p *ReconfigureSurvivors) Title() string
 Title for the phase
 
 <a name="RemoveSelinuxPolicy"></a>
-## type [RemoveSelinuxPolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L34>)
+## type [RemoveSelinuxPolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L38>)
 
 RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.
 
 ```go
 type RemoveSelinuxPolicy struct {
     GenericPhase
+    // TargetHosts names the hosts being removed, empty for a whole-cluster reset. A reset of a
+    // subset is driven through hosts that stay, so the configuration holds every host and the
+    // target list is the only thing that says which of them this phase may touch.
+    TargetHosts []string
     // contains filtered or unexported fields
 }
 ```
 
 <a name="RemoveSelinuxPolicy.Explanation"></a>
-### func \(\*RemoveSelinuxPolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L53>)
+### func \(\*RemoveSelinuxPolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L67>)
 
 ```go
 func (p *RemoveSelinuxPolicy) Explanation() string
@@ -2677,7 +2694,7 @@ func (p *RemoveSelinuxPolicy) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="RemoveSelinuxPolicy.Prepare"></a>
-### func \(\*RemoveSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37>)
+### func \(\*RemoveSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L51>)
 
 ```go
 func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -2686,7 +2703,7 @@ func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _
 Prepare the phase
 
 <a name="RemoveSelinuxPolicy.Run"></a>
-### func \(\*RemoveSelinuxPolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L58>)
+### func \(\*RemoveSelinuxPolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L72>)
 
 ```go
 func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error
@@ -2695,7 +2712,7 @@ func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error
 Run the phase
 
 <a name="RemoveSelinuxPolicy.ShouldRun"></a>
-### func \(\*RemoveSelinuxPolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L68>)
+### func \(\*RemoveSelinuxPolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L82>)
 
 ```go
 func (p *RemoveSelinuxPolicy) ShouldRun() bool
@@ -2704,7 +2721,7 @@ func (p *RemoveSelinuxPolicy) ShouldRun() bool
 ShouldRun is true when a host carries a policy cargoship recorded
 
 <a name="RemoveSelinuxPolicy.Title"></a>
-### func \(\*RemoveSelinuxPolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L48>)
+### func \(\*RemoveSelinuxPolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L62>)
 
 ```go
 func (p *RemoveSelinuxPolicy) Title() string

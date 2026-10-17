@@ -411,12 +411,42 @@ func selinuxModulePriority(m distro.SELinuxModule) int {
 	return m.Priority
 }
 
+// semanageFileTypes maps the file-type names a package declares onto the single letters
+// `semanage fcontext -f` accepts.
+//
+// The two vocabularies are not the same and semanage's is not guessable: it takes the letters ls
+// shows in its mode field -- a, f, d, c, b, s, l, p -- and rejects anything else outright, with
+// "argument -f/--ftype: invalid choice". The schema documents the words because they are what an
+// operator writing YAML can read, so the translation has to happen here. Without it every mapping
+// a package declares fails, which is the whole of the SELinux policy phase on any host whose
+// package carries file contexts.
+var semanageFileTypes = map[string]string{ //nolint:gochecknoglobals
+	// keep-sorted start
+	"all":     "a",
+	"block":   "b",
+	"char":    "c",
+	"dir":     "d",
+	"file":    "f",
+	"pipe":    "p",
+	"socket":  "s",
+	"symlink": "l",
+	// keep-sorted end
+}
+
 // selinuxFileType is the semanage file type fc applies to, defaulted when it sets none.
+//
+// A value semanage already accepts is passed through, so a package that spells the letter is not
+// second-guessed, and so is anything neither table knows -- semanage names what it will not take,
+// which is a better error than one invented here.
 func selinuxFileType(fc distro.SELinuxFileContext) string {
-	if fc.FileType == "" {
-		return DefaultSELinuxFileType
+	name := fc.FileType
+	if name == "" {
+		name = DefaultSELinuxFileType
 	}
-	return fc.FileType
+	if letter, ok := semanageFileTypes[strings.ToLower(name)]; ok {
+		return letter
+	}
+	return name
 }
 
 // selinuxRelabelTarget resolves the path regular expression to a directory on h that restorecon

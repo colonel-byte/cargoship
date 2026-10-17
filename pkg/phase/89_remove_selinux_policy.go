@@ -30,12 +30,26 @@ import (
 // RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.
 type RemoveSelinuxPolicy struct {
 	GenericPhase
+	// TargetHosts names the hosts being removed, empty for a whole-cluster reset. A reset of a
+	// subset is driven through hosts that stay, so the configuration holds every host and the
+	// target list is the only thing that says which of them this phase may touch.
+	TargetHosts        []string
 	selinuxPolicyHosts cluster.Hosts
+}
+
+// selinuxTargets are the hosts this phase may touch: the target list when the reset is removing a
+// subset of the cluster, every host when it is removing all of it.
+//
+// It is separate from the capability probes in Prepare because those need a host to ask -- a
+// getenforce over the connection -- while the scoping is the half that was wrong and the half
+// worth holding in a test.
+func (p *RemoveSelinuxPolicy) selinuxTargets() cluster.Hosts {
+	return filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
 }
 
 // Prepare the phase
 func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
-	p.selinuxPolicyHosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
+	p.selinuxPolicyHosts = p.selinuxTargets().Filter(func(h *cluster.Host) bool {
 		return selinuxPolicyCapable(h) && h.FileExist(SELinuxStateFile)
 	})
 

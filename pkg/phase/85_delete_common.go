@@ -70,6 +70,22 @@ type DeleteCommon struct {
 var ErrNoSurvivingController = errors.New("every running controller is being removed, but not every host is: " +
 	"target the whole cluster to tear it down, or leave a controller out of the target list to remove a subset through it")
 
+// ErrNoRunningController is returned when a reset of part of a cluster finds no controller running
+// the engine it was told to remove.
+//
+// The deletions are kubectl commands run on a controller that stays, so with none answering there
+// is nothing to drive them with. Skipping them instead -- which is what used to happen -- leaves
+// the targeted host with its files removed, its engine still running and its node still in the
+// cluster, and the run reports success over it.
+//
+// The usual cause is a run pointed at the wrong engine: the controller service it looks for is the
+// one `--distro` named, not the one the fleet runs, so a k3s cluster reset as rke2 looks exactly
+// like a cluster whose control plane is down.
+var ErrNoRunningController = errors.New("no controller is running the engine this reset was told to remove: " +
+	"removing a subset of the hosts needs a controller that stays, to drain and delete their nodes through. " +
+	"Check that --distro, or distro.type in the cargoship config file, names the engine the fleet actually " +
+	"runs, or reset the whole cluster rather than a subset")
+
 // ErrControllersNotOneAtATime is returned when a run that keeps the cluster removes more than one
 // running controller.
 //
@@ -91,6 +107,11 @@ func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distr
 		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) == 0 {
+		// Removing a subset needs a controller that stays; a whole-cluster reset needs none, and
+		// a dry run never started an engine to find. See ErrNoRunningController.
+		if !p.manager.DryRun && len(filterTargetHosts(hosts, p.TargetHosts)) != len(hosts) {
+			return fmt.Errorf("%w: nothing answers for the %s service", ErrNoRunningController, p.Distro.GetControllerService())
+		}
 		logger.From(ctx).Warn("there is no running controllers")
 		return nil
 	}

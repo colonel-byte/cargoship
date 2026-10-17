@@ -168,7 +168,7 @@ var ErrNoAdminCredentials = errors.New("admin kubeconfig has no admin credential
 ```
 
 <a name="NodeLabelsMapToList"></a>
-## func [NodeLabelsMapToList](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L87>)
+## func [NodeLabelsMapToList](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L92>)
 
 ```go
 func NodeLabelsMapToList(m map[string]string) []string
@@ -230,7 +230,7 @@ type Bootstrapper interface {
 ```
 
 <a name="Common"></a>
-## type [Common](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L96-L121>)
+## type [Common](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L101-L126>)
 
 Common for all the distro's
 
@@ -264,7 +264,7 @@ type Common struct {
 ```
 
 <a name="Common.BinaryName"></a>
-### func \(\*Common\) [BinaryName](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139>)
+### func \(\*Common\) [BinaryName](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L144>)
 
 ```go
 func (r *Common) BinaryName() string
@@ -273,7 +273,7 @@ func (r *Common) BinaryName() string
 BinaryName returns the engine binary name
 
 <a name="Common.BinaryPath"></a>
-### func \(\*Common\) [BinaryPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134>)
+### func \(\*Common\) [BinaryPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139>)
 
 ```go
 func (r *Common) BinaryPath() string
@@ -282,7 +282,7 @@ func (r *Common) BinaryPath() string
 BinaryPath returns the full path to the engine binary
 
 <a name="Common.ConfigPath"></a>
-### func \(\*Common\) [ConfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L144>)
+### func \(\*Common\) [ConfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L149>)
 
 ```go
 func (r *Common) ConfigPath() string
@@ -291,7 +291,7 @@ func (r *Common) ConfigPath() string
 ConfigPath returns the full path for the config directory used by the engine
 
 <a name="Common.DataDirPath"></a>
-### func \(\*Common\) [DataDirPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L154>)
+### func \(\*Common\) [DataDirPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L159>)
 
 ```go
 func (r *Common) DataDirPath() string
@@ -300,7 +300,7 @@ func (r *Common) DataDirPath() string
 DataDirPath returns the full path for the data directory used by the engine
 
 <a name="Common.GetControllerService"></a>
-### func \(\*Common\) [GetControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L174>)
+### func \(\*Common\) [GetControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L179>)
 
 ```go
 func (r *Common) GetControllerService() string
@@ -309,7 +309,7 @@ func (r *Common) GetControllerService() string
 GetControllerService returns the name of the controller service
 
 <a name="Common.GetWorkerService"></a>
-### func \(\*Common\) [GetWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L169>)
+### func \(\*Common\) [GetWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L174>)
 
 ```go
 func (r *Common) GetWorkerService() string
@@ -318,7 +318,7 @@ func (r *Common) GetWorkerService() string
 GetWorkerService returns the name of the worker service
 
 <a name="Common.JoinTokenPath"></a>
-### func \(\*Common\) [JoinTokenPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L149>)
+### func \(\*Common\) [JoinTokenPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L154>)
 
 ```go
 func (r *Common) JoinTokenPath() string
@@ -327,7 +327,7 @@ func (r *Common) JoinTokenPath() string
 JoinTokenPath returns the path of the token to join the cluster
 
 <a name="Common.PackageStagingDir"></a>
-### func \(\*Common\) [PackageStagingDir](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L161>)
+### func \(\*Common\) [PackageStagingDir](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L166>)
 
 ```go
 func (r *Common) PackageStagingDir() string
@@ -336,7 +336,7 @@ func (r *Common) PackageStagingDir() string
 PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.
 
 <a name="Common.SetPath"></a>
-### func \(\*Common\) [SetPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L179>)
+### func \(\*Common\) [SetPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L184>)
 
 ```go
 func (r *Common) SetPath(key string, value string) error
@@ -345,7 +345,7 @@ func (r *Common) SetPath(key string, value string) error
 SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
 
 <a name="Common.SupervisorPort"></a>
-### func \(\*Common\) [SupervisorPort](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L124>)
+### func \(\*Common\) [SupervisorPort](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129>)
 
 ```go
 func (r *Common) SupervisorPort() int
@@ -354,7 +354,7 @@ func (r *Common) SupervisorPort() int
 SupervisorPort returns the port a joining node registers with the cluster on.
 
 <a name="Common.SupervisorURL"></a>
-### func \(\*Common\) [SupervisorURL](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129>)
+### func \(\*Common\) [SupervisorURL](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134>)
 
 ```go
 func (r *Common) SupervisorURL(name string) string
@@ -379,7 +379,7 @@ type DesiredFile struct {
 ```
 
 <a name="DistroReleaseDesiredFile"></a>
-### func [DistroReleaseDesiredFile](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L41>)
+### func [DistroReleaseDesiredFile](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L46>)
 
 ```go
 func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error)
@@ -649,13 +649,15 @@ type RancherCommon struct {
 ```
 
 <a name="RancherCommon.CleanupPaths"></a>
-### func \(\*RancherCommon\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L681>)
+### func \(\*RancherCommon\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L687>)
 
 ```go
 func (d *RancherCommon) CleanupPaths() []string
 ```
 
-CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright.
+CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright, plus the node directory beside the config one.
+
+The node directory is the engine's own \-\- it holds the password the node registers under \-\- and a reset that leaves it behind leaves a credential for the cluster on a machine that is no longer in it. It is derived from the config directory's parent rather than spelled out, so a config path pointed somewhere other than /etc/rancher takes its node directory with it.
 
 <a name="RancherCommon.ConfigureEngine"></a>
 ### func \(\*RancherCommon\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L188>)
@@ -676,7 +678,7 @@ func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.Host, run 
 DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for the given host/run/dis, keyed by their full destination path. Content is identical across hosts of the same run \(no host\-varying fields are involved\), unlike config.yaml.
 
 <a name="RancherCommon.DistroCmdf"></a>
-### func \(\*RancherCommon\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L725>)
+### func \(\*RancherCommon\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L751>)
 
 ```go
 func (d *RancherCommon) DistroCmdf(template string, args ...any) string
@@ -694,7 +696,7 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.Distro) []string
 GetClusterCIDR returns a string array with the all the known cluster cidr blocks
 
 <a name="RancherCommon.JoinTokenPathAgent"></a>
-### func \(\*RancherCommon\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L687>)
+### func \(\*RancherCommon\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L713>)
 
 ```go
 func (d *RancherCommon) JoinTokenPathAgent() string
@@ -712,7 +714,7 @@ func (d *RancherCommon) ManagedDirs() []ManagedDir
 ManagedDirs returns the directories on a host cargoship prunes. For rke2 and k3s that is the directory holding CA certificates, the one holding state metadata \-\- every file in both was put there by cargoship, so a file with no entry left behind it can go \-\- and the engine's manifest directory, which cargoship shares with the engine and where it prunes only the HelmChartConfig files it writes itself.
 
 <a name="RancherCommon.RunningVersion"></a>
-### func \(\*RancherCommon\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L730>)
+### func \(\*RancherCommon\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L756>)
 
 ```go
 func (d *RancherCommon) RunningVersion(host *cluster.Host) (string, error)

@@ -116,7 +116,9 @@ func NewReset(opts ResetOptions) (*Reset, error) {
 				Distro:      d,
 				TargetHosts: opts.TargetHosts,
 			},
-			&phase.RemoveSelinuxPolicy{},
+			&phase.RemoveSelinuxPolicy{
+				TargetHosts: opts.TargetHosts,
+			},
 			&phase.DaemonReload{
 				TargetHosts: opts.TargetHosts,
 			},
