@@ -130,6 +130,7 @@
 - [phase](golang/pkg/phase.md)
 - [retry](golang/pkg/retry.md)
 - [schema](golang/pkg/schema.md)
+- [signing](golang/pkg/signing.md)
 - [utils](golang/pkg/utils.md)
   - [build](golang/pkg/utils/build.md)
 - [types](golang/types.md)
@@ -157,6 +158,7 @@
 - [microvm](dev/microvm.md)
 - [qemu-setup](dev/qemu-setup.md)
 - [shell-completion](dev/shell-completion.md)
+- [signing](dev/signing.md)
 - [thirdparty-src](dev/thirdparty-src.md)
 - [tofu-provider](dev/tofu-provider.md)
 
@@ -217,6 +219,7 @@
 - [choice-reset-target-hosts](agent/choice-reset-target-hosts.md)
 - [choice-run-receipts](agent/choice-run-receipts.md)
 - [choice-selinux-policy](agent/choice-selinux-policy.md)
+- [choice-signing-fork](agent/choice-signing-fork.md)
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)

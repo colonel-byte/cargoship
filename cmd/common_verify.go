@@ -25,11 +25,11 @@ import (
 
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 // flagGroupAnnotation is the pflag annotation key used to assign a flag to a named

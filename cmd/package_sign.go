@@ -32,10 +32,10 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/spf13/cobra"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry"
 )
 

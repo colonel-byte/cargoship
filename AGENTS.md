@@ -55,6 +55,21 @@ Plain Go commands work for anything mage doesn't wrap - `go build ./...`, `go ve
 
 Never run `go test ./...` (or any of the paths above) without `-short`. Without it, the suite pulls in the full e2e tests, including the cluster suite that needs Docker + bootloose. Always pass `-short`, or use the mage targets above which scope things correctly.
 
+### Measuring binary size means building the way a release does
+
+Binary size is a real constraint here - the management node is air-gapped and the binary is part of what gets staged - so "did this shrink the binary" is a question worth asking of a dependency change. It is also a question that is easy to answer wrongly, because a plain `go build` of this repo is about 35% larger than the shipped artifact and the gap is not uniform: `CGO_ENABLED=0` alone accounts for most of it, and `-gcflags=all="-l"` for another 13%.
+
+Read [`docs/dev/build-flags.md`](docs/dev/build-flags.md) before quoting a number. It documents every flag, why it is set, and what each one measured. The flags themselves live in `pkg/utils/build/utils.go` (`LDFlags`, `GCFLags`), which `magefiles/pkg/build/build.go` calls - so the one safe way to build a comparable binary is `mage build:binary`, and the one safe way to spell it by hand is to read those two functions rather than to remember them.
+
+```sh
+mage build:binary                        # the shipped flags, no remembering required
+```
+
+A size measured with different flags than the baseline it is compared against is worse than no measurement, because it looks like a result. Two further traps, both of which have produced wrong numbers in this repo:
+
+- **Compare like with like, across the whole set.** Rebuild the baseline with the same flags in the same session rather than reusing a figure from a document or an earlier run. `docs/dev/build-flags.md` records a flag comparison at one point in history, not a size to diff against today; toolchain and dependency drift move the absolute number without anybody editing the file.
+- **Vendor size is not binary size, and neither is module count.** Dropping a module from `go.mod` shrinks `vendor/` and the dependency surface whether or not the linker was keeping any of it. Removing `containerd/containerd/v2` deleted 5065 vendored lines and moved the binary by 30KB. Both facts are worth reporting; reporting the first as though it were the second is not. Use `go list -deps ./cmd/cargoship` to see what is actually linked, and attribute weight with `go mod why -vendor <pkg>`.
+
 ## Keeping `.gitattributes` in sync with the generators
 
 Everything a generator writes is marked `linguist-generated` in [`.gitattributes`](.gitattributes), which is what collapses it in a GitHub diff and keeps it out of the repository's language statistics. A generated file that is not marked shows up as hand-written work in every review, and a thousand-line regenerated page buries the twenty lines that were actually written.

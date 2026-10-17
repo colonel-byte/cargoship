@@ -26,9 +26,9 @@ import (
 
 	"github.com/colonel-byte/cargoship/pkg/coci"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
 )

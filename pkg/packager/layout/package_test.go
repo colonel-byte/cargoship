@@ -24,8 +24,8 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 func TestDigest(t *testing.T) {

@@ -37,11 +37,11 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/coci/layers"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/gabriel-vasile/mimetype"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )

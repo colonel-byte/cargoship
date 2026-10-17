@@ -30,9 +30,9 @@ import (
 
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/colonel-byte/cargoship/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/types"
 )
 

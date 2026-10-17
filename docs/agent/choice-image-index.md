@@ -27,11 +27,13 @@ Entry order carries no meaning to anything that reads the layout, so the sort ru
 
 ## Selecting a platform when uploading
 
-`pkg/phase/50_uploadfiles.go` resolves the image reference against the package's store and exports a tarball for the node. With an index in the store, `resolveImageManifest` picks the child manifest matching the platform and hands that descriptor to `archive.Export`, so the exported tarball holds exactly one platform and looks the same as one exported from a single-architecture package.
+`pkg/phase/50_uploadfiles.go` resolves the image reference against the package's store and exports a tarball for the node. With an index in the store, `resolveImageManifest` picks the child manifest matching the platform and hands that descriptor to `tarball.Write`, so the exported tarball holds exactly one platform and looks the same as one exported from a single-architecture package.
 
-The selection is done here rather than left to containerd, even though `archive.Export` accepts a platform matcher and filters an index's children with it. The exporter skips the blobs of the platforms it filters out, but it still writes the full index blob into the tarball, which would leave the tarball referencing manifests whose blobs are not in it. Picking the child ourselves avoids handing nodes a tarball with dangling references.
+The selection is done here rather than left to the tarball writer. A docker-save tarball describes one image per entry, so handing the writer an index would either write blobs for platforms the node will not run or leave it referencing manifests whose blobs are not in the tarball. Picking the child ourselves avoids both.
 
-The matcher is still `platforms.DefaultStrict()`, which describes the machine running cargoship rather than the host being uploaded to. That is tracked as its own piece of work: apply time selection needs a tarball per host architecture, not one shared tarball.
+Reaching that child needs one extra step, because `layout.Path.Image` resolves a digest against the layout's `index.json` and does not recurse into a child index. A multi-arch package tags a synthesized index, so `layoutImage` looks the parent up first and asks it for the per-arch manifest.
+
+The matcher is `imageExportPlatform`, which pins the OS to `linux` and the architecture to the host being uploaded to rather than the machine running cargoship. Each architecture the cluster runs gets its own tarball directory, because the tarball name is derived from the image reference alone and two architectures of one image would otherwise collide.
 
 ## Alternatives that were considered
 

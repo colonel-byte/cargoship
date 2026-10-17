@@ -39,12 +39,12 @@ import (
 	"github.com/colonel-byte/cargoship/internal/cfg"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/colonel-byte/cargoship/pkg/utils"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 // Digest returns the OCI manifest digest for this package layout.

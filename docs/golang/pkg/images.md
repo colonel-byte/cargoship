@@ -11,6 +11,8 @@ Package images is functionality related to interacting with oci images. This als
 ## Index
 
 - [Constants](<#constants>)
+- [func IsIndex\(mediaType string\) bool](<#IsIndex>)
+- [func IsManifest\(mediaType string\) bool](<#IsManifest>)
 - [func Ping\(ctx context.Context, plainHTTP bool, registryURL string, client \*auth.Client\) \(err error\)](<#Ping>)
 - [func ShouldUsePlainHTTP\(ctx context.Context, registryURL string, client \*auth.Client\) \(bool, error\)](<#ShouldUsePlainHTTP>)
 - [type ImageWithManifest](<#ImageWithManifest>)
@@ -38,6 +40,24 @@ const (
     DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
 )
 ```
+
+<a name="IsIndex"></a>
+## func [IsIndex](<https://github.com/colonel-byte/cargoship/blob/main/pkg/images/common.go#L115>)
+
+```go
+func IsIndex(mediaType string) bool
+```
+
+IsIndex reports whether the media type represents an OCI image index.
+
+<a name="IsManifest"></a>
+## func [IsManifest](<https://github.com/colonel-byte/cargoship/blob/main/pkg/images/common.go#L106>)
+
+```go
+func IsManifest(mediaType string) bool
+```
+
+IsManifest reports whether the media type represents an OCI manifest.
 
 <a name="Ping"></a>
 ## func [Ping](<https://github.com/colonel-byte/cargoship/blob/main/pkg/images/common.go#L64>)

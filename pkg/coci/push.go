@@ -30,11 +30,11 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/colonel-byte/cargoship/api"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
