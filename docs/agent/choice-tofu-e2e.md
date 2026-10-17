@@ -1,6 +1,6 @@
 # How the OpenTofu provider is tested end to end
 
-`test/e2e/tofu/` runs the real `tofu` binary over the shipped module against three bootloose machines. Several of its shapes look like arbitrary choices and are not, and two of its preflight checks look like paranoia until the failure they catch happens to you. This records both, plus what the suite has and has not actually proven.
+`test/e2e/tofu/` runs the real `tofu` binary over the shipped module against three machines - bootloose containers by default, local virtual machines when asked. Several of its shapes look like arbitrary choices and are not, and two of its preflight checks look like paranoia until the failure they catch happens to you. This records both, plus what the suite has actually proven and what it found while proving it.
 
 ## Why the real CLI rather than `terraform-plugin-testing`
 
@@ -24,7 +24,7 @@ k3s rather than rke2 for the reason the phase suite's full walk is k3s: a single
 
 ## The two preflights
 
-Both guard failures that were found the expensive way, and both masquerade as something else while they happen. They run before the machines are created, so a host that cannot run the suite starts no container.
+Both guard failures that were found the expensive way, and both masquerade as something else while they happen. They run before the machines are created, so a host that cannot run the suite starts no container. Neither runs on the microvm backend, where a guest kernel and a private segment make both questions somebody else's.
 
 **Kernel modules.** Without the legacy iptables tables, k3s starts, notifies readiness, and shuts itself down about three seconds later - `kube-proxy exited: iptables is not available on this host` - and systemd restarts it for the whole phase timeout. Seventy-seven restarts in eleven minutes, exit status 0 every time, and nothing from cargoship to say why; the explanation is only in the node's journal.
 
@@ -42,13 +42,28 @@ The bootloose cluster name is fixed, as it is in the phase suite, so two runs of
 
 `-short` now skips, which closes the accidental route. Nothing prevents two deliberate runs, and nothing should: a lock would be machinery for a case a sentence covers.
 
+## Why there is a second backend
+
+`CARGOSHIP_E2E_BACKEND=microvm` provisions the three machines as local Rocky virtual machines instead of containers. It is not redundancy for its own sake: the inter-container networking failure above is a host condition a contributor cannot always fix, and a VM fleet routes over its own layer 2 segment, so that whole class of problem never arises. It is also how the walk was first seen green - see [what the walk has proven](#what-the-walk-has-proven-and-what-it-found).
+
+What the two buy on top of each other is the guest. Ubuntu containers against Rocky virtual machines put different halves of the phases under the same configuration, and `modify_firewall` only does anything on the second: Rocky boots with firewalld up, so a worker's join is refused outright where a container's phase correctly finds nothing to do. Run both rather than choosing.
+
+`label_nodes` and `export_kubeconfig` are decided from the backend rather than probed, which is the one place this suite departs from the phase suite's equivalent. A VM fleet's load balancer is the leader's address on a segment private to the qemu processes, so the management node has no route to the API server; the phase suite can probe for one because it asks after an install, while `label_nodes` is an attribute the apply carries and so has to be answered before one.
+
 ## Why the phase timeout is tunable
 
 `CARGOSHIP_E2E_TOFU_PHASE_TIMEOUT` exists for diagnosis, not for tuning. A phase that is going to fail waits out its whole timeout first, so investigating at the module's own 20 minutes costs twenty minutes to arrive at an error that six reaches in six. It is the `timeout` the configuration hands the provider, so it changes nothing else.
 
-## What has not been proven
+## What the walk has proven, and what it found
 
-The suite is new and its upper half has never run green. Verified: `init` resolves the provider from the mirror with no registry, `plan` renders the resource with the fleet keyed by machine name and `removed = (known after apply)` per host, the package builds from the shipped k3s definition, and the controller installs and reports `Ready` with no restarts. **The apply, kubeconfig, convergence, removal and destroy steps have not been seen pass** - they were blocked by the inter-container networking failure above on the machine available at the time, which is a host fix rather than a code one.
+The microvm backend ran the whole walk on 2026-10-16, which is the first time anything past the install has been seen: `init` resolves the provider out of the mirror with no registry, `plan` renders the resource with the fleet keyed by machine name, `apply` installs a three-node Rocky cluster through the provider in a little over two minutes - the node count read back through the controller's own `kubectl`, not the provider's `nodes` attribute - and `destroy` empties state and leaves no engine running. `kubeconfig` skips, as this backend decides it must.
+
+The two steps that failed are the suite earning its place. Both are provider defects, both are invisible to the unit tests and to the phase suite, and neither is this suite's to fix.
+
+- **`converge`: a second plan is never empty.** The nodes an apply records carry `engine_version = "v0.0.0"`, and the next refresh reads the engine's real `v1.36.4+k3s1` off the hosts, so OpenTofu reports a change made "outside of OpenTofu" on every plan from then on. A resource that cannot converge is the first promise a practitioner tests.
+- **`remove`: the apply contradicts its own plan.** Marking `kw1` absent plans `removed = false` for it - `useBoolStateForUnknownModifier` hands the prior state value through - and the apply then records `true`, which OpenTofu rejects with `Provider produced inconsistent result after apply ... .hosts["kw1"].removed: was cty.False, but now cty.True`. The removal work itself ran; the plan modifier has to leave `removed` unknown for a host the configuration marks absent.
+
+The container backend is still unproven past the install, for the inter-container reason above rather than for anything in the code.
 
 Also uncovered, by design for now:
 
