@@ -1123,11 +1123,11 @@ func TestCleanupPaths(t *testing.T) {
 	}{
 		"k3s": {
 			distro: &K3S{RancherCommon{Common{Config: "/etc/rancher/k3s/config.yaml", Data: "/var/lib/rancher/k3s"}}},
-			want:   []string{"/var/lib/rancher/k3s", "/etc/rancher/k3s", "/etc/rancher/node"},
+			want:   []string{"/var/lib/rancher/k3s", "/etc/rancher/k3s", "/etc/rancher/node", "/var/lib/kubelet"},
 		},
 		"rke2": {
 			distro: &RKE2{RancherCommon{Common{Config: "/etc/rancher/rke2/config.yaml", Data: "/var/lib/rancher/rke2"}}},
-			want:   []string{"/var/lib/rancher/rke2", "/etc/rancher/rke2", "/etc/rancher/node"},
+			want:   []string{"/var/lib/rancher/rke2", "/etc/rancher/rke2", "/etc/rancher/node", "/var/lib/kubelet"},
 		},
 		"unset paths are not removable": {
 			distro: &K3S{RancherCommon{Common{}}},
@@ -1139,11 +1139,11 @@ func TestCleanupPaths(t *testing.T) {
 		},
 		"the same directory is only removed once": {
 			distro: &K3S{RancherCommon{Common{Config: "/etc/rancher/k3s/config.yaml", Data: "/etc/rancher/k3s"}}},
-			want:   []string{"/etc/rancher/k3s", "/etc/rancher/node"},
+			want:   []string{"/etc/rancher/k3s", "/etc/rancher/node", "/var/lib/kubelet"},
 		},
 		"a config directly below the root carries no node directory with it": {
 			distro: &K3S{RancherCommon{Common{Config: "/etc/config.yaml", Data: "/var/lib/rancher/k3s"}}},
-			want:   []string{"/var/lib/rancher/k3s", "/etc"},
+			want:   []string{"/var/lib/rancher/k3s", "/etc", "/var/lib/kubelet"},
 		},
 	}
 

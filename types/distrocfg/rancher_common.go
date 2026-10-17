@@ -694,7 +694,18 @@ func (d *RancherCommon) CleanupPaths() []string {
 	if parent := filepath.Dir(configDir); parent != "." && parent != "/" {
 		paths = append(paths, filepath.Join(parent, "node"))
 	}
-	return removablePaths(paths...)
+
+	engine := removablePaths(paths...)
+	if len(engine) == 0 {
+		// None of the engine's own paths survived, so this distro is half-configured and the
+		// kubelet directory is not its to remove on that basis alone.
+		return engine
+	}
+	// The kubelet keeps its per-pod bookkeeping outside both of the engine's directories, so a
+	// reset that removed only those left it behind: stale pod directories and their configmap
+	// contents, waiting on a machine that is no longer in the cluster. The upstream distro
+	// already removes it, as its own data directory.
+	return removablePaths(append(engine, kubeletDir)...)
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster.

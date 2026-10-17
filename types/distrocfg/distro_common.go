@@ -31,6 +31,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// kubeletDir is the kubelet's own working directory, where it keeps per-pod bookkeeping. Both
+// rancher engines run their kubelet there whatever their data directory is set to, and the
+// upstream distro's data directory is that path, so a reset removes it either way.
+const kubeletDir = "/var/lib/kubelet"
+
 // StateDir is where cargoship records state files describing the applied distro package.
 const StateDir = "/etc/cargoship"
 
