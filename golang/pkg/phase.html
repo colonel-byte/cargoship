@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-76812937.js";
+            window.path_to_searchindex_js = "../../searchindex-fb9d840c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-63067bc1.js"></script>
@@ -679,6 +679,14 @@
 <p><a name="ErrNoKubeConfig"></a>ErrNoKubeConfig is returned when the config is asked for before the phase has run</p>
 <pre><code class="language-go">var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
 </code></pre>
+<p><a name="ErrNoRunningController"></a>ErrNoRunningController is returned when a reset of part of a cluster finds no controller running the engine it was told to remove.</p>
+<p>The deletions are kubectl commands run on a controller that stays, so with none answering there is nothing to drive them with. Skipping them instead -- which is what used to happen -- leaves the targeted host with its files removed, its engine still running and its node still in the cluster, and the run reports success over it.</p>
+<p>The usual cause is a run pointed at the wrong engine: the controller service it looks for is the one `--distro` named, not the one the fleet runs, so a k3s cluster reset as rke2 looks exactly like a cluster whose control plane is down.</p>
+<pre><code class="language-go">var ErrNoRunningController = errors.New("no controller is running the engine this reset was told to remove: " +
+    "removing a subset of the hosts needs a controller that stays, to drain and delete their nodes through. " +
+    "Check that --distro, or distro.type in the cargoship config file, names the engine the fleet actually " +
+    "runs, or reset the whole cluster rather than a subset")
+</code></pre>
 <p><a name="ErrNoSurvivingController"></a>ErrNoSurvivingController is returned when every running controller is being removed, but some host is not. Tearing a subset down works by driving kubectl through a controller that stays, so a run with no controller left to drive is a whole-cluster teardown wearing a subset’s clothes: it would drain and delete nodes through a machine it is about to uninstall, and whether that finished would depend on the order the hosts happened to be in.</p>
 <p>Removing every host is still allowed. That is a reset, and reset is what it is for.</p>
 <pre><code class="language-go">var ErrNoSurvivingController = errors.New("every running controller is being removed, but not every host is: " +
@@ -706,7 +714,7 @@
 <pre><code class="language-go">var NoWait bool
 </code></pre>
 <p><a name="CheckTargetHosts"></a></p>
-<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L302">CheckTargetHosts</a></a></h2>
+<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L323">CheckTargetHosts</a></a></h2>
 <pre><code class="language-go">func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
 </code></pre>
 <p>CheckTargetHosts reports a target that names no host in the configuration.</p>
@@ -943,7 +951,7 @@
 }
 </code></pre>
 <p><a name="DeleteCommon.Prepare"></a></p>
-<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L88">Prepare</a></a></h3>
+<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L104">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
@@ -967,7 +975,7 @@
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteControllers.Run"></a></p>
-<h3 id="func-deletecontrollers-run"><a class="header" href="#func-deletecontrollers-run">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L85">Run</a></a></h3>
+<h3 id="func-deletecontrollers-run"><a class="header" href="#func-deletecontrollers-run">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L84">Run</a></a></h3>
 <pre><code class="language-go">func (p *DeleteControllers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -1002,7 +1010,7 @@
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteWorkers.Run"></a></p>
-<h3 id="func-deleteworkers-run"><a class="header" href="#func-deleteworkers-run">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L85">Run</a></a></h3>
+<h3 id="func-deleteworkers-run"><a class="header" href="#func-deleteworkers-run">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L84">Run</a></a></h3>
 <pre><code class="language-go">func (p *DeleteWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -1709,7 +1717,7 @@
 }
 </code></pre>
 <p><a name="ManifestEntry"></a></p>
-<h2 id="type-manifestentry"><a class="header" href="#type-manifestentry">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L38-L43">ManifestEntry</a></a></h2>
+<h2 id="type-manifestentry"><a class="header" href="#type-manifestentry">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L40-L45">ManifestEntry</a></a></h2>
 <p>ManifestEntry is a single file cargoship uploaded to a host, recorded so it can be found and removed later during an upgrade or uninstall.</p>
 <pre><code class="language-go">type ManifestEntry struct {
     // Category labels why the file was uploaded, e.g. "engine", "image", "file", "data".
@@ -1719,7 +1727,7 @@
 }
 </code></pre>
 <p><a name="ParseManifest"></a></p>
-<h3 id="func-parsemanifest"><a class="header" href="#func-parsemanifest">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L55">ParseManifest</a></a></h3>
+<h3 id="func-parsemanifest"><a class="header" href="#func-parsemanifest">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L57">ParseManifest</a></a></h3>
 <pre><code class="language-go">func ParseManifest(content string) []ManifestEntry
 </code></pre>
 <p>ParseManifest reads manifest file content back into entries. Malformed lines are skipped.</p>
@@ -1823,7 +1831,7 @@
 }
 </code></pre>
 <p><a name="PrepareFapolicy.Explanation"></a></p>
-<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L59">Explanation</a></a></h3>
+<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L83">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
@@ -1833,17 +1841,17 @@
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareFapolicy.Run"></a></p>
-<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L64">Run</a></a></h3>
+<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L88">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareFapolicy.ShouldRun"></a></p>
-<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L69">ShouldRun</a></a></h3>
+<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L93">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
 <p><a name="PrepareFapolicy.Title"></a></p>
-<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L54">Title</a></a></h3>
+<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L78">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -2044,35 +2052,39 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="RemoveSelinuxPolicy"></a></p>
-<h2 id="type-removeselinuxpolicy"><a class="header" href="#type-removeselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L34">RemoveSelinuxPolicy</a></a></h2>
+<h2 id="type-removeselinuxpolicy"><a class="header" href="#type-removeselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L38">RemoveSelinuxPolicy</a></a></h2>
 <p>RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.</p>
 <pre><code class="language-go">type RemoveSelinuxPolicy struct {
     GenericPhase
+    // TargetHosts names the hosts being removed, empty for a whole-cluster reset. A reset of a
+    // subset is driven through hosts that stay, so the configuration holds every host and the
+    // target list is the only thing that says which of them this phase may touch.
+    TargetHosts []string
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="RemoveSelinuxPolicy.Explanation"></a></p>
-<h3 id="func-removeselinuxpolicy-explanation"><a class="header" href="#func-removeselinuxpolicy-explanation">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L53">Explanation</a></a></h3>
+<h3 id="func-removeselinuxpolicy-explanation"><a class="header" href="#func-removeselinuxpolicy-explanation">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L67">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="RemoveSelinuxPolicy.Prepare"></a></p>
-<h3 id="func-removeselinuxpolicy-prepare"><a class="header" href="#func-removeselinuxpolicy-prepare">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37">Prepare</a></a></h3>
+<h3 id="func-removeselinuxpolicy-prepare"><a class="header" href="#func-removeselinuxpolicy-prepare">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L51">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="RemoveSelinuxPolicy.Run"></a></p>
-<h3 id="func-removeselinuxpolicy-run"><a class="header" href="#func-removeselinuxpolicy-run">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L58">Run</a></a></h3>
+<h3 id="func-removeselinuxpolicy-run"><a class="header" href="#func-removeselinuxpolicy-run">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L72">Run</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="RemoveSelinuxPolicy.ShouldRun"></a></p>
-<h3 id="func-removeselinuxpolicy-shouldrun"><a class="header" href="#func-removeselinuxpolicy-shouldrun">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L68">ShouldRun</a></a></h3>
+<h3 id="func-removeselinuxpolicy-shouldrun"><a class="header" href="#func-removeselinuxpolicy-shouldrun">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L82">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when a host carries a policy cargoship recorded</p>
 <p><a name="RemoveSelinuxPolicy.Title"></a></p>
-<h3 id="func-removeselinuxpolicy-title"><a class="header" href="#func-removeselinuxpolicy-title">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L48">Title</a></a></h3>
+<h3 id="func-removeselinuxpolicy-title"><a class="header" href="#func-removeselinuxpolicy-title">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L62">Title</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>

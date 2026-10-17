@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-76812937.js";
+            window.path_to_searchindex_js = "searchindex-fb9d840c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-63067bc1.js"></script>
@@ -7337,7 +7337,7 @@ $ cargoship version -o json
 </code></pre>
 <p>NewReset an apply action object</p>
 <p><a name="Reset.Run"></a></p>
-<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L133">Run</a></a></h3>
+<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L135">Run</a></a></h3>
 <pre><code class="language-go">func (r Reset) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
@@ -11647,6 +11647,14 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="ErrNoKubeConfig"></a>ErrNoKubeConfig is returned when the config is asked for before the phase has run</p>
 <pre><code class="language-go">var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
 </code></pre>
+<p><a name="ErrNoRunningController"></a>ErrNoRunningController is returned when a reset of part of a cluster finds no controller running the engine it was told to remove.</p>
+<p>The deletions are kubectl commands run on a controller that stays, so with none answering there is nothing to drive them with. Skipping them instead -- which is what used to happen -- leaves the targeted host with its files removed, its engine still running and its node still in the cluster, and the run reports success over it.</p>
+<p>The usual cause is a run pointed at the wrong engine: the controller service it looks for is the one `--distro` named, not the one the fleet runs, so a k3s cluster reset as rke2 looks exactly like a cluster whose control plane is down.</p>
+<pre><code class="language-go">var ErrNoRunningController = errors.New("no controller is running the engine this reset was told to remove: " +
+    "removing a subset of the hosts needs a controller that stays, to drain and delete their nodes through. " +
+    "Check that --distro, or distro.type in the cargoship config file, names the engine the fleet actually " +
+    "runs, or reset the whole cluster rather than a subset")
+</code></pre>
 <p><a name="ErrNoSurvivingController"></a>ErrNoSurvivingController is returned when every running controller is being removed, but some host is not. Tearing a subset down works by driving kubectl through a controller that stays, so a run with no controller left to drive is a whole-cluster teardown wearing a subset’s clothes: it would drain and delete nodes through a machine it is about to uninstall, and whether that finished would depend on the order the hosts happened to be in.</p>
 <p>Removing every host is still allowed. That is a reset, and reset is what it is for.</p>
 <pre><code class="language-go">var ErrNoSurvivingController = errors.New("every running controller is being removed, but not every host is: " +
@@ -11674,7 +11682,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var NoWait bool
 </code></pre>
 <p><a name="CheckTargetHosts"></a></p>
-<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L302">CheckTargetHosts</a></a></h2>
+<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L323">CheckTargetHosts</a></a></h2>
 <pre><code class="language-go">func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
 </code></pre>
 <p>CheckTargetHosts reports a target that names no host in the configuration.</p>
@@ -11911,7 +11919,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DeleteCommon.Prepare"></a></p>
-<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L88">Prepare</a></a></h3>
+<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L104">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
@@ -11935,7 +11943,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteControllers.Run"></a></p>
-<h3 id="func-deletecontrollers-run"><a class="header" href="#func-deletecontrollers-run">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L85">Run</a></a></h3>
+<h3 id="func-deletecontrollers-run"><a class="header" href="#func-deletecontrollers-run">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L84">Run</a></a></h3>
 <pre><code class="language-go">func (p *DeleteControllers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -11970,7 +11978,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteWorkers.Run"></a></p>
-<h3 id="func-deleteworkers-run"><a class="header" href="#func-deleteworkers-run">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L85">Run</a></a></h3>
+<h3 id="func-deleteworkers-run"><a class="header" href="#func-deleteworkers-run">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L84">Run</a></a></h3>
 <pre><code class="language-go">func (p *DeleteWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -12677,7 +12685,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ManifestEntry"></a></p>
-<h2 id="type-manifestentry"><a class="header" href="#type-manifestentry">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L38-L43">ManifestEntry</a></a></h2>
+<h2 id="type-manifestentry"><a class="header" href="#type-manifestentry">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L40-L45">ManifestEntry</a></a></h2>
 <p>ManifestEntry is a single file cargoship uploaded to a host, recorded so it can be found and removed later during an upgrade or uninstall.</p>
 <pre><code class="language-go">type ManifestEntry struct {
     // Category labels why the file was uploaded, e.g. "engine", "image", "file", "data".
@@ -12687,7 +12695,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ParseManifest"></a></p>
-<h3 id="func-parsemanifest"><a class="header" href="#func-parsemanifest">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L55">ParseManifest</a></a></h3>
+<h3 id="func-parsemanifest"><a class="header" href="#func-parsemanifest">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L57">ParseManifest</a></a></h3>
 <pre><code class="language-go">func ParseManifest(content string) []ManifestEntry
 </code></pre>
 <p>ParseManifest reads manifest file content back into entries. Malformed lines are skipped.</p>
@@ -12791,7 +12799,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PrepareFapolicy.Explanation"></a></p>
-<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L59">Explanation</a></a></h3>
+<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L83">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
@@ -12801,17 +12809,17 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareFapolicy.Run"></a></p>
-<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L64">Run</a></a></h3>
+<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L88">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareFapolicy.ShouldRun"></a></p>
-<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L69">ShouldRun</a></a></h3>
+<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L93">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
 <p><a name="PrepareFapolicy.Title"></a></p>
-<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L54">Title</a></a></h3>
+<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L78">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13012,35 +13020,39 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="RemoveSelinuxPolicy"></a></p>
-<h2 id="type-removeselinuxpolicy"><a class="header" href="#type-removeselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L34">RemoveSelinuxPolicy</a></a></h2>
+<h2 id="type-removeselinuxpolicy"><a class="header" href="#type-removeselinuxpolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L38">RemoveSelinuxPolicy</a></a></h2>
 <p>RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.</p>
 <pre><code class="language-go">type RemoveSelinuxPolicy struct {
     GenericPhase
+    // TargetHosts names the hosts being removed, empty for a whole-cluster reset. A reset of a
+    // subset is driven through hosts that stay, so the configuration holds every host and the
+    // target list is the only thing that says which of them this phase may touch.
+    TargetHosts []string
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="RemoveSelinuxPolicy.Explanation"></a></p>
-<h3 id="func-removeselinuxpolicy-explanation"><a class="header" href="#func-removeselinuxpolicy-explanation">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L53">Explanation</a></a></h3>
+<h3 id="func-removeselinuxpolicy-explanation"><a class="header" href="#func-removeselinuxpolicy-explanation">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L67">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="RemoveSelinuxPolicy.Prepare"></a></p>
-<h3 id="func-removeselinuxpolicy-prepare"><a class="header" href="#func-removeselinuxpolicy-prepare">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37">Prepare</a></a></h3>
+<h3 id="func-removeselinuxpolicy-prepare"><a class="header" href="#func-removeselinuxpolicy-prepare">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L51">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="RemoveSelinuxPolicy.Run"></a></p>
-<h3 id="func-removeselinuxpolicy-run"><a class="header" href="#func-removeselinuxpolicy-run">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L58">Run</a></a></h3>
+<h3 id="func-removeselinuxpolicy-run"><a class="header" href="#func-removeselinuxpolicy-run">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L72">Run</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="RemoveSelinuxPolicy.ShouldRun"></a></p>
-<h3 id="func-removeselinuxpolicy-shouldrun"><a class="header" href="#func-removeselinuxpolicy-shouldrun">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L68">ShouldRun</a></a></h3>
+<h3 id="func-removeselinuxpolicy-shouldrun"><a class="header" href="#func-removeselinuxpolicy-shouldrun">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L82">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when a host carries a policy cargoship recorded</p>
 <p><a name="RemoveSelinuxPolicy.Title"></a></p>
-<h3 id="func-removeselinuxpolicy-title"><a class="header" href="#func-removeselinuxpolicy-title">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L48">Title</a></a></h3>
+<h3 id="func-removeselinuxpolicy-title"><a class="header" href="#func-removeselinuxpolicy-title">func (*RemoveSelinuxPolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L62">Title</a></a></h3>
 <pre><code class="language-go">func (p *RemoveSelinuxPolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13976,7 +13988,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Upstream">type Upstream</a>
 <ul>
 <li><a href="#Upstream.AdminCredentials">func (d *Upstream) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)</a></li>
-<li><a href="#Upstream.Bootstrap">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error</a></li>
+<li><a href="#Upstream.Bootstrap">func (d *Upstream) Bootstrap(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error</a></li>
 <li><a href="#Upstream.CleanupPaths">func (d *Upstream) CleanupPaths() []string</a></li>
 <li><a href="#Upstream.ConfigureEngine">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error</a></li>
 <li><a href="#Upstream.DesiredFiles">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)</a></li>
@@ -13990,7 +14002,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Upstream.ManagedDirs">func (d *Upstream) ManagedDirs() []ManagedDir</a></li>
 <li><a href="#Upstream.ManifestPaths">func (d *Upstream) ManifestPaths(dis distro.Distro) []string</a></li>
 <li><a href="#Upstream.PreStartUpgrade">func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.Host, dis distro.Distro) error</a></li>
-<li><a href="#Upstream.PreUninstallReset">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) error</a></li>
+<li><a href="#Upstream.PreUninstallReset">func (d *Upstream) PreUninstallReset(ctx context.Context, host *cluster.Host) error</a></li>
 <li><a href="#Upstream.RunningVersion">func (d *Upstream) RunningVersion(host *cluster.Host) (string, error)</a></li>
 <li><a href="#Upstream.StopControllerService">func (d *Upstream) StopControllerService(h *cluster.Host) error</a></li>
 <li><a href="#Upstream.StopWorkerService">func (d *Upstream) StopWorkerService(h *cluster.Host) error</a></li>
@@ -14059,7 +14071,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var ErrNoAdminCredentials = errors.New("admin kubeconfig has no admin credentials")
 </code></pre>
 <p><a name="NodeLabelsMapToList"></a></p>
-<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L87">NodeLabelsMapToList</a></a></h2>
+<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L92">NodeLabelsMapToList</a></a></h2>
 <pre><code class="language-go">func NodeLabelsMapToList(m map[string]string) []string
 </code></pre>
 <p>NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels</p>
@@ -14099,7 +14111,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Common"></a></p>
-<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L96-L121">Common</a></a></h2>
+<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L101-L126">Common</a></a></h2>
 <p>Common for all the distro’s</p>
 <pre><code class="language-go">type Common struct {
     // Binary name of the engine binary
@@ -14129,57 +14141,57 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Common.BinaryName"></a></p>
-<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139">BinaryName</a></a></h3>
+<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L144">BinaryName</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryName() string
 </code></pre>
 <p>BinaryName returns the engine binary name</p>
 <p><a name="Common.BinaryPath"></a></p>
-<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134">BinaryPath</a></a></h3>
+<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139">BinaryPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryPath() string
 </code></pre>
 <p>BinaryPath returns the full path to the engine binary</p>
 <p><a name="Common.ConfigPath"></a></p>
-<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L144">ConfigPath</a></a></h3>
+<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L149">ConfigPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) ConfigPath() string
 </code></pre>
 <p>ConfigPath returns the full path for the config directory used by the engine</p>
 <p><a name="Common.DataDirPath"></a></p>
-<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L154">DataDirPath</a></a></h3>
+<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L159">DataDirPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) DataDirPath() string
 </code></pre>
 <p>DataDirPath returns the full path for the data directory used by the engine</p>
 <p><a name="Common.GetControllerService"></a></p>
-<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L174">GetControllerService</a></a></h3>
+<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L179">GetControllerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetControllerService() string
 </code></pre>
 <p>GetControllerService returns the name of the controller service</p>
 <p><a name="Common.GetWorkerService"></a></p>
-<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L169">GetWorkerService</a></a></h3>
+<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L174">GetWorkerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetWorkerService() string
 </code></pre>
 <p>GetWorkerService returns the name of the worker service</p>
 <p><a name="Common.JoinTokenPath"></a></p>
-<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L149">JoinTokenPath</a></a></h3>
+<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L154">JoinTokenPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) JoinTokenPath() string
 </code></pre>
 <p>JoinTokenPath returns the path of the token to join the cluster</p>
 <p><a name="Common.PackageStagingDir"></a></p>
-<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L161">PackageStagingDir</a></a></h3>
+<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L166">PackageStagingDir</a></a></h3>
 <pre><code class="language-go">func (r *Common) PackageStagingDir() string
 </code></pre>
 <p>PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.</p>
 <p><a name="Common.SetPath"></a></p>
-<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L179">SetPath</a></a></h3>
+<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L184">SetPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) SetPath(key string, value string) error
 </code></pre>
 <p>SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an “ErrPathKey” error</p>
 <p><a name="Common.SupervisorPort"></a></p>
-<h3 id="func-common-supervisorport"><a class="header" href="#func-common-supervisorport">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L124">SupervisorPort</a></a></h3>
+<h3 id="func-common-supervisorport"><a class="header" href="#func-common-supervisorport">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129">SupervisorPort</a></a></h3>
 <pre><code class="language-go">func (r *Common) SupervisorPort() int
 </code></pre>
 <p>SupervisorPort returns the port a joining node registers with the cluster on.</p>
 <p><a name="Common.SupervisorURL"></a></p>
-<h3 id="func-common-supervisorurl"><a class="header" href="#func-common-supervisorurl">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129">SupervisorURL</a></a></h3>
+<h3 id="func-common-supervisorurl"><a class="header" href="#func-common-supervisorurl">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134">SupervisorURL</a></a></h3>
 <pre><code class="language-go">func (r *Common) SupervisorURL(name string) string
 </code></pre>
 <p>SupervisorURL returns the URL a node joins the cluster through, for the host that serves it.</p>
@@ -14196,7 +14208,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroReleaseDesiredFile"></a></p>
-<h3 id="func-distroreleasedesiredfile"><a class="header" href="#func-distroreleasedesiredfile">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L41">DistroReleaseDesiredFile</a></a></h3>
+<h3 id="func-distroreleasedesiredfile"><a class="header" href="#func-distroreleasedesiredfile">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L46">DistroReleaseDesiredFile</a></a></h3>
 <pre><code class="language-go">func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error)
 </code></pre>
 <p>DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.</p>
@@ -14386,10 +14398,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="RancherCommon.CleanupPaths"></a></p>
-<h3 id="func-ranchercommon-cleanuppaths"><a class="header" href="#func-ranchercommon-cleanuppaths">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L681">CleanupPaths</a></a></h3>
+<h3 id="func-ranchercommon-cleanuppaths"><a class="header" href="#func-ranchercommon-cleanuppaths">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L687">CleanupPaths</a></a></h3>
 <pre><code class="language-go">func (d *RancherCommon) CleanupPaths() []string
 </code></pre>
-<p>CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright.</p>
+<p>CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright, plus the node directory beside the config one.</p>
+<p>The node directory is the engine’s own -- it holds the password the node registers under -- and a reset that leaves it behind leaves a credential for the cluster on a machine that is no longer in it. It is derived from the config directory’s parent rather than spelled out, so a config path pointed somewhere other than /etc/rancher takes its node directory with it.</p>
 <p><a name="RancherCommon.ConfigureEngine"></a></p>
 <h3 id="func-ranchercommon-configureengine"><a class="header" href="#func-ranchercommon-configureengine">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L188">ConfigureEngine</a></a></h3>
 <pre><code class="language-go">func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error
@@ -14401,7 +14414,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for the given host/run/dis, keyed by their full destination path. Content is identical across hosts of the same run (no host-varying fields are involved), unlike config.yaml.</p>
 <p><a name="RancherCommon.DistroCmdf"></a></p>
-<h3 id="func-ranchercommon-distrocmdf"><a class="header" href="#func-ranchercommon-distrocmdf">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L725">DistroCmdf</a></a></h3>
+<h3 id="func-ranchercommon-distrocmdf"><a class="header" href="#func-ranchercommon-distrocmdf">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L751">DistroCmdf</a></a></h3>
 <pre><code class="language-go">func (d *RancherCommon) DistroCmdf(template string, args ...any) string
 </code></pre>
 <p>DistroCmdf returns a string that can be used to execute commands on the core engine binary</p>
@@ -14411,7 +14424,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>GetClusterCIDR returns a string array with the all the known cluster cidr blocks</p>
 <p><a name="RancherCommon.JoinTokenPathAgent"></a></p>
-<h3 id="func-ranchercommon-jointokenpathagent"><a class="header" href="#func-ranchercommon-jointokenpathagent">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L687">JoinTokenPathAgent</a></a></h3>
+<h3 id="func-ranchercommon-jointokenpathagent"><a class="header" href="#func-ranchercommon-jointokenpathagent">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L713">JoinTokenPathAgent</a></a></h3>
 <pre><code class="language-go">func (d *RancherCommon) JoinTokenPathAgent() string
 </code></pre>
 <p>JoinTokenPathAgent returns the path of the token to join the cluster. Distro’s like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.</p>
@@ -14421,7 +14434,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>ManagedDirs returns the directories on a host cargoship prunes. For rke2 and k3s that is the directory holding CA certificates, the one holding state metadata -- every file in both was put there by cargoship, so a file with no entry left behind it can go -- and the engine’s manifest directory, which cargoship shares with the engine and where it prunes only the HelmChartConfig files it writes itself.</p>
 <p><a name="RancherCommon.RunningVersion"></a></p>
-<h3 id="func-ranchercommon-runningversion"><a class="header" href="#func-ranchercommon-runningversion">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L730">RunningVersion</a></a></h3>
+<h3 id="func-ranchercommon-runningversion"><a class="header" href="#func-ranchercommon-runningversion">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L756">RunningVersion</a></a></h3>
 <pre><code class="language-go">func (d *RancherCommon) RunningVersion(host *cluster.Host) (string, error)
 </code></pre>
 <p>RunningVersion returns the version of the distro being ran, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
@@ -14438,12 +14451,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.</p>
 <p><a name="Upstream.Bootstrap"></a></p>
-<h3 id="func-upstream-bootstrap"><a class="header" href="#func-upstream-bootstrap">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L63">Bootstrap</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error
+<h3 id="func-upstream-bootstrap"><a class="header" href="#func-upstream-bootstrap">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L67">Bootstrap</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) Bootstrap(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, _ distro.Distro) error
 </code></pre>
 <p>Bootstrap forms the cluster on the leader with `kubeadm init`, joins an additional controller onto it with kubeadm’s HA control-plane path, or joins a worker with a plain `kubeadm join`, against the kubeadm-config.yaml ConfigureEngine already wrote to host.</p>
+<p>The container runtime comes up first. kubeadm talks to the CRI socket in its own preflight, and this is the first point in a run where the package that provides the runtime is installed -- see ensureRuntime.</p>
 <p><a name="Upstream.CleanupPaths"></a></p>
-<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L289">CleanupPaths</a></a></h3>
+<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L322">CleanupPaths</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) CleanupPaths() []string
 </code></pre>
 <p>CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config directory, the kubelet data directory, and the staged package directory, all of which upstream owns outright.</p>
@@ -14453,7 +14467,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>ConfigureEngine writes DesiredFiles’ output to host: containerd’s config, crictl.yaml, registry hosts.toml, and the kubeadm-config.yaml this host’s role needs. Unlike RancherCommon.ConfigureEngine there is no already-running guard -- kubeadm-config.yaml is meant to be rewritten every run (Bootstrap rewrites it again with the real join token right before `kubeadm join`), so an unconditional overwrite is correct here, not a gap.</p>
 <p><a name="Upstream.DesiredFiles"></a></p>
-<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L175">DesiredFiles</a></a></h3>
+<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L208">DesiredFiles</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)
 </code></pre>
 <p>DesiredFiles returns the full set of engine config files this distro would write: containerd’s config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.</p>
@@ -14468,7 +14482,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>GetClusterCIDR returns the known cluster CIDR blocks. kubeadm’s service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default -- that is entirely CNI dependent -- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.</p>
 <p><a name="Upstream.ImportImages"></a></p>
-<h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L259">ImportImages</a></a></h3>
+<h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L292">ImportImages</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ImportImages(host *cluster.Host, path string) error
 </code></pre>
 <p>ImportImages imports every image tarball staged under path into containerd’s k8s.io image store. Unlike rke2/k3s, upstream’s containerd has no agent watching that directory on its own, so cargoship has to trigger the import itself.</p>
@@ -14478,7 +14492,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>IsBootstrapped reports whether host has already run `kubeadm init` or `kubeadm join`.</p>
 <p><a name="Upstream.JoinTokenPathAgent"></a></p>
-<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L296">JoinTokenPathAgent</a></a></h3>
+<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L329">JoinTokenPathAgent</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) JoinTokenPathAgent() string
 </code></pre>
 <p>JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has no static agent-join-token file -- tokens are short-lived and minted on demand with `kubeadm token create` -- so there is nothing to point at yet.</p>
@@ -14493,12 +14507,12 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.</p>
 <p><a name="Upstream.ManagedDirs"></a></p>
-<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L250">ManagedDirs</a></a></h3>
+<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L283">ManagedDirs</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ManagedDirs() []ManagedDir
 </code></pre>
 <p>ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per-registry hosts.toml directories under containerdCertsDir are not included -- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry’s own subdirectory, so a removed registry’s hosts.toml is left behind rather than risk pruning the wrong thing.</p>
 <p><a name="Upstream.ManifestPaths"></a></p>
-<h3 id="func-upstream-manifestpaths"><a class="header" href="#func-upstream-manifestpaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L282">ManifestPaths</a></a></h3>
+<h3 id="func-upstream-manifestpaths"><a class="header" href="#func-upstream-manifestpaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L315">ManifestPaths</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ManifestPaths(dis distro.Distro) []string
 </code></pre>
 <p>ManifestPaths returns the on-host manifest paths the package declares for cargoship to kubectl apply, e.g. a CNI. Delivery of those files is Config.Files’ job; this is only the list of what to apply.</p>
@@ -14508,22 +14522,23 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>PreStartUpgrade runs kubeadm’s own upgrade sequence between the shared upgrade phase’s package install and service restart steps. kubeadm, unlike rke2/k3s, refuses to move the control plane forward on a plain kubelet restart -- it must install the new kubeadm binary and run its own upgrade command first, and the first controller runs a different command than every other node.</p>
 <p><a name="Upstream.PreUninstallReset"></a></p>
-<h3 id="func-upstream-preuninstallreset"><a class="header" href="#func-upstream-preuninstallreset">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L29">PreUninstallReset</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.Host) error
+<h3 id="func-upstream-preuninstallreset"><a class="header" href="#func-upstream-preuninstallreset">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L34">PreUninstallReset</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) PreUninstallReset(ctx context.Context, host *cluster.Host) error
 </code></pre>
 <p>PreUninstallReset runs kubeadm’s own teardown before packages are removed, then cleans up what kubeadm reset deliberately leaves behind: it prints a reminder about CNI state and iptables/ipvs rules rather than removing them itself. Each post-reset command is best-effort -- a link that does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected common case, not a failure worth reporting.</p>
+<p>The container runtime goes last. `kubeadm reset` needs it to tear the control-plane containers down, so it is stopped only once that has run -- and it is stopped at all because nothing else on an upstream host started it: leaving it enabled means a decommissioned machine still comes back with a runtime serving a CRI socket for a cluster it is no longer part of.</p>
 <p><a name="Upstream.RunningVersion"></a></p>
 <h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L119">RunningVersion</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) RunningVersion(host *cluster.Host) (string, error)
 </code></pre>
 <p>RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream.StopControllerService"></a></p>
-<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L303">StopControllerService</a></a></h3>
+<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L336">StopControllerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopControllerService(h *cluster.Host) error
 </code></pre>
 <p>StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.</p>
 <p><a name="Upstream.StopWorkerService"></a></p>
-<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L308">StopWorkerService</a></a></h3>
+<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L341">StopWorkerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopWorkerService(h *cluster.Host) error
 </code></pre>
 <p>StopWorkerService stops the worker service on the host.</p>
