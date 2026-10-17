@@ -677,9 +677,24 @@ func (d *RancherCommon) ManagedDirs() []ManagedDir {
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the engine data
-// directory and the config directory, both of which rke2 and k3s own outright.
+// directory and the config directory, both of which rke2 and k3s own outright, plus the node
+// directory beside the config one.
+//
+// The node directory is the engine's own -- it holds the password the node registers under -- and
+// a reset that leaves it behind leaves a credential for the cluster on a machine that is no longer
+// in it. It is derived from the config directory's parent rather than spelled out, so a config
+// path pointed somewhere other than /etc/rancher takes its node directory with it.
 func (d *RancherCommon) CleanupPaths() []string {
-	return removablePaths(d.DataDirPath(), filepath.Dir(d.Config))
+	configDir := filepath.Dir(d.Config)
+	paths := []string{d.DataDirPath(), configDir}
+	// filepath.Dir of an unset config is ".", and of "/config.yaml" is "/", so the node directory
+	// is only derived from a config directory that sits somewhere below the root. Without the
+	// guard a half-configured distro hands a recursive remove "node" or "/node", which is the
+	// failure removablePaths exists to prevent.
+	if parent := filepath.Dir(configDir); parent != "." && parent != "/" {
+		paths = append(paths, filepath.Join(parent, "node"))
+	}
+	return removablePaths(paths...)
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster.

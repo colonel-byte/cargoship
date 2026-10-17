@@ -649,13 +649,15 @@ type RancherCommon struct {
 ```
 
 <a name="RancherCommon.CleanupPaths"></a>
-### func \(\*RancherCommon\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L681>)
+### func \(\*RancherCommon\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L687>)
 
 ```go
 func (d *RancherCommon) CleanupPaths() []string
 ```
 
-CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright.
+CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright, plus the node directory beside the config one.
+
+The node directory is the engine's own \-\- it holds the password the node registers under \-\- and a reset that leaves it behind leaves a credential for the cluster on a machine that is no longer in it. It is derived from the config directory's parent rather than spelled out, so a config path pointed somewhere other than /etc/rancher takes its node directory with it.
 
 <a name="RancherCommon.ConfigureEngine"></a>
 ### func \(\*RancherCommon\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L188>)
@@ -676,7 +678,7 @@ func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.Host, run 
 DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for the given host/run/dis, keyed by their full destination path. Content is identical across hosts of the same run \(no host\-varying fields are involved\), unlike config.yaml.
 
 <a name="RancherCommon.DistroCmdf"></a>
-### func \(\*RancherCommon\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L725>)
+### func \(\*RancherCommon\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L740>)
 
 ```go
 func (d *RancherCommon) DistroCmdf(template string, args ...any) string
@@ -694,7 +696,7 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.Distro) []string
 GetClusterCIDR returns a string array with the all the known cluster cidr blocks
 
 <a name="RancherCommon.JoinTokenPathAgent"></a>
-### func \(\*RancherCommon\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L687>)
+### func \(\*RancherCommon\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L702>)
 
 ```go
 func (d *RancherCommon) JoinTokenPathAgent() string
@@ -712,7 +714,7 @@ func (d *RancherCommon) ManagedDirs() []ManagedDir
 ManagedDirs returns the directories on a host cargoship prunes. For rke2 and k3s that is the directory holding CA certificates, the one holding state metadata \-\- every file in both was put there by cargoship, so a file with no entry left behind it can go \-\- and the engine's manifest directory, which cargoship shares with the engine and where it prunes only the HelmChartConfig files it writes itself.
 
 <a name="RancherCommon.RunningVersion"></a>
-### func \(\*RancherCommon\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L730>)
+### func \(\*RancherCommon\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L745>)
 
 ```go
 func (d *RancherCommon) RunningVersion(host *cluster.Host) (string, error)
