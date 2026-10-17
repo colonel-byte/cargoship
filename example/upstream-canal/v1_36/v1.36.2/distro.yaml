@@ -46,6 +46,20 @@ spec:
           # traffic silently does not route.
           podSubnet: 10.244.0.0/16
     os:
+      # fapolicyd allows execution only from paths it trusts, and an Enterprise Linux host runs it
+      # by default. The container runtime executes out of its own content store, so without these
+      # rules every sandbox creation fails with `runc create failed: unable to start container
+      # process: can't copy bootstrap data to pipe: write init-p: broken pipe` -- a message that
+      # names neither fapolicyd nor the directory it refused. Cargoship writes this block to
+      # /etc/fapolicyd/rules.d/31-cargoship.rules and restarts the service, on the hosts that run
+      # one; a host without fapolicyd is left alone.
+      fapolicyd: |
+        # Allow the kubeadm control plane and its container runtime to run what they stage.
+        allow perm=any all : dir=/opt/cni/
+        allow perm=any all : dir=/run/containerd/
+        allow perm=any all : dir=/var/lib/containerd/
+        allow perm=any all : dir=/var/lib/kubelet/
+        allow perm=any all : dir=/var/lib/kubernetes/
       selinux:
         # The SELinux settings upstream Kubernetes documentation recommends for a kubeadm host.
         # Cargoship applies them only to hosts that report SELinux enforcing and have semodule
