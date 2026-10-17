@@ -46,8 +46,32 @@ func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *di
 	})
 
 	logger.From(ctx).Info("number of systems with fapolicy", "hosts", len(p.fapolicydhosts))
+	p.warnOnMissingRules(ctx)
 
 	return nil
+}
+
+// warnOnMissingRules says so when the hosts run fapolicyd and the package carries no rules for
+// it, which is the one combination this phase can do nothing about.
+//
+// ShouldRun goes false in that case, so the phase is skipped with nothing written and nothing
+// said. What follows is a cluster that installs and then cannot start a container: fapolicyd
+// denies the execs the runtime makes out of its own content store, and the failure arrives much
+// later as `runc create failed: unable to start container process: can't copy bootstrap data to
+// pipe: write init-p: broken pipe`, which names neither fapolicyd nor the package. An upstream
+// package carried no rules at all until the fleet showed exactly that.
+func (p *PrepareFapolicy) warnOnMissingRules(ctx context.Context) {
+	if len(p.fapolicydhosts) == 0 || p.manager.Distro == nil || p.manager.Distro.Spec.Config.OS.FAPolicyd != "" {
+		return
+	}
+
+	logger.From(ctx).Warn("hosts run fapolicyd and this package declares no rules for it, so none are "+
+		"written: fapolicyd may deny the container runtime's own executions, which surfaces later as a "+
+		"container that cannot start rather than as a policy refusal. Add an `os.fapolicyd` block to the "+
+		"package, or stop fapolicyd on these hosts",
+		"hosts", len(p.fapolicydhosts),
+		"rules", FAPolicydRuleFile,
+	)
 }
 
 // Title for the phase
