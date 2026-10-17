@@ -8,7 +8,6 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/avast/retry-go/v4 v4.7.0
-	github.com/containerd/containerd/v2 v2.4.1
 	github.com/containerd/platforms v1.0.0-rc.5
 	github.com/creasty/defaults v1.11.0
 	github.com/defenseunicorns/pkg/oci v1.3.2
@@ -175,6 +174,8 @@ require (
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.10 // indirect
 	github.com/docker/go-connections v0.8.2 // indirect
+	github.com/docker/go-events v0.1.0 // indirect
+	github.com/docker/go-metrics v0.1.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect

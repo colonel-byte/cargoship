@@ -3075,7 +3075,7 @@ func (p *UpgradeWorkers) Title() string
 Title for the phase
 
 <a name="UploadFiles"></a>
-## type [UploadFiles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L53-L67>)
+## type [UploadFiles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L56-L70>)
 
 UploadFiles implements a phase which upload files to hosts
 
@@ -3087,7 +3087,7 @@ type UploadFiles struct {
 ```
 
 <a name="UploadFiles.Explanation"></a>
-### func \(\*UploadFiles\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L75>)
+### func \(\*UploadFiles\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L78>)
 
 ```go
 func (p *UploadFiles) Explanation() string
@@ -3096,7 +3096,7 @@ func (p *UploadFiles) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="UploadFiles.Prepare"></a>
-### func \(\*UploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L85>)
+### func \(\*UploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L88>)
 
 ```go
 func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
@@ -3105,7 +3105,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro
 Prepare the phase
 
 <a name="UploadFiles.Run"></a>
-### func \(\*UploadFiles\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L279>)
+### func \(\*UploadFiles\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L310>)
 
 ```go
 func (p *UploadFiles) Run(ctx context.Context) error
@@ -3114,7 +3114,7 @@ func (p *UploadFiles) Run(ctx context.Context) error
 Run the phase
 
 <a name="UploadFiles.ShouldRun"></a>
-### func \(\*UploadFiles\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L274>)
+### func \(\*UploadFiles\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L305>)
 
 ```go
 func (p *UploadFiles) ShouldRun() bool
@@ -3123,7 +3123,7 @@ func (p *UploadFiles) ShouldRun() bool
 ShouldRun is true when there are workers
 
 <a name="UploadFiles.Title"></a>
-### func \(\*UploadFiles\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L70>)
+### func \(\*UploadFiles\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L73>)
 
 ```go
 func (p *UploadFiles) Title() string

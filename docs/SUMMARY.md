@@ -123,7 +123,6 @@
 - [images](golang/pkg/images.md)
 - [lint](golang/pkg/lint.md)
 - [node](golang/pkg/node.md)
-- [archive](golang/pkg/oci/archive.md)
 - [platform](golang/pkg/oci/platform.md)
 - [assemble](golang/pkg/packager/assemble.md)
 - [layout](golang/pkg/packager/layout.md)

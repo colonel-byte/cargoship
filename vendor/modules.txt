@@ -732,17 +732,6 @@ github.com/common-nighthawk/go-figure
 # github.com/containerd/console v1.0.5
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd/v2 v2.4.1
-## explicit; go 1.26.6
-github.com/containerd/containerd/v2/core/content
-github.com/containerd/containerd/v2/core/images
-github.com/containerd/containerd/v2/core/images/archive
-github.com/containerd/containerd/v2/internal/lazyregexp
-github.com/containerd/containerd/v2/internal/randutil
-github.com/containerd/containerd/v2/pkg/archive/compression
-github.com/containerd/containerd/v2/pkg/filters
-github.com/containerd/containerd/v2/pkg/labels
-github.com/containerd/containerd/v2/pkg/reference
 # github.com/containerd/errdefs v1.0.0
 ## explicit; go 1.20
 github.com/containerd/errdefs
@@ -836,6 +825,10 @@ github.com/docker/docker-credential-helpers/credentials
 github.com/docker/go-connections/nat
 github.com/docker/go-connections/sockets
 github.com/docker/go-connections/tlsconfig
+# github.com/docker/go-events v0.1.0
+## explicit; go 1.24
+# github.com/docker/go-metrics v0.1.0
+## explicit; go 1.21
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
