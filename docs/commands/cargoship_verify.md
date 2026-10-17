@@ -6,7 +6,7 @@ Verifies the signature on a Cargoship distro package
 
 ### Synopsis
 
-Verifies the signature on an existing Cargoship distro package. The package can be a local tarball or pulled from an OCI registry. Pass --key to verify against a public key, or the keyless flags to verify a signer identity against a Fulcio root and a transparency log. An unsigned package is reported as a failure. The other commands that load packages verify as part of loading, gated on their --verify flag -- this command verifies and nothing else, so it can be run before a play that has no network for the keyless flow.
+Verifies the signature on an existing Cargoship distro package. The package can be a local tarball or pulled from an OCI registry. Pass --key to verify against a cosign public key, which is the only supported signing method. An unsigned package is reported as a failure. The other commands that load packages verify as part of loading, gated on their --verify flag -- this command verifies and nothing else.
 
 ```
 cargoship verify PACKAGE_SOURCE [flags]
@@ -21,27 +21,18 @@ $ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --key ./cosign.pub
 # Verify a package in an OCI registry
 $ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
 
-# Verify a keyless signature against a signer identity and its OIDC issuer
-$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-identity signer@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # Match the signer identity by pattern instead
-$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-identity-regexp '.*@example\.com' --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
 ```
 
 ### Options
 
 ```
-      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
-      --certificate-identity-regexp string      Regex variant of --certificate-identity
-      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
-      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
-  -h, --help                                    help for verify
-      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
-      --insecure-skip-tls-verify                Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -k, --key string                              Path to public key file for validating signed packages
-      --plain-http                              Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
-      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+  -h, --help                       help for verify
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string                 Path to public key file for validating signed packages
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
 ```
 
 ### Options inherited from parent commands

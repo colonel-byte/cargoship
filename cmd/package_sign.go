@@ -47,18 +47,7 @@ type packageSignOptions struct {
 	ociConcurrency     int
 	retries            int
 
-	// Keyless signing flags. Each is hand-rolled and individually opted-in;
-	// new cosign flags will not appear here automatically on dependency bumps.
-	keyless        bool
-	identityToken  string
-	fulcioURL      string
-	fulcioAuthFlow string
-	oidcIssuer     string
-	oidcClientID   string
-	rekorURL       string
-	tlogUpload     bool
-	confirm        bool
-	tsaServerURL   string
+	confirm bool
 	packageVerifyFlags
 }
 
@@ -92,20 +81,7 @@ func newPackageSignCommand() *cobra.Command {
 	o.verify = verifyModeIfPossible
 	cmd.Flags().VarP(&o.verify, "verify", "", lang.CmdPackageFlagVerify)
 
-	cmd.Flags().BoolVar(&o.keyless, "keyless", false, zlang.CmdPackageSignFlagKeyless)
-	cmd.Flags().StringVar(&o.identityToken, "identity-token", "", zlang.CmdPackageSignFlagIdentityToken)
-	cmd.Flags().StringVar(&o.fulcioURL, "fulcio-url", "", zlang.CmdPackageSignFlagFulcioURL)
-	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", "", zlang.CmdPackageSignFlagFulcioAuthFlow)
-	cmd.Flags().StringVar(&o.oidcIssuer, "oidc-issuer", "", zlang.CmdPackageSignFlagOIDCIssuer)
-	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", "", zlang.CmdPackageSignFlagOIDCClientID)
-	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", "", zlang.CmdPackageSignFlagRekorURL)
-	cmd.Flags().BoolVar(&o.tlogUpload, "tlog-upload", false, zlang.CmdPackageSignFlagTlogUpload)
 	cmd.Flags().BoolVar(&o.confirm, "confirm", false, zlang.CmdPackageSignFlagConfirm)
-	cmd.Flags().StringVar(&o.tsaServerURL, "tsa-server-url", "", zlang.CmdPackageSignFlagTSAServerURL)
-	cmd.Flags().AddFlagSet(newKeylessVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
-
-	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 
 	addBuildFlags(cmd)
 	addRegistryFlags(cmd)
@@ -117,8 +93,8 @@ func (o *packageSignOptions) run(ctx context.Context, cmd *cobra.Command, args [
 	l := logger.From(ctx)
 	packageSource := args[0]
 
-	if !o.keyless && o.signingKeyPath == "" {
-		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")
+	if o.signingKeyPath == "" {
+		return errors.New("--signing-key is required")
 	}
 
 	outputDest := o.output
@@ -182,38 +158,12 @@ func (o *packageSignOptions) run(ctx context.Context, cmd *cobra.Command, args [
 		}
 	}
 
-	if o.keyless {
-		l.Info("signing package via Sigstore keyless flow")
-		l.Debug("keyless signing endpoints", "fulcio", o.fulcioURL, "oidcIssuer", o.oidcIssuer, "rekor", o.rekorURL)
-	} else {
-		l.Info("signing package with provided key")
-	}
+	l.Info("signing package with provided key")
 
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 	signOpts.Overwrite = o.overwrite
-	signOpts.Fulcio.IdentityToken = o.identityToken
-	signOpts.Fulcio.URL = o.fulcioURL
-	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
-	signOpts.OIDC.Issuer = o.oidcIssuer
-	signOpts.OIDC.ClientID = o.oidcClientID
-	signOpts.Rekor.URL = o.rekorURL
-	signOpts.TlogUpload = o.tlogUpload
-	signOpts.SkipConfirmation = o.confirm
-	signOpts.TSAServerURL = o.tsaServerURL
-
-	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp the
-	// signature is unverifiable past expiry. Default --tlog-upload=true for keyless
-	// unless the user explicitly opted out via the CLI flag.
-	if o.keyless {
-		if !cmd.Flags().Changed("tlog-upload") {
-			signOpts.TlogUpload = true
-		}
-		if !signOpts.TlogUpload && signOpts.TSAServerURL == "" {
-			l.Warn(zlang.CmdPackageSignNoTimestampAnchorWarn)
-		}
-	}
 
 	if helpers.IsOCIURL(outputDest) {
 		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
@@ -232,7 +182,7 @@ func (o *packageSignOptions) run(ctx context.Context, cmd *cobra.Command, args [
 		return err
 	}
 
-	if err := distroLayout.SignPackage(ctx, layout.SignOptions{SignBlobOptions: signOpts, Keyless: o.keyless}); err != nil {
+	if err := distroLayout.SignPackage(ctx, layout.SignOptions{SignBlobOptions: signOpts}); err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 

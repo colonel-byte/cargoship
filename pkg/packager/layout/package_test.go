@@ -227,31 +227,6 @@ func TestSignOptionsShouldSign(t *testing.T) {
 			},
 			want: true,
 		},
-		{
-			name: "fulcio identity token",
-			opts: func() SignOptions {
-				var o SignOptions
-				o.Fulcio.IdentityToken = "a-token"
-				return o
-			}(),
-			want: true,
-		},
-		{
-			name: "hardware security key",
-			opts: func() SignOptions {
-				var o SignOptions
-				o.SecurityKey.Use = true
-				return o
-			}(),
-			want: true,
-		},
-		{
-			name: "keyless with no other material",
-			opts: SignOptions{
-				Keyless: true,
-			},
-			want: true,
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, tt.opts.ShouldSign())

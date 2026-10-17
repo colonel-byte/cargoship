@@ -336,7 +336,7 @@ func (d *DistroLayout) SetRegistryDigest(digest string)
 SetRegistryDigest records the manifest digest as resolved from a registry. It replaces the locally\-computed digest and clears the manifest cache, since the registry manifest may differ \(e.g. partial OCI pulls\). After this call the layout is no longer usable as an oras.ReadOnlyTarget for pushing.
 
 <a name="DistroLayout.SignPackage"></a>
-### func \(\*DistroLayout\) [SignPackage](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L464>)
+### func \(\*DistroLayout\) [SignPackage](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L457>)
 
 ```go
 func (d *DistroLayout) SignPackage(ctx context.Context, opts SignOptions) (err error)
@@ -363,7 +363,7 @@ func (d *DistroLayout) Values(ctx context.Context, overrides ...map[string]any) 
 Values returns the merged, schema\-checked values the package was built with, with any overrides applied on top.
 
 <a name="DistroLayout.VerifyPackageSignature"></a>
-### func \(\*DistroLayout\) [VerifyPackageSignature](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L593>)
+### func \(\*DistroLayout\) [VerifyPackageSignature](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L584>)
 
 ```go
 func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.VerifyBlobOptions) error
@@ -406,30 +406,24 @@ func ResolveDistroPath(path string) (DistroPath, error)
 ResolveDistroPath returns an object of DistroPath from a given path
 
 <a name="SignOptions"></a>
-## type [SignOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L443-L451>)
+## type [SignOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L443-L445>)
 
-SignOptions carries the cosign signing configuration plus the cargoship\-side keyless flag. zarf v0.87.0 dropped signing.SignBlobOptions.Keyless and its ShouldSign method, so cargoship owns the signing gate.
+SignOptions carries the signing configuration. zarf v0.87.0 dropped signing.SignBlobOptions.Keyless and its ShouldSign method, so cargoship owns the signing gate.
 
 ```go
 type SignOptions struct {
     signing.SignBlobOptions
-
-    // Keyless gates cargoship-specific sign-side guards on top of cosign's behavior.
-    // When true, --signing-key is no longer required and ShouldSign returns true even
-    // without explicit Key/IdentityToken/SecurityKey material - cosign resolves identity
-    // via Fulcio/OIDC at sign time.
-    Keyless bool
 }
 ```
 
 <a name="SignOptions.ShouldSign"></a>
-### func \(SignOptions\) [ShouldSign](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L456>)
+### func \(SignOptions\) [ShouldSign](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L450>)
 
 ```go
 func (opts SignOptions) ShouldSign() bool
 ```
 
-ShouldSign returns true if any signing key material is configured, or if the keyless flow is selected. KeyRef is included for backward compatibility; it is synced to Key in signing.CosignSignBlobWithOptions.
+ShouldSign returns true if a signing key is configured. A cosign keypair is the only signing method; KeyRef is included for backward compatibility and is synced to Key in signing.CosignSignBlobWithOptions.
 
 <a name="VerificationStrategy"></a>
 ## type [VerificationStrategy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L55>)

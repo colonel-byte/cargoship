@@ -197,7 +197,7 @@ cargoship sign ./build/cargoship-distro-amd64.tar.zst --signing-key ./private-ke
 cargoship verify ./build/cargoship-distro-amd64.tar.zst --key ./cosign.pub
 ```
 
-`sign` also takes `--keyless` for the Sigstore keyless flow, and `verify` takes the matching keyless flags (`--certificate-identity`, `--certificate-oidc-issuer`, and their regex variants). The commands that load a package - `apply`, `prepare`, `engine-config-sync`, `publish`, `pull`, `validate`, `schema` - verify as part of loading, gated on `--verify=never|if-possible|always`. `verify` does nothing but check the signature, which is what makes it the one to run before a playbook on a management node with no network.
+A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see [#848](https://github.com/colonel-byte/cargoship/issues/848). The commands that load a package - `apply`, `prepare`, `engine-config-sync`, `publish`, `pull`, `validate`, `schema` - verify as part of loading, gated on `--verify=never|if-possible|always`. `verify` does nothing but check the signature, which is what makes it the one to run before a playbook.
 
 ### 8. Encrypt Credentials in a Config File
 

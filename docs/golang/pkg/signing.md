@@ -6,11 +6,11 @@
 import "github.com/colonel-byte/cargoship/pkg/signing"
 ```
 
-Package signing provides cosign\-based signing and verification for cargoship packages.
+Package signing provides cosign\-compatible signing and verification for cargoship packages, against an ordinary cosign keypair.
 
-Derived from zarf's src/pkg/signing, with two deliberate differences. The cloud KMS plugins \(aws, azure, gcp, hashivault\) and cosign's ambient OIDC credential providers are not registered here: all four need to reach a cloud endpoint, so none of them can be used from the air\-gapped management node cargoship runs on, and together they account for roughly 9MB of binary that nothing on an air\-gapped host can call. See docs/agent/choice\-signing\-fork.md, and docs/dev/signing.md for the supported signing path.
+Originally a fork of zarf's src/pkg/signing, which wrapped cosign's CLI command structs. Those are gone: the command structs carried Fulcio, OIDC, cloud KMS, transparency\-log and policy\-evaluation machinery that cannot be reached from the air\-gapped management node cargoship runs on, and that linked Open Policy Agent, cuelang, go\-github and the GitLab client into the binary. Signing and verification now go through sigstore\-go in signkey.go and verifykey.go.
 
-SignManifest and VerifyManifest are also dropped, because cargoship signs and verifies the distro.yaml blob rather than an OCI manifest referrer.
+A cosign keypair is the only supported signing method. Keyless \(Fulcio/OIDC\) signing and verification were removed; see docs/agent/choice\-signing\-fork.md and https://github.com/colonel-byte/cargoship/issues/848.
 
 ## Index
 
@@ -31,29 +31,29 @@ SignManifest and VerifyManifest are also dropped, because cargoship signs and ve
 
 ## Constants
 
-<a name="CosignDefaultTimeout"></a>CosignDefaultTimeout is the default timeout for cosign sign and verify operations.
+<a name="CosignDefaultTimeout"></a>CosignDefaultTimeout is the default timeout for sign and verify operations.
 
 ```go
 const CosignDefaultTimeout = 3 * time.Minute
 ```
 
 <a name="CosignSignBlobWithOptions"></a>
-## func [CosignSignBlobWithOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L167>)
+## func [CosignSignBlobWithOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L147>)
 
 ```go
 func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBlobOptions) ([]byte, error)
 ```
 
-CosignSignBlobWithOptions signs a blob via cosign's SignBlobCmd. Mirrors cmd/cosign/cli/signblob.go \(v3.0.6\) SignBlob\(\).RunE.
+CosignSignBlobWithOptions signs a blob with a cosign keypair and writes a Sigstore bundle beside it.
 
 <a name="CosignVerifyBlobWithOptions"></a>
-## func [CosignVerifyBlobWithOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L262>)
+## func [CosignVerifyBlobWithOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L181>)
 
 ```go
 func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error
 ```
 
-CosignVerifyBlobWithOptions verifies a blob via cosign's VerifyBlobCmd. Mirrors cmd/cosign/cli/verify.go \(v3.0.6\) VerifyBlob\(\).RunE.
+CosignVerifyBlobWithOptions verifies a blob against a cosign public key and the Sigstore bundle beside it.
 
 <a name="SignBlobWithKey"></a>
 ## func [SignBlobWithKey](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/signkey.go#L115>)
@@ -103,34 +103,25 @@ func ReadBundleInfo(bundlePath string) (BundleInfo, error)
 ReadBundleInfo parses a Sigstore bundle file and returns its signing metadata.
 
 <a name="SignBlobOptions"></a>
-## type [SignBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L64-L90>)
+## type [SignBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L59-L76>)
 
 SignBlobOptions holds the signing configuration for a blob.
 
 ```go
 type SignBlobOptions struct {
-    Key              string
-    Base64Output     bool
-    OutputSignature  string
-    BundlePath       string
-    NewBundleFormat  bool
-    SkipConfirmation bool
-    TlogUpload       bool
-    TSAServerURL     string
-    // UseSigningConfig is set to false by DefaultSignBlobOptions to override
-    // cosign's default of true, which conflicts with TlogUpload=false in airgap.
-    UseSigningConfig bool
-
-    SecurityKey options.SecurityKeyOptions
-    Fulcio      options.FulcioOptions
-    Rekor       options.RekorOptions
-    OIDC        options.OIDCOptions
-
-    Verbose   bool
-    Timeout   time.Duration
-    Password  string
-    PassFunc  cosign.PassFunc
+    // Key is the path to a cosign-format private key.
+    Key string
+    // BundlePath is where the Sigstore bundle is written.
+    BundlePath string
+    // Password decrypts the private key. PassFunc takes precedence, and
+    // COSIGN_PASSWORD is the fallback when neither is set.
+    Password string
+    // PassFunc resolves the private-key password, taking precedence over Password.
+    PassFunc cosign.PassFunc
+    // Overwrite allows CheckOverwrite to replace an existing bundle.
     Overwrite bool
+    // Timeout bounds the whole operation.
+    Timeout time.Duration
 
     // Deprecated: use Key. Removed in a future version.
     KeyRef string
@@ -138,30 +129,22 @@ type SignBlobOptions struct {
 ```
 
 <a name="DefaultSignBlobOptions"></a>
-### func [DefaultSignBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L140>)
+### func [DefaultSignBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L106>)
 
 ```go
 func DefaultSignBlobOptions() SignBlobOptions
 ```
 
-DefaultSignBlobOptions returns SignBlobOptions seeded with zarf defaults. Divergences from cosign defaults \(air\-gap\):
-
-- TlogUpload=false \(cosign default true\)
-- UseSigningConfig=false \(cosign default true\) — required because cosign rejects UseSigningConfig=true combined with TlogUpload=false.
-
-DefaultSignBlobOptions returns SignBlobOptions seeded with zarf defaults. Divergences from cosign defaults \(air\-gap\):
-
-- TlogUpload=false \(cosign default true\)
-- UseSigningConfig=false \(cosign default true\) — required because cosign rejects UseSigningConfig=true combined with TlogUpload=false.
+DefaultSignBlobOptions returns the signing defaults.
 
 <a name="SignBlobOptions.CheckOverwrite"></a>
-### func \(SignBlobOptions\) [CheckOverwrite](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L114>)
+### func \(SignBlobOptions\) [CheckOverwrite](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L92>)
 
 ```go
 func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error
 ```
 
-CheckOverwrite errors if any output file exists and Overwrite is false.
+CheckOverwrite errors if the bundle already exists and Overwrite is false.
 
 <a name="SigningMethod"></a>
 ## type [SigningMethod](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/bundle.go#L31>)
@@ -184,39 +167,31 @@ const (
 ```
 
 <a name="VerifyBlobOptions"></a>
-## type [VerifyBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L93-L111>)
+## type [VerifyBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L79-L89>)
 
 VerifyBlobOptions holds the verification configuration for a blob.
 
 ```go
 type VerifyBlobOptions struct {
-    Key        string
-    Signature  string
+    // Key is the path to a PEM-encoded cosign public key.
+    Key string
+    // BundlePath is the Sigstore bundle to verify against.
     BundlePath string
-
-    SecurityKey         options.SecurityKeyOptions
-    CertVerify          options.CertVerifyOptions
-    Rekor               options.RekorOptions
-    CommonVerifyOptions options.CommonVerifyOptions
-    SignatureDigest     options.SignatureDigestOptions
-
-    TempDir string
+    // Timeout bounds the whole operation.
     Timeout time.Duration
 
     // Deprecated: use Key. Removed in a future version.
     KeyRef string
-    // Deprecated: use Signature. Removed in a future version.
-    SigRef string
 }
 ```
 
 <a name="DefaultVerifyBlobOptions"></a>
-### func [DefaultVerifyBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L156>)
+### func [DefaultVerifyBlobOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/signing/cosign.go#L111>)
 
 ```go
 func DefaultVerifyBlobOptions() VerifyBlobOptions
 ```
 
-DefaultVerifyBlobOptions returns VerifyBlobOptions seeded with zarf defaults. Divergences: IgnoreTlog and IgnoreSCT default to true \(cosign default false\) for airgap. DefaultVerifyBlobOptions returns VerifyBlobOptions seeded with zarf defaults. Divergences: IgnoreTlog and IgnoreSCT default to true \(cosign default false\) for airgap.
+DefaultVerifyBlobOptions returns the verification defaults.
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

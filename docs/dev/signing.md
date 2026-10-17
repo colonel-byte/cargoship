@@ -2,7 +2,7 @@
 
 Cargoship signs the `distro.yaml` blob in a package and verifies it on pull, install and verify. The wrapper around cosign lives in [`pkg/signing`](https://github.com/colonel-byte/cargoship/tree/main/pkg/signing), a fork of zarf's package of the same name - [`docs/agent/choice-signing-fork.md`](../agent/choice-signing-fork.md) records why it is a fork and what it deliberately leaves out.
 
-The supported path is a local cosign keypair whose password comes from `COSIGN_PASSWORD`. Cloud KMS key references and ambient-OIDC keyless signing are not available: all of them need to reach a cloud endpoint, and the management node is air-gapped.
+A local cosign keypair whose password comes from `COSIGN_PASSWORD` is the only supported signing method. Cloud KMS key references and keyless (Fulcio/OIDC) signing and verification are not available: all of them need to reach a cloud endpoint, and the management node is air-gapped. Whether keyless should return is [#848](https://github.com/colonel-byte/cargoship/issues/848).
 
 ```sh
 cosign generate-key-pair                                     # cosign.key, cosign.pub
@@ -16,24 +16,12 @@ The end-to-end coverage is in `test/e2e/noncluster`, and it does real signing ag
 go test -run 'TestCargoshipSign|TestCargoshipSignedRoundTrip|TestCargoshipVerifyCommand' ./test/e2e/noncluster/
 ```
 
-## The embedded trusted root is a pin
+## There is no embedded trusted root any more
 
-`pkg/signing/embedded_trusted_root.json` is the Sigstore TrustedRoot, embedded into the binary so a keyless verification that supplies no `--trusted-root` has one to fall back on. It names Fulcio, Rekor, the CT logs and the timestamp authority, each with key material and validity windows, so it goes stale on sigstore's schedule rather than ours.
+An earlier revision embedded `pkg/signing/embedded_trusted_root.json`, the Sigstore TrustedRoot, so a keyless verification that supplied no `--trusted-root` had one to fall back on. Keyless verification is gone and nothing key-based reads a trusted root, so the file and its manual refresh procedure went with it. That is one fewer pin with no automatic owner - see [`magefiles/AGENTS.md`](https://github.com/colonel-byte/cargoship/blob/main/magefiles/AGENTS.md#every-pin-needs-an-owner) for why that matters.
 
-No updater owns it. Dependabot parses no format it is written in, and reconstructing it with `cosign trusted-root create` means supplying every service's certificate chain and public key by hand, which is not a refresh so much as a rebuild. So this is the third answer the pin rule allows - see [`magefiles/AGENTS.md`](https://github.com/colonel-byte/cargoship/blob/main/magefiles/AGENTS.md#every-pin-needs-an-owner) - a written manual bump rather than automation.
-
-Refresh it from sigstore's TUF repository, which is where cosign itself gets it. Use a throwaway `TUF_ROOT` so an operator's own `~/.sigstore` is left alone:
+If keyless verification returns through [#848](https://github.com/colonel-byte/cargoship/issues/848), the trusted root comes back with it, and so does the obligation to refresh it. The procedure that worked was:
 
 ```sh
-TUF_ROOT=$(mktemp -d) sh -c 'cosign initialize && cp "$TUF_ROOT/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json" \
-  pkg/signing/embedded_trusted_root.json'
+TUF_ROOT=$(mktemp -d) sh -c 'cosign initialize && cp "$TUF_ROOT/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json" <destination>'
 ```
-
-Then check that it changed for a reason, and that the result still verifies:
-
-```sh
-git diff --stat pkg/signing/embedded_trusted_root.json
-go test -run 'TestCargoshipSign|TestCargoshipSignedRoundTrip|TestCargoshipVerifyCommand' ./test/e2e/noncluster/
-```
-
-An empty diff is the normal outcome and means the pin was already current - at the time of writing it is byte-identical to upstream. A diff that drops a `tlogs` or `certificateAuthorities` entry rather than adding one is worth reading before committing: it narrows what the binary will accept, which is sometimes the point of the upstream change and sometimes a sign the fetch was incomplete.

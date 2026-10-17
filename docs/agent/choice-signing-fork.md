@@ -1,4 +1,4 @@
-# Why `pkg/signing` is a fork of zarf's, and what was left out
+# Why `pkg/signing` stopped being a wrapper around cosign's CLI
 
 Cargoship signs and verifies the `distro.yaml` blob with cosign, and until this change it did so through `github.com/zarf-dev/zarf/src/pkg/signing`. That package is a thin wrapper over cosign's CLI command structs, which is exactly what cargoship wants, so importing it rather than reimplementing it was the right call. The reason it is now a fork is not a disagreement about the wrapper. It is eight blank imports' worth of binary.
 
@@ -18,13 +18,21 @@ Every one of those resolves a key by reaching a cloud endpoint - KMS for the key
 
 Go has no way to drop a transitive blank import. The package that writes `_ "…/kms/aws"` registers it for every binary that links the package, however the linker is invoked. Dropping the registration means not linking that package, which means owning a copy.
 
-## What the fork keeps
+## The second step: the CLI structs went too
 
-Everything cargoship called, unchanged: `SignBlobOptions`, `VerifyBlobOptions`, their `Default…` constructors, `CheckOverwrite`, `CosignSignBlobWithOptions`, `CosignVerifyBlobWithOptions`, and `ReadBundleInfo` with `SigningMethodKey` / `SigningMethodKeyless`. The bodies are zarf's, still delegating to `verify.VerifyBlobCmd` and `sign.SignBlobCmd`, so the verification semantics are cosign's and were not rewritten.
+Dropping the KMS registrations left the cosign CLI command structs in place, and they carry their own weight: `cmd/cosign/cli/verify` pulls Open Policy Agent through `pkg/cosign/rego` and cuelang through `pkg/cosign/cue`, both for policy evaluation cargoship never used, and `cmd/cosign/cli/options` pulls go-github and the GitLab client through `pkg/cosign/signature` for git-based key storage cargoship never used. Another 16 MB.
 
-Key-based signing and key-based verification are the hard requirement - a cargoship release is verified with `cosign verify-blob --key cosign.pub --bundle …`, and cargoship's own packages carry a `distro.bundle.sig`. Keyless *verification* also still works: it is `cmd/cosign/cli/verify` doing the work, and the embedded trusted root is still there for a verify that supplies no `--trusted-root`.
+Signing and verification are now `sigstore-go`, in `signkey.go` and `verifykey.go`: `sign.Bundle` with a `Keypair` adapter over a cosign-format private key, and `verify.NewVerifier` with `WithKey()` and `WithNoObserverTimestamps()`. The bundle format is unchanged, and the interoperability was tested in both directions - a cargoship-signed bundle verifies under `cosign verify-blob --key`, and a `cosign sign-blob` bundle verifies under cargoship. `TestSignBlobWithKeyRoundTrip` and `TestVerifyBlobWithKeyAgainstCosignCLI` pin both.
 
-What no longer works is signing or verifying against a cloud KMS key reference (`awskms://`, `azurekms://`, `gcpkms://`, `hashivault://`), and keyless signing that obtains its OIDC token from an ambient provider. Both need network egress to a cloud the air-gapped node cannot reach. A `COSIGN_PASSWORD`-protected local keypair is the supported path and is what the e2e suite exercises.
+One seam onto cosign's library is kept deliberately: `cosign.LoadPrivateKey` reads the encrypted private-key envelope, which is cosign's own scrypt and secretbox format. Re-deriving it here would be a way to get it subtly wrong, and the cost of keeping it is `sigstore/rekor` and `goleveldb` arriving through `cosign/pkg/cosign` - about 1.3 MB, which is worth paying for not reimplementing a key-decryption format.
+
+## What no longer works
+
+Keyless (Fulcio/OIDC) signing and verification, and cloud KMS key references (`awskms://`, `azurekms://`, `gcpkms://`, `hashivault://`). All of them need network egress to a cloud the air-gapped management node cannot reach. A `COSIGN_PASSWORD`-protected local keypair is the only signing method, and is what the e2e suite exercises.
+
+Whether keyless should return, and in what form, is [#848](https://github.com/colonel-byte/cargoship/issues/848). `sigstore-go/pkg/verify` supports `WithCertificateIdentity`, so keyless verification is reachable without relinking the CLI structs - which is the option that issue argues for.
+
+A package already signed keylessly cannot be verified. `VerifyPackage` detects that from the bundle via `ReadBundleInfo` and fails naming the method and the issue, rather than letting the key verifier report a mismatch it cannot explain.
 
 ## What was dropped as unused
 

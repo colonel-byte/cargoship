@@ -149,20 +149,6 @@ type DistroOptions struct {
 	Verify string `json:"verify,omitempty" mapstructure:"-" jsonschema:"enum=never,enum=if-possible,enum=always"` // mapstructure:"-": common_verify.go needs v.IsSet to distinguish "unset" from "set to zero value" (never read from the resolved struct)
 	// PublicKey path to public key file for validating signed packages
 	PublicKey string `json:"public_key,omitempty" mapstructure:"public_key"`
-	// CertificateIdentity required identity claim in the signing certificate
-	CertificateIdentity string `json:"certificate_identity,omitempty" mapstructure:"certificate_identity"`
-	// CertificateIdentityRegexp equired identity claim in the signing certificate, allows usage of regex
-	CertificateIdentityRegexp string `json:"certificate_identity_regexp,omitempty" mapstructure:"certificate_identity_regexp"`
-	// CertificateOIDCIssuer required OIDC issuer claim in the signing certificate
-	CertificateOIDCIssuer string `json:"certificate_oidc_issuer,omitempty" mapstructure:"certificate_oidc_issuer"`
-	// CertificateOIDCIssuerRegexp required OIDC issuer claim in the signing certificate, allows usage of regex
-	CertificateOIDCIssuerRegexp string `json:"certificate_oidc_issuer_regexp,omitempty" mapstructure:"certificate_oidc_issuer_regexp"`
-	// TrustedRoot path to a Sigstore TrustedRoot JSON
-	TrustedRoot string `json:"trusted_root,omitempty" mapstructure:"trusted_root"`
-	// InsecureIgnoreTLog
-	InsecureIgnoreTLog string `json:"insecure_ignore_tlog,omitempty" mapstructure:"-"` // mapstructure:"-": same v.IsSet reasoning as Verify above, plus this is really a bool (read via v.GetBool) despite the string type
-	// UseSignedTimestamps verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.
-	UseSignedTimestamps string `json:"use_signed_timestamps,omitempty" mapstructure:"-"` // mapstructure:"-": really a bool (read via v.GetBool in common_verify.go) despite the string type
 }
 
 // DistroCreateOptions holds the values for the `.distro.create` section of the config file
