@@ -334,10 +334,28 @@ func (d *Upstream) JoinTokenPathAgent() string {
 // same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to
 // account for.
 func (d *Upstream) StopControllerService(h *cluster.Host) error {
-	return h.StopService(context.Background(), d.GetControllerService())
+	return stopIfRunning(h, d.GetControllerService())
 }
 
 // StopWorkerService stops the worker service on the host.
 func (d *Upstream) StopWorkerService(h *cluster.Host) error {
-	return h.StopService(context.Background(), d.GetWorkerService())
+	return stopIfRunning(h, d.GetWorkerService())
+}
+
+// stopIfRunning stops the named service only when it is running, so a reset over a host that
+// never got that far is a no-op rather than a failure.
+//
+// systemd exits 5 with "Unit kubelet.service not loaded" for a service whose package was never
+// installed, and that is the ordinary state of a worker when a run failed before the controller
+// came up: its packages are staged under the package directory and nothing has been installed
+// from them. A reset has to be re-runnable over exactly that host -- it is the one an operator
+// reaches for when an apply failed half way -- and the uninstall that follows still has files to
+// remove whether or not a service was ever loaded. The rancher modules take the same guard, in
+// RancherCommon.stopService.
+func stopIfRunning(h *cluster.Host, service string) error {
+	ctx := context.Background()
+	if !h.ServiceIsRunning(ctx, service) {
+		return nil
+	}
+	return h.StopService(ctx, service)
 }

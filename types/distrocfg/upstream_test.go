@@ -386,3 +386,40 @@ func TestUpstreamStopWorkerService(t *testing.T) {
 		t.Fatalf("StopWorkerService() error = %v", err)
 	}
 }
+
+// TestUpstreamStopServiceToleratesAHostWithNoUnit is the reset an operator reaches for after an
+// apply failed half way.
+//
+// A worker whose packages were staged but never installed has no kubelet unit, and systemd exits
+// 5 with "Unit kubelet.service not loaded" for one, which failed the whole reset before the
+// uninstall could remove the files that *are* there. Both roles share one kubelet service here,
+// so both stops take the same guard.
+func TestUpstreamStopServiceToleratesAHostWithNoUnit(t *testing.T) {
+	d := newTestUpstream()
+
+	// Nothing running: the service was never installed, so there is nothing to stop and the
+	// fake would report an unexpected stop if one were attempted.
+	absent := &fakeHost{}
+	host := absent.attach(&cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker})
+	if err := d.StopWorkerService(host); err != nil {
+		t.Fatalf("StopWorkerService() error = %v, want nil for a host with no unit", err)
+	}
+	if err := d.StopControllerService(host); err != nil {
+		t.Fatalf("StopControllerService() error = %v, want nil for a host with no unit", err)
+	}
+	if len(absent.stopped) != 0 {
+		t.Fatalf("stopped = %v, want nothing attempted", absent.stopped)
+	}
+
+	// A running service is still stopped, which is the whole point of the call.
+	running := &fakeHost{
+		serviceRunning:      true,
+		allowServiceChanges: true,
+	}
+	if err := d.StopWorkerService(running.attach(&cluster.Host{Hostname: "worker-1"})); err != nil {
+		t.Fatalf("StopWorkerService() error = %v, want nil", err)
+	}
+	if want := []string{"kubelet"}; !reflect.DeepEqual(running.stopped, want) {
+		t.Fatalf("stopped = %v, want %v", running.stopped, want)
+	}
+}
