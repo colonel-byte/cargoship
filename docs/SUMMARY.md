@@ -124,6 +124,7 @@
 - [lint](golang/pkg/lint.md)
 - [node](golang/pkg/node.md)
 - [platform](golang/pkg/oci/platform.md)
+- [actions](golang/pkg/packager/actions.md)
 - [assemble](golang/pkg/packager/assemble.md)
 - [layout](golang/pkg/packager/layout.md)
 - [load](golang/pkg/packager/load.md)
@@ -198,6 +199,7 @@
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [ai-usage](agent/ai-usage.md)
+- [choice-actions-fork](agent/choice-actions-fork.md)
 - [choice-age-encryption](agent/choice-age-encryption.md)
 - [choice-ansible-module](agent/choice-ansible-module.md)
 - [choice-api-group-move](agent/choice-api-group-move.md)
