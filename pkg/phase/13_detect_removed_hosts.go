@@ -26,7 +26,6 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for.
@@ -143,8 +142,36 @@ func (p *DetectRemovedHosts) Run(ctx context.Context) error {
 	return fmt.Errorf("%w: %s", ErrUnmanagedNodes, strings.Join(unmanaged, ", "))
 }
 
+// kubectlNodeList is the subset of `kubectl get nodes -o json` this phase reads.
+//
+// The node list arrives as JSON from kubectl on the leader rather than from an API
+// client, so decoding it needs a shape, not the Kubernetes API types. Four fields are
+// read; depending on k8s.io/api for them linked the whole core/v1 group into the
+// binary for a struct this file can spell in twelve lines.
+type kubectlNodeList struct {
+	Items []kubectlNode `json:"items"`
+}
+
+// kubectlNode is one node in that list.
+type kubectlNode struct {
+	Metadata struct {
+		Name   string            `json:"name"`
+		Labels map[string]string `json:"labels"`
+	} `json:"metadata"`
+	Status struct {
+		Addresses []kubectlNodeAddress `json:"addresses"`
+	} `json:"status"`
+}
+
+// kubectlNodeAddress is one entry in a node's status.addresses. Only the address is
+// read: the comparison matches any address a node reports against any identifier a
+// host carries, so the type discriminator never enters into it.
+type kubectlNodeAddress struct {
+	Address string `json:"address"`
+}
+
 // listNodes returns every node joined to the cluster, read with kubectl on the leader.
-func (p *DetectRemovedHosts) listNodes() ([]corev1.Node, error) {
+func (p *DetectRemovedHosts) listNodes() ([]kubectlNode, error) {
 	if p.leader == nil {
 		return nil, ErrNoControllers
 	}
@@ -156,7 +183,7 @@ func (p *DetectRemovedHosts) listNodes() ([]corev1.Node, error) {
 		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	var list corev1.NodeList
+	var list kubectlNodeList
 	if err := json.Unmarshal([]byte(out), &list); err != nil {
 		return nil, fmt.Errorf("failed to parse the node list: %w", err)
 	}
@@ -179,7 +206,7 @@ func (p *DetectRemovedHosts) listNodes() ([]corev1.Node, error) {
 //
 // The comparison is case-insensitive: a node name is always lowercase, while a config hostname
 // need not be.
-func unmanagedNodes(hosts cluster.Hosts, nodes []corev1.Node) []string {
+func unmanagedNodes(hosts cluster.Hosts, nodes []kubectlNode) []string {
 	known := make(map[string]struct{}, len(hosts)*4)
 	for _, h := range hosts {
 		for _, id := range []string{h.Metadata.Hostname, h.Hostname, h.PrivateAddress, h.Address()} {
@@ -194,15 +221,15 @@ func unmanagedNodes(hosts cluster.Hosts, nodes []corev1.Node) []string {
 		if isKnownNode(&nodes[i], known) {
 			continue
 		}
-		unmanaged = append(unmanaged, fmt.Sprintf("%s (%s)", nodes[i].Name, nodeRole(&nodes[i])))
+		unmanaged = append(unmanaged, fmt.Sprintf("%s (%s)", nodes[i].Metadata.Name, nodeRole(&nodes[i])))
 	}
 	sort.Strings(unmanaged)
 	return unmanaged
 }
 
 // isKnownNode reports whether any identifier the node carries names a host in the config.
-func isKnownNode(node *corev1.Node, known map[string]struct{}) bool {
-	if _, ok := known[strings.ToLower(node.Name)]; ok {
+func isKnownNode(node *kubectlNode, known map[string]struct{}) bool {
+	if _, ok := known[strings.ToLower(node.Metadata.Name)]; ok {
 		return true
 	}
 	for _, addr := range node.Status.Addresses {
@@ -219,9 +246,9 @@ func isKnownNode(node *corev1.Node, known map[string]struct{}) bool {
 // nodeRole is "controller" for a node carrying any of the control plane labels, "worker"
 // otherwise. Removing a controller is the dangerous case: its etcd membership outlives the Node
 // object, so a cluster that looks smaller is still counting it towards quorum.
-func nodeRole(node *corev1.Node) string {
+func nodeRole(node *kubectlNode) string {
 	for _, label := range controlPlaneLabels {
-		if _, ok := node.Labels[label]; ok {
+		if _, ok := node.Metadata.Labels[label]; ok {
 			return "controller"
 		}
 	}
