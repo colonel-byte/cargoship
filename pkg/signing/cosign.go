@@ -60,8 +60,7 @@ var nonPromptingPassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
 	return nil, nil
 })
 
-// SignBlobOptions holds signing configuration for zarf blob operations.
-// SignBlobOptions holds signing configuration for zarf blob operations.
+// SignBlobOptions holds the signing configuration for a blob.
 type SignBlobOptions struct {
 	Key              string
 	Base64Output     bool
@@ -90,8 +89,7 @@ type SignBlobOptions struct {
 	KeyRef string
 }
 
-// VerifyBlobOptions holds verification configuration for zarf blob operations.
-// VerifyBlobOptions holds verification configuration for zarf blob operations.
+// VerifyBlobOptions holds the verification configuration for a blob.
 type VerifyBlobOptions struct {
 	Key        string
 	Signature  string
