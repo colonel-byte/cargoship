@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -765,6 +766,54 @@ func planFor(t *testing.T, model clusterResourceModel) tfsdk.Plan {
 		t.Fatalf("the model does not fit the schema: %v", diags)
 	}
 	return plan
+}
+
+// configFor renders a model into the tfsdk.Config a plan modifier reads a sibling attribute from.
+func configFor(t *testing.T, model clusterResourceModel) tfsdk.Config {
+	t.Helper()
+
+	plan := planFor(t, model)
+	return tfsdk.Config(plan)
+}
+
+// TestUseBoolStateForUnknownLeavesAnAbsentHostUnknown is the removal the modifier used to plan
+// wrong: `removed` is false in state for a host the configuration has now marked absent, and
+// planning that false fails the apply that sets it true with "provider produced inconsistent
+// result after apply" -- over a removal that ran.
+func TestUseBoolStateForUnknownLeavesAnAbsentHostUnknown(t *testing.T) {
+	model := clusterModelFor()
+	for name, host := range model.Hosts {
+		host.Removed = types.BoolValue(false)
+		if name == "worker" {
+			host.State = types.StringValue(hostStateAbsent)
+		}
+		model.Hosts[name] = host
+	}
+
+	req := planmodifier.BoolRequest{
+		Path:       path.Root("hosts").AtMapKey("worker").AtName("removed"),
+		Config:     configFor(t, model),
+		State:      stateFor(t, model),
+		StateValue: types.BoolValue(false),
+		PlanValue:  types.BoolUnknown(),
+	}
+	var resp planmodifier.BoolResponse
+	resp.PlanValue = req.PlanValue
+	useBoolStateForUnknownModifier{}.PlanModifyBool(context.Background(), req, &resp)
+
+	if !resp.PlanValue.IsUnknown() {
+		t.Errorf("the plan value is %s, want it left unknown for a host marked absent", resp.PlanValue)
+	}
+
+	// Every other host keeps the recorded value, which is what makes the same apply plan no
+	// change for the hosts it is leaving alone.
+	req.Path = path.Root("hosts").AtMapKey("controller").AtName("removed")
+	resp.PlanValue = types.BoolUnknown()
+	useBoolStateForUnknownModifier{}.PlanModifyBool(context.Background(), req, &resp)
+
+	if !resp.PlanValue.Equal(types.BoolValue(false)) {
+		t.Errorf("the plan value is %s, want the recorded false for a host that stays", resp.PlanValue)
+	}
 }
 
 // TestModifyPlanRefusesAnEmptiedCluster is the same refusal as the apply-time one, moved to where
