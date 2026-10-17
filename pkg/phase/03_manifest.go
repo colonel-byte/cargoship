@@ -16,6 +16,8 @@ package phase
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
@@ -157,10 +159,29 @@ func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.Host,
 func (p *GenericPhase) removeStaleManifestEntries(ctx context.Context, h *cluster.Host, old, current []ManifestEntry) {
 	for _, e := range diffManifest(old, current) {
 		logger.From(ctx).Info("removing stale upload from previous install", "host", h, "category", e.Category, "path", e.Path)
-		if err := h.DeleteFile(e.Path); err != nil {
+		if err := deleteRecordedUpload(ctx, h, e.Path); err != nil {
 			logger.From(ctx).Warn("failed to remove stale upload", "host", h, "path", e.Path, "error", err)
 		}
 	}
+}
+
+// deleteRecordedUpload removes one file the manifest recorded, reporting a file that is already
+// gone as the success it is.
+//
+// An uninstall removes the engine's data and config directories before it walks the manifest, so
+// every file the manifest recorded inside them has gone with them -- eight image tarballs on a
+// k3s node, each warned about individually, over work the run had already done. The state being
+// asked for is the file's absence, and it holds either way.
+func deleteRecordedUpload(ctx context.Context, h *cluster.Host, path string) error {
+	err := h.DeleteFile(path)
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		logger.From(ctx).Debug("the uploaded file was already gone", "host", h, "path", path)
+		return nil
+	}
+	return err
 }
 
 // cleanUploadManifest deletes every file listed in h's upload manifest, then the manifest
@@ -174,7 +195,7 @@ func (p *GenericPhase) cleanUploadManifest(ctx context.Context, h *cluster.Host)
 
 	for _, e := range entries {
 		logger.From(ctx).Info("removing uploaded file", "host", h, "category", e.Category, "path", e.Path)
-		if err := h.DeleteFile(e.Path); err != nil {
+		if err := deleteRecordedUpload(ctx, h, e.Path); err != nil {
 			logger.From(ctx).Warn("failed to remove uploaded file", "host", h, "path", e.Path, "error", err)
 		}
 	}

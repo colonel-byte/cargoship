@@ -15,10 +15,52 @@
 package phase
 
 import (
+	"context"
+	"errors"
+	"io/fs"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 )
+
+// removeFS answers one Remove with the error it is given, and records what it was asked to
+// remove.
+type removeFS struct {
+	remotefs.FS
+
+	err     error
+	removed []string
+}
+
+func (r *removeFS) Remove(path string) error {
+	r.removed = append(r.removed, path)
+	return r.err
+}
+
+// TestDeleteRecordedUploadTreatsAMissingFileAsDone is the noise an uninstall used to make about
+// work it had already done: it removes the engine's data and config directories first, so every
+// file the manifest recorded inside them is gone by the time the manifest is walked, and each one
+// was warned about by path.
+func TestDeleteRecordedUploadTreatsAMissingFileAsDone(t *testing.T) {
+	t.Parallel()
+
+	const path = "/var/lib/rancher/k3s/agent/images/app_v1.tar"
+
+	gone := &removeFS{err: remotefs.PathError("remove", path, fs.ErrNotExist)}
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(gone)
+	require.NoError(t, deleteRecordedUpload(context.Background(), h, path))
+	require.Equal(t, []string{path}, gone.removed, "the removal was not attempted")
+
+	// Every other reason a file would not go is still the caller's to report: a reset that
+	// cannot remove what it uploaded has left the host holding it.
+	denied := errors.New("permission denied")
+	refused := &removeFS{err: remotefs.PathError("remove", path, denied)}
+	h.SetFS(refused)
+	require.ErrorIs(t, deleteRecordedUpload(context.Background(), h, path), denied)
+}
 
 func TestEncodeParseManifestRoundTrip(t *testing.T) {
 	entries := []ManifestEntry{

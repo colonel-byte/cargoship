@@ -2110,7 +2110,7 @@ type ManagerDistroConfig struct {
 ```
 
 <a name="ManifestEntry"></a>
-## type [ManifestEntry](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L38-L43>)
+## type [ManifestEntry](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L40-L45>)
 
 ManifestEntry is a single file cargoship uploaded to a host, recorded so it can be found and removed later during an upgrade or uninstall.
 
@@ -2124,7 +2124,7 @@ type ManifestEntry struct {
 ```
 
 <a name="ParseManifest"></a>
-### func [ParseManifest](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L55>)
+### func [ParseManifest](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L57>)
 
 ```go
 func ParseManifest(content string) []ManifestEntry
