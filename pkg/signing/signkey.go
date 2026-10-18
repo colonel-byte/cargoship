@@ -43,7 +43,7 @@ type cosignKeypair struct {
 // newCosignKeypair loads an encrypted cosign private key, the format
 // `cosign generate-key-pair` writes.
 func newCosignKeypair(keyPath, password string) (*cosignKeypair, error) {
-	keyBytes, err := os.ReadFile(keyPath)
+	keyBytes, err := readKeyMaterial(keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading the private key: %w", err)
 	}

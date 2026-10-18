@@ -38,7 +38,7 @@ import (
 // It is deliberately not a replacement for CosignVerifyBlobWithOptions, which still
 // covers the certificate and keyless paths. See docs/agent/choice-signing-fork.md.
 func VerifyBlobWithKey(publicKeyPath, bundlePath, blobPath string) (err error) {
-	pubBytes, err := os.ReadFile(publicKeyPath)
+	pubBytes, err := readKeyMaterial(publicKeyPath)
 	if err != nil {
 		return fmt.Errorf("reading the public key: %w", err)
 	}

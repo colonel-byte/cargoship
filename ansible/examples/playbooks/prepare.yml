@@ -33,10 +33,9 @@
           firewall: true
           fapolicyd: false
 
-          # Signature verification, key-based. Keyless verification identifies a signer against a
-          # Fulcio root and a transparency log, which needs network a management node inside an
-          # airlock does not have; verify a keyless-signed package with `cargoship package verify`
-          # before the play.
+          # Signature verification, key-based. A Cosign key pair is cargoship's only signing
+          # method; keyless verification was removed because identifying a signer against a
+          # Fulcio root and a transparency log needs network an airlocked node does not have.
           public_key: /srv/staging/keys/cosign.pub
           verify: always
 
