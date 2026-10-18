@@ -28,6 +28,7 @@ Several directories carry their own `AGENTS.md` with rules specific to that dire
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | [`docs/AGENTS.md`](docs/AGENTS.md)                                                     | Markdown formatting, generated pages                                                                                |
 | [`.github/AGENTS.md`](.github/AGENTS.md)                                               | Scorecard-safe workflow changes, PR description format                                                              |
+| [`test/AGENTS.md`](test/AGENTS.md)                                                     | What the three e2e backends do and do not cover, and which one to reach for                                         |
 | [`test/e2e/AGENTS.md`](test/e2e/AGENTS.md)                                             | Fixtures belong in files, not Go string constants                                                                   |
 | [`example/AGENTS.md`](example/AGENTS.md)                                               | Generated versus hand-written                                                                                       |
 | [`ansible/AGENTS.md`](ansible/AGENTS.md)                                               | Markdown/string formatting rules that feed generated docs                                                           |
@@ -36,7 +37,7 @@ Several directories carry their own `AGENTS.md` with rules specific to that dire
 | [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                     | Don't name two `Fuzz*` functions where one is a prefix of the other                                                 |
 | [`magefiles/AGENTS.md`](magefiles/AGENTS.md)                                           | Mage target layout and structure rules; how pinned versions, digests, and checksums are kept current                |
 
-`CLAUDE.md` in the repository root is a symlink to this file, so a Claude Code session started there loads these rules without being asked. That covers the root and nothing else: the directory-specific files in the table above are not symlinked, so a session whose working directory is `docs/`, `test/e2e/`, `fuzz/`, `example/`, `config/lang/`, or `ansible/` starts with none of their rules in context. The root is where a session normally starts, so this is usually moot - but do not treat "nothing was loaded for me" as "there are no rules here", and do not grep a rules file for the one thing you thought to ask about. Open the closest `AGENTS.md` and read it before writing anything in that directory.
+`CLAUDE.md` in the repository root is a symlink to this file, so a Claude Code session started there loads these rules without being asked. That covers the root and nothing else: the directory-specific files in the table above are not symlinked, so a session whose working directory is `docs/`, `test/`, `test/e2e/`, `fuzz/`, `example/`, `config/lang/`, or `ansible/` starts with none of their rules in context. The root is where a session normally starts, so this is usually moot - but do not treat "nothing was loaded for me" as "there are no rules here", and do not grep a rules file for the one thing you thought to ask about. Open the closest `AGENTS.md` and read it before writing anything in that directory.
 
 ## Building and testing
 
@@ -74,6 +75,18 @@ It was **100.71 MiB** as of `f3678071b` and is **39.48 MiB** now; [#846](https:/
 Which is the practical rule: **the cost of a dependency is what it links, not what you call.** One import of a helper package for four symbols pulled `docker/cli` and the Docker daemon client; one typed Kubernetes client registered all 59 API groups; one `actions.Run` call linked `kubectl` and `kustomize`. Check with `go list -deps ./cmd/cargoship` before adding an import, and read the section below before quoting any number.
 
 Note the units. These are **MiB** - what `ls`, `du` and `ls -la | awk '{$5/1048576}'` report - not decimal megabytes. The difference is about 5% at this size, which is enough to argue past each other over.
+
+### The cluster suite runs on three backends, and they cover different things
+
+`mage test:endToEndCluster` provisions privileged containers with bootloose. `CARGOSHIP_E2E_BACKEND=microvm` provisions Rocky virtual machines instead, and is the only way the SELinux, fapolicyd and firewalld phases run as the paths they are rather than as gates that correctly do nothing. `CARGOSHIP_E2E_BACKEND=inventory` runs against hosts that already exist and provisions nothing.
+
+They are not interchangeable, and a walk that passed on one says less than it looks about the others:
+
+- the **container** backend carries several OS families, so it is what exercises the family-routed branches, and it reports no SELinux, runs no fapolicyd and has no firewall of its own
+- the **VM** backend runs one distribution and cannot reach the cluster API from the host, so every step that talks to Kubernetes skips there
+- the **external** backend provisions nothing, so the join walk is skipped rather than failed
+
+A result is only as good as the backend that produced it. Before reporting a suite run, check which steps **skipped** rather than only which failed - a skip on this suite usually means a capability the backend does not have, and reading a run with fifteen of them as a pass is the mistake this section exists to prevent. [`test/AGENTS.md`](test/AGENTS.md) has the per-backend detail and the gaps each one leaves.
 
 ### Measuring binary size means building the way a release does
 

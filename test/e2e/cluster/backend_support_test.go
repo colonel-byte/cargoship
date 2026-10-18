@@ -150,12 +150,27 @@ func provision(ctx context.Context, spec fleetSpec) (apicluster.Cluster, error) 
 		return hostsNamedBy(inv, spec), nil
 
 	case backendMicroVM:
-		fleet, err := microvm.Up(ctx, microvmSpec(spec))
-		if err != nil {
-			return apicluster.Cluster{}, err
+		// The fleet is brought up once, at the size the join walk will need, and every
+		// later call selects out of it rather than provisioning again.
+		//
+		// microvm.Up refuses a fleet that is already up rather than adopting one, on
+		// purpose: a node carrying the state of a previous run is what makes a phase
+		// failure impossible to reason about. bootloose has no such rule -- CreateMachine
+		// skips a container that already exists -- so the join walk's second provision
+		// is a no-op plus one new container there and a refusal here.
+		//
+		// Holding a host out of a walk is already how the external-inventory backend
+		// works, so this reuses it: provision the superset, then narrow with
+		// hostsNamedBy, which is what the apply walk's spec and the join walk's spec
+		// differ by. See test/AGENTS.md.
+		if vmFleet == nil {
+			fleet, err := microvm.Up(ctx, microvmSpec(clusterConfig().withJoinMachine()))
+			if err != nil {
+				return apicluster.Cluster{}, err
+			}
+			vmFleet = &fleet
 		}
-		vmFleet = &fleet
-		return microvm.Inventory(fleet), nil
+		return hostsNamedBy(microvm.Inventory(*vmFleet), spec), nil
 
 	default:
 		cluster, err := setup(spec)
