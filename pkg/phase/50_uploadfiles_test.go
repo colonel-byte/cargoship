@@ -15,9 +15,11 @@
 package phase
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,8 +30,8 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
-	carch "github.com/colonel-byte/cargoship/pkg/oci/archive"
 	"github.com/containerd/platforms"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -258,9 +260,12 @@ func TestExportImagesForArchWritesPerArchTarballs(t *testing.T) {
 	})
 	p.imgFiles = map[api.Arch][]v1alpha1.File{}
 
-	archiveStore := &carch.OciArchiveStore{Root: imagesPath, Src: store}
+	lp, err := layout.FromPath(imagesPath)
+	if err != nil {
+		t.Fatalf("failed to open the image layout: %v", err)
+	}
 	for _, arch := range []api.Arch{api.ArchAMD64, api.ArchARM64} {
-		if err := p.exportImagesForArch(ctx, store, archiveStore, arch); err != nil {
+		if err := p.exportImagesForArch(ctx, store, lp, arch); err != nil {
 			t.Fatalf("exportImagesForArch(%s) unexpected error: %v", arch, err)
 		}
 	}
@@ -276,6 +281,8 @@ func TestExportImagesForArchWritesPerArchTarballs(t *testing.T) {
 		if files[0].LocalSource.Path != want {
 			t.Errorf("tarball path = %q, want %q", files[0].LocalSource.Path, want)
 		}
+
+		assertTarballNamesImage(t, files[0].LocalSource.Path, ref)
 
 		b, err := os.ReadFile(files[0].LocalSource.Path)
 		if err != nil {
@@ -319,7 +326,12 @@ func TestExportImagesForArchWithoutAMatchingManifest(t *testing.T) {
 	})
 	p.imgFiles = map[api.Arch][]v1alpha1.File{}
 
-	err = p.exportImagesForArch(ctx, store, &carch.OciArchiveStore{Root: imagesPath, Src: store}, api.ArchARM64)
+	lp, err := layout.FromPath(imagesPath)
+	if err != nil {
+		t.Fatalf("failed to open the image layout: %v", err)
+	}
+
+	err = p.exportImagesForArch(ctx, store, lp, api.ArchARM64)
 	if err == nil {
 		t.Fatal("exportImagesForArch() returned no error for an image the index has no arm64 manifest for")
 	}
@@ -438,4 +450,100 @@ func TestDistroFilesForSelectsByProfileAndWhen(t *testing.T) {
 			require.Equal(t, tt.want, names)
 		})
 	}
+}
+
+// TestExportImagesForArchWritesASingleArchImage covers the other half of layoutImage: an image
+// pulled for one architecture is tagged as a manifest rather than an index, so it is read straight
+// out of index.json instead of through a parent.
+func TestExportImagesForArchWritesASingleArchImage(t *testing.T) {
+	ctx := context.Background()
+	const ref = "ghcr.io/colonel-byte/pause:3.10"
+
+	tempDir := t.TempDir()
+	imagesPath := filepath.Join(tempDir, config.ImagesDir)
+	store, err := oci.NewWithContext(ctx, imagesPath)
+	if err != nil {
+		t.Fatalf("failed to create the store: %v", err)
+	}
+	manifestDesc := pushImageManifest(ctx, t, store, "amd64")
+	if err := store.Tag(ctx, manifestDesc, ref); err != nil {
+		t.Fatalf("failed to tag the manifest: %v", err)
+	}
+
+	p := &UploadFiles{}
+	p.SetManager(&Manager{
+		TempDirectory: tempDir,
+		Distro: &distro.Distro{
+			Spec: distro.Spec{
+				Config: distro.Config{
+					ImagesConfig: distro.ImageConfig{
+						Images: []string{ref},
+						Path:   "/var/lib/rancher/k3s/agent/images",
+					},
+				},
+			},
+		},
+	})
+	p.imgFiles = map[api.Arch][]v1alpha1.File{}
+
+	lp, err := layout.FromPath(imagesPath)
+	if err != nil {
+		t.Fatalf("failed to open the image layout: %v", err)
+	}
+	if err := p.exportImagesForArch(ctx, store, lp, api.ArchAMD64); err != nil {
+		t.Fatalf("exportImagesForArch() unexpected error: %v", err)
+	}
+
+	files := p.imgFiles[api.ArchAMD64]
+	if len(files) != 1 {
+		t.Fatalf("imgFiles[amd64] has %d entries, want 1", len(files))
+	}
+	assertTarballNamesImage(t, files[0].LocalSource.Path, ref)
+}
+
+// assertTarballNamesImage reads the docker-save manifest out of a tarball and checks it names the
+// image by the reference the distro config asked for. A tarball whose RepoTags do not match is
+// imported under a name no pod spec refers to, which an "image exists on the host" check misses.
+func assertTarballNamesImage(t *testing.T, path, ref string) {
+	t.Helper()
+
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("failed to open the tarball: %v", err)
+	}
+	defer func() { require.NoError(t, f.Close()) }()
+
+	tr := tar.NewReader(f)
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("failed to read the tarball: %v", err)
+		}
+		if h.Name != "manifest.json" {
+			continue
+		}
+
+		var m []struct {
+			Config   string   `json:"Config"`
+			RepoTags []string `json:"RepoTags"`
+			Layers   []string `json:"Layers"`
+		}
+		if err := json.NewDecoder(tr).Decode(&m); err != nil {
+			t.Fatalf("failed to decode manifest.json: %v", err)
+		}
+		if len(m) != 1 {
+			t.Fatalf("manifest.json holds %d entries, want 1", len(m))
+		}
+		if got := m[0].RepoTags; len(got) != 1 || got[0] != ref {
+			t.Errorf("RepoTags = %v, want [%s]", got, ref)
+		}
+		if m[0].Config == "" {
+			t.Error("manifest.json names no config blob")
+		}
+		return
+	}
+	t.Error("the tarball holds no manifest.json, so nothing will import it")
 }

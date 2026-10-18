@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	cargoshiptest "github.com/colonel-byte/cargoship/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -48,12 +49,12 @@ func (s *phaseWalk) labelNodes() {
 	cs, err := e2e.KubeClient(s.T())
 	s.Require().NoError(err)
 
-	nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	nodes, err := cs.Resource(cargoshiptest.NodesResource).List(context.Background(), metav1.ListOptions{})
 	s.Require().NoError(err)
 
 	labels := make(map[string]map[string]string, len(nodes.Items))
 	for _, node := range nodes.Items {
-		labels[strings.ToLower(node.Name)] = node.Labels
+		labels[strings.ToLower(node.GetName())] = node.GetLabels()
 	}
 
 	for _, host := range s.harness.hosts() {

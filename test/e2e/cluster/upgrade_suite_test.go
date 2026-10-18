@@ -33,8 +33,9 @@ import (
 // version is already the newest patch in its own minor. Keyed by distroID so distroEnvVar
 // picks the right upgrade target too.
 var exampleUpgradeDefinitions = map[string]string{ //nolint:gochecknoglobals
-	"rke2": "example/rke2-multi-cni-cilium/v1_37/v1.37.0-rke2r1",
-	"k3s":  "example/k3s-flannel/v1_37/v1.37.0-k3s1",
+	"rke2":     "example/rke2-multi-cni-cilium/v1_37/v1.37.0-rke2r1",
+	"k3s":      "example/k3s-flannel/v1_37/v1.37.0-k3s1",
+	"upstream": "example/upstream-cilium/v1_37/v1.37.0",
 }
 
 // exampleUpgradePackage is the distro definition the upgrade walk installs.

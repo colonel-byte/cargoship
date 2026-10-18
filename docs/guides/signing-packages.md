@@ -1,6 +1,8 @@
 # Signing Packages
 
-This guide explains how Cargoship signs and verifies packages. It covers key pair generation, the three points where you can sign, keyless (Sigstore) signing, and verification.
+This guide explains how Cargoship signs and verifies packages. It covers key pair generation, the three points where you can sign, and verification.
+
+A Cosign key pair is the only signing method. Keyless (Fulcio/OIDC) signing and verification, and cloud KMS key references, were removed: all of them need to reach a cloud endpoint, and the management node Cargoship runs from is air-gapped. If you need keyless back, say so on [issue #848](https://github.com/colonel-byte/cargoship/issues/848).
 
 ## What Gets Signed
 
@@ -37,21 +39,19 @@ Restrict the private key file to the signing user:
 chmod 600 cosign.key
 ```
 
-### Key Providers Instead of Files
+### Keeping the Key Off Disk
 
-`--signing-key` accepts a local file path or a Cosign key provider URI. A provider URI keeps the private key off the build host.
+`--signing-key` accepts a local file path, or `env://NAME` to read the PEM out of an environment variable. The environment form keeps the private key off the build host's filesystem, which is what a CI pipeline wants.
 
-| Provider                  | Example                                                                             |
-| ------------------------- | ----------------------------------------------------------------------------------- |
-| Environment variable      | `env://COSIGN_PRIVATE_KEY`                                                          |
-| AWS KMS                   | `awskms:///alias/my-signing-key`, or `awskms://[ENDPOINT]/[ID/ALIAS/ARN]`           |
-| GCP KMS                   | `gcpkms://projects/[PROJECT]/locations/[LOCATION]/keyRings/[RING]/cryptoKeys/[KEY]` |
-| Azure Key Vault           | `azurekms://[VAULT_NAME][VAULT_URL]/[KEY_NAME]/[VERSION]` (version optional)        |
-| HashiCorp Vault / OpenBao | `hashivault://[KEY]`, `openbao://[KEY]`                                             |
+```sh
+export COSIGN_PRIVATE_KEY="$(cat cosign.key)"
+export COSIGN_PASSWORD=...
+cargoship sign ./my-package.tar.zst --signing-key env://COSIGN_PRIVATE_KEY
+```
 
-The Cargoship release pipeline uses the environment variable form. GitHub Actions stores the private key as a secret. GoReleaser receives the key as `--key=env://COSIGN_PRIVATE_KEY`, together with `COSIGN_PASSWORD`.
+`--key` takes the same two forms when verifying, so a public key can come from `env://COSIGN_PUBLIC_KEY` as well as from a file.
 
-For a KMS provider, create the key with an algorithm that Cosign supports. ECDSA P-256 with SHA-256 is the usual choice. The signing identity needs sign permission and get-public-key permission on that key.
+Cloud KMS references -- `awskms://`, `gcpkms://`, `azurekms://`, `hashivault://`, `openbao://` -- are **not** supported. Each resolves a key by reaching a cloud endpoint, which an air-gapped management node cannot do. Passing one fails naming the scheme rather than reporting a missing file.
 
 ## Signing a Package
 
@@ -106,43 +106,6 @@ cargoship sign ./my-package.tar.zst --signing-key ./new-cosign.key --overwrite
 
 Add `--verify=always --key ./old-cosign.pub` to check the existing signature against the old key first. Use this form for key rotation. It proves the package is the one you expect before the new signature replaces the old one.
 
-## Keyless Signing
-
-`cargoship sign --keyless` signs without a private key. Cargoship exchanges an OIDC identity token with Fulcio for a signing certificate. The certificate is valid for about 10 minutes. Cargoship signs the package with the ephemeral key and records the signing identity in the bundle.
-
-```
-cargoship sign ./my-package.tar.zst --keyless
-```
-
-`--keyless` and `--signing-key` are mutually exclusive.
-
-The flow opens a browser by default. In CI, supply a token instead. `--identity-token` accepts the token itself or a path to a file that contains one.
-
-```
-cargoship sign ./my-package.tar.zst --keyless --identity-token "$ACTIONS_ID_TOKEN" --confirm
-```
-
-`--fulcio-auth-flow` selects the flow: `normal` (browser), `device` (device code, for a headless terminal), `token`, or `client_credentials`.
-
-### Keyless Signatures Need a Timestamp Anchor
-
-The Fulcio certificate expires in about 10 minutes. After expiry, nobody can verify the signature without proof that you made it while the certificate was valid. Two mechanisms supply that proof:
-
-* **Rekor transparency log.** `--tlog-upload` uploads the signature to the public Rekor log and produces an inclusion proof. Cargoship enables this flag for `--keyless` unless you pass `--tlog-upload=false`. The upload is public and permanent, so Cargoship prompts first. `--confirm` skips the prompt.
-* **RFC3161 timestamp authority.** `--tsa-server-url` embeds a signed timestamp in the bundle. This mechanism publishes nothing to a public log.
-
-```
-cargoship sign ./my-package.tar.zst --keyless \
-  --tsa-server-url https://timestamp.sigstore.dev/api/v1/timestamp \
-  --tlog-upload=false --confirm
-```
-
-Cargoship warns you when you use neither mechanism. The signature then stops being verifiable when the certificate expires.
-
-### Private Sigstore Deployments
-
-`--fulcio-url`, `--rekor-url`, `--oidc-issuer`, and `--oidc-client-id` direct the keyless flow to a self-hosted Sigstore stack instead of the public instances. Everyone who verifies those signatures needs the matching `--trusted-root`. See [Transparency Log and Trusted Root](#transparency-log-and-trusted-root).
-
 ## Verifying a Package
 
 Every command that loads a package accepts `--verify`: `sign`, `publish`, `pull`, `apply`, `prepare`, and `engine-config-sync`. The flag takes one of three modes.
@@ -161,28 +124,6 @@ Pass the public key with `--key` or `-k`.
 cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./cosign.pub
 ```
 
-### Keyless Verification
-
-Cargoship verifies a keyless signature against the identity claims in the signing certificate instead of a key. You must supply both the identity and the issuer.
-
-```
-cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always \
-  --certificate-identity signer@example.com \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-```
-
-For a package signed by a workflow, the identity is the workflow reference.
-
-```
-cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always \
-  --certificate-identity 'https://github.com/my-org/my-repo/.github/workflows/release.yml@refs/heads/main' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-```
-
-`--certificate-identity-regexp` and `--certificate-oidc-issuer-regexp` are the pattern-matching variants. Each variant is mutually exclusive with its literal counterpart. All four flags are mutually exclusive with `--key`.
-
-Cargoship reports a method-specific error when you supply the wrong kind of material. This applies when you verify a key-signed package with identity flags, and in the opposite case. The message replaces a generic Cosign error.
-
 ### Verification on the Install Path
 
 `apply`, `prepare`, and `engine-config-sync` verify the package before they touch any host. They accept the same flags as `pull`, and they read the same config keys.
@@ -196,14 +137,6 @@ Set `verify: always` and `public_key` in the config file to apply this policy to
 
 Verification runs while Cargoship loads the package. A failure stops the command before it configures a node.
 
-### Transparency Log and Trusted Root
-
-`--insecure-ignore-tlog` defaults to `true`. A Rekor inclusion check needs network access, and an air-gapped install has none. Cargoship disables the flag when you set keyless identity flags. A keyless signature depends on the Rekor inclusion proof to stay verifiable after the certificate expires.
-
-`--use-signed-timestamps` verifies RFC3161 timestamps in the bundle. Cargoship enables the flag when the bundle contains TSA timestamp data. You rarely set it manually.
-
-`--trusted-root` gives the path to a Sigstore TrustedRoot JSON file. Cargoship uses the copy embedded in the binary when you omit the flag. The embedded copy makes offline verification of public Sigstore signatures possible. Supply your own file to verify signatures from a private Sigstore deployment.
-
 ## Configuration File and Environment Variables
 
 Set signing and verification options in `cargoship-config.yaml` to avoid repeating them on every command. The `distro.verify` and `distro.public_key` keys apply to every command that loads a package, including `apply`.
@@ -213,10 +146,6 @@ distro:
   # verification defaults, applied to any command that loads a package
   verify: always
   public_key: /etc/cargoship/cosign.pub
-  # or, for keyless-signed packages:
-  # certificate_identity: signer@example.com
-  # certificate_oidc_issuer: https://token.actions.githubusercontent.com
-  # trusted_root: /etc/cargoship/trusted-root.json
   publish:
     signing_key: /etc/cargoship/cosign.key
     signing_key_password: hunter2
@@ -234,7 +163,7 @@ Note the doubled prefix. `DISTRO_` is the environment prefix. The second `DISTRO
 
 Command-line flags take precedence over the config file and the environment.
 
-`signing_key_password` in the config file puts a plaintext secret on disk. Use the environment variable instead, or use a key provider such as `awskms://` or `hashivault://` that removes the local key.
+`signing_key_password` in the config file puts a plaintext secret on disk. Use the environment variable instead, and `env://` for the key itself, so neither the key nor its password is written to the build host.
 
 ## Recommended CI Pattern
 

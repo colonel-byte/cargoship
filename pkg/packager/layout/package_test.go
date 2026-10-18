@@ -24,8 +24,8 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 func TestDigest(t *testing.T) {
@@ -224,31 +224,6 @@ func TestSignOptionsShouldSign(t *testing.T) {
 			name: "deprecated key reference",
 			opts: SignOptions{
 				SignBlobOptions: signing.SignBlobOptions{KeyRef: "cosign.key"}, //nolint:staticcheck // the deprecated field is what this row covers
-			},
-			want: true,
-		},
-		{
-			name: "fulcio identity token",
-			opts: func() SignOptions {
-				var o SignOptions
-				o.Fulcio.IdentityToken = "a-token"
-				return o
-			}(),
-			want: true,
-		},
-		{
-			name: "hardware security key",
-			opts: func() SignOptions {
-				var o SignOptions
-				o.SecurityKey.Use = true
-				return o
-			}(),
-			want: true,
-		},
-		{
-			name: "keyless with no other material",
-			opts: SignOptions{
-				Keyless: true,
 			},
 			want: true,
 		},

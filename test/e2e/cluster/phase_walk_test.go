@@ -23,8 +23,10 @@ import (
 
 	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	cargoshiptest "github.com/colonel-byte/cargoship/test"
 	"github.com/stretchr/testify/suite"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // phaseWalk is what ApplyPhaseSuite, JoinPhaseSuite and UpgradePhaseSuite have in common: one
@@ -150,12 +152,17 @@ func (s *phaseWalk) requireSchedulable(hosts apicluster.Hosts) {
 	cs, err := e2e.KubeClient(s.T())
 	s.Require().NoError(err)
 
-	nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	nodes, err := cs.Resource(cargoshiptest.NodesResource).List(context.Background(), metav1.ListOptions{})
 	s.Require().NoError(err)
 
 	unschedulable := make(map[string]bool, len(nodes.Items))
-	for _, node := range nodes.Items {
-		unschedulable[strings.ToLower(node.Name)] = node.Spec.Unschedulable
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+		// A node that never set spec.unschedulable is schedulable, which is what a
+		// missing field reads as here.
+		cordoned, _, err := unstructured.NestedBool(node.Object, "spec", "unschedulable")
+		s.Require().NoError(err)
+		unschedulable[strings.ToLower(node.GetName())] = cordoned
 	}
 
 	for _, host := range hosts {

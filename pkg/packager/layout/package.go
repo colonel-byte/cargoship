@@ -39,12 +39,12 @@ import (
 	"github.com/colonel-byte/cargoship/internal/cfg"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/colonel-byte/cargoship/pkg/utils"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 // Digest returns the OCI manifest digest for this package layout.
@@ -437,25 +437,18 @@ func (d *DistroLayout) IsSigned() bool {
 	return false
 }
 
-// SignOptions carries the cosign signing configuration plus the cargoship-side
-// keyless flag. zarf v0.87.0 dropped signing.SignBlobOptions.Keyless and its
-// ShouldSign method, so cargoship owns the signing gate.
+// SignOptions carries the signing configuration. zarf v0.87.0 dropped
+// signing.SignBlobOptions.Keyless and its ShouldSign method, so cargoship owns the
+// signing gate.
 type SignOptions struct {
 	signing.SignBlobOptions
-
-	// Keyless gates cargoship-specific sign-side guards on top of cosign's behavior.
-	// When true, --signing-key is no longer required and ShouldSign returns true even
-	// without explicit Key/IdentityToken/SecurityKey material - cosign resolves identity
-	// via Fulcio/OIDC at sign time.
-	Keyless bool
 }
 
-// ShouldSign returns true if any signing key material is configured, or if the
-// keyless flow is selected. KeyRef is included for backward compatibility; it is
-// synced to Key in signing.CosignSignBlobWithOptions.
+// ShouldSign returns true if a signing key is configured. A cosign keypair is the
+// only signing method; KeyRef is included for backward compatibility and is synced
+// to Key in signing.CosignSignBlobWithOptions.
 func (opts SignOptions) ShouldSign() bool {
-	return opts.Key != "" || opts.KeyRef != "" || //nolint:staticcheck // KeyRef is deprecated upstream but still honored here
-		opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use || opts.Keyless
+	return opts.Key != "" || opts.KeyRef != "" //nolint:staticcheck // KeyRef is deprecated upstream but still honored here
 }
 
 // SignPackage signs the zarf package using cosign with the provided options.
@@ -536,9 +529,7 @@ func (d *DistroLayout) SignPackage(ctx context.Context, opts SignOptions) (err e
 		return fmt.Errorf("failed to write temp %s: %w", config.DistroYAML, err)
 	}
 
-	// Configure signing. cosign v3.1.1+ writes only the bundle when NewBundleFormat=true.
 	signOpts := opts
-	signOpts.NewBundleFormat = true
 
 	actualBundlePath := filepath.Join(d.dirPath, config.Bundle)
 	signOpts.BundlePath = actualBundlePath
@@ -612,15 +603,12 @@ func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.
 	}
 
 	hasKey := opts.Key != ""
-	hasKeylessIdentity := opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != ""
-	hasCert := opts.CertVerify.Cert != ""
-	hasVerificationMaterial := hasKey || hasKeylessIdentity || hasCert
 
 	// Handle the case where the package is not signed
 	if !d.IsSigned() {
-		if hasVerificationMaterial {
-			// Providing material implies expecting a signature - always fatal.
-			return errors.New("verification material was provided but the package is not signed")
+		if hasKey {
+			// Providing a key implies expecting a signature - always fatal.
+			return errors.New("a public key was provided but the package is not signed")
 		}
 		return fmt.Errorf("package is not signed - verification cannot be performed: %w", ErrNoVerificationMaterial)
 	}
@@ -631,46 +619,27 @@ func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.
 	bundleInfo, bundleErr := signing.ReadBundleInfo(bundlePath)
 	hasBundleInfo := bundleErr == nil
 
-	// Early validation: fail fast with a method-specific message before cosign emits a generic error.
-	if hasBundleInfo {
-		switch bundleInfo.Method {
-		case signing.SigningMethodKeyless:
-			if !hasKeylessIdentity && !hasCert {
-				return fmt.Errorf("package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify: %w", ErrNoVerificationMaterial)
-			}
-		case signing.SigningMethodKey:
-			if !hasKey && !hasCert {
-				return fmt.Errorf("package was signed with a key; provide --key to verify: %w", ErrNoVerificationMaterial)
-			}
+	// Fail fast with a method-specific message rather than letting the key verifier
+	// report a mismatch it cannot explain.
+	if hasBundleInfo && bundleInfo.Method == signing.SigningMethodKeyless {
+		return fmt.Errorf(
+			"package was signed with the keyless (Fulcio) method, which cargoship can no longer verify - re-sign it with a cosign keypair, or see https://github.com/colonel-byte/cargoship/issues/848: %w",
+			ErrNoVerificationMaterial,
+		)
+	}
+
+	if !hasKey {
+		return fmt.Errorf("package is signed but no public key was provided (--key): %w", ErrNoVerificationMaterial)
+	}
+
+	if !hasBundleInfo {
+		if !errors.Is(bundleErr, os.ErrNotExist) {
+			return fmt.Errorf("error checking bundle signature: %w", bundleErr)
 		}
+		return fmt.Errorf("package is signed but carries no %s bundle to verify against: %w", config.Bundle, ErrNoVerificationMaterial)
 	}
 
-	if !hasVerificationMaterial {
-		return fmt.Errorf("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer): %w", ErrNoVerificationMaterial)
-	}
-
-	// Preserve a caller-provided staging directory while retaining Zarf's default.
-	if opts.TempDir == "" {
-		opts.TempDir = config.CommonOptions.TempDirectory
-	}
-
-	if hasBundleInfo {
-		opts.BundlePath = bundlePath
-		// Auto-enable UseSignedTimestamps when the bundle contains timestamps.
-		// The bundle was signed with a TSA; using those timestamps is required to
-		// verify the signature after the short-lived Fulcio cert expires.
-		if bundleInfo.HasTSATimestamps && !opts.CommonVerifyOptions.UseSignedTimestamps {
-			l.Debug("bundle contains TSA timestamps; enabling signed-timestamp verification automatically")
-			opts.CommonVerifyOptions.UseSignedTimestamps = true
-		}
-		DistroYAMLPath := filepath.Join(d.dirPath, config.DistroYAML)
-		return signing.CosignVerifyBlobWithOptions(ctx, DistroYAMLPath, opts)
-	}
-	if !errors.Is(bundleErr, os.ErrNotExist) {
-		return fmt.Errorf("error checking bundle signature: %w", bundleErr)
-	}
-
-	opts.CommonVerifyOptions.NewBundleFormat = false
+	opts.BundlePath = bundlePath
 	DistroYAMLPath := filepath.Join(d.dirPath, config.DistroYAML)
 	return signing.CosignVerifyBlobWithOptions(ctx, DistroYAMLPath, opts)
 }

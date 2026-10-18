@@ -58,8 +58,6 @@ func newPackageVerifyCommand() *cobra.Command {
 	// opt out of it. --key is registered here rather than through addVerifyFlags for
 	// the same reason: the full set would carry --verify along with it.
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", resolvedConfig.DistroOpts.PublicKey, zlang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().AddFlagSet(newKeylessVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
 
 	addRegistryFlags(cmd)
 

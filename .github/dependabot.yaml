@@ -42,21 +42,29 @@ updates:
         patterns:
           - "github.com/aws/*"
           - "github.com/Azure/*"
-          - "github.com/alibabacloud-go/*"
-          - "github.com/AliyunContainerService/*"
           - "cloud.google.com/go/*"
       openapi:
         patterns:
           - "github.com/go-openapi/*"
     ignore:
-      # gobwas/glob v1.0.0 removed the Glob interface type; vendored
-      # open-policy-agent/opa (transitive via sigstore/cosign) still uses it.
+      # gobwas/glob v1.0.0 removed the Glob interface type; open-policy-agent/opa
+      # used it, transitively via sigstore/cosign's rego policy evaluation.
+      #
+      # Dormant: nothing requires glob since cosign's CLI command structs stopped
+      # being linked. Kept because the path back is live -- issue #848 may restore
+      # keyless verification, and doing that through those structs relinks opa.
       - dependency-name: "github.com/gobwas/glob"
         update-types: ["version-update:semver-major"]
       # crypto11 is stuck at v1.2.5: the upstream repo was renamed twice, and
       # every tag after v1.2.5 declares a different module path, so Dependabot
       # fails the whole run with go_module_path_mismatch. Nothing newer resolves
       # under this path until cosign re-imports the renamed module.
+      #
+      # Dormant: nothing requires crypto11 since cosign's CLI command structs
+      # stopped being linked -- it arrived with their PKCS#11 (--sk) support. Kept
+      # deliberately rather than deleted, because the failure it prevents takes out
+      # the whole daily run rather than one pull request, and issue #848 may relink
+      # those structs. A line that matches nothing costs less than that outage.
       # See docs/agent/choice-crypto11-rename.md before touching this.
       - dependency-name: "github.com/ThalesIgnite/crypto11"
   - package-ecosystem: pre-commit

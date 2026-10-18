@@ -75,11 +75,15 @@ func TestCargoshipVerifyCommand(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("a key and a keyless identity together error", func(t *testing.T) {
+	// Keyless verification was removed, so the identity flags are rejected as unknown
+	// rather than accepted and silently ignored.
+	t.Run("the keyless verification flags are gone", func(t *testing.T) {
 		_, pubPath := cosignKeyPair(t)
 
-		_, _, err := e2e.Cargoship(t, "verify", minimalPackage(t),
-			"-k", pubPath, "--certificate-identity", "signer@example.com")
-		require.Error(t, err)
+		for _, flag := range []string{"--certificate-identity=signer@example.com", "--certificate-identity-regexp=.*", "--certificate-oidc-issuer=https://example.com", "--trusted-root=/dev/null", "--insecure-ignore-tlog", "--use-signed-timestamps"} {
+			_, stderr, err := e2e.Cargoship(t, "verify", minimalPackage(t), "-k", pubPath, flag)
+			require.Error(t, err, "verify accepted %s", flag)
+			require.Contains(t, stderr, "unknown flag", "verify rejected %s for the wrong reason", flag)
+		}
 	})
 }

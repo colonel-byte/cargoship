@@ -39,11 +39,14 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
-	carch "github.com/colonel-byte/cargoship/pkg/oci/archive"
-	"github.com/containerd/containerd/v2/core/images/archive"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/containerd/platforms"
+	"github.com/google/go-containerregistry/pkg/name"
+	ggcrv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
@@ -100,7 +103,10 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro
 		return err
 	}
 
-	store := &carch.OciArchiveStore{Root: imagesPath, Src: src}
+	lp, err := layout.FromPath(imagesPath)
+	if err != nil {
+		return err
+	}
 
 	// Tarballs are built for the architectures the cluster actually runs rather than every
 	// architecture the package carries, so applying a multi-architecture package to a cluster of
@@ -109,7 +115,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro
 	p.imgFiles = make(map[api.Arch][]v1alpha1.File, len(arches))
 
 	for _, arch := range arches {
-		if err := p.exportImagesForArch(ctx, src, store, arch); err != nil {
+		if err := p.exportImagesForArch(ctx, src, lp, arch); err != nil {
 			return err
 		}
 	}
@@ -122,7 +128,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro
 // Each architecture gets its own directory under the tarball dir. The tarball name is derived from
 // the image reference alone, so two architectures of the same image would otherwise be written to
 // the same path, and the exporter opens tarballs for appending.
-func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, store *carch.OciArchiveStore, arch api.Arch) error {
+func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, lp layout.Path, arch api.Arch) error {
 	compression := p.manager.Distro.Spec.Config.ImagesConfig.Compression
 	tarSuffix, err := p.manager.Distro.Spec.Config.ImagesConfig.TarballSuffix()
 	if err != nil {
@@ -140,18 +146,24 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), tarSuffix)
 		tarballPath := filepath.Join(tarBallDir, tarBallName)
 
-		desc, err := src.Resolve(ctx, i)
+		tagged, err := src.Resolve(ctx, i)
 		if err != nil {
 			return err
 		}
 
-		desc, err = resolveImageManifest(ctx, src, desc, exportPlatform)
+		desc, err := resolveImageManifest(ctx, src, tagged, exportPlatform)
 		if err != nil {
 			return fmt.Errorf("failed to select a %s manifest for image %s: %w", arch, i, err)
 		}
 
-		desc.URLs = []string{
-			i,
+		img, err := layoutImage(lp, tagged, desc)
+		if err != nil {
+			return fmt.Errorf("failed to open the %s manifest for image %s: %w", arch, i, err)
+		}
+
+		ref, err := name.ParseReference(i)
+		if err != nil {
+			return fmt.Errorf("failed to parse image reference %s: %w", i, err)
 		}
 
 		writer, err := os.OpenFile(tarballPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -167,14 +179,7 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 			return err
 		}
 
-		err = archive.Export(
-			ctx,
-			store,
-			compressor,
-			archive.WithManifest(desc, i),
-			archive.WithPlatform(exportPlatform),
-		)
-		if err != nil {
+		if err := tarball.Write(ref, img, compressor); err != nil {
 			logger.From(ctx).Warn("failed to create archive", "error", err)
 		}
 
@@ -226,12 +231,38 @@ func imageExportPlatform(arch api.Arch) platforms.MatchComparer {
 	})
 }
 
+// ggcrHash converts an OCI descriptor digest into the hash type go-containerregistry addresses
+// blobs by.
+func ggcrHash(d digest.Digest) ggcrv1.Hash {
+	return ggcrv1.Hash{Algorithm: d.Algorithm().String(), Hex: d.Encoded()}
+}
+
+// layoutImage opens the manifest chosen for an architecture out of the OCI layout the images were
+// pulled into. tagged is the descriptor the image reference resolves to and resolved the manifest
+// picked out of it, which are the same descriptor for a single-architecture image.
+//
+// layout.Path resolves a digest against index.json alone and does not recurse, so a manifest that
+// is a child of a tagged index has to be reached through its parent rather than looked up directly.
+func layoutImage(lp layout.Path, tagged, resolved ocispec.Descriptor) (ggcrv1.Image, error) {
+	root, err := lp.ImageIndex()
+	if err != nil {
+		return nil, err
+	}
+	if tagged.Digest == resolved.Digest {
+		return root.Image(ggcrHash(resolved.Digest))
+	}
+	parent, err := root.ImageIndex(ggcrHash(tagged.Digest))
+	if err != nil {
+		return nil, err
+	}
+	return parent.Image(ggcrHash(resolved.Digest))
+}
+
 // resolveImageManifest picks the manifest to export for an image. An image pulled for a single
 // architecture is tagged as a manifest and comes back unchanged. An image pulled for several is
-// tagged as an index, so the manifest matching the platform is chosen out of it here rather than
-// left to archive.Export: the exporter filters an index's children by platform but still writes the
-// whole index blob into the tarball, which would leave the tarball referencing blobs for a platform
-// it deliberately left out.
+// tagged as an index, so the manifest matching the platform is chosen out of it here: a tarball
+// carries one image per architecture, and the tarball writer is handed a manifest rather than an
+// index so it never writes blobs for a platform this host will not run.
 func resolveImageManifest(ctx context.Context, src *oci.Store, desc ocispec.Descriptor, matcher platforms.MatchComparer) (ocispec.Descriptor, error) {
 	if !images.IsIndex(desc.MediaType) {
 		return desc, nil

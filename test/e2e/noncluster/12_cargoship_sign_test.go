@@ -110,17 +110,22 @@ func TestCargoshipSign(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("no signing key and no keyless errors", func(t *testing.T) {
+	t.Run("no signing key errors", func(t *testing.T) {
 		_, _, err := e2e.Cargoship(t, "sign", minimalPackage(t), "-o", t.TempDir())
 		require.Error(t, err)
 	})
 
-	t.Run("keyless and signing-key are mutually exclusive", func(t *testing.T) {
-		privPath, _ := cosignKeyPair(t)
-
-		_, _, err := e2e.Cargoship(t, "sign", minimalPackage(t), "--keyless",
-			"--signing-key", privPath, "-o", t.TempDir())
-		require.Error(t, err)
+	// A cosign keypair is the only signing method. The keyless flags are rejected as
+	// unknown rather than accepted and ignored, which is what a flag left behind after
+	// its implementation would do.
+	t.Run("the keyless signing flags are gone", func(t *testing.T) {
+		for _, flag := range []string{"--keyless", "--identity-token=t", "--fulcio-url=https://example.com", "--rekor-url=https://example.com", "--tsa-server-url=https://example.com", "--tlog-upload"} {
+			privPath, _ := cosignKeyPair(t)
+			_, stderr, err := e2e.Cargoship(t, "sign", minimalPackage(t), flag,
+				"--signing-key", privPath, "-o", t.TempDir())
+			require.Error(t, err, "sign accepted %s", flag)
+			require.Contains(t, stderr, "unknown flag", "sign rejected %s for the wrong reason", flag)
+		}
 	})
 
 	t.Run("missing source package errors", func(t *testing.T) {

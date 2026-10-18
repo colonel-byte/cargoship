@@ -158,7 +158,6 @@ func expandHomePaths(cfg *types.DistroConfig) error {
 		&cfg.DistroOpts.ReceiptPath,
 		&cfg.DistroOpts.Output,
 		&cfg.DistroOpts.PublicKey,
-		&cfg.DistroOpts.TrustedRoot,
 		&cfg.DistroOpts.PublishOpts.SigningKey,
 	}
 	for i := range cfg.AgeOpts.IdentityFiles {
@@ -263,11 +262,6 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKeyPassword"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateIdentity"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateIdentityRegexp"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuer"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuerRegexp"), "")
-	v.SetDefault(configPath("DistroOpts", "TrustedRoot"), "")
 	v.SetDefault(configPath("DistroOpts", "PublicKey"), "")
 
 	// Registered for the same reason as the keys above: without a default, Unmarshal never learns

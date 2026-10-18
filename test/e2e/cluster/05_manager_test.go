@@ -24,8 +24,9 @@ import (
 )
 
 // distroEnvVar picks which distro the suite installs, instead of the k3s default. See
-// distroID. Set to "rke2" to walk the suite against an rke2 package instead -- see
-// cluster_lifecycle_test.go for what package that selects.
+// distroID. Set to "rke2" or "upstream" to walk the suite against one of those instead --
+// see cluster_lifecycle_test.go for what package that selects, and upgrade_suite_test.go
+// for the package the upgrade walk moves it to.
 const distroEnvVar = "CARGOSHIP_E2E_DISTRO"
 
 // distroID is the distro the suite installs, and the value the CLI's --distro flag would
