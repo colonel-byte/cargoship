@@ -50,7 +50,7 @@ const (
 	// engine-config-sync's rewrite-and-restart-the-service cycle does not do that for kubeadm.
 	// The KubeletConfiguration document in this same file is the exception: the kubelet re-reads
 	// its own config on restart, so a kubelet key does get picked up by that cycle.
-	kubeadmConfigPath = "/etc/kubernetes/kubeadm-config.yaml"
+	kubeadmConfigPath = upstreamConfigDir + "/kubeadm-config.yaml"
 	// kubeadmAPIVersion is the kubeadm config API version cargoship renders.
 	kubeadmAPIVersion = "kubeadm.k8s.io/v1beta4"
 	// kubeletConfigAPIVersion is the kubelet component config API version cargoship renders.
@@ -63,8 +63,8 @@ const (
 	// policy and pod security admission config, when the engine config sets one. They live
 	// under Upstream's own config directory rather than derived from a Common field, since
 	// auditPSSVolumes has no distro instance to read one off of.
-	upstreamAuditFilePath = "/etc/kubernetes/audit.yaml"
-	upstreamPSSFilePath   = "/etc/kubernetes/pss.yaml"
+	upstreamAuditFilePath = upstreamConfigDir + "/audit.yaml"
+	upstreamPSSFilePath   = upstreamConfigDir + "/pss.yaml"
 )
 
 // extraArg renders one kubeadm v1beta4 extraArgs entry. v1beta4 changed this from a v1beta3

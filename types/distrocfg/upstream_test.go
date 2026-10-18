@@ -32,7 +32,7 @@ func newTestUpstream() *Upstream {
 			ID:                DistroUpstream,
 			BinaryDir:         "/usr/bin",
 			Binary:            "kubectl",
-			Config:            "/etc/kubernetes",
+			Config:            kubeadmConfigPath,
 			Data:              "/var/lib/kubelet",
 			PackageDir:        "/var/lib/kubernetes",
 			ServiceController: "kubelet",
@@ -318,6 +318,17 @@ func TestUpstreamManagedDirsIncludesRegistryTLSDir(t *testing.T) {
 	want := []ManagedDir{{Path: registryTLSDir}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("ManagedDirs() = %v, want %v", got, want)
+	}
+}
+
+// TestUpstreamConfigPathIsTheKubeadmConfigFile pins the half of the Distro contract upstream
+// used to break: ConfigPath is the engine's config file, as it is for rke2 and k3s, not the
+// directory holding it. A caller reading it got "Is a directory" back when this was /etc/kubernetes.
+func TestUpstreamConfigPathIsTheKubeadmConfigFile(t *testing.T) {
+	d := newTestUpstream()
+
+	if got := d.ConfigPath(); got != "/etc/kubernetes/kubeadm-config.yaml" {
+		t.Fatalf("ConfigPath() = %q, want the kubeadm config file", got)
 	}
 }
 

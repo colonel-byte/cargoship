@@ -16,6 +16,7 @@ package cluster
 
 import (
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
 )
 
 // configureEngine covers phase/60_configure_engine.go. It renders the engine config
@@ -53,8 +54,13 @@ func (s *phaseWalk) configureEngine() {
 		s.Require().NotEmptyf(content, "%s: %s is empty", host, configPath)
 		s.Require().Containsf(content, host.Hostname,
 			"%s: %s does not name this node", host, configPath)
-		s.Require().Containsf(content, s.harness.distro.DataDirPath(),
-			"%s: %s does not point at the engine data directory", host, configPath)
+		// `data-dir:` is a Rancher key. A distro that bootstraps instead -- kubeadm -- writes a
+		// kubeadm-config.yaml that names the node and the CRI socket and never mentions
+		// /var/lib/kubelet, so asserting it there would fail a config that is correct.
+		if _, bootstraps := s.harness.distro.(distrocfg.Bootstrapper); !bootstraps {
+			s.Require().Containsf(content, s.harness.distro.DataDirPath(),
+				"%s: %s does not point at the engine data directory", host, configPath)
+		}
 	}
 }
 

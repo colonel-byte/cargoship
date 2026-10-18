@@ -54,8 +54,7 @@ func (s *phaseWalk) aptUploadFiles() {
 				"%s: the APT phase changed a host it does not claim", host)
 			continue
 		}
-		s.Require().Subsetf(after, before[host.String()],
-			"%s: the APT phase dropped files an earlier upload phase staged", host)
+		s.requireKeptStagedFiles(host, before[host.String()], after, "APT")
 	}
 
 	if s.harness.carriesFilesFor(config.SelectorAPT) {
