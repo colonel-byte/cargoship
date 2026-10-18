@@ -22,6 +22,11 @@ resource "cargoship_cluster" "this" {
   load_balancer = var.load_balancer
   package       = var.package
 
+  # What a profile means, stated once. A host selects one by name, and a host that selects a
+  # profile this map does not define is a configuration error rather than a silently missing
+  # taint.
+  profiles = var.profiles
+
   modify_hosts          = var.modify_hosts
   modify_firewall       = var.modify_firewall
   label_nodes           = var.label_nodes
