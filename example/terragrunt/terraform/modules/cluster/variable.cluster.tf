@@ -62,6 +62,7 @@ variable "hosts" {
     profile         = optional(string, null)
     hostname        = optional(string, null)
     private_address = optional(string, null)
+    state           = optional(string, "present")
 
     private_interface = optional(string, null)
     environment       = optional(map(string), null)
@@ -154,7 +155,7 @@ variable "export_kubeconfig" {
 
 variable "retain_on_destroy" {
   type        = bool
-  description = "Leave the cluster running when the resource is destroyed, dropping it from state with a warning instead of resetting it"
+  description = "Leave the cluster running when the resource is destroyed, dropping it from state with a warning instead of resetting it. Set it at destroy time -- `terragrunt destroy -var retain_on_destroy=true` -- when the machines are being destroyed in the same run: draining and uninstalling a node that is about to be deleted is work nobody sees the result of"
   default     = false
 }
 
