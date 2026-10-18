@@ -51,37 +51,40 @@ type phaseDoc struct {
 // phaseDocs lists every action whose phases get a docs/phases/<name>.md page. Add a new
 // action's phases here to get it picked up by `Document()` -- no new function needed.
 //
-// NewReset reports an error for a target host list that matches nothing, and the manager below
-// names no targets, so an error here is the generator being wrong rather than an input being
-// wrong: it comes back and `Document()` fails with it, instead of rendering a page from an
-// empty phase list.
+// The action constructors return an error for a distro ID they cannot resolve, and the managers
+// below name a real one, so an error here is the generator being wrong rather than an input being
+// wrong: it comes back and `Document()` fails with it, instead of rendering a page from a nil
+// action's empty phase list.
 func phaseDocs() ([]phaseDoc, error) {
-	reset, err := action.NewReset(action.ResetOptions{
-		Manager: genDocsManagerNoConfig,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("building the reset action for its phase reference: %w", err)
-	}
-
 	apply, err := action.NewApply(action.ApplyOptions{
 		Manager: genDocsManager,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("building the apply action for its phase reference: %w", err)
+		return nil, err
 	}
-
+	reset, err := action.NewReset(action.ResetOptions{
+		Manager: genDocsManagerNoConfig,
+	})
+	if err != nil {
+		return nil, err
+	}
 	kubeConfig, err := action.NewKubeConfig(action.KubeConfigOptions{
 		Manager: genDocsManager,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("building the kube-config action for its phase reference: %w", err)
+		return nil, err
 	}
-
-	engineConfigSync, err := action.NewEngineConfigSync(action.EngineConfigSyncOptions{
+	refresh, err := action.NewRefresh(action.RefreshOptions{
 		Manager: genDocsManager,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("building the engine-config-sync action for its phase reference: %w", err)
+		return nil, err
+	}
+	sync, err := action.NewEngineConfigSync(action.EngineConfigSyncOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return []phaseDoc{
@@ -105,8 +108,12 @@ func phaseDocs() ([]phaseDoc, error) {
 			dryRun: true,
 		},
 		{
+			name:   "refresh",
+			phases: refresh.Phases,
+		},
+		{
 			name:   "engine-config-sync",
-			phases: engineConfigSync.Phases,
+			phases: sync.Phases,
 			dryRun: true,
 		},
 	}, nil

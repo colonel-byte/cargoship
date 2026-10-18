@@ -26,6 +26,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // KubeConfigOptions struct
@@ -35,12 +36,24 @@ type KubeConfigOptions struct {
 	// KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
 	// location when empty
 	KubeConfigPath string
+	// NoWrite leaves the operator's kubeconfig alone, so the credentials are built and returned
+	// and nothing on this machine is touched.
+	//
+	// It is phrased as the negative so that the zero value writes, which is what every caller
+	// before this field existed did: `cargoship install kube-config` exists to write the file.
+	// A caller that wants the value instead reads Bytes or Config after Run; see
+	// docs/agent/choice-tofu-secrets.md for why the OpenTofu provider is that caller and why it
+	// does not expose the result unless it is asked to.
+	NoWrite bool
 }
 
 // KubeConfig state logic
 type KubeConfig struct {
 	KubeConfigOptions
 	Phases phase.Phases
+	// kubeconfig is the phase that builds the credentials, retained so Bytes and Config can read
+	// what it built.
+	kubeconfig *phase.KubeConfig
 }
 
 // NewKubeConfig pulls the admin cert from a control-plane node and updates the local kube-config
@@ -50,25 +63,52 @@ func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error) {
 		return nil, err
 	}
 
+	kubeconfig := &phase.KubeConfig{
+		Distro:    d,
+		ClusterID: opts.Manager.Config.Metadata.Name,
+		Enabled:   true,
+		Write:     !opts.NoWrite,
+		Path:      opts.KubeConfigPath,
+	}
+
 	lockPhase := &phase.Lock{}
 	return &KubeConfig{
 		KubeConfigOptions: opts,
+		kubeconfig:        kubeconfig,
 		Phases: phase.Phases{
 			&phase.Connect{},
 			&phase.DetectOS{},
 			lockPhase,
 			&phase.GatherFacts{},
-			&phase.KubeConfig{
-				Distro:    d,
-				ClusterID: opts.Manager.Config.Metadata.Name,
-				Enabled:   true,
-				Write:     true,
-				Path:      opts.KubeConfigPath,
-			},
+			kubeconfig,
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
 	}, nil
+}
+
+// Bytes is the kubeconfig the run built, serialized.
+//
+// It is read after Run, and it is the half of this action that has nothing to do with the
+// operator's own kubeconfig: phase.KubeConfig builds the credentials whether or not it writes
+// them, and #305 separated the two so a caller could have the value without touching
+// ~/.kube/config. Before this, the only way to reach it was to rebuild the phase list by hand.
+//
+// What comes back is cluster-admin credentials, so a caller holding them is holding the cluster.
+func (a KubeConfig) Bytes() ([]byte, error) {
+	if a.kubeconfig == nil {
+		return nil, phase.ErrNoKubeConfig
+	}
+	return a.kubeconfig.Bytes()
+}
+
+// Config is the same credentials as a structure, for a caller that wants to read a field rather
+// than a file. Nil until Run has built it.
+func (a KubeConfig) Config() *clientcmdapi.Config {
+	if a.kubeconfig == nil {
+		return nil
+	}
+	return a.kubeconfig.Config()
 }
 
 // Run the actions
