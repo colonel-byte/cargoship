@@ -163,6 +163,7 @@
 - [e2e-external-inventory](dev/e2e-external-inventory.md)
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
+- [e2e-tofu-tests](dev/e2e-tofu-tests.md)
 - [fuzz-tests](dev/fuzz-tests.md)
 - [goreleaser](dev/goreleaser.md)
 - [mage-test-manual](dev/mage-test-manual.md)
