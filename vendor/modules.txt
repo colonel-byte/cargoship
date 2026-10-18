@@ -1588,7 +1588,7 @@ golang.org/x/vuln/internal/traces
 golang.org/x/vuln/internal/vulncheck
 golang.org/x/vuln/internal/web
 golang.org/x/vuln/scan
-# google.golang.org/api v0.302.0
+# google.golang.org/api v0.304.0
 ## explicit; go 1.26.0
 # google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc
 ## explicit; go 1.26.0
