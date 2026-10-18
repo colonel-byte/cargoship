@@ -49,8 +49,9 @@ func TestMain(m *testing.M) {
 	if err := os.RemoveAll(kubeDir); err != nil {
 		log.Print(err)
 	}
-	if testCluster != nil && (code == 0 || !keepCluster()) {
-		if err := testCluster.Delete(); err != nil {
+	if code == 0 || !keepCluster() {
+		if err := teardownFleet(); err != nil {
+			log.Print(err)
 			os.Exit(1)
 		}
 	}
@@ -70,7 +71,7 @@ func requireTofu(t *testing.T) string {
 	// containers. It is also what keeps a `go test -short ./...` from colliding with a full run
 	// of this suite: both would claim the same machine names.
 	if testing.Short() {
-		t.Skip("the provider walk needs a bootloose cluster, a real distro package and a tofu binary")
+		t.Skip("the provider walk needs a fleet of machines, a real distro package and a tofu binary")
 	}
 
 	if _, err := exec.LookPath(tofuBinary()); err != nil {
@@ -92,28 +93,59 @@ func requireCluster(t *testing.T) {
 	t.Helper()
 
 	clusterOnce.Do(func() {
-		// The kernel comes first: it is the one prerequisite that has nothing to do with the
-		// machines, and finding it missing after provisioning them means three containers
-		// started for a run that cannot install anything.
-		if testClusterErr = requireKernelModules(); testClusterErr != nil {
+		var backend string
+		if backend, testClusterErr = selectedBackend(); testClusterErr != nil {
 			return
 		}
-		if testClusterErr = requireContainerNetworking(); testClusterErr != nil {
-			return
+		if backend == backendMicroVM {
+			testClusterErr = provisionVMFleet(t.Context())
+		} else {
+			testClusterErr = provisionContainerFleet()
 		}
-		testCluster, testClusterErr = blcluster.New(fleet)
 		if testClusterErr != nil {
 			return
 		}
-		if testClusterErr = testCluster.Create(); testClusterErr != nil {
-			return
-		}
-		if testClusterErr = detachHostsFile(testCluster); testClusterErr != nil {
-			return
-		}
-		// bootloose regenerates each container's SSH host key on every Create, and the
+		// Both backends regenerate each machine's SSH host key on every bring-up, and the
 		// provider's phases dial those machines from inside the provider process.
 		testClusterErr = os.Setenv("SSH_KNOWN_HOSTS", "")
 	})
 	require.NoError(t, testClusterErr)
+}
+
+// provisionContainerFleet brings up the bootloose cluster and makes its machines ready to be
+// installed onto.
+func provisionContainerFleet() error {
+	// The kernel comes first: it is the one prerequisite that has nothing to do with the
+	// machines, and finding it missing after provisioning them means three containers started
+	// for a run that cannot install anything.
+	if err := requireKernelModules(); err != nil {
+		return err
+	}
+	if err := requireContainerNetworking(); err != nil {
+		return err
+	}
+
+	var err error
+	if testCluster, err = blcluster.New(fleet); err != nil {
+		return err
+	}
+	if err := testCluster.Create(); err != nil {
+		return err
+	}
+	return detachHostsFile(testCluster)
+}
+
+// teardownFleet takes away whichever fleet was provisioned, and does nothing when the run
+// skipped before provisioning one.
+func teardownFleet() error {
+	if onMicroVM() {
+		if len(testVMFleet.Nodes) == 0 {
+			return nil
+		}
+		return teardownVMFleet()
+	}
+	if testCluster == nil {
+		return nil
+	}
+	return testCluster.Delete()
 }

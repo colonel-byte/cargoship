@@ -21,8 +21,9 @@
 # the module's variable types still accept what the provider's schema wants, which is the half
 # that breaks silently when an attribute changes shape.
 #
-# Nothing here is contacted at plan time. The addresses the variables carry are the bootloose
-# containers the suite started, reached on 127.0.0.1 through published SSH ports.
+# Nothing here is contacted at plan time. The addresses the variables carry are the machines the
+# suite started -- bootloose containers or local virtual machines, depending on the backend --
+# reached on 127.0.0.1 through a forwarded SSH port either way.
 
 module "cluster" {
   source = "./module"
@@ -35,9 +36,14 @@ module "cluster" {
   # The settings whose effect is visible on the hosts or in the cluster, so that the attributes
   # the provider passes to the actions are exercised rather than left on their defaults.
   modify_hosts       = true
-  label_nodes        = true
+  label_nodes        = var.label_nodes
+  # On by default here because a VM has a firewall and a container does not. Rocky boots with
+  # firewalld running and no engine ports open, so a worker's join is refused outright -- while
+  # on the container backend this phase correctly finds nothing to do. Leaving it off made the
+  # omission invisible for as long as the suite only ever ran on containers.
+  modify_firewall    = true
   worker_concurrency = "1"
-  export_kubeconfig  = true
+  export_kubeconfig  = var.export_kubeconfig
 
   timeout         = var.timeout
   connect_timeout = var.connect_timeout
@@ -68,8 +74,24 @@ variable "hosts" {
     hostname = optional(string, null)
     profile  = optional(string, null)
     state    = optional(string, null)
+    # Set only by the microvm backend: a VM is reached on a forwarded loopback port, but the
+    # nodes reach each other over a segment the host is not on.
+    private_address   = optional(string, null)
+    private_interface = optional(string, null)
   }))
   description = "The fleet, keyed by machine name. A host marked `state = \"absent\"` is the removal the suite walks"
+}
+
+variable "label_nodes" {
+  type        = bool
+  description = "Whether to label the nodes, which needs a route from here to the cluster's API server"
+  default     = true
+}
+
+variable "export_kubeconfig" {
+  type        = bool
+  description = "Whether to return the cluster's admin credentials, which are only usable with such a route"
+  default     = true
 }
 
 variable "timeout" {

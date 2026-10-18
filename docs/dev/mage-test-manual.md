@@ -107,6 +107,22 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
 
 The suite skips rather than fails when `tofu` is not on PATH or the mirror does not hold that binary, so a run that prints two skips and passes means one of those two is missing. See [e2e-tofu-tests](e2e-tofu-tests.md).
 
+## `Test.EndToEndTofuVM`
+
+The same build and the same walk, against local virtual machines. The bootloose cleanup is not needed, because this backend starts no containers; what it needs instead is that no other fleet holds its loopback ports.
+
+```console
+$ mkdir -p build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"
+$ go build -ldflags "-X main.version=0.1.0 -X github.com/colonel-byte/cargoship/internal/tofuprovider.Version=0.1.0" \
+    -o build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"/terraform-provider-cargoship_v0.1.0 \
+    ./cmd/terraform-provider-cargoship
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/tofu/...
+```
+
+Needs KVM. The fleet is called `tofu`; `mage dev:vmList -fleet=tofu` shows what a killed run left behind and `mage dev:vmDown -fleet=tofu` removes it.
+
 ## `Test.CleanZarfClusters`
 
 ```console

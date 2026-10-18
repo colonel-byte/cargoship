@@ -29,8 +29,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// clusterName is the cluster the configuration describes, and the resource's identity.
-const clusterName = "bootloose-tofu"
+// clusterName is the cluster the configuration describes, and the resource's identity. It names
+// no backend, because both provision the same cluster and the name turns up in the provider's
+// own diagnostics.
+const clusterName = "cargoship-tofu"
+
+// reachesClusterAPI is whether this machine can route to the cluster's API server, which decides
+// whether the two steps that talk to Kubernetes from here can run at all.
+//
+// It is answered from the backend rather than probed, unlike the phase suite's equivalent. That
+// probe runs after an install, against an API server that is already listening; this has to be
+// decided before the apply, because `label_nodes` is one of the attributes the apply carries.
+//
+// A VM fleet has no route by construction: its load balancer is the leader's address on a segment
+// private to the qemu processes, which is the address the other nodes join through and is not one
+// the host is on. A container fleet does have one, the docker-bridge address.
+func reachesClusterAPI() bool {
+	return !onMicroVM()
+}
 
 // TestTofuProvider walks one configuration through its whole life: initialised against the local
 // mirror, planned, applied onto three machines, converged a second time, reduced by one worker
@@ -54,6 +70,11 @@ func TestTofuProvider(t *testing.T) {
 		"package":       pkgPath,
 		"hosts":         hosts,
 		"timeout":       phaseTimeout(),
+		// Both need to reach the API server from here. Asking for them where that is not
+		// possible fails the apply inside the labelling phase, which says nothing about the
+		// provider -- see reachesClusterAPI.
+		"label_nodes":       reachesClusterAPI(),
+		"export_kubeconfig": reachesClusterAPI(),
 	}
 	w.writeVars(t, vars)
 
@@ -132,6 +153,12 @@ func applyInstallsTheCluster(t *testing.T, w *workspace) {
 // uses them. `export_kubeconfig` is the attribute that decides whether they come back at all, and
 // a value that is present but unusable looks the same in state as one that works.
 func exportedKubeconfigReachesTheCluster(t *testing.T, w *workspace) {
+	if !reachesClusterAPI() {
+		t.Skip("this machine has no route to the cluster's API server, so the credentials " +
+			"could not be used from here even when they are correct; the configuration asked " +
+			"for neither them nor the node labelling")
+	}
+
 	kubeconfig := w.stringOutput(t, "kubeconfig")
 	require.NoError(t, os.WriteFile(kubeconfigPath, []byte(kubeconfig), 0o600))
 
@@ -166,7 +193,7 @@ func absentHostLeavesTheCluster(t *testing.T, w *workspace, vars map[string]any)
 	hosts, ok := vars["hosts"].(map[string]hostVars)
 	require.True(t, ok, "the fleet in the variables is a %T", vars["hosts"])
 
-	removed := fmt.Sprintf(bootKW, workers-1)
+	removed := workerName(workers - 1)
 	host, ok := hosts[removed]
 	require.True(t, ok, "the fleet holds no machine named %s", removed)
 	host.State = "absent"
@@ -259,7 +286,7 @@ func destroyCluster(t *testing.T, w *workspace) {
 	require.True(t, w.stateIsEmpty(t), "destroy finished with the resource still in state")
 
 	// A destroy resets the cluster, so the controller's engine is no longer serving.
-	controller := fmt.Sprintf(bootKC, 0)
+	controller := controllerName(0)
 	if out, err := machineExec(controller, "systemctl", "is-active", "k3s-server"); err == nil {
 		t.Errorf("the engine is still running on %s after a destroy: %s", controller, out)
 	}
@@ -279,7 +306,7 @@ func destroyCluster(t *testing.T, w *workspace) {
 func requireReadyNodes(t *testing.T, want int) {
 	t.Helper()
 
-	controller := fmt.Sprintf(bootKC, 0)
+	controller := controllerName(0)
 	deadline := time.Now().Add(2 * time.Minute)
 	var last string
 	for {
@@ -347,10 +374,19 @@ func buildPackage(t *testing.T) string {
 func requireFleetVars(t *testing.T) (map[string]hostVars, string) {
 	t.Helper()
 
-	keyPath, err := absKeyPath()
-	require.NoError(t, err)
-
-	hosts, loadBalancer, err := fleetVars(testCluster, keyPath)
+	var (
+		hosts        map[string]hostVars
+		loadBalancer string
+		err          error
+	)
+	if onMicroVM() {
+		hosts, loadBalancer, err = vmFleetVars(testVMFleet)
+	} else {
+		var keyPath string
+		keyPath, err = absKeyPath()
+		require.NoError(t, err)
+		hosts, loadBalancer, err = fleetVars(testCluster, keyPath)
+	}
 	require.NoError(t, err)
 	require.Len(t, hosts, nodeCount)
 	return hosts, loadBalancer
