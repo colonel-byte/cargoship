@@ -329,6 +329,23 @@ func (c cargoshipConverger) Apply(ctx context.Context, cfg *cluster.Cluster, opt
 	// cluster.
 	result.Facts = factsOf(cfg.Spec.Hosts)
 
+	// Those facts are what the run gathered on its way in, which is before it installed
+	// anything: the version phase 12 records on a host with no engine yet is UnknownVersion, and
+	// it is never written again. Recording that is a resource that can never converge -- the
+	// next refresh reads the engine the apply installed and reports a change made outside
+	// OpenTofu, on every plan from then on. Reading them back is one more connect to each host,
+	// and only on a run that finished.
+	if runErr == nil {
+		if facts, err := c.Refresh(ctx, cfg, result.DistroID); err == nil {
+			result.Facts = facts
+		} else {
+			tflog.Warn(ctx, "the apply finished but its hosts could not be read back, so the "+
+				"facts recorded are the ones gathered before the install", map[string]any{
+				"error": err.Error(),
+			})
+		}
+	}
+
 	if opts.Kubeconfig && runErr == nil {
 		bytes, err := apply.KubeConfigBytes()
 		if err != nil {
