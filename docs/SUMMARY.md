@@ -234,6 +234,7 @@
 - [choice-run-receipts](agent/choice-run-receipts.md)
 - [choice-selinux-policy](agent/choice-selinux-policy.md)
 - [choice-signing-fork](agent/choice-signing-fork.md)
+- [choice-tofu-host-removal](agent/choice-tofu-host-removal.md)
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)
