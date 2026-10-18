@@ -24,6 +24,14 @@ Fixtures are covered separately, in [`e2e/AGENTS.md`](e2e/AGENTS.md).
 
 **The external backend provisions nothing**, so the join walk is skipped. It also changes somebody's real hosts and does not change them back.
 
+## Which distro the walks install
+
+`CARGOSHIP_E2E_DISTRO` picks it: `k3s` (the suite default), `rke2` (what `mage test:endToEndClusterVM` sets) or `upstream`. It is read by two maps that have to stay in step - `exampleDefinitions` in `cluster_lifecycle_test.go` for the package the walks install, and `exampleUpgradeDefinitions` in `upgrade_suite_test.go` for the one the upgrade walk moves to. Both are plain maps keyed by the same string, so a distro missing from either resolves to an empty path and the walk fails trying to package `""` rather than saying what is unset.
+
+**`upstream` does not complete yet.** It passes `dryrun` and gets through the upload phases, then fails at `Test_60_ConfigureEngine` on [#849](https://github.com/colonel-byte/cargoship/issues/849) - `ConfigPath()` is a directory for that distro and the assertion `cat`s it. That is a pre-existing defect in the distro interface, not a regression, and it is why `mage test:endToEndClusterVM` defaults to `rke2`.
+
+**The upgrade walk is opt-in**, behind `CARGOSHIP_E2E_UPGRADE=1`. It currently fails on every backend at `Test_59_BINUploadFiles` - [#850](https://github.com/colonel-byte/cargoship/issues/850), the manifest keeping the previous engine's RPMs after an install consumes them. Reproduced on pre-change code, so a run that fails there has not necessarily broken anything.
+
 ## Reading a result
 
 Count the skips, not just the failures. A skip here almost always means a capability the backend does not have, and a run with fifteen of them is not a pass of fifteen things. When reporting a run, say which walks passed, which steps skipped and why, and which failures are the backend rather than the code. `--- SKIP` lines carry their reason; the suite writes them for exactly this.
