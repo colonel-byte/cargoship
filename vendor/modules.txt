@@ -544,7 +544,7 @@ github.com/goccy/go-yaml/parser
 github.com/goccy/go-yaml/printer
 github.com/goccy/go-yaml/scanner
 github.com/goccy/go-yaml/token
-# github.com/godbus/dbus/v5 v5.2.2
+# github.com/godbus/dbus/v5 v5.2.4
 ## explicit; go 1.20
 # github.com/gofrs/uuid v4.4.0+incompatible
 ## explicit
