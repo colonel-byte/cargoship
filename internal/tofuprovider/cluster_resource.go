@@ -876,7 +876,7 @@ func (useBoolStateForUnknownModifier) MarkdownDescription(_ context.Context) str
 	return "Once set, the value of this attribute in state will not change unless modified."
 }
 
-func (useBoolStateForUnknownModifier) PlanModifyBool(_ context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+func (useBoolStateForUnknownModifier) PlanModifyBool(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
 	if req.State.Raw.IsNull() || !req.PlanValue.IsUnknown() || req.ConfigValue.IsUnknown() {
 		return
 	}
@@ -886,7 +886,32 @@ func (useBoolStateForUnknownModifier) PlanModifyBool(_ context.Context, req plan
 	if req.StateValue.IsNull() {
 		return
 	}
+	// The same failure, from the other direction: a host the configuration has just marked
+	// absent is about to be torn down, so the false in state is the one value the apply will
+	// not return. Planning it fails the run with "provider produced inconsistent result after
+	// apply" over a removal that in fact succeeded.
+	if absentInConfig(ctx, req) && !req.StateValue.ValueBool() {
+		return
+	}
 	resp.PlanValue = req.StateValue
+}
+
+// absentInConfig reports whether the host the attribute belongs to is marked absent in the
+// configuration.
+//
+// A modifier is handed one attribute, so the sibling is read back out of the configuration by
+// path rather than off a decoded model. A request carrying no configuration at all reports false:
+// that is a caller invoking the modifier directly, not a host that stays.
+func absentInConfig(ctx context.Context, req planmodifier.BoolRequest) bool {
+	if req.Config.Schema == nil {
+		return false
+	}
+
+	var state types.String
+	if req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("state"), &state).HasError() {
+		return false
+	}
+	return strings.EqualFold(state.ValueString(), hostStateAbsent)
 }
 
 // durationOf reads a Go duration attribute, or reports why it could not.
