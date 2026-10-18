@@ -120,28 +120,8 @@ func generateTofuDocs() error {
 	return nil
 }
 
-func renderYAMLDescription(s string) string {
-	lines := strings.Split(s, "\n")
-	var out []string
-	for _, l := range lines {
-		trimmed := strings.TrimRight(l, " \t\r")
-		if trimmed == "" {
-			out = append(out, "")
-		} else {
-			out = append(out, "  "+trimmed)
-		}
-	}
-	return strings.Join(out, "\n")
-}
-
 func writeProviderIndex(s pschema.Schema) error {
 	return writeGeneratedPage(tofuDocsDir, "index.md", func(doc *markdown.Markdown) error {
-		doc.PlainText("---")
-		doc.PlainText("page_title: \"Provider: cargoship\"")
-		doc.PlainText("description: |-")
-		doc.PlainText(renderYAMLDescription(s.MarkdownDescription))
-		doc.PlainText("---")
-		doc.PlainText("")
 		doc.H1("cargoship Provider")
 		doc.PlainText("")
 		doc.PlainText(s.MarkdownDescription)
@@ -171,13 +151,6 @@ func writeResourceDoc(name string, s rschema.Schema) error {
 	filename := fmt.Sprintf("resources/%s.md", cleanName)
 
 	return writeGeneratedPage(tofuDocsDir, filename, func(doc *markdown.Markdown) error {
-		doc.PlainText("---")
-		doc.PlainText(fmt.Sprintf("page_title: \"%s Resource - cargoship\"", name))
-		doc.PlainText("subcategory: \"\"")
-		doc.PlainText("description: |-")
-		doc.PlainText(renderYAMLDescription(s.MarkdownDescription))
-		doc.PlainText("---")
-		doc.PlainText("")
 		doc.H1(name)
 		doc.PlainText("")
 		doc.PlainText(s.MarkdownDescription)
@@ -240,13 +213,6 @@ func writeDataSourceDoc(name string, s dschema.Schema) error {
 	filename := fmt.Sprintf("data-sources/%s.md", cleanName)
 
 	return writeGeneratedPage(tofuDocsDir, filename, func(doc *markdown.Markdown) error {
-		doc.PlainText("---")
-		doc.PlainText(fmt.Sprintf("page_title: \"%s Data Source - cargoship\"", name))
-		doc.PlainText("subcategory: \"\"")
-		doc.PlainText("description: |-")
-		doc.PlainText(renderYAMLDescription(s.MarkdownDescription))
-		doc.PlainText("---")
-		doc.PlainText("")
 		doc.H1(name)
 		doc.PlainText("")
 		doc.PlainText(s.MarkdownDescription)
