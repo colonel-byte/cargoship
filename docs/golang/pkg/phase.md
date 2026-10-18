@@ -1026,7 +1026,7 @@ func (p *DetectOS) Title() string
 Title for the phase
 
 <a name="DetectRemovedHosts"></a>
-## type [DetectRemovedHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L71-L79>)
+## type [DetectRemovedHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L70-L78>)
 
 DetectRemovedHosts state.
 
@@ -1049,7 +1049,7 @@ type DetectRemovedHosts struct {
 ```
 
 <a name="DetectRemovedHosts.Explanation"></a>
-### func \(\*DetectRemovedHosts\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L87>)
+### func \(\*DetectRemovedHosts\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L86>)
 
 ```go
 func (p *DetectRemovedHosts) Explanation() string
@@ -1058,7 +1058,7 @@ func (p *DetectRemovedHosts) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="DetectRemovedHosts.Prepare"></a>
-### func \(\*DetectRemovedHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L102>)
+### func \(\*DetectRemovedHosts\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L101>)
 
 ```go
 func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -1069,7 +1069,7 @@ Prepare the phase.
 The leader is any host in the config already running the controller service, which is the same way the label and delete phases find one. Nothing is running on a first install, so there is no leader, and ShouldRun turns the phase off: a cluster that does not exist yet cannot have had a host removed from it.
 
 <a name="DetectRemovedHosts.ReadOnly"></a>
-### func \(\*DetectRemovedHosts\) [ReadOnly](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L92>)
+### func \(\*DetectRemovedHosts\) [ReadOnly](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L91>)
 
 ```go
 func (p *DetectRemovedHosts) ReadOnly() string
@@ -1078,7 +1078,7 @@ func (p *DetectRemovedHosts) ReadOnly() string
 ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
 
 <a name="DetectRemovedHosts.Run"></a>
-### func \(\*DetectRemovedHosts\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L123>)
+### func \(\*DetectRemovedHosts\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L122>)
 
 ```go
 func (p *DetectRemovedHosts) Run(ctx context.Context) error
@@ -1089,7 +1089,7 @@ Run the phase.
 Only positive evidence stops the apply. Failing to reach the cluster says nothing about whether a host was removed, and this phase runs before every phase that does the real work, so treating an unreachable cluster as a refusal would turn a transient failure into a failed apply that had nothing to do with removals. Those cases warn and continue.
 
 <a name="DetectRemovedHosts.ShouldRun"></a>
-### func \(\*DetectRemovedHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L113>)
+### func \(\*DetectRemovedHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L112>)
 
 ```go
 func (p *DetectRemovedHosts) ShouldRun() bool
@@ -1098,7 +1098,7 @@ func (p *DetectRemovedHosts) ShouldRun() bool
 ShouldRun is true once there is a running controller to ask
 
 <a name="DetectRemovedHosts.Title"></a>
-### func \(\*DetectRemovedHosts\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L82>)
+### func \(\*DetectRemovedHosts\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L81>)
 
 ```go
 func (p *DetectRemovedHosts) Title() string
@@ -1857,7 +1857,7 @@ func (p *KubeConfig) Title() string
 Title for the phase
 
 <a name="LabelNodes"></a>
-## type [LabelNodes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L40-L46>)
+## type [LabelNodes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L50-L56>)
 
 LabelNodes phase state
 
@@ -1872,7 +1872,7 @@ type LabelNodes struct {
 ```
 
 <a name="LabelNodes.Explanation"></a>
-### func \(\*LabelNodes\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L54>)
+### func \(\*LabelNodes\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L64>)
 
 ```go
 func (p *LabelNodes) Explanation() string
@@ -1881,7 +1881,7 @@ func (p *LabelNodes) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="LabelNodes.Prepare"></a>
-### func \(\*LabelNodes\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L59>)
+### func \(\*LabelNodes\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L69>)
 
 ```go
 func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
@@ -1890,7 +1890,7 @@ func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.
 Prepare the phase
 
 <a name="LabelNodes.Run"></a>
-### func \(\*LabelNodes\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L79>)
+### func \(\*LabelNodes\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L89>)
 
 ```go
 func (p *LabelNodes) Run(ctx context.Context) error
@@ -1899,7 +1899,7 @@ func (p *LabelNodes) Run(ctx context.Context) error
 Run the phase
 
 <a name="LabelNodes.ShouldRun"></a>
-### func \(\*LabelNodes\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L74>)
+### func \(\*LabelNodes\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L84>)
 
 ```go
 func (p *LabelNodes) ShouldRun() bool
@@ -1908,7 +1908,7 @@ func (p *LabelNodes) ShouldRun() bool
 ShouldRun is true when enabled by flags
 
 <a name="LabelNodes.Title"></a>
-### func \(\*LabelNodes\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L49>)
+### func \(\*LabelNodes\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L59>)
 
 ```go
 func (p *LabelNodes) Title() string
@@ -3075,7 +3075,7 @@ func (p *UpgradeWorkers) Title() string
 Title for the phase
 
 <a name="UploadFiles"></a>
-## type [UploadFiles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L53-L67>)
+## type [UploadFiles](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L56-L70>)
 
 UploadFiles implements a phase which upload files to hosts
 
@@ -3087,7 +3087,7 @@ type UploadFiles struct {
 ```
 
 <a name="UploadFiles.Explanation"></a>
-### func \(\*UploadFiles\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L75>)
+### func \(\*UploadFiles\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L78>)
 
 ```go
 func (p *UploadFiles) Explanation() string
@@ -3096,7 +3096,7 @@ func (p *UploadFiles) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="UploadFiles.Prepare"></a>
-### func \(\*UploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L85>)
+### func \(\*UploadFiles\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L88>)
 
 ```go
 func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
@@ -3105,7 +3105,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro
 Prepare the phase
 
 <a name="UploadFiles.Run"></a>
-### func \(\*UploadFiles\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L279>)
+### func \(\*UploadFiles\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L310>)
 
 ```go
 func (p *UploadFiles) Run(ctx context.Context) error
@@ -3114,7 +3114,7 @@ func (p *UploadFiles) Run(ctx context.Context) error
 Run the phase
 
 <a name="UploadFiles.ShouldRun"></a>
-### func \(\*UploadFiles\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L274>)
+### func \(\*UploadFiles\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L305>)
 
 ```go
 func (p *UploadFiles) ShouldRun() bool
@@ -3123,7 +3123,7 @@ func (p *UploadFiles) ShouldRun() bool
 ShouldRun is true when there are workers
 
 <a name="UploadFiles.Title"></a>
-### func \(\*UploadFiles\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L70>)
+### func \(\*UploadFiles\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L73>)
 
 ```go
 func (p *UploadFiles) Title() string

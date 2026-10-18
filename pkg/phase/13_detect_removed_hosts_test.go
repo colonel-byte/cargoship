@@ -20,18 +20,19 @@ import (
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // joinedNode is a node joined to the cluster with the labels its role implies.
-func joinedNode(name string, controller bool) corev1.Node {
+func joinedNode(name string, controller bool) kubectlNode {
 	labels := map[string]string{}
 	if controller {
 		labels["node-role.kubernetes.io/control-plane"] = "true"
 		labels["node-role.kubernetes.io/etcd"] = "true"
 	}
-	return corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels}}
+	var n kubectlNode
+	n.Metadata.Name = name
+	n.Metadata.Labels = labels
+	return n
 }
 
 // configHost is a host still in the config, with the hostname the facts phase read off it.
@@ -45,7 +46,7 @@ func configHost(name string) *cluster.Host {
 // worker's host block was deleted from the config must see the node that is still joined.
 func TestUnmanagedNodesFindsARemovedWorker(t *testing.T) {
 	hosts := cluster.Hosts{configHost("control1"), configHost("worker1")}
-	nodes := []corev1.Node{joinedNode("control1", true), joinedNode("worker1", false), joinedNode("worker2", false)}
+	nodes := []kubectlNode{joinedNode("control1", true), joinedNode("worker1", false), joinedNode("worker2", false)}
 
 	require.Equal(t, []string{"worker2 (worker)"}, unmanagedNodes(hosts, nodes))
 }
@@ -55,7 +56,7 @@ func TestUnmanagedNodesFindsARemovedWorker(t *testing.T) {
 // quorum arithmetic already moved against them.
 func TestUnmanagedNodesFindsARemovedController(t *testing.T) {
 	hosts := cluster.Hosts{configHost("control1"), configHost("worker1")}
-	nodes := []corev1.Node{joinedNode("control1", true), joinedNode("control2", true), joinedNode("worker1", false)}
+	nodes := []kubectlNode{joinedNode("control1", true), joinedNode("control2", true), joinedNode("worker1", false)}
 
 	require.Equal(t, []string{"control2 (controller)"}, unmanagedNodes(hosts, nodes))
 }
@@ -63,19 +64,18 @@ func TestUnmanagedNodesFindsARemovedController(t *testing.T) {
 // TestUnmanagedNodesUsesTheMasterLabel covers a distro that still labels its control plane the old
 // way. Missing that label would report a controller as a worker and understate the risk.
 func TestUnmanagedNodesUsesTheMasterLabel(t *testing.T) {
-	old := corev1.Node{ObjectMeta: metav1.ObjectMeta{
-		Name:   "control2",
-		Labels: map[string]string{"node-role.kubernetes.io/master": "true"},
-	}}
+	var old kubectlNode
+	old.Metadata.Name = "control2"
+	old.Metadata.Labels = map[string]string{"node-role.kubernetes.io/master": "true"}
 
-	require.Equal(t, []string{"control2 (controller)"}, unmanagedNodes(nil, []corev1.Node{old}))
+	require.Equal(t, []string{"control2 (controller)"}, unmanagedNodes(nil, []kubectlNode{old}))
 }
 
 // TestUnmanagedNodesIsEmptyWhenTheConfigMatches pins the case that must stay silent, since this
 // phase runs on every apply against an existing cluster.
 func TestUnmanagedNodesIsEmptyWhenTheConfigMatches(t *testing.T) {
 	hosts := cluster.Hosts{configHost("control1"), configHost("worker1")}
-	nodes := []corev1.Node{joinedNode("control1", true), joinedNode("worker1", false)}
+	nodes := []kubectlNode{joinedNode("control1", true), joinedNode("worker1", false)}
 
 	require.Empty(t, unmanagedNodes(hosts, nodes))
 }
@@ -85,7 +85,7 @@ func TestUnmanagedNodesIsEmptyWhenTheConfigMatches(t *testing.T) {
 func TestUnmanagedNodesMatchesCaseInsensitively(t *testing.T) {
 	hosts := cluster.Hosts{configHost("Control1.EXAMPLE.com")}
 
-	require.Empty(t, unmanagedNodes(hosts, []corev1.Node{joinedNode("control1.example.com", true)}))
+	require.Empty(t, unmanagedNodes(hosts, []kubectlNode{joinedNode("control1.example.com", true)}))
 }
 
 // TestUnmanagedNodesFallsBackToTheConfigHostname covers a host the facts phase has not visited, so
@@ -93,13 +93,13 @@ func TestUnmanagedNodesMatchesCaseInsensitively(t *testing.T) {
 func TestUnmanagedNodesFallsBackToTheConfigHostname(t *testing.T) {
 	hosts := cluster.Hosts{{Hostname: "worker1"}}
 
-	require.Empty(t, unmanagedNodes(hosts, []corev1.Node{joinedNode("worker1", false)}))
+	require.Empty(t, unmanagedNodes(hosts, []kubectlNode{joinedNode("worker1", false)}))
 }
 
 // TestUnmanagedNodesSortsAndReportsAll keeps the message stable, so an operator comparing two runs
 // sees the same order, and pins that every leftover node is named rather than just the first.
 func TestUnmanagedNodesSortsAndReportsAll(t *testing.T) {
-	nodes := []corev1.Node{joinedNode("worker9", false), joinedNode("control2", true), joinedNode("worker3", false)}
+	nodes := []kubectlNode{joinedNode("worker9", false), joinedNode("control2", true), joinedNode("worker3", false)}
 
 	require.Equal(t, []string{
 		"control2 (controller)",
@@ -117,11 +117,11 @@ func TestUnmanagedNodesMatchesOnAddressWhenTheNameWasOverridden(t *testing.T) {
 	h.Metadata.Hostname = "worker1"
 
 	renamed := joinedNode("custom-node-name", false)
-	renamed.Status.Addresses = []corev1.NodeAddress{
-		{Type: corev1.NodeInternalIP, Address: "10.0.0.7"},
+	renamed.Status.Addresses = []kubectlNodeAddress{
+		{Address: "10.0.0.7"},
 	}
 
-	require.Empty(t, unmanagedNodes(cluster.Hosts{h}, []corev1.Node{renamed}))
+	require.Empty(t, unmanagedNodes(cluster.Hosts{h}, []kubectlNode{renamed}))
 }
 
 // TestUnmanagedNodesStillCatchesARemovalWithAddresses guards the other direction: the address
@@ -131,22 +131,22 @@ func TestUnmanagedNodesStillCatchesARemovalWithAddresses(t *testing.T) {
 	h.Metadata.Hostname = "worker1"
 
 	gone := joinedNode("worker2", false)
-	gone.Status.Addresses = []corev1.NodeAddress{
-		{Type: corev1.NodeInternalIP, Address: "10.0.0.8"},
-		{Type: corev1.NodeHostName, Address: "worker2"},
+	gone.Status.Addresses = []kubectlNodeAddress{
+		{Address: "10.0.0.8"},
+		{Address: "worker2"},
 	}
 
-	require.Equal(t, []string{"worker2 (worker)"}, unmanagedNodes(cluster.Hosts{h}, []corev1.Node{gone}))
+	require.Equal(t, []string{"worker2 (worker)"}, unmanagedNodes(cluster.Hosts{h}, []kubectlNode{gone}))
 }
 
 // TestUnmanagedNodesIgnoresEmptyIdentifiers pins that a host with no private address yet, and a
 // node reporting a blank address, do not match each other through the empty string.
 func TestUnmanagedNodesIgnoresEmptyIdentifiers(t *testing.T) {
 	blank := joinedNode("worker2", false)
-	blank.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: ""}}
+	blank.Status.Addresses = []kubectlNodeAddress{{Address: ""}}
 
 	require.Equal(t, []string{"worker2 (worker)"},
-		unmanagedNodes(cluster.Hosts{{Hostname: "worker1"}}, []corev1.Node{blank}))
+		unmanagedNodes(cluster.Hosts{{Hostname: "worker1"}}, []kubectlNode{blank}))
 }
 
 // TestDetectRemovedHostsSkipsWithoutARunningController is the first-install case. Nothing is

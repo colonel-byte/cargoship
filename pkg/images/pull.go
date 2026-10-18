@@ -223,7 +223,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 
 			// If the image sha points to an index then error
-			if image.original.Digest != "" && isIndex(desc.MediaType) {
+			if image.original.Digest != "" && IsIndex(desc.MediaType) {
 				// Both index types can be marshalled into an ocispec.Index
 				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
 				var idx ocispec.Index
@@ -236,7 +236,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// non container image, and that single manifest is what every requested architecture gets.
 			// If it's not a manifest then we received an index and need to pull one manifest per platform.
 			fetched := []fetchedManifest{{desc: desc, body: b}}
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				fetched = fetched[:0]
 				for _, pullPlatform := range pullPlatforms {
 					platformOpts := oras.DefaultFetchBytesOptions
@@ -254,7 +254,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			seen := map[digest.Digest]struct{}{}
 			for _, f := range fetched {
 				// extra validation before we marshall, this should never be true
-				if !isManifest(f.desc.MediaType) {
+				if !IsManifest(f.desc.MediaType) {
 					return fmt.Errorf("received unexpected mediatype %s", f.desc.MediaType)
 				}
 				// An index is allowed to point several platforms at the same manifest, and there is no

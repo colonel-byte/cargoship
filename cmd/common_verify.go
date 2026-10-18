@@ -25,11 +25,11 @@ import (
 
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 // flagGroupAnnotation is the pflag annotation key used to assign a flag to a named
@@ -40,18 +40,11 @@ const flagGroupAnnotation = "cargoship_flag_group"
 // verifyFlagGroupTitle is the usage section title for package verification flags.
 const verifyFlagGroupTitle = "Verification Flags"
 
-// These three keys are read directly from viper, never through resolvedConfig: verify
-// and insecureIgnoreTlogKey need v.IsSet to distinguish "unset" from "set to zero
-// value", which a struct field can't represent, and useSignedTimestampsKey's real
-// value is a bool (read via v.GetBool) even though the DistroOptions field it maps to
-// is typed as a string (mirroring the config-file schema). All three are excluded from
-// Unmarshal (mapstructure:"-" in config.go), so configPath falls back to their json
-// tag -- see configPath's doc comment in viper.go.
-var (
-	verifyKey              = configPath("DistroOpts", "Verify")
-	insecureIgnoreTlogKey  = configPath("DistroOpts", "InsecureIgnoreTLog")
-	useSignedTimestampsKey = configPath("DistroOpts", "UseSignedTimestamps")
-)
+// verifyKey is read directly from viper, never through resolvedConfig: it needs
+// v.IsSet to distinguish "unset" from "set to the zero value", which a struct field
+// cannot represent. It is excluded from Unmarshal (mapstructure:"-" in config.go), so
+// configPath falls back to its json tag -- see configPath's doc comment in viper.go.
+var verifyKey = configPath("DistroOpts", "Verify")
 
 // annotateFlagGroup tags every flag in fs with the given usage-section title.
 func annotateFlagGroup(fs *pflag.FlagSet, title string) {
@@ -63,20 +56,13 @@ func annotateFlagGroup(fs *pflag.FlagSet, title string) {
 	})
 }
 
-// packageVerifyFlags holds all package signature and keyless verification flags.
-// Embed this in any command options struct that performs a package load operation.
-// To add a new verification flag in the future, add the field here and register it
-// in newVerifyFlagSet / newKeylessVerifyFlagSet, then update buildVerifyBlobOptions.
+// packageVerifyFlags holds the package signature verification flags. Embed this in
+// any command options struct that performs a package load operation. To add a new
+// verification flag in the future, add the field here, register it in
+// newVerifyFlagSet, then update buildVerifyBlobOptions.
 type packageVerifyFlags struct {
-	publicKeyPath               string
-	verify                      verifyMode
-	certificateIdentity         string
-	certificateIdentityRegexp   string
-	certificateOIDCIssuer       string
-	certificateOIDCIssuerRegexp string
-	trustedRoot                 string
-	insecureIgnoreTlog          bool
-	useSignedTimestamps         bool
+	publicKeyPath string
+	verify        verifyMode
 }
 
 // verifyMode is the value type for the --verify flag.
@@ -122,95 +108,29 @@ func (m verifyMode) toStrategy() layout.VerificationStrategy {
 	}
 }
 
-// newKeylessVerifyFlagSet creates a pflag.FlagSet containing only the 7 keyless
-// verification flags (certificate identity/issuer, trusted root, tlog, timestamps).
-// Used by newVerifyFlagSet and directly by the sign command, which registers --key
-// separately with a command-specific usage string.
-func newKeylessVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
-	fs := pflag.NewFlagSet("keyless-verify", pflag.ContinueOnError)
-
-	fs.StringVar(&f.certificateIdentity, "certificate-identity",
-		resolvedConfig.DistroOpts.CertificateIdentity, zlang.CmdPackageVerifyFlagCertificateIdentity)
-	fs.StringVar(&f.certificateIdentityRegexp, "certificate-identity-regexp",
-		resolvedConfig.DistroOpts.CertificateIdentityRegexp, zlang.CmdPackageVerifyFlagCertificateIdentityRegexp)
-	fs.StringVar(&f.certificateOIDCIssuer, "certificate-oidc-issuer",
-		resolvedConfig.DistroOpts.CertificateOIDCIssuer, zlang.CmdPackageVerifyFlagCertificateOIDCIssuer)
-	fs.StringVar(&f.certificateOIDCIssuerRegexp, "certificate-oidc-issuer-regexp",
-		resolvedConfig.DistroOpts.CertificateOIDCIssuerRegexp, zlang.CmdPackageVerifyFlagCertificateOIDCIssuerRegexp)
-	fs.StringVar(&f.trustedRoot, "trusted-root",
-		resolvedConfig.DistroOpts.TrustedRoot, zlang.CmdPackageVerifyFlagTrustedRoot)
-
-	ignoreTlogDefault := true
-	if v.IsSet(insecureIgnoreTlogKey) {
-		ignoreTlogDefault = v.GetBool(insecureIgnoreTlogKey)
-	}
-	fs.BoolVar(&f.insecureIgnoreTlog, "insecure-ignore-tlog", ignoreTlogDefault,
-		zlang.CmdPackageVerifyFlagInsecureIgnoreTlog)
-	fs.BoolVar(&f.useSignedTimestamps, "use-signed-timestamps",
-		v.GetBool(useSignedTimestampsKey), zlang.CmdPackageVerifyFlagUseSignedTimestamps)
-
-	annotateFlagGroup(fs, verifyFlagGroupTitle)
-	return fs
-}
-
-// newVerifyFlagSet creates a pflag.FlagSet containing all 10 package verification flags
-func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
+// newVerifyFlagSet creates a pflag.FlagSet containing the package verification flags.
+func newVerifyFlagSet(_ *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 	fs := pflag.NewFlagSet("verify", pflag.ContinueOnError)
 
 	fs.StringVarP(&f.publicKeyPath, "key", "k", resolvedConfig.DistroOpts.PublicKey, zlang.CmdPackageFlagFlagPublicKey)
 	f.verify = verifyModeIfPossible
 	fs.VarP(&f.verify, "verify", "", lang.CmdPackageFlagVerify)
 
-	fs.AddFlagSet(newKeylessVerifyFlagSet(v, f))
 	annotateFlagGroup(fs, verifyFlagGroupTitle)
 	return fs
 }
 
-// addVerifyFlags registers the full verification flag set on cmd and marks the
-// key/keyless flags mutually exclusive. Use this for all commands that load packages.
-// The sign and verify commands are exceptions - they register --key manually and use
-// newKeylessVerifyFlagSet directly, then call markVerifyFlagsMutuallyExclusive themselves.
+// addVerifyFlags registers the verification flag set on cmd. Use this for all
+// commands that load packages. The sign and verify commands are exceptions - they
+// register --key manually with a command-specific usage string.
 func addVerifyFlags(cmd *cobra.Command, v *viper.Viper, f *packageVerifyFlags) {
 	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, f))
-	markVerifyFlagsMutuallyExclusive(cmd)
 }
 
-// markVerifyFlagsMutuallyExclusive registers --key vs keyless flag mutual exclusions on cmd.
-// Must be called after cmd.Flags().AddFlagSet so all flags are present on the command.
-func markVerifyFlagsMutuallyExclusive(cmd *cobra.Command) {
-	cmd.MarkFlagsMutuallyExclusive("key", "certificate-identity")
-	cmd.MarkFlagsMutuallyExclusive("key", "certificate-identity-regexp")
-	cmd.MarkFlagsMutuallyExclusive("key", "certificate-oidc-issuer")
-	cmd.MarkFlagsMutuallyExclusive("key", "certificate-oidc-issuer-regexp")
-	cmd.MarkFlagsMutuallyExclusive("certificate-identity", "certificate-identity-regexp")
-	cmd.MarkFlagsMutuallyExclusive("certificate-oidc-issuer", "certificate-oidc-issuer-regexp")
-}
-
-// buildVerifyBlobOptions builds signing.VerifyBlobOptions from the verification flags,
-// applying the tlog auto-disable logic for keyless identity verification.
-func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper.Viper) *signing.VerifyBlobOptions {
+// buildVerifyBlobOptions builds signing.VerifyBlobOptions from the verification flags.
+func (f *packageVerifyFlags) buildVerifyBlobOptions(_ *cobra.Command, _ *viper.Viper) *signing.VerifyBlobOptions {
 	opts := signing.DefaultVerifyBlobOptions()
 	opts.Key = f.publicKeyPath
-	opts.CertVerify.CertIdentity = f.certificateIdentity
-	opts.CertVerify.CertIdentityRegexp = f.certificateIdentityRegexp
-	opts.CertVerify.CertOidcIssuer = f.certificateOIDCIssuer
-	opts.CertVerify.CertOidcIssuerRegexp = f.certificateOIDCIssuerRegexp
-	opts.CommonVerifyOptions.TrustedRootPath = f.trustedRoot
-	opts.CommonVerifyOptions.IgnoreTlog = f.insecureIgnoreTlog
-	opts.CommonVerifyOptions.UseSignedTimestamps = f.useSignedTimestamps
-
-	// When a keyless identity is provided, require tlog verification by default so the
-	// inclusion proof establishes when the signature was made. Honor any explicit override.
-	// cmd may be nil when run() is called directly (e.g. from tests); in that case only
-	// the viper config path is checked for an explicit override.
-	hasKeylessIdentity := f.certificateIdentity != "" || f.certificateIdentityRegexp != ""
-	tlogExplicit := v.IsSet(insecureIgnoreTlogKey)
-	if cmd != nil {
-		tlogExplicit = tlogExplicit || cmd.Flags().Changed("insecure-ignore-tlog")
-	}
-	if hasKeylessIdentity && !tlogExplicit {
-		opts.CommonVerifyOptions.IgnoreTlog = false
-	}
 	return &opts
 }
 

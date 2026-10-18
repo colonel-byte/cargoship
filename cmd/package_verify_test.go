@@ -26,63 +26,46 @@ func TestPackageVerifyRegistersTheVerificationFlags(t *testing.T) {
 
 	// --verify is deliberately absent: verification is the command's only job, so
 	// there is no mode to opt out of it.
-	for _, name := range []string{
-		"key",
-		"certificate-identity",
-		"certificate-identity-regexp",
-		"certificate-oidc-issuer",
-		"certificate-oidc-issuer-regexp",
-		"trusted-root",
-		"insecure-ignore-tlog",
-		"use-signed-timestamps",
-	} {
-		if cmd.Flags().Lookup(name) == nil {
-			t.Errorf("newPackageVerifyCommand() is missing the --%s flag", name)
-		}
+	if cmd.Flags().Lookup("key") == nil {
+		t.Error("newPackageVerifyCommand() is missing the --key flag")
 	}
 	if f := cmd.Flags().Lookup("verify"); f != nil {
 		t.Error("newPackageVerifyCommand() registers --verify, which it should not")
 	}
 }
 
-func TestPackageVerifyRejectsKeyWithKeylessFlags(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{
-			name: "key with certificate identity",
-			args: []string{"pkg.tar.zst", "--key", "./cosign.pub", "--certificate-identity", "signer@example.com"},
-		},
-		{
-			name: "key with certificate identity regexp",
-			args: []string{"pkg.tar.zst", "--key", "./cosign.pub", "--certificate-identity-regexp", ".*"},
-		},
-		{
-			name: "key with oidc issuer",
-			args: []string{"pkg.tar.zst", "--key", "./cosign.pub", "--certificate-oidc-issuer", "https://example.com"},
-		},
-		{
-			name: "identity and its regexp together",
-			args: []string{"pkg.tar.zst", "--certificate-identity", "signer@example.com", "--certificate-identity-regexp", ".*"},
-		},
-		{
-			name: "oidc issuer and its regexp together",
-			args: []string{"pkg.tar.zst", "--certificate-oidc-issuer", "https://example.com", "--certificate-oidc-issuer-regexp", ".*"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmd := newPackageVerifyCommand()
-			// Replace RunE so a passing flag check does not go on to load a package.
-			cmd.RunE = func(_ *cobra.Command, _ []string) error { return nil }
-			cmd.SetArgs(tt.args)
-			cmd.SetOut(io.Discard)
-			cmd.SetErr(io.Discard)
-			if err := cmd.Execute(); err == nil {
-				t.Fatalf("Execute(%v) = nil error, want a mutual-exclusion error", tt.args)
+// TestPackageVerifyHasNoKeylessFlags is the regression test for the keyless removal.
+// A flag that lingers after the code behind it is gone either does nothing or does
+// something other than what it says, and nothing else in the suite notices: every
+// other sign and verify test drives a key, so all of them passed unchanged while
+// keyless was being removed.
+func TestPackageVerifyHasNoKeylessFlags(t *testing.T) {
+	for _, cmd := range []*cobra.Command{
+		newPackageVerifyCommand(),
+		newPackageSignCommand(),
+	} {
+		for _, name := range []string{
+			"certificate-identity",
+			"certificate-identity-regexp",
+			"certificate-oidc-issuer",
+			"certificate-oidc-issuer-regexp",
+			"trusted-root",
+			"insecure-ignore-tlog",
+			"use-signed-timestamps",
+			"keyless",
+			"identity-token",
+			"fulcio-url",
+			"fulcio-auth-flow",
+			"oidc-issuer",
+			"oidc-client-id",
+			"rekor-url",
+			"tlog-upload",
+			"tsa-server-url",
+		} {
+			if f := cmd.Flags().Lookup(name); f != nil {
+				t.Errorf("%s registers --%s, which was removed with keyless signing", cmd.Name(), name)
 			}
-		})
+		}
 	}
 }
 

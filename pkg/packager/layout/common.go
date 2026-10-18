@@ -25,8 +25,8 @@ import (
 	"errors"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/colonel-byte/cargoship/types"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 // Distro struct

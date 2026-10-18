@@ -56,6 +56,9 @@ var exampleDefinitions = map[string]struct { //nolint:gochecknoglobals
 }{
 	"rke2": {path: "example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1", version: "1.36.4-rke2r1"},
 	"k3s":  {path: "example/k3s-flannel/v1_36/v1.36.4-k3s1", version: "1.36.4-k3s1"},
+	// Upstream kubeadm. Cilium to match the rke2 entry, and the same minor as the other
+	// two so a walk against one distro is comparable to a walk against another.
+	"upstream": {path: "example/upstream-cilium/v1_36/v1.36.5", version: "1.36.5"},
 }
 
 // examplePackage is the distro definition the suite packages and installs.
@@ -261,10 +264,17 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 	// nothing to tear down.
 	s.Require().NotEmpty(sink.Result().Planned, "a reset dry run over a live cluster reported no phases")
 
-	cs, err := e2e.KubeClient(s.T())
-	s.Require().NoError(err)
-	s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, time.Minute),
-		"a reset dry run took nodes out of the cluster")
+	// The node check needs the API server reachable from here, which it is not on the
+	// microvm backend: the fleet's nodes sit on a private segment and only the leader's
+	// forwarded ports reach the host. Test_ZZ1_ClusterHealthy guards the same call and
+	// this one did not, so a VM run failed here on reachability rather than on anything
+	// the reset did. The phase assertions above still run either way.
+	if reachesClusterAPI(manager.Config.Spec.Config.LoadBalancer) {
+		cs, err := e2e.KubeClient(s.T())
+		s.Require().NoError(err)
+		s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, time.Minute),
+			"a reset dry run took nodes out of the cluster")
+	}
 
 	s.Require().NoError(reconnectHosts(s.ctx, manager))
 	defer disconnectAll(manager.Config.Spec.Hosts)

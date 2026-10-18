@@ -177,8 +177,10 @@ func (s Spec) Normalize() (Spec, error) {
 	if total := s.nodeCount(); total > maxNodes {
 		return Spec{}, fmt.Errorf("a fleet of %d nodes exceeds the %d node limit", total, maxNodes)
 	}
-	if s.Distro != "k3s" && s.Distro != "rke2" {
-		return Spec{}, fmt.Errorf("distro must be k3s or rke2, got %q", s.Distro)
+	switch s.Distro {
+	case "k3s", "rke2", "upstream":
+	default:
+		return Spec{}, fmt.Errorf("distro must be k3s, rke2 or upstream, got %q", s.Distro)
 	}
 	return s, nil
 }
@@ -299,6 +301,9 @@ func leaderForwards(id int, distro string) []PortForward {
 			GuestPort: 6443,
 		},
 	}
+	// Only rke2 serves its join endpoint on a second port. k3s multiplexes onto 6443,
+	// and upstream kubeadm has no supervisor at all, so both are covered by the forward
+	// above.
 	if distro == "rke2" {
 		fwd = append(fwd, PortForward{
 			HostPort:  apiPortFor(id, 9345),

@@ -55,6 +55,41 @@ Plain Go commands work for anything mage doesn't wrap - `go build ./...`, `go ve
 
 Never run `go test ./...` (or any of the paths above) without `-short`. Without it, the suite pulls in the full e2e tests, including the cluster suite that needs Docker + bootloose. Always pass `-short`, or use the mage targets above which scope things correctly.
 
+### The binary has a size budget
+
+`cargoship` is carried onto air-gapped networks by hand. It crosses on removable media, through a one-way diode, or over a link metered by the hour, and it is staged alongside the distro packages, the container images and everything else the management node needs before it is disconnected. Every mebibyte is one somebody physically moves, often repeatedly, often without a resumable transfer.
+
+So the binary has a budget, and it is a design constraint rather than a nice-to-have:
+
+| Size (MiB, `mage build:binary`, linux/amd64) | What it means                                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **50-60**                                    | The target. Comfortable to carry, and the range to aim for when weighing a dependency.                   |
+| 60-100                                       | Acceptable, and worth a look. Something large is linked; find out what before adding more.               |
+| **over 100**                                 | **Warn, and say so in the change.** Not a hard failure, but a number nobody should discover by accident. |
+
+There is no enforced limit, and this is deliberate: a hard gate in CI would get raised the first time it blocked something urgent, and the useful behaviour is a human noticing rather than a threshold being edited. What is expected is that a change which moves the binary materially says so, with a measured before and after.
+
+It was **100.71 MiB** as of `f3678071b` and is **39.48 MiB** now; [#846](https://github.com/colonel-byte/cargoship/issues/846) records where the 61 MiB went and what is left. That history is the argument for the budget: nothing in it was a deliberate decision to ship a 100 MiB binary. It was four dependency trees carried for features unreachable from an air-gapped host - containerd's image exporter, the docker-socket image pull, cosign's cloud KMS and CLI command structs, and the Kubernetes typed clientset - each arriving transitively, none visible from the code that pulled it in.
+
+Which is the practical rule: **the cost of a dependency is what it links, not what you call.** One import of a helper package for four symbols pulled `docker/cli` and the Docker daemon client; one typed Kubernetes client registered all 59 API groups; one `actions.Run` call linked `kubectl` and `kustomize`. Check with `go list -deps ./cmd/cargoship` before adding an import, and read the section below before quoting any number.
+
+Note the units. These are **MiB** - what `ls`, `du` and `ls -la | awk '{$5/1048576}'` report - not decimal megabytes. The difference is about 5% at this size, which is enough to argue past each other over.
+
+### Measuring binary size means building the way a release does
+
+Checking the budget above means producing a number that means something, which is easy to get wrong, because a plain `go build` of this repo is about 35% larger than the shipped artifact and the gap is not uniform: `CGO_ENABLED=0` alone accounts for most of it, and `-gcflags=all="-l"` for another 13%.
+
+Read [`docs/dev/build-flags.md`](docs/dev/build-flags.md) before quoting a number. It documents every flag, why it is set, and what each one measured. The flags themselves live in `pkg/utils/build/utils.go` (`LDFlags`, `GCFLags`), which `magefiles/pkg/build/build.go` calls - so the one safe way to build a comparable binary is `mage build:binary`, and the one safe way to spell it by hand is to read those two functions rather than to remember them.
+
+```sh
+mage build:binary                        # the shipped flags, no remembering required
+```
+
+A size measured with different flags than the baseline it is compared against is worse than no measurement, because it looks like a result. Two further traps, both of which have produced wrong numbers in this repo:
+
+- **Compare like with like, across the whole set.** Rebuild the baseline with the same flags in the same session rather than reusing a figure from a document or an earlier run. `docs/dev/build-flags.md` records a flag comparison at one point in history, not a size to diff against today; toolchain and dependency drift move the absolute number without anybody editing the file.
+- **Vendor size is not binary size, and neither is module count.** Dropping a module from `go.mod` shrinks `vendor/` and the dependency surface whether or not the linker was keeping any of it. Removing `containerd/containerd/v2` deleted 5065 vendored lines and moved the binary by 30KB. Both facts are worth reporting; reporting the first as though it were the second is not. Use `go list -deps ./cmd/cargoship` to see what is actually linked, and attribute weight with `go mod why -vendor <pkg>`.
+
 ## Keeping `.gitattributes` in sync with the generators
 
 Everything a generator writes is marked `linguist-generated` in [`.gitattributes`](.gitattributes), which is what collapses it in a GitHub diff and keeps it out of the repository's language statistics. A generated file that is not marked shows up as hand-written work in every review, and a thousand-line regenerated page buries the twenty lines that were actually written.
@@ -173,3 +208,34 @@ OpenSSF Scorecard's `isTestdataFile` logic excludes anything under a `src/test/`
 ### `docs/agent/choice-*.md` are constraints, not history
 
 When a decision looks reversible from the code alone - four generated `osv-scanner.toml` files inside `vendor/`, a firewall backend picked by the node's OS rather than by what is running on it, an in-memory OCI registry in the test suite - check `docs/agent/` first. These are usually the record of a tradeoff already made on purpose, not an oversight waiting to be cleaned up.
+
+# Markdown line formatting
+
+## Do not hard-wrap lines in Markdown documents
+
+Markdown files should NOT have hard-wrapped or truncated lines. Instead, write full paragraphs and list items on single, continuous lines without manual line breaks, letting editors and renderers handle line wrapping dynamically.
+
+- Write entire paragraphs or list items on a single line without manual line breaks / hard wraps.
+- Let editors and rendering tools handle line wrapping dynamically.
+
+## Pad table cells so the columns line up
+
+Tables are written in their aligned form, so that the source reads as a table and a reviewer can see the columns without rendering the file. Pad every cell with spaces to the width of the widest cell in its column, keep one space of padding inside each pipe, and run the dashes of the delimiter row out to that same width. Every line of the table then has the same length.
+
+Write this:
+
+```markdown
+| Path                                   | What it holds     |
+| -------------------------------------- | ----------------- |
+| `.spec.config.registries[N].auth.user` | Registry username |
+```
+
+Not this:
+
+```markdown
+| Path | What it holds |
+| --- | --- |
+| `.spec.config.registries[N].auth.user` | Registry username |
+```
+
+Adding a row that is wider than the column repads the whole table, which is expected - the alignment is part of the content, not a one-time cleanup.

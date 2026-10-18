@@ -112,7 +112,6 @@ func TestExpandHomePaths(t *testing.T) {
 			ReceiptPath: "~/.cache/cargoship/logs/{command}-{timestamp}.json",
 			Output:      "~/packages",
 			PublicKey:   "~/.cosign/cosign.pub",
-			TrustedRoot: "~/.sigstore/trusted_root.json",
 			PublishOpts: types.DistroPublishOptions{
 				// A cosign key provider rather than a file: it has no leading ~, so it
 				// must survive untouched.
@@ -138,7 +137,6 @@ func TestExpandHomePaths(t *testing.T) {
 			ReceiptPath: filepath.Join(home, ".cache", "cargoship", "logs", "{command}-{timestamp}.json"),
 			Output:      filepath.Join(home, "packages"),
 			PublicKey:   filepath.Join(home, ".cosign", "cosign.pub"),
-			TrustedRoot: filepath.Join(home, ".sigstore", "trusted_root.json"),
 			PublishOpts: types.DistroPublishOptions{
 				SigningKey: "awskms:///alias/cargoship",
 			},

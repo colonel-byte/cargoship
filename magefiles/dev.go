@@ -168,7 +168,7 @@ func (Dev) VMUp(
 	ubuntuControl *int,
 	// Ubuntu worker nodes, instead of Rocky (default 0)
 	ubuntuWorker *int,
-	// engine the fleet is prepared for, k3s or rke2 (default k3s)
+	// engine the fleet is prepared for, k3s, rke2 or upstream (default k3s)
 	distro *string,
 	// memory per node in MiB (default 4096)
 	memory *int,

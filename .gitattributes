@@ -31,6 +31,10 @@ example/*/cni/*.yaml linguist-generated
 example/shasums.json linguist-generated
 
 # mage dev:vendor
-vendor/**/osv-scanner.toml linguist-generated
+# The whole tree, not just the osv-scanner.toml files mage writes into it: `go mod vendor`
+# generates all of it, and a dependency change that moves 8000 files buries the 70 that were
+# actually written. linguist-generated collapses them in a GitHub diff and keeps them out of the
+# language statistics; the files are still tracked, still reviewable, and still diffable locally.
+vendor/** linguist-generated
 
 thirdparty-src/** linguist-vendored

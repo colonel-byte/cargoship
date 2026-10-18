@@ -25,16 +25,26 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )
 
 // nodeRoleLabelPrefix prefixes the Kubernetes node label cargoship uses to mark which
 // profile group a node belongs to.
 const nodeRoleLabelPrefix = "node-role.kubernetes.io/"
+
+// nodesResource names the resource this phase reads and patches.
+//
+// The node list goes through the dynamic client rather than the typed clientset,
+// because every typed client imports k8s.io/client-go/kubernetes/scheme, which
+// registers every Kubernetes API group and linked about 24MB of k8s.io/api and
+// client-go into the binary. This phase reads two fields off a node and patches one
+// label, which unstructured serves directly through GetName and GetLabels.
+var nodesResource = schema.GroupVersionResource{Version: "v1", Resource: "nodes"}
 
 // LabelNodes phase state
 type LabelNodes struct {
@@ -79,19 +89,20 @@ func (p *LabelNodes) ShouldRun() bool {
 func (p *LabelNodes) Run(ctx context.Context) error {
 	l := logger.From(ctx)
 
-	clientset, err := p.clientset()
+	client, err := p.dynamicClient()
 	if err != nil {
 		return fmt.Errorf("failed to build kubernetes client: %w", err)
 	}
+	nodeClient := client.Resource(nodesResource)
 
-	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := nodeClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	byName := make(map[string]*corev1.Node, len(nodes.Items))
+	byName := make(map[string]*unstructured.Unstructured, len(nodes.Items))
 	for i := range nodes.Items {
-		byName[strings.ToLower(nodes.Items[i].Name)] = &nodes.Items[i]
+		byName[strings.ToLower(nodes.Items[i].GetName())] = &nodes.Items[i]
 	}
 
 	for _, h := range p.manager.Config.Spec.Hosts {
@@ -111,7 +122,7 @@ func (p *LabelNodes) Run(ctx context.Context) error {
 		}
 
 		labelKey := nodeRoleLabelPrefix + h.Profile
-		if node.Labels[labelKey] == "true" {
+		if node.GetLabels()[labelKey] == "true" {
 			continue
 		}
 
@@ -123,21 +134,21 @@ func (p *LabelNodes) Run(ctx context.Context) error {
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to build label patch for node %s: %w", node.Name, err)
+			return fmt.Errorf("failed to build label patch for node %s: %w", node.GetName(), err)
 		}
 
-		if _, err := clientset.CoreV1().Nodes().Patch(ctx, node.Name, apitypes.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
-			return fmt.Errorf("failed to label node %s with %s=true: %w", node.Name, labelKey, err)
+		if _, err := nodeClient.Patch(ctx, node.GetName(), apitypes.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
+			return fmt.Errorf("failed to label node %s with %s=true: %w", node.GetName(), labelKey, err)
 		}
 
-		l.Info("labeled node with profile group", "node", node.Name, "label", labelKey)
+		l.Info("labeled node with profile group", "node", node.GetName(), "label", labelKey)
 	}
 
 	return nil
 }
 
-// clientset builds a Kubernetes client from the leader's admin certificates.
-func (p *LabelNodes) clientset() (*kubernetes.Clientset, error) {
+// dynamicClient builds a Kubernetes client from the leader's admin certificates.
+func (p *LabelNodes) dynamicClient() (dynamic.Interface, error) {
 	if p.leader == nil {
 		return nil, errors.New("no leader host resolved")
 	}
@@ -156,5 +167,5 @@ func (p *LabelNodes) clientset() (*kubernetes.Clientset, error) {
 		},
 	}
 
-	return kubernetes.NewForConfig(restConfig)
+	return dynamic.NewForConfig(restConfig)
 }

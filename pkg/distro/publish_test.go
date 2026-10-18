@@ -21,7 +21,7 @@ import (
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 )
 
 func TestPublishNilRegistry(t *testing.T) {

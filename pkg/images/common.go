@@ -102,7 +102,8 @@ func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Cl
 	return true, nil
 }
 
-func isManifest(mediaType string) bool {
+// IsManifest reports whether the media type represents an OCI manifest.
+func IsManifest(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageManifest, DockerMediaTypeManifest:
 		return true
@@ -110,7 +111,8 @@ func isManifest(mediaType string) bool {
 	return false
 }
 
-func isIndex(mediaType string) bool {
+// IsIndex reports whether the media type represents an OCI image index.
+func IsIndex(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
 		return true
