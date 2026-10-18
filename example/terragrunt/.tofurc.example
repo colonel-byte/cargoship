@@ -1,0 +1,27 @@
+# The provider is not published to a registry, so OpenTofu is pointed at a build of it instead.
+# Copy this to ~/.tofurc, or name it with TF_CLI_CONFIG_FILE, and set the path.
+#
+# `mage release:tofuProviderDev 0.1.0` builds into exactly this layout and prints the directory.
+# See docs/dev/tofu-provider.md.
+provider_installation {
+  filesystem_mirror {
+    path    = "/path/to/cargoship/build/tofu-provider/mirror"
+    include = ["registry.opentofu.org/colonel-byte/*"]
+  }
+
+  # Everything else still resolves normally. Without the matching exclusion, OpenTofu would try
+  # the registry for this provider too.
+  direct {
+    exclude = ["registry.opentofu.org/colonel-byte/*"]
+  }
+}
+
+# An internal OCI registry is the other way in, and the one an airgapped site is likelier to
+# have: `mage release:tofuProvider <version>` pushes the artifact an oci_mirror serves.
+#
+# provider_installation {
+#   oci_mirror {
+#     repository_template = "registry.bubbles.test/tofu-providers/${namespace}/${type}"
+#     include             = ["registry.opentofu.org/colonel-byte/*"]
+#   }
+# }
