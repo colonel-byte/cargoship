@@ -103,7 +103,7 @@ func (s *JoinPhaseSuite) Test_00_JoinMachine() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	definition, err := containerSafeDefinition(examplePackage(), s.pkgDir)
+	definition, err := test.ContainerSafeDefinition(examplePackage(), s.pkgDir)
 	s.Require().NoError(err)
 
 	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
