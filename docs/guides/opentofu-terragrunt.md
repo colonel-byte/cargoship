@@ -88,6 +88,84 @@ export TG_TF_PATH=tofu
 
 A `facts` leaf that reads a cluster this inventory also installs declares a dependency on the `cluster` leaf, so the read reports what the apply installed rather than racing it. Reading a fleet nothing here installs needs no dependency at all: the data source takes no lock and changes nothing.
 
+## Profiles and per-host overrides
+
+A fleet is not uniform. Controllers want a port open and a label; infra nodes want a taint so ordinary workloads stay off them; one node has a second interface or sits behind a jump host. A `profiles` map says what a profile means once, and a host selects one by name:
+
+```hcl
+resource "cargoship_cluster" "prod" {
+  # ...
+
+  profiles = {
+    control = {
+      node_labels = { "adrp.xyz/purpose-control" = "true" }
+      ports       = [{ port = "6443" }]
+      concurrency = "1"
+    }
+
+    general = {}
+
+    infra = {
+      node_taints = ["adrp.xyz/infra=true:NoSchedule"]
+      firewall_rules = [
+        { name = "allow-backup", action = "allow", source = "10.0.0.0/8", port = "2049" },
+      ]
+    }
+  }
+
+  hosts = {
+    kc01 = {
+      address  = "10.3.20.11"
+      role     = "controller"
+      key_path = "~/.ssh/bubbles"
+      profile  = "control"
+    }
+
+    kw03 = {
+      address           = "10.3.20.22"
+      role              = "worker"
+      key_path          = "~/.ssh/bubbles"
+      profile           = "infra"
+      private_interface = "ens224"
+      node_labels       = { "adrp.xyz/purpose-infra" = "true" }
+      environment       = { NO_PROXY = "10.0.0.0/8" }
+    }
+  }
+}
+```
+
+`concurrency` on a profile is how many of the hosts sharing it cargoship acts on at once -- draining, upgrading, initializing, uninstalling -- as a count or a percentage of that group. `control = { concurrency = "1" }` is why an embedded etcd cluster forms its quorum before the next member joins.
+
+Three rules decide what a host ends up with, and they are not all the same:
+
+| Field                              | A host's own value...                      |
+| :--------------------------------- | :----------------------------------------- |
+| `node_labels`, `node_taints`, `ports` | **replaces** the profile's                |
+| `firewall_rules`                   | is **unioned** with the profile's          |
+| everything else                    | belongs to the host alone                  |
+
+So a host that sets one label does not inherit the profile's others. That is `cluster.ZarfHostEngine.Merge`'s behaviour rather than a provider choice, and it matches what the Ansible collection does with `cargoship_node_labels` in `host_vars`.
+
+**A host selecting a profile the map does not define is a configuration error.** That matters more than it sounds: nothing downstream treats an undefined profile as wrong. The lookup returns a zero value, the concurrency falls back to the phase's own, and the taint the operator wrote simply never exists -- a cluster that looks configured and is not. A `profile` with **no** `profiles` map at all is still fine, and still useful: it names the `node-role.kubernetes.io/<profile>` label `label_nodes` writes, and still groups hosts for concurrency.
+
+A host behind a jump host states it, because cargoship opens its own SSH connections and inherits nothing from an SSH client configuration:
+
+```hcl
+kw04 = {
+  address  = "10.3.40.21"
+  role     = "worker"
+  key_path = "~/.ssh/bubbles"
+
+  bastion = {
+    address  = "10.3.20.1"
+    user     = "jump"
+    key_path = "~/.ssh/bubbles-jump"
+  }
+}
+```
+
+The facts data source has none of this, and it still takes `host` blocks rather than a map, because a read has nothing to key. Its block takes an address, a role and the connection details, because a read needs nothing else -- so a fleet described for an apply is a superset of one described for a read.
+
 ## Credentials
 
 The provider takes **no credentials as attributes**. A value an attribute carries is a value the state file carries, and a state file is committed, pushed to a remote backend, and readable by everyone with access to that backend. [choice-tofu-secrets](../agent/choice-tofu-secrets.md) records the reasoning.
