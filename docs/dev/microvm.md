@@ -28,9 +28,9 @@ Every flag has a default, so `mage dev:vmUp` on its own gives one control-plane 
 | `-infra`         | `0`     | Infra nodes: workers carrying an `infra` profile of their own                                   |
 | `-ubuntuControl` | `0`     | Control-plane nodes running Ubuntu instead of Rocky                                             |
 | `-ubuntuWorker`  | `0`     | Worker nodes running Ubuntu instead of Rocky                                                    |
-| `-distro`        | `k3s`   | The engine the fleet is prepared for, `k3s` or `rke2`                                           |
+| `-distro`        | `k3s`   | The engine the fleet is prepared for, `k3s`, `rke2` or `upstream`                               |
 
-`-distro` changes nothing about the guests. It decides only which of the leader's ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.
+`-distro` changes nothing about the guests. It decides only which of the leader's ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 while k3s multiplexes onto 6443 and upstream kubeadm has no supervisor port at all.
 
 Infra nodes join as workers -- the engine has no third role -- and what makes them infra is their profile, which [`pkg/phase/81_label_nodes.go`](https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go) turns into a `node-role.kubernetes.io/infra` label and which a cluster config can hang a per-profile concurrency off. They are worth asking for because every other host in the generated inventory has a profile that just restates its role, which leaves both of those mechanisms indistinguishable from the role they came from. Ask for some and the engine phases batch them separately: `starting agent (profile: infra)`.
 

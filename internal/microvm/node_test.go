@@ -111,12 +111,27 @@ func TestSpecNormalizeDefaultsAndRejections(t *testing.T) {
 			wantErr: "cannot have -1 infra nodes",
 		},
 		{
+			name: "upstream is accepted",
+			spec: Spec{
+				Controllers: 1,
+				Distro:      "upstream",
+			},
+			want: Spec{
+				Fleet:       "dev",
+				Controllers: 1,
+				Distro:      "upstream",
+				MemoryMiB:   4096,
+				CPUs:        2,
+				DiskSize:    "20G",
+			},
+		},
+		{
 			name: "unknown distro",
 			spec: Spec{
 				Controllers: 1,
 				Distro:      "openshift",
 			},
-			wantErr: "must be k3s or rke2",
+			wantErr: "must be k3s, rke2 or upstream",
 		},
 	}
 

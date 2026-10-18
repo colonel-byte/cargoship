@@ -56,6 +56,9 @@ var exampleDefinitions = map[string]struct { //nolint:gochecknoglobals
 }{
 	"rke2": {path: "example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1", version: "1.36.4-rke2r1"},
 	"k3s":  {path: "example/k3s-flannel/v1_36/v1.36.4-k3s1", version: "1.36.4-k3s1"},
+	// Upstream kubeadm. Cilium to match the rke2 entry, and the same minor as the other
+	// two so a walk against one distro is comparable to a walk against another.
+	"upstream": {path: "example/upstream-cilium/v1_36/v1.36.5", version: "1.36.5"},
 }
 
 // examplePackage is the distro definition the suite packages and installs.
