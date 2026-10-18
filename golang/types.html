@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-63067bc1.js"></script>
+        <script src="../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -250,7 +250,7 @@
 }
 </code></pre>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L180">ApplyOptions</a></a></h2>
 <p>ApplyOptions holds the values for the `.distro.apply` section of the config file</p>
 <pre><code class="language-go">type ApplyOptions struct{}
 </code></pre>
@@ -281,7 +281,7 @@
 }
 </code></pre>
 <p><a name="DistroCreateOptions"></a></p>
-<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L169-L177">DistroCreateOptions</a></a></h2>
+<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L155-L163">DistroCreateOptions</a></a></h2>
 <p>DistroCreateOptions holds the values for the `.distro.create` section of the config file</p>
 <pre><code class="language-go">type DistroCreateOptions struct {
     // RegistryOverride maps a source registry to the registry cargoship uses instead
@@ -294,7 +294,7 @@
 }
 </code></pre>
 <p><a name="DistroDeployOptions"></a></p>
-<h2 id="type-distrodeployoptions"><a class="header" href="#type-distrodeployoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188-L191">DistroDeployOptions</a></a></h2>
+<h2 id="type-distrodeployoptions"><a class="header" href="#type-distrodeployoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L174-L177">DistroDeployOptions</a></a></h2>
 <p>DistroDeployOptions holds the values for the `.distro.deploy` section of the config file</p>
 <pre><code class="language-go">type DistroDeployOptions struct {
     // Retries how many times we will try to push a package
@@ -302,7 +302,7 @@
 }
 </code></pre>
 <p><a name="DistroOptions"></a></p>
-<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L166">DistroOptions</a></a></h2>
+<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L152">DistroOptions</a></a></h2>
 <p>DistroOptions holds the values for the `.distro` section of the config file</p>
 <pre><code class="language-go">type DistroOptions struct {
     // CreateOpts are options used by the create subcommand
@@ -357,24 +357,10 @@
     Verify string `json:"verify,omitempty" mapstructure:"-" jsonschema:"enum=never,enum=if-possible,enum=always"` // mapstructure:"-": common_verify.go needs v.IsSet to distinguish "unset" from "set to zero value" (never read from the resolved struct)
     // PublicKey path to public key file for validating signed packages
     PublicKey string `json:"public_key,omitempty" mapstructure:"public_key"`
-    // CertificateIdentity required identity claim in the signing certificate
-    CertificateIdentity string `json:"certificate_identity,omitempty" mapstructure:"certificate_identity"`
-    // CertificateIdentityRegexp equired identity claim in the signing certificate, allows usage of regex
-    CertificateIdentityRegexp string `json:"certificate_identity_regexp,omitempty" mapstructure:"certificate_identity_regexp"`
-    // CertificateOIDCIssuer required OIDC issuer claim in the signing certificate
-    CertificateOIDCIssuer string `json:"certificate_oidc_issuer,omitempty" mapstructure:"certificate_oidc_issuer"`
-    // CertificateOIDCIssuerRegexp required OIDC issuer claim in the signing certificate, allows usage of regex
-    CertificateOIDCIssuerRegexp string `json:"certificate_oidc_issuer_regexp,omitempty" mapstructure:"certificate_oidc_issuer_regexp"`
-    // TrustedRoot path to a Sigstore TrustedRoot JSON
-    TrustedRoot string `json:"trusted_root,omitempty" mapstructure:"trusted_root"`
-    // InsecureIgnoreTLog
-    InsecureIgnoreTLog string `json:"insecure_ignore_tlog,omitempty" mapstructure:"-"` // mapstructure:"-": same v.IsSet reasoning as Verify above, plus this is really a bool (read via v.GetBool) despite the string type
-    // UseSignedTimestamps verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.
-    UseSignedTimestamps string `json:"use_signed_timestamps,omitempty" mapstructure:"-"` // mapstructure:"-": really a bool (read via v.GetBool in common_verify.go) despite the string type
 }
 </code></pre>
 <p><a name="DistroPublishOptions"></a></p>
-<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L180-L185">DistroPublishOptions</a></a></h2>
+<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L166-L171">DistroPublishOptions</a></a></h2>
 <p>DistroPublishOptions holds the values for the `.distro.publish` section of the config file</p>
 <pre><code class="language-go">type DistroPublishOptions struct {
     // SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package
@@ -384,27 +370,27 @@
 }
 </code></pre>
 <p><a name="FileOverrideMap"></a></p>
-<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L219">FileOverrideMap</a></a></h2>
+<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L205">FileOverrideMap</a></a></h2>
 <p>FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.</p>
 <pre><code class="language-go">type FileOverrideMap map[string]string
 </code></pre>
 <p><a name="FileOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L224">JSONSchemaExtend</a></a></h3>
+<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L210">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonFileSources to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
 <p><a name="RegistryOverrideMap"></a></p>
-<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L203">RegistryOverrideMap</a></a></h2>
+<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L189">RegistryOverrideMap</a></a></h2>
 <p>RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It’s a named type (rather than a bare map[string]string) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.</p>
 <pre><code class="language-go">type RegistryOverrideMap map[string]string
 </code></pre>
 <p><a name="RegistryOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L208">JSONSchemaExtend</a></a></h3>
+<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonRegistries to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
 <p><a name="ResetOptions"></a></p>
-<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L197">ResetOptions</a></a></h2>
+<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L183">ResetOptions</a></a></h2>
 <p>ResetOptions holds the values for the `.distro.reset` section of the config file</p>
 <pre><code class="language-go">type ResetOptions struct{}
 </code></pre>

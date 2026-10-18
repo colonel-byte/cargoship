@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-63067bc1.js"></script>
+        <script src="../../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,6 +190,8 @@
 <h2 id="index"><a class="header" href="#index">Index</a></h2>
 <ul>
 <li><a href="#constants">Constants</a></li>
+<li><a href="#IsIndex">func IsIndex(mediaType string) bool</a></li>
+<li><a href="#IsManifest">func IsManifest(mediaType string) bool</a></li>
 <li><a href="#Ping">func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) (err error)</a></li>
 <li><a href="#ShouldUsePlainHTTP">func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Client) (bool, error)</a></li>
 <li><a href="#ImageWithManifest">type ImageWithManifest</a>
@@ -225,6 +227,16 @@
     DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
 )
 </code></pre>
+<p><a name="IsIndex"></a></p>
+<h2 id="func-isindex"><a class="header" href="#func-isindex">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/images/common.go#L115">IsIndex</a></a></h2>
+<pre><code class="language-go">func IsIndex(mediaType string) bool
+</code></pre>
+<p>IsIndex reports whether the media type represents an OCI image index.</p>
+<p><a name="IsManifest"></a></p>
+<h2 id="func-ismanifest"><a class="header" href="#func-ismanifest">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/images/common.go#L106">IsManifest</a></a></h2>
+<pre><code class="language-go">func IsManifest(mediaType string) bool
+</code></pre>
+<p>IsManifest reports whether the media type represents an OCI manifest.</p>
 <p><a name="Ping"></a></p>
 <h2 id="func-ping"><a class="header" href="#func-ping">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/images/common.go#L64">Ping</a></a></h2>
 <pre><code class="language-go">func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) (err error)

@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-63067bc1.js"></script>
+        <script src="toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -319,7 +319,7 @@ cargoship sign ./build/cargoship-distro-amd64.tar.zst --signing-key ./private-ke
 # Verify the signature before anything installs from it
 cargoship verify ./build/cargoship-distro-amd64.tar.zst --key ./cosign.pub
 </code></pre>
-<p><code>sign</code> also takes <code>--keyless</code> for the Sigstore keyless flow, and <code>verify</code> takes the matching keyless flags (<code>--certificate-identity</code>, <code>--certificate-oidc-issuer</code>, and their regex variants). The commands that load a package - <code>apply</code>, <code>prepare</code>, <code>engine-config-sync</code>, <code>publish</code>, <code>pull</code>, <code>validate</code>, <code>schema</code> - verify as part of loading, gated on <code>--verify=never|if-possible|always</code>. <code>verify</code> does nothing but check the signature, which is what makes it the one to run before a playbook on a management node with no network.</p>
+<p>A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see <a href="https://github.com/colonel-byte/cargoship/issues/848">#848</a>. The commands that load a package - <code>apply</code>, <code>prepare</code>, <code>engine-config-sync</code>, <code>publish</code>, <code>pull</code>, <code>validate</code>, <code>schema</code> - verify as part of loading, gated on <code>--verify=never|if-possible|always</code>. <code>verify</code> does nothing but check the signature, which is what makes it the one to run before a playbook.</p>
 <h3 id="8-encrypt-credentials-in-a-config-file"><a class="header" href="#8-encrypt-credentials-in-a-config-file">8. Encrypt Credentials in a Config File</a></h3>
 <p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
 <pre><code class="language-bash"># Encrypt one value for a registry's user/pass/token field

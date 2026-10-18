@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-63067bc1.js"></script>
+        <script src="../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="todo-registry-backed-unit-tests-for-pkgcoci"><a class="header" href="#todo-registry-backed-unit-tests-for-pkgcoci">TODO: registry-backed unit tests for <code>pkg/coci</code></a></h1>
-<p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. A coverage pass on <code>pkg/coci</code>, <code>pkg/oci/archive</code>, and <code>pkg/oci/platform</code> split the remaining gaps into three tiers. Tier 1 (pure helpers: <code>layers.GetAllLayerTypes</code>, <code>GetOCICacheModifier</code>, <code>CopyPackage</code>’s retry validation) and Tier 2 (the layer-assembly logic in <code>pull.go</code> and <code>fetch.go</code>’s free-function <code>FetchDistroYAML</code>, all fakeable with an in-memory <code>content.Fetcher</code> and a hand-built <code>*oci.Manifest</code> – no registry involved) are both done; see <code>pkg/coci/common_test.go</code>, <code>pkg/coci/copier_test.go</code>, <code>pkg/coci/pull_test.go</code>, <code>pkg/coci/layers/common_test.go</code>. This document is the remainder: Tier 3, the functions that need a real (or in-memory) OCI registry to exercise meaningfully.</p>
+<p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. A coverage pass on <code>pkg/coci</code>, <code>pkg/oci/archive</code> (since removed with the containerd exporter) and <code>pkg/oci/platform</code> split the remaining gaps into three tiers. Tier 1 (pure helpers: <code>layers.GetAllLayerTypes</code>, <code>GetOCICacheModifier</code>, <code>CopyPackage</code>’s retry validation) and Tier 2 (the layer-assembly logic in <code>pull.go</code> and <code>fetch.go</code>’s free-function <code>FetchDistroYAML</code>, all fakeable with an in-memory <code>content.Fetcher</code> and a hand-built <code>*oci.Manifest</code> – no registry involved) are both done; see <code>pkg/coci/common_test.go</code>, <code>pkg/coci/copier_test.go</code>, <code>pkg/coci/pull_test.go</code>, <code>pkg/coci/layers/common_test.go</code>. This document is the remainder: Tier 3, the functions that need a real (or in-memory) OCI registry to exercise meaningfully.</p>
 <h2 id="whats-left-and-why-it-needs-a-registry"><a class="header" href="#whats-left-and-why-it-needs-a-registry">What’s left, and why it needs a registry</a></h2>
 <p>These all call through <code>*Remote</code> (an <code>*oci.OrasRemote</code> wrapper) to a <code>content.Fetcher</code>/<code>oras.Target</code> backed by an actual repository – resolving tags, fetching roots, walking indexes against real registry HTTP semantics – which the Tier 2 fake fetcher does not attempt to reproduce faithfully:</p>
 <ul>

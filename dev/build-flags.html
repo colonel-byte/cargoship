@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-63067bc1.js"></script>
+        <script src="../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -254,7 +254,7 @@
 <h2 id="what-was-deliberately-not-changed"><a class="header" href="#what-was-deliberately-not-changed">What was deliberately not changed</a></h2>
 <ul>
 <li><strong>UPX or other binary compressors</strong> - not used. UPX-compressed binaries unpack themselves into memory at startup, adding a small latency hit, and self-modifying/self-extracting binaries are frequently flagged by antivirus and endpoint security tools. Given <code>cargoship</code> operates in cluster-management/infrastructure contexts where such scanning is common, this tradeoff wasn’t taken.</li>
-<li><strong>Trimming <code>zarf</code>/<code>k8s.io/client-go</code> dependencies</strong> - these are the largest remaining contributors to binary size (particularly <code>zarf</code>’s signing stack, which pulls in <code>sigstore</code>/<code>cosign</code>/<code>go-tuf</code>/cloud SDKs), but they’re load-bearing for existing features (image signing, cluster operations) and weren’t touched here. Removing them would require dropping or refactoring those features, not just changing build flags.</li>
+<li><strong>Trimming <code>zarf</code>/<code>k8s.io/client-go</code> dependencies</strong> - these are the largest remaining contributors to binary size, and they are not a build-flag question: shrinking them means changing what the binary links, which is tracked separately from this document. <code>k8s.io/api</code> and <code>k8s.io/client-go</code> are load-bearing for cluster operations and reached from <code>pkg/phase</code> directly. <code>zarf</code>’s signing stack has since been partly addressed - <code>pkg/signing</code> is a fork that no longer registers the four cloud KMS plugins, worth about 7.4MB, because none of them can reach a cloud endpoint from an air-gapped node. The roughly 45MB still behind cosign’s CLI command structs (Open Policy Agent, cuelang, go-github, the GitLab client) is untouched, because replacing those structs means rewriting verification rather than trimming a dependency. See <a href="signing.html"><code>signing.md</code></a> and <a href="../agent/choice-signing-fork.html"><code>../agent/choice-signing-fork.md</code></a>.</li>
 </ul>
 
                     </main>

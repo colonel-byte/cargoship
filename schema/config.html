@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-63067bc1.js"></script>
+        <script src="../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -270,17 +270,12 @@
 <tr><td><code>allow_downgrade</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether a run continues when a host already runs an engine version newer<br>than the one the package carries</td></tr>
 <tr><td><code>allow_unmanaged_nodes</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether an apply continues when the cluster holds a node that no host<br>in the config accounts for</td></tr>
 <tr><td><code>apply</code></td><td><a href="#applyoptions">ApplyOptions</a></td><td>no</td><td></td><td>are options used by the apply subcommand</td></tr>
-<tr><td><code>certificate_identity</code></td><td><code>string</code></td><td>no</td><td></td><td>required identity claim in the signing certificate</td></tr>
-<tr><td><code>certificate_identity_regexp</code></td><td><code>string</code></td><td>no</td><td></td><td>equired identity claim in the signing certificate, allows usage of regex</td></tr>
-<tr><td><code>certificate_oidc_issuer</code></td><td><code>string</code></td><td>no</td><td></td><td>required OIDC issuer claim in the signing certificate</td></tr>
-<tr><td><code>certificate_oidc_issuer_regexp</code></td><td><code>string</code></td><td>no</td><td></td><td>required OIDC issuer claim in the signing certificate, allows usage of regex</td></tr>
 <tr><td><code>concurrency</code></td><td><code>integer</code></td><td>no</td><td></td><td>how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once</td></tr>
 <tr><td><code>create</code></td><td><a href="#distrocreateoptions">DistroCreateOptions</a></td><td>no</td><td></td><td>are options used by the create subcommand</td></tr>
 <tr><td><code>deploy</code></td><td><a href="#distrodeployoptions">DistroDeployOptions</a></td><td>no</td><td></td><td>are options used by the deploy subcommand</td></tr>
 <tr><td><code>fapolicyd</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update hosts with fapolicyd</td></tr>
 <tr><td><code>firewall</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update the host firewall</td></tr>
 <tr><td><code>hosts</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update the etc host file</td></tr>
-<tr><td><code>insecure_ignore_tlog</code></td><td><code>string</code></td><td>no</td><td></td><td></td></tr>
 <tr><td><code>kubeconfig</code></td><td><code>string</code></td><td>no</td><td></td><td>path of the kubeconfig file the admin creds are merged into, the standard<br>location – KUBECONFIG, else ~/.kube/config – when empty</td></tr>
 <tr><td><code>label_nodes</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will check and add the node-role.kubernetes.io/&lt;profile&gt; label on nodes</td></tr>
 <tr><td><code>oci_concurrency</code></td><td><code>integer</code></td><td>no</td><td></td><td>is how many concurrent oci artifacts that will be pushed at a time</td></tr>
@@ -290,10 +285,8 @@
 <tr><td><code>receipt_path</code></td><td><code>string</code></td><td>no</td><td></td><td>is where the lifecycle commands – apply, prepare, reset and<br>engine-config-sync – write the structured JSON record of a run, empty for no receipt.<br>Equivalent to –receipt-path, and templated the same way: {command} expands to the<br>command that ran and {timestamp} to when it started, so one configured value gives<br>every run its own file rather than overwriting the last.</td></tr>
 <tr><td><code>reset</code></td><td><a href="#resetoptions">ResetOptions</a></td><td>no</td><td></td><td>ResetOptions are options used by the reset subcommand</td></tr>
 <tr><td><code>retry</code></td><td><code>integer</code></td><td>no</td><td></td><td>number of retries we will try</td></tr>
-<tr><td><code>trusted_root</code></td><td><code>string</code></td><td>no</td><td></td><td>path to a Sigstore TrustedRoot JSON</td></tr>
 <tr><td><code>type</code></td><td><code>string</code></td><td>no</td><td></td><td>of distro we are interacting with One of <code>rke2</code>, <code>k3s</code>.</td></tr>
 <tr><td><code>update_kubeconfig</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update a kubeconfig file with the admin creds for the cluster</td></tr>
-<tr><td><code>use_signed_timestamps</code></td><td><code>string</code></td><td>no</td><td></td><td>verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.</td></tr>
 <tr><td><code>verify</code></td><td><code>string</code></td><td>no</td><td></td><td>the Cargoship package signature One of <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
 <tr><td><code>worker_concurrency</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>number of worker nodes that will be upgraded at once, as a fixed count<br>(“5”) or a percentage of the batch (“25%”)</td></tr>
 </tbody>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-63067bc1.js"></script>
+        <script src="../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -205,11 +205,11 @@ mage dev:vmUp -control=1 -worker=2 -infra=3 -distro=rke2
 <tr><td><code>-infra</code></td><td><code>0</code></td><td>Infra nodes: workers carrying an <code>infra</code> profile of their own</td></tr>
 <tr><td><code>-ubuntuControl</code></td><td><code>0</code></td><td>Control-plane nodes running Ubuntu instead of Rocky</td></tr>
 <tr><td><code>-ubuntuWorker</code></td><td><code>0</code></td><td>Worker nodes running Ubuntu instead of Rocky</td></tr>
-<tr><td><code>-distro</code></td><td><code>k3s</code></td><td>The engine the fleet is prepared for, <code>k3s</code> or <code>rke2</code></td></tr>
+<tr><td><code>-distro</code></td><td><code>k3s</code></td><td>The engine the fleet is prepared for, <code>k3s</code>, <code>rke2</code> or <code>upstream</code></td></tr>
 </tbody>
 </table>
 </div>
-<p><code>-distro</code> changes nothing about the guests. It decides only which of the leader’s ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.</p>
+<p><code>-distro</code> changes nothing about the guests. It decides only which of the leader’s ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 while k3s multiplexes onto 6443 and upstream kubeadm has no supervisor port at all.</p>
 <p>Infra nodes join as workers – the engine has no third role – and what makes them infra is their profile, which <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go"><code>pkg/phase/81_label_nodes.go</code></a> turns into a <code>node-role.kubernetes.io/infra</code> label and which a cluster config can hang a per-profile concurrency off. They are worth asking for because every other host in the generated inventory has a profile that just restates its role, which leaves both of those mechanisms indistinguishable from the role they came from. Ask for some and the engine phases batch them separately: <code>starting agent (profile: infra)</code>.</p>
 <p>The first run downloads a pinned Rocky 10 GenericCloud image, roughly 520MiB, into <code>$XDG_CACHE_HOME/cargoship/microvm</code> and verifies its digest. That cache is outside the repository and survives a clean checkout; later runs reuse it.</p>
 <p>Each node is a copy-on-write overlay over that image, so a bring-up costs a few megabytes rather than another copy. Bring-up takes a minute or two: a node answers SSH about six seconds in, and the rest is cloud-init installing firewalld and fapolicyd. The fleet is only handed back once cloud-init has finished on every node, because the gates in phases 22 and 26 ask whether those services are <em>running</em> - a fleet returned any earlier looks healthy and has both of those phases silently skipping.</p>

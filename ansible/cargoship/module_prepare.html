@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-63067bc1.js"></script>
+        <script src="../../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -207,7 +207,7 @@
 <tr><td><code>values</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td><code>--values</code></td><td>Package values files to apply, one flag per entry.</td></tr>
 <tr><td><code>timeout</code></td><td><code>str</code></td><td>no</td><td><code>--timeout</code></td><td>How long the run may take before it is abandoned, as a Go duration such as <code>45m</code>.</td></tr>
 <tr><td><code>public_key</code></td><td><code>str</code></td><td>no</td><td><code>--key</code></td><td>The public key the package signature is verified against.</td></tr>
-<tr><td><code>verify</code></td><td><code>str</code></td><td>no</td><td><code>--verify</code></td><td>When to verify the package signature. Only key-based verification is offered. Keyless verification wants network the management node does not have; verify a keyless-signed package with <code>cargoship package verify</code> before the play. One of <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
+<tr><td><code>verify</code></td><td><code>str</code></td><td>no</td><td><code>--verify</code></td><td>When to verify the package signature. Verification is key-based. A Cosign key pair is cargoship’s only signing method; keyless (Fulcio/OIDC) verification was removed because it needs network an air-gapped management node does not have. One of <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
 <tr><td><code>inventory_path</code></td><td><code>str</code></td><td>no</td><td><code>--config</code></td><td>Where to write the generated ZarfCluster document. A private temporary file when unset, removed after a run that succeeded. A run that fails leaves the document on disk either way, because it is the first thing to look at when a failure reads like the wrong cluster.</td></tr>
 <tr><td><code>age_recipient</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Age public keys used to encrypt registry credentials written into the generated inventory document. Consumed while that document is written, so it renders no flag.</td></tr>
 <tr><td><code>age_recipients_file</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Files holding age public keys, read for the same purpose as <code>age_recipient</code>.</td></tr>

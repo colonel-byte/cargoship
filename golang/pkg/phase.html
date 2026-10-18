@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-63067bc1.js"></script>
+        <script src="../../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1052,7 +1052,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="DetectRemovedHosts"></a></p>
-<h2 id="type-detectremovedhosts"><a class="header" href="#type-detectremovedhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L71-L79">DetectRemovedHosts</a></a></h2>
+<h2 id="type-detectremovedhosts"><a class="header" href="#type-detectremovedhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L70-L78">DetectRemovedHosts</a></a></h2>
 <p>DetectRemovedHosts state.</p>
 <p>Apply drives the cluster towards the config, but only ever forwards: every phase after this one reads Spec.Hosts and acts on what it finds there. A host deleted from the config is therefore invisible to all of them, and the machine keeps running the engine and stays joined to the cluster while apply reports success. This phase is what stops that from being silent.</p>
 <p>It detects and refuses. It does not reconcile, and the reason is not effort: apply cannot reach the machine it would have to clean up. Draining a node and deleting its Node object needs only the name, which the API gives us. Uninstalling the engine needs an SSH connection, and the address, user and key for that lived in the host block that was just deleted. Deleting the Node object without the uninstall is worse than doing nothing, because it looks like the removal worked while the machine keeps its certificates and tries to rejoin -- and for a controller it stays an etcd member, so the quorum arithmetic silently moves against a member nobody can reach.</p>
@@ -1068,34 +1068,34 @@
 }
 </code></pre>
 <p><a name="DetectRemovedHosts.Explanation"></a></p>
-<h3 id="func-detectremovedhosts-explanation"><a class="header" href="#func-detectremovedhosts-explanation">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L87">Explanation</a></a></h3>
+<h3 id="func-detectremovedhosts-explanation"><a class="header" href="#func-detectremovedhosts-explanation">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L86">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *DetectRemovedHosts) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="DetectRemovedHosts.Prepare"></a></p>
-<h3 id="func-detectremovedhosts-prepare"><a class="header" href="#func-detectremovedhosts-prepare">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L102">Prepare</a></a></h3>
+<h3 id="func-detectremovedhosts-prepare"><a class="header" href="#func-detectremovedhosts-prepare">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L101">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase.</p>
 <p>The leader is any host in the config already running the controller service, which is the same way the label and delete phases find one. Nothing is running on a first install, so there is no leader, and ShouldRun turns the phase off: a cluster that does not exist yet cannot have had a host removed from it.</p>
 <p><a name="DetectRemovedHosts.ReadOnly"></a></p>
-<h3 id="func-detectremovedhosts-readonly"><a class="header" href="#func-detectremovedhosts-readonly">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L92">ReadOnly</a></a></h3>
+<h3 id="func-detectremovedhosts-readonly"><a class="header" href="#func-detectremovedhosts-readonly">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L91">ReadOnly</a></a></h3>
 <pre><code class="language-go">func (p *DetectRemovedHosts) ReadOnly() string
 </code></pre>
 <p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
 <p><a name="DetectRemovedHosts.Run"></a></p>
-<h3 id="func-detectremovedhosts-run"><a class="header" href="#func-detectremovedhosts-run">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L123">Run</a></a></h3>
+<h3 id="func-detectremovedhosts-run"><a class="header" href="#func-detectremovedhosts-run">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L122">Run</a></a></h3>
 <pre><code class="language-go">func (p *DetectRemovedHosts) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase.</p>
 <p>Only positive evidence stops the apply. Failing to reach the cluster says nothing about whether a host was removed, and this phase runs before every phase that does the real work, so treating an unreachable cluster as a refusal would turn a transient failure into a failed apply that had nothing to do with removals. Those cases warn and continue.</p>
 <p><a name="DetectRemovedHosts.ShouldRun"></a></p>
-<h3 id="func-detectremovedhosts-shouldrun"><a class="header" href="#func-detectremovedhosts-shouldrun">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L113">ShouldRun</a></a></h3>
+<h3 id="func-detectremovedhosts-shouldrun"><a class="header" href="#func-detectremovedhosts-shouldrun">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L112">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *DetectRemovedHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true once there is a running controller to ask</p>
 <p><a name="DetectRemovedHosts.Title"></a></p>
-<h3 id="func-detectremovedhosts-title"><a class="header" href="#func-detectremovedhosts-title">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L82">Title</a></a></h3>
+<h3 id="func-detectremovedhosts-title"><a class="header" href="#func-detectremovedhosts-title">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L81">Title</a></a></h3>
 <pre><code class="language-go">func (p *DetectRemovedHosts) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -1560,7 +1560,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="LabelNodes"></a></p>
-<h2 id="type-labelnodes"><a class="header" href="#type-labelnodes">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L40-L46">LabelNodes</a></a></h2>
+<h2 id="type-labelnodes"><a class="header" href="#type-labelnodes">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L50-L56">LabelNodes</a></a></h2>
 <p>LabelNodes phase state</p>
 <pre><code class="language-go">type LabelNodes struct {
     GenericPhase
@@ -1571,27 +1571,27 @@
 }
 </code></pre>
 <p><a name="LabelNodes.Explanation"></a></p>
-<h3 id="func-labelnodes-explanation"><a class="header" href="#func-labelnodes-explanation">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L54">Explanation</a></a></h3>
+<h3 id="func-labelnodes-explanation"><a class="header" href="#func-labelnodes-explanation">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L64">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *LabelNodes) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="LabelNodes.Prepare"></a></p>
-<h3 id="func-labelnodes-prepare"><a class="header" href="#func-labelnodes-prepare">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L59">Prepare</a></a></h3>
+<h3 id="func-labelnodes-prepare"><a class="header" href="#func-labelnodes-prepare">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L69">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="LabelNodes.Run"></a></p>
-<h3 id="func-labelnodes-run"><a class="header" href="#func-labelnodes-run">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L79">Run</a></a></h3>
+<h3 id="func-labelnodes-run"><a class="header" href="#func-labelnodes-run">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L89">Run</a></a></h3>
 <pre><code class="language-go">func (p *LabelNodes) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="LabelNodes.ShouldRun"></a></p>
-<h3 id="func-labelnodes-shouldrun"><a class="header" href="#func-labelnodes-shouldrun">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L74">ShouldRun</a></a></h3>
+<h3 id="func-labelnodes-shouldrun"><a class="header" href="#func-labelnodes-shouldrun">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L84">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *LabelNodes) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when enabled by flags</p>
 <p><a name="LabelNodes.Title"></a></p>
-<h3 id="func-labelnodes-title"><a class="header" href="#func-labelnodes-title">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L49">Title</a></a></h3>
+<h3 id="func-labelnodes-title"><a class="header" href="#func-labelnodes-title">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L59">Title</a></a></h3>
 <pre><code class="language-go">func (p *LabelNodes) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -2295,7 +2295,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UploadFiles"></a></p>
-<h2 id="type-uploadfiles"><a class="header" href="#type-uploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L53-L67">UploadFiles</a></a></h2>
+<h2 id="type-uploadfiles"><a class="header" href="#type-uploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L56-L70">UploadFiles</a></a></h2>
 <p>UploadFiles implements a phase which upload files to hosts</p>
 <pre><code class="language-go">type UploadFiles struct {
     GenericPhase
@@ -2303,27 +2303,27 @@
 }
 </code></pre>
 <p><a name="UploadFiles.Explanation"></a></p>
-<h3 id="func-uploadfiles-explanation"><a class="header" href="#func-uploadfiles-explanation">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L75">Explanation</a></a></h3>
+<h3 id="func-uploadfiles-explanation"><a class="header" href="#func-uploadfiles-explanation">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L78">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *UploadFiles) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="UploadFiles.Prepare"></a></p>
-<h3 id="func-uploadfiles-prepare"><a class="header" href="#func-uploadfiles-prepare">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L85">Prepare</a></a></h3>
+<h3 id="func-uploadfiles-prepare"><a class="header" href="#func-uploadfiles-prepare">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L88">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UploadFiles.Run"></a></p>
-<h3 id="func-uploadfiles-run"><a class="header" href="#func-uploadfiles-run">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L279">Run</a></a></h3>
+<h3 id="func-uploadfiles-run"><a class="header" href="#func-uploadfiles-run">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L310">Run</a></a></h3>
 <pre><code class="language-go">func (p *UploadFiles) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="UploadFiles.ShouldRun"></a></p>
-<h3 id="func-uploadfiles-shouldrun"><a class="header" href="#func-uploadfiles-shouldrun">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L274">ShouldRun</a></a></h3>
+<h3 id="func-uploadfiles-shouldrun"><a class="header" href="#func-uploadfiles-shouldrun">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L305">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UploadFiles) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
 <p><a name="UploadFiles.Title"></a></p>
-<h3 id="func-uploadfiles-title"><a class="header" href="#func-uploadfiles-title">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L70">Title</a></a></h3>
+<h3 id="func-uploadfiles-title"><a class="header" href="#func-uploadfiles-title">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L73">Title</a></a></h3>
 <pre><code class="language-go">func (p *UploadFiles) Title() string
 </code></pre>
 <p>Title for the phase</p>

@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-fb9d840c.js";
+            window.path_to_searchindex_js = "../../searchindex-1495f0e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-63067bc1.js"></script>
+        <script src="../../toc-8b8ee343.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -209,7 +209,7 @@
 </code></pre>
 <p>Load fetches, verifies, and loads a Zarf package from the specified source.</p>
 <p><a name="Publish"></a></p>
-<h2 id="func-publish"><a class="header" href="#func-publish">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L58">Publish</a></a></h2>
+<h2 id="func-publish"><a class="header" href="#func-publish">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L55">Publish</a></a></h2>
 <pre><code class="language-go">func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.Reference, opts PublishOptions) (registry.Reference, error)
 </code></pre>
 <p>Publish used to publish a distro package to an oci registry</p>
@@ -264,7 +264,7 @@
 }
 </code></pre>
 <p><a name="PublishOptions"></a></p>
-<h2 id="type-publishoptions"><a class="header" href="#type-publishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L39-L55">PublishOptions</a></a></h2>
+<h2 id="type-publishoptions"><a class="header" href="#type-publishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L39-L52">PublishOptions</a></a></h2>
 <p>PublishOptions are the optional parameters to publish</p>
 <pre><code class="language-go">type PublishOptions struct {
     // OCIConcurrency configures the amount of layers to push in parallel
@@ -273,12 +273,9 @@
     Retries int
     // SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
     SignBlobOptions signing.SignBlobOptions
-    // Keyless selects the Sigstore keyless flow, where cosign resolves the signing
-    // identity via Fulcio/OIDC instead of SignBlobOptions.Key.
-    Keyless       bool
-    CachePath     string
-    IsInteractive bool
-    Registry      *registry.Reference
+    CachePath       string
+    IsInteractive   bool
+    Registry        *registry.Reference
     types.RemoteOptions
     // Tag is an optional tag for the OCI reference separate from the package metadata.version
     Tag string
