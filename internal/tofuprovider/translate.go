@@ -89,11 +89,12 @@ type clusterModel struct {
 	Name string
 	// LoadBalancer is the address clients use to reach the control plane.
 	LoadBalancer string
-	// Hosts are the host blocks, in configuration order.
+	// Hosts are the fleet, in the order the resource handed them over: by map key, so the first
+	// controller -- the leader -- is the controller whose key sorts first.
 	Hosts []hostModel
 }
 
-// translate builds a ZarfCluster from a resource or data source model.
+// translate builds a Cluster from a resource or data source model.
 //
 // It renders the document and reads it back through clustercfg.Parse rather than returning the
 // struct it just built. That costs a marshal and a parse, and buys the thing a provider most needs:
