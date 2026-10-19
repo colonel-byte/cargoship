@@ -1320,8 +1320,8 @@ github.com/xeipuuv/gojsonschema
 # github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 ## explicit; go 1.17
 github.com/youmark/pkcs8
-# github.com/zarf-dev/zarf v0.87.0
-## explicit; go 1.26.6
+# github.com/zarf-dev/zarf v0.88.0
+## explicit; go 1.26.9
 github.com/zarf-dev/zarf/src/api
 github.com/zarf-dev/zarf/src/api/convert
 github.com/zarf-dev/zarf/src/api/v1alpha1
@@ -1330,6 +1330,7 @@ github.com/zarf-dev/zarf/src/config
 github.com/zarf-dev/zarf/src/config/lang
 github.com/zarf-dev/zarf/src/internal/api/v1alpha1
 github.com/zarf-dev/zarf/src/internal/api/v1beta1
+github.com/zarf-dev/zarf/src/internal/checksum
 github.com/zarf-dev/zarf/src/internal/dns
 github.com/zarf-dev/zarf/src/internal/git
 github.com/zarf-dev/zarf/src/pkg/archive
