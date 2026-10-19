@@ -30,7 +30,9 @@ Fixtures are covered separately, in [`e2e/AGENTS.md`](e2e/AGENTS.md).
 
 **`upstream` does not complete yet.** It passes `dryrun` and gets through the upload phases, then fails at `Test_60_ConfigureEngine` on [#849](https://github.com/colonel-byte/cargoship/issues/849) - `ConfigPath()` is a directory for that distro and the assertion `cat`s it. That is a pre-existing defect in the distro interface, not a regression, and it is why `mage test:endToEndClusterVM` defaults to `rke2`.
 
-**The upgrade walk is opt-in**, behind `CARGOSHIP_E2E_UPGRADE=1`. It currently fails on every backend at `Test_59_BINUploadFiles` - [#850](https://github.com/colonel-byte/cargoship/issues/850), the manifest keeping the previous engine's RPMs after an install consumes them. Reproduced on pre-change code, so a run that fails there has not necessarily broken anything.
+**The upgrade walk is opt-in**, behind `CARGOSHIP_E2E_UPGRADE=1`. It gets through `Test_62_InitializeWorkers` and phase 66 completes, so a failure before that is worth reading as a defect rather than a known gap: [#850](https://github.com/colonel-byte/cargoship/issues/850) (the manifest keeping the previous engine's RPMs after an install consumes them, which failed `Test_59_BINUploadFiles` on every backend) and [#865](https://github.com/colonel-byte/cargoship/issues/865) (phase 66 draining a node by a name the cluster does not have) were both found here and are fixed. `Test_67_UpgradeWorkers`, `Test_71_EngineConfigSyncController` and `Test_72_EngineConfigSyncWorker` have not been exercised on any backend yet, so they are unproven rather than passing.
+
+The walk also builds its own package, and nothing caches the `etcd` archive a `files` entry extracts `etcdctl` from - so every walk downloads it again, and a momentary DNS failure fails the walk at `Test_00_UpgradePackage` or `Test_00_JoinMachine` with nothing wrong in the phases at all. Three runs out of five in one session went that way. See [`todo-extractpath-archive-cache.md`](../docs/agent/todo-extractpath-archive-cache.md) before reading one of those as a regression.
 
 ## Reading a result
 
