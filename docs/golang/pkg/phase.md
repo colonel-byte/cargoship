@@ -451,7 +451,7 @@ var NoWait bool
 ```
 
 <a name="CheckTargetHosts"></a>
-## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L323>)
+## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L338>)
 
 ```go
 func CheckTargetHosts(hosts cluster.Hosts, targets []string) error

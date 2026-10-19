@@ -578,3 +578,37 @@ func TestDeleteCommonRefusesASubsetWithNothingRunning(t *testing.T) {
 	})
 	require.NoError(t, dry.Prepare(context.Background(), m.Config, nil))
 }
+
+// TestStopEngineBeforeDeleteResetsADistroThatGivesUpMembershipItself is issue #813: on kubeadm
+// `kubectl delete node` touches no etcd membership, so the engine stop that makes the deletion
+// stick on k3s and rke2 strands the member instead -- `kubeadm reset`'s remove-etcd-member phase
+// needs the local etcd, a static pod kubelet owns, still running to commit the removal.
+//
+// An unconnected test host cannot run SudoExecOutput, so dispatch into the reset is as far as
+// this can be observed here, the same limit TestPreUninstallResetReachesKubeadmReset works under.
+func TestStopEngineBeforeDeleteResetsADistroThatGivesUpMembershipItself(t *testing.T) {
+	t.Parallel()
+
+	builder, err := registry.GetDistroModuleBuilder(distrocfg.DistroUpstream)
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	h := &cluster.Host{
+		Hostname: "controller1",
+		Role:     cluster.RoleController,
+	}
+	h.SetServices(fakeRunningServices{})
+
+	p := &DeleteCommon{Distro: dis}
+	require.ErrorContains(t, p.stopEngineBeforeDelete(context.Background(), h), "kubeadm reset",
+		"the membership was given up by stopping the engine, which is what strands it on kubeadm")
+
+	// keepEngineForDelete is the delete-driven arithmetic, and says nothing about a reset: the
+	// member has to be up for one either way, so the branch is taken whatever it holds.
+	keep := &DeleteCommon{
+		Distro:              dis,
+		keepEngineForDelete: true,
+	}
+	require.ErrorContains(t, keep.stopEngineBeforeDelete(context.Background(), h), "kubeadm reset")
+}

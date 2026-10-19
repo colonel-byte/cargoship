@@ -96,7 +96,7 @@ func (p *DeleteControllers) Run(ctx context.Context) error {
 	}
 	if err := p.batchedParallelWithMessage(
 		ctx,
-		"stopping engines",
+		"releasing cluster membership",
 		p.hosts,
 		1,
 		p.stopEngineBeforeDelete,

@@ -159,9 +159,24 @@ func (p *DeleteCommon) planControllerRemovals(ctx context.Context, control, surv
 	return nil
 }
 
-// stopEngineBeforeDelete takes the engine down on a host whose node is about to be deleted, unless
-// the membership arithmetic in planControllerRemovals says it has to stay up.
+// stopEngineBeforeDelete gives a controller's cluster membership up before its node is deleted, by
+// whichever route its distro uses, unless the membership arithmetic in planControllerRemovals says
+// the engine has to stay up.
 func (p *DeleteCommon) stopEngineBeforeDelete(ctx context.Context, h *cluster.Host) error {
+	// A distro that implements PreUninstallResetter gives its membership up by resetting itself,
+	// not by having a controller remove the member when the node object goes away: on kubeadm
+	// `kubectl delete node` touches no membership, and `kubeadm reset`'s remove-etcd-member phase
+	// needs the local etcd -- a static pod kubelet owns -- still running to commit the removal, so
+	// stopping the engine first is what strands it. The reset stops the kubelet itself, which is
+	// why no stop follows; phase 88 runs it again over a host that is already reset, and absorbs
+	// the error that second run reports.
+	//
+	// keepEngineForDelete is deliberately not consulted here. It exists for the delete-driven
+	// removal, and the member has to be up for a reset whatever the arithmetic says.
+	if r, ok := p.Distro.(distrocfg.PreUninstallResetter); ok {
+		logger.From(ctx).Info("resetting the host before deleting its node", "host", h)
+		return r.PreUninstallReset(ctx, h)
+	}
 	if p.keepEngineForDelete {
 		return nil
 	}
