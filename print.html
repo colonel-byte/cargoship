@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7f79c84e.js";
+            window.path_to_searchindex_js = "searchindex-1c04171e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8b8ee343.js"></script>
+        <script src="toc-85cbcabe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -11554,7 +11554,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var NoWait bool
 </code></pre>
 <p><a name="CheckTargetHosts"></a></p>
-<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L323">CheckTargetHosts</a></a></h2>
+<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L245">CheckTargetHosts</a></a></h2>
 <pre><code class="language-go">func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
 </code></pre>
 <p>CheckTargetHosts reports a target that names no host in the configuration.</p>
@@ -11781,7 +11781,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="DeleteCommon"></a></p>
-<h2 id="type-deletecommon"><a class="header" href="#type-deletecommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L50-L61">DeleteCommon</a></a></h2>
+<h2 id="type-deletecommon"><a class="header" href="#type-deletecommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L38-L49">DeleteCommon</a></a></h2>
 <p>DeleteCommon phase state</p>
 <pre><code class="language-go">type DeleteCommon struct {
     GenericPhase
@@ -11791,7 +11791,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DeleteCommon.Prepare"></a></p>
-<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L104">Prepare</a></a></h3>
+<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L92">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
@@ -12022,7 +12022,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="EngineConfigSyncHosts"></a></p>
-<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L68">EngineConfigSyncHosts</a></a></h2>
+<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L71">EngineConfigSyncHosts</a></a></h2>
 <p>EngineConfigSyncHosts phase state</p>
 <pre><code class="language-go">type EngineConfigSyncHosts struct {
     GenericPhase
@@ -12033,20 +12033,20 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="EngineConfigSyncHosts.Changed"></a></p>
-<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L163">Changed</a></a></h3>
+<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L166">Changed</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) Changed() bool
 </code></pre>
 <p>Changed reports whether this phase altered any host, which is what Ansible’s changed is built from. See changedReporter in 05_manager.go.</p>
 <p>There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.</p>
 <p><a name="EngineConfigSyncHosts.HostsChanged"></a></p>
-<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L132">HostsChanged</a></a></h3>
+<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L135">HostsChanged</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
 </code></pre>
 <p>HostsChanged reports what this phase did to each host it looked at. See hostChangedReporter in 05_manager.go.</p>
 <p>Every host Prepare checked is reported, including the ones that turned out to be in sync. A host that was checked and found correct is a different answer from a host nothing looked at, and only one of them means the fleet was fully assessed.</p>
 <p>The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.</p>
 <p><a name="EngineConfigSyncHosts.ShouldRun"></a></p>
-<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L170">ShouldRun</a></a></h3>
+<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L173">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are hosts to sync</p>
@@ -12852,7 +12852,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ReconfigureSurvivors"></a></p>
-<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L66">ReconfigureSurvivors</a></a></h2>
+<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L69">ReconfigureSurvivors</a></a></h2>
 <p>ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.</p>
 <p>A controller that is not the first one carries `server:` naming the first, written when it joined. That value is read at startup, so removing the first controller leaves a cluster that keeps working and cannot come back: every survivor names a machine that is gone, and the next restart or reboot of any of them fails to rejoin.</p>
 <p>cargoship apply already fixes this -- it re-elects the first controller from the hosts that are left and rewrites `server:` on the rest -- and the documented procedure is to run one after a removal. The trouble with leaving it there is that a reset reports success having created that state, so the safety of the operation rests on the operator remembering a second command. This phase converges the survivors itself, and says so when it cannot.</p>
@@ -12866,28 +12866,28 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ReconfigureSurvivors.Explanation"></a></p>
-<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L74">Explanation</a></a></h3>
+<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L77">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ReconfigureSurvivors.Prepare"></a></p>
-<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L79">Prepare</a></a></h3>
+<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L82">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ReconfigureSurvivors.Run"></a></p>
-<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L112">Run</a></a></h3>
+<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L132">Run</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="ReconfigureSurvivors.ShouldRun"></a></p>
-<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L107">ShouldRun</a></a></h3>
+<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L127">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) ShouldRun() bool
 </code></pre>
-<p>ShouldRun is true when the run removed a controller and kept at least one.</p>
+<p>ShouldRun is true when the run removed a controller and kept at least one, on a distro this phase knows how to repoint.</p>
 <p>Removing every controller is a whole-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.</p>
 <p><a name="ReconfigureSurvivors.Title"></a></p>
-<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L69">Title</a></a></h3>
+<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L72">Title</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13093,7 +13093,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UpgradeHosts"></a></p>
-<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L37-L44">UpgradeHosts</a></a></h2>
+<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L38-L48">UpgradeHosts</a></a></h2>
 <p>UpgradeHosts phase state</p>
 <pre><code class="language-go">type UpgradeHosts struct {
     GenericPhase
@@ -13102,7 +13102,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="UpgradeHosts.ShouldRun"></a></p>
-<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L47">ShouldRun</a></a></h3>
+<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L61">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
@@ -14098,7 +14098,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Bootstrapper"></a></p>
-<h2 id="type-bootstrapper"><a class="header" href="#type-bootstrapper">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L132-L138">Bootstrapper</a></a></h2>
+<h2 id="type-bootstrapper"><a class="header" href="#type-bootstrapper">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L133-L139">Bootstrapper</a></a></h2>
 <p>Bootstrapper is implemented by a distro whose cluster formation is a one-shot command rather than a service to start -- kubeadm init/join, unlike rke2/k3s’s single config.yaml + systemd service. InitializeControllers/InitializeWorkers call Bootstrap instead of starting the service, and ask IsBootstrapped instead of checking service state, when a distro implements this, the same optional-interface pattern ImageImporter uses.</p>
 <pre><code class="language-go">type Bootstrapper interface {
     // IsBootstrapped reports whether host has already formed or joined the cluster, so a re-run
@@ -14149,37 +14149,37 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>BinaryPath returns the full path to the engine binary</p>
 <p><a name="Common.ConfigPath"></a></p>
-<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L149">ConfigPath</a></a></h3>
+<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L152">ConfigPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) ConfigPath() string
 </code></pre>
-<p>ConfigPath returns the full path for the config directory used by the engine</p>
+<p>ConfigPath returns the full path of the engine’s own config file -- rke2 and k3s’s config.yaml, upstream’s kubeadm-config.yaml. A caller that wants the directory holding it takes filepath.Dir of this; several of the files cargoship writes beside it are found that way, and so is the tree an uninstall removes.</p>
 <p><a name="Common.DataDirPath"></a></p>
-<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L159">DataDirPath</a></a></h3>
+<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L162">DataDirPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) DataDirPath() string
 </code></pre>
 <p>DataDirPath returns the full path for the data directory used by the engine</p>
 <p><a name="Common.GetControllerService"></a></p>
-<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L179">GetControllerService</a></a></h3>
+<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L182">GetControllerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetControllerService() string
 </code></pre>
 <p>GetControllerService returns the name of the controller service</p>
 <p><a name="Common.GetWorkerService"></a></p>
-<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L174">GetWorkerService</a></a></h3>
+<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L177">GetWorkerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetWorkerService() string
 </code></pre>
 <p>GetWorkerService returns the name of the worker service</p>
 <p><a name="Common.JoinTokenPath"></a></p>
-<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L154">JoinTokenPath</a></a></h3>
+<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L157">JoinTokenPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) JoinTokenPath() string
 </code></pre>
 <p>JoinTokenPath returns the path of the token to join the cluster</p>
 <p><a name="Common.PackageStagingDir"></a></p>
-<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L166">PackageStagingDir</a></a></h3>
+<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L169">PackageStagingDir</a></a></h3>
 <pre><code class="language-go">func (r *Common) PackageStagingDir() string
 </code></pre>
 <p>PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.</p>
 <p><a name="Common.SetPath"></a></p>
-<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L184">SetPath</a></a></h3>
+<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L187">SetPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) SetPath(key string, value string) error
 </code></pre>
 <p>SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an “ErrPathKey” error</p>
@@ -14211,7 +14211,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.</p>
 <p><a name="Distro"></a></p>
-<h2 id="type-distro-2"><a class="header" href="#type-distro-2">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L55-L116">Distro</a></a></h2>
+<h2 id="type-distro-2"><a class="header" href="#type-distro-2">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L55-L117">Distro</a></a></h2>
 <p>Distro interface for any distro object</p>
 <pre><code class="language-go">type Distro interface {
     // AdminCredentials returns the cluster CA certificate and the admin client key pair
@@ -14224,7 +14224,8 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // CleanupPaths returns every path on a host the engine owns outright, for an uninstall
     // to remove recursively. Paths that are unset or too broad to safely remove are left out.
     CleanupPaths() []string
-    // ConfigPath returns the full path for the config directory used by the engine
+    // ConfigPath returns the full path of the engine's own config file. The directory holding
+    // it is filepath.Dir of this -- there is no separate accessor for it.
     ConfigPath() string
     // SupervisorPort returns the port a joining node registers with the cluster on.
     SupervisorPort() int
@@ -14277,7 +14278,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ImageImporter"></a></p>
-<h2 id="type-imageimporter"><a class="header" href="#type-imageimporter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L122-L125">ImageImporter</a></a></h2>
+<h2 id="type-imageimporter"><a class="header" href="#type-imageimporter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L123-L126">ImageImporter</a></a></h2>
 <p>ImageImporter is implemented by a distro whose engine does not import uploaded image tarballs on its own, so cargoship must trigger the import itself. rke2 and k3s’s own agents import automatically outside cargoship’s control and do not implement this; a distro without an agent to do that -- plain kubeadm’s upstream containerd, say -- does.</p>
 <pre><code class="language-go">type ImageImporter interface {
     // ImportImages imports every image tarball staged under path into the engine's image store.
@@ -14332,7 +14333,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ManifestApplier"></a></p>
-<h2 id="type-manifestapplier"><a class="header" href="#type-manifestapplier">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L162-L166">ManifestApplier</a></a></h2>
+<h2 id="type-manifestapplier"><a class="header" href="#type-manifestapplier">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L163-L167">ManifestApplier</a></a></h2>
 <p>ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically a CNI -- that cargoship applies with kubectl once the leader is reachable, instead of rendering them into a HelmChartConfig an embedded controller reconciles (rancher_common.go’s helmChartConfigs). Same optional-interface pattern as ImageImporter/Bootstrapper.</p>
 <pre><code class="language-go">type ManifestApplier interface {
     // ManifestPaths returns the on-host paths to kubectl apply, in order. Empty when the package
@@ -14341,7 +14342,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PreStartUpgrader"></a></p>
-<h2 id="type-prestartupgrader"><a class="header" href="#type-prestartupgrader">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L144-L147">PreStartUpgrader</a></a></h2>
+<h2 id="type-prestartupgrader"><a class="header" href="#type-prestartupgrader">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L145-L148">PreStartUpgrader</a></a></h2>
 <p>PreStartUpgrader is implemented by a distro whose upgrade needs a step between the new package install and the service restart -- kubeadm upgrade, unlike rke2/k3s where a plain restart on the new binary is enough. UpgradeHosts calls it, when implemented, right after installDistro and before startService. Same optional-interface pattern as Bootstrapper.</p>
 <pre><code class="language-go">type PreStartUpgrader interface {
     // PreStartUpgrade runs after the new packages are staged but before the service restarts.
@@ -14349,7 +14350,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PreUninstallResetter"></a></p>
-<h2 id="type-preuninstallresetter"><a class="header" href="#type-preuninstallresetter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L153-L156">PreUninstallResetter</a></a></h2>
+<h2 id="type-preuninstallresetter"><a class="header" href="#type-preuninstallresetter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L154-L157">PreUninstallResetter</a></a></h2>
 <p>PreUninstallResetter is implemented by a distro that must tear down its own cluster membership before its packages are removed -- kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. UninstallEngine calls it, when implemented, before resolving package names and removing them. Same optional-interface pattern as PreStartUpgrader.</p>
 <pre><code class="language-go">type PreUninstallResetter interface {
     // PreUninstallReset runs before packages are resolved and removed.
@@ -14437,14 +14438,14 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>RunningVersion returns the version of the distro being ran, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream"></a></p>
-<h2 id="type-upstream"><a class="header" href="#type-upstream">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L55-L57">Upstream</a></a></h2>
+<h2 id="type-upstream"><a class="header" href="#type-upstream">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L60-L62">Upstream</a></a></h2>
 <p>Upstream distro struct. It targets a kubeadm-bootstrapped cluster: plain kubelet/kubeadm/ kubectl packages and upstream containerd, none of which share rke2/k3s’s single config.yaml or wharfie registries.yaml, so it implements Distro directly rather than embedding RancherCommon.</p>
 <pre><code class="language-go">type Upstream struct {
     Common
 }
 </code></pre>
 <p><a name="Upstream.AdminCredentials"></a></p>
-<h3 id="func-upstream-admincredentials"><a class="header" href="#func-upstream-admincredentials">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L94">AdminCredentials</a></a></h3>
+<h3 id="func-upstream-admincredentials"><a class="header" href="#func-upstream-admincredentials">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L99">AdminCredentials</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) AdminCredentials(host *cluster.Host, dataDir string) (AdminCredentials, error)
 </code></pre>
 <p>AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.</p>
@@ -14455,32 +14456,32 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Bootstrap forms the cluster on the leader with `kubeadm init`, joins an additional controller onto it with kubeadm’s HA control-plane path, or joins a worker with a plain `kubeadm join`, against the kubeadm-config.yaml ConfigureEngine already wrote to host.</p>
 <p>The container runtime comes up first. kubeadm talks to the CRI socket in its own preflight, and this is the first point in a run where the package that provides the runtime is installed -- see ensureRuntime.</p>
 <p><a name="Upstream.CleanupPaths"></a></p>
-<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L322">CleanupPaths</a></a></h3>
+<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L327">CleanupPaths</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) CleanupPaths() []string
 </code></pre>
 <p>CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config directory, the kubelet data directory, and the staged package directory, all of which upstream owns outright.</p>
 <p><a name="Upstream.ConfigureEngine"></a></p>
-<h3 id="func-upstream-configureengine"><a class="header" href="#func-upstream-configureengine">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L159">ConfigureEngine</a></a></h3>
+<h3 id="func-upstream-configureengine"><a class="header" href="#func-upstream-configureengine">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L164">ConfigureEngine</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error
 </code></pre>
 <p>ConfigureEngine writes DesiredFiles’ output to host: containerd’s config, crictl.yaml, registry hosts.toml, and the kubeadm-config.yaml this host’s role needs. Unlike RancherCommon.ConfigureEngine there is no already-running guard -- kubeadm-config.yaml is meant to be rewritten every run (Bootstrap rewrites it again with the real join token right before `kubeadm join`), so an unconditional overwrite is correct here, not a gap.</p>
 <p><a name="Upstream.DesiredFiles"></a></p>
-<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L208">DesiredFiles</a></a></h3>
+<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L213">DesiredFiles</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error)
 </code></pre>
 <p>DesiredFiles returns the full set of engine config files this distro would write: containerd’s config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.</p>
 <p><a name="Upstream.DistroCmdf"></a></p>
-<h3 id="func-upstream-distrocmdf"><a class="header" href="#func-upstream-distrocmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L113">DistroCmdf</a></a></h3>
+<h3 id="func-upstream-distrocmdf"><a class="header" href="#func-upstream-distrocmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L118">DistroCmdf</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) DistroCmdf(template string, args ...any) string
 </code></pre>
 <p>DistroCmdf returns a string that can be used to execute a command directly. Upstream has no single engine binary to wrap a command through -- kubeadm, kubelet, and kubectl are three separate packages -- so the template is formatted as-is.</p>
 <p><a name="Upstream.GetClusterCIDR"></a></p>
-<h3 id="func-upstream-getclustercidr"><a class="header" href="#func-upstream-getclustercidr">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L139">GetClusterCIDR</a></a></h3>
+<h3 id="func-upstream-getclustercidr"><a class="header" href="#func-upstream-getclustercidr">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L144">GetClusterCIDR</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) GetClusterCIDR(dis distro.Distro) []string
 </code></pre>
 <p>GetClusterCIDR returns the known cluster CIDR blocks. kubeadm’s service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default -- that is entirely CNI dependent -- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.</p>
 <p><a name="Upstream.ImportImages"></a></p>
-<h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L292">ImportImages</a></a></h3>
+<h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L297">ImportImages</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ImportImages(host *cluster.Host, path string) error
 </code></pre>
 <p>ImportImages imports every image tarball staged under path into containerd’s k8s.io image store. Unlike rke2/k3s, upstream’s containerd has no agent watching that directory on its own, so cargoship has to trigger the import itself.</p>
@@ -14490,27 +14491,27 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>IsBootstrapped reports whether host has already run `kubeadm init` or `kubeadm join`.</p>
 <p><a name="Upstream.JoinTokenPathAgent"></a></p>
-<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L329">JoinTokenPathAgent</a></a></h3>
+<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L334">JoinTokenPathAgent</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) JoinTokenPathAgent() string
 </code></pre>
 <p>JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has no static agent-join-token file -- tokens are short-lived and minted on demand with `kubeadm token create` -- so there is nothing to point at yet.</p>
 <p><a name="Upstream.KubeconfigPath"></a></p>
-<h3 id="func-upstream-kubeconfigpath"><a class="header" href="#func-upstream-kubeconfigpath">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L100">KubeconfigPath</a></a></h3>
+<h3 id="func-upstream-kubeconfigpath"><a class="header" href="#func-upstream-kubeconfigpath">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L105">KubeconfigPath</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) KubeconfigPath(_ *cluster.Host, _ string) string
 </code></pre>
 <p>KubeconfigPath returns the path to the admin config kubeadm writes. Unlike rke2/k3s, this path does not vary by host or data directory.</p>
 <p><a name="Upstream.KubectlCmdf"></a></p>
-<h3 id="func-upstream-kubectlcmdf"><a class="header" href="#func-upstream-kubectlcmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L106">KubectlCmdf</a></a></h3>
+<h3 id="func-upstream-kubectlcmdf"><a class="header" href="#func-upstream-kubectlcmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L111">KubectlCmdf</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) KubectlCmdf(host *cluster.Host, dataDir string, s string, args ...any) string
 </code></pre>
 <p>KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.</p>
 <p><a name="Upstream.ManagedDirs"></a></p>
-<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L283">ManagedDirs</a></a></h3>
+<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L288">ManagedDirs</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ManagedDirs() []ManagedDir
 </code></pre>
 <p>ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per-registry hosts.toml directories under containerdCertsDir are not included -- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry’s own subdirectory, so a removed registry’s hosts.toml is left behind rather than risk pruning the wrong thing.</p>
 <p><a name="Upstream.ManifestPaths"></a></p>
-<h3 id="func-upstream-manifestpaths"><a class="header" href="#func-upstream-manifestpaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L315">ManifestPaths</a></a></h3>
+<h3 id="func-upstream-manifestpaths"><a class="header" href="#func-upstream-manifestpaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L320">ManifestPaths</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ManifestPaths(dis distro.Distro) []string
 </code></pre>
 <p>ManifestPaths returns the on-host manifest paths the package declares for cargoship to kubectl apply, e.g. a CNI. Delivery of those files is Config.Files’ job; this is only the list of what to apply.</p>
@@ -14526,17 +14527,17 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>PreUninstallReset runs kubeadm’s own teardown before packages are removed, then cleans up what kubeadm reset deliberately leaves behind: it prints a reminder about CNI state and iptables/ipvs rules rather than removing them itself. Each post-reset command is best-effort -- a link that does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected common case, not a failure worth reporting.</p>
 <p>The container runtime goes last. `kubeadm reset` needs it to tear the control-plane containers down, so it is stopped only once that has run -- and it is stopped at all because nothing else on an upstream host started it: leaving it enabled means a decommissioned machine still comes back with a runtime serving a CRI socket for a cluster it is no longer part of.</p>
 <p><a name="Upstream.RunningVersion"></a></p>
-<h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L119">RunningVersion</a></a></h3>
+<h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L124">RunningVersion</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) RunningVersion(host *cluster.Host) (string, error)
 </code></pre>
 <p>RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream.StopControllerService"></a></p>
-<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L336">StopControllerService</a></a></h3>
+<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L341">StopControllerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopControllerService(h *cluster.Host) error
 </code></pre>
 <p>StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.</p>
 <p><a name="Upstream.StopWorkerService"></a></p>
-<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L341">StopWorkerService</a></a></h3>
+<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L346">StopWorkerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopWorkerService(h *cluster.Host) error
 </code></pre>
 <p>StopWorkerService stops the worker service on the host.</p>
@@ -18743,6 +18744,67 @@ pre-commit run --all-files
 <h2 id="suggested-order"><a class="header" href="#suggested-order">Suggested order</a></h2>
 <p><code>from-json</code>, then <code>from-csv</code>, then <code>from-ssh-config</code>, then stop until someone asks. <code>from-terraform</code> slots in wherever demand puts it, built on the outputs path rather than the state path.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="todo-persist-archives-fetched-for-an-extractpath-file"><a class="header" href="#todo-persist-archives-fetched-for-an-extractpath-file">TODO: persist archives fetched for an <code>extractPath</code> file</a></h1>
+<p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. Every walk of the cluster suite builds its own package, each <code>distro.yaml</code> names an <code>etcd</code> release to pull <code>etcdctl</code> out of, and none of those archives is ever cached between runs - so a cluster walk downloads them again every time and a momentary DNS failure fails the walk at the package build. That accounted for three failed runs out of five in one session, at <code>Test_00_UpgradePackage</code> and <code>Test_00_JoinMachine</code>, neither of which has anything to do with the phases under test.</p>
+<h2 id="why-they-are-not-cached"><a class="header" href="#why-they-are-not-cached">Why they are not cached</a></h2>
+<p><code>assembleFile</code> in <a href="../pkg/packager/assemble/assemble.go"><code>pkg/packager/assemble/assemble.go</code></a> splits on whether a file declares <code>extractPath</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Entry</th><th>Download call</th><th>Persisted?</th></tr>
+</thead>
+<tbody>
+<tr><td>plain <code>source</code></td><td><code>DownloadToFileWithChecksum(ctx, source, dst, file.Shasum, ...)</code></td><td>yes - keyed by shasum under <code>files/</code></td></tr>
+<tr><td>with <code>extractPath</code></td><td><code>DownloadToFileWithChecksum(ctx, source, compressedFile, "", ...)</code></td><td>no - <code>archives</code> is per-build only</td></tr>
+</tbody>
+</table>
+</div>
+<p>The empty shasum is deliberate and correct: with <code>extractPath</code> set, <code>file.Shasum</code> is the digest of the <em>extracted</em> file, and the archive it came out of has a different one. The <code>archives</code> map it uses instead is reserved and populated within a single assemble call, and the <code>defer</code> removes an archive whose download failed. Nothing writes it to <code>~/.cache/cargoship/files</code>, so the next build starts from nothing.</p>
+<p>The evidence is the cache itself: 1.7G and 109 entries under <code>files/</code>, every one an RPM or a <code>.deb</code>, and <code>find ~/.cache/cargoship -iname '*etcd*'</code> returns nothing after five full runs that each downloaded one.</p>
+<h2 id="what-to-do-about-it"><a class="header" href="#what-to-do-about-it">What to do about it</a></h2>
+<p>The archive needs a cache key that does not depend on a digest the definition does not carry. Two shapes, in preference order:</p>
+<ul>
+<li><strong>Let a <code>files</code> entry declare the archive’s own digest</strong> alongside the extracted file’s, and key the persistent cache on it. This keeps the integrity guarantee that the plain-source path has and is the only option that lets a cached archive be trusted rather than merely reused.</li>
+<li><strong>Key on the resolved URL and verify the extracted file as today.</strong> Cheaper and needs no schema change, but a cached archive is then trusted on its name - acceptable for the suite, weaker than what this project does everywhere else, and worth saying out loud in the code rather than leaving a reader to notice.</li>
+</ul>
+<p>Do not reach for a suite-local pre-warm step that downloads the five <code>etcd</code> versions before the walks. It hides the problem from the one place that keeps hitting it, leaves a real <code>cargoship package build</code> re-downloading on every invocation, and the examples drift - the versions in use today are v3.6.6, v3.6.7, v3.6.12, v3.6.14 and v3.7.1, and nothing would keep that list in step.</p>
+<h2 id="scope-1"><a class="header" href="#scope-1">Scope</a></h2>
+<p>This is about the archive, not about the extraction or the checksum of what comes out of it, both of which work. Nor is it about node egress - see <a href="#todo-cut-the-microvm-fleets-internet-access-once-its-nodes-are-up"><code>todo-microvm-egress-blackout.md</code></a>; a package build legitimately reaches the network, and the point here is that it should not have to do so twice for the same artifact.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="todo-cut-the-microvm-fleets-internet-access-once-its-nodes-are-up"><a class="header" href="#todo-cut-the-microvm-fleets-internet-access-once-its-nodes-are-up">TODO: cut the microvm fleet’s internet access once its nodes are up</a></h1>
+<p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. Cargoship’s whole premise is that a target host receives everything over SSH from a staged package and reaches nothing itself, and no backend currently proves that: a phase that quietly fetched something from the internet would pass on every one of them. The microvm fleet has working egress today, measured from <code>kc0</code> mid-run - <code>github.com</code> resolves and <code>curl https://github.com</code> returns <code>200</code>. This document is what it would take to take that away, and what not to try.</p>
+<h2 id="why-it-is-not-one-command"><a class="header" href="#why-it-is-not-one-command">Why it is not one command</a></h2>
+<p>Each node gets two NICs from <code>internal/microvm/vm.go</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>NIC</th><th>QEMU netdev</th><th>Address</th><th>Carries</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enp0s3</code></td><td><code>-netdev user,id=mgmt,hostfwd=...</code> (SLIRP)</td><td><code>10.0.2.15/24</code></td><td>egress <strong>and</strong> the inbound SSH every phase runs over</td></tr>
+<tr><td><code>enp0s4</code></td><td><code>-netdev socket,id=lan,mcast=...</code></td><td><code>10.73.193.x/24</code></td><td>the fleet’s own layer 2 segment, no egress</td></tr>
+</tbody>
+</table>
+</div>
+<p>So the mgmt NIC cannot simply be dropped - that is the SSH. The detail that makes a blackout possible is that SSH arrives from <code>10.0.2.2</code>, the SLIRP gateway, which is reachable through the kernel’s own <code>10.0.2.0/24 dev enp0s3 scope link</code> route rather than through the default route.</p>
+<h2 id="the-approach-to-take"><a class="header" href="#the-approach-to-take">The approach to take</a></h2>
+<p>Apply an nftables blackout inside each guest after cloud-init has finished, gated behind an environment variable so the default behaviour does not change:</p>
+<pre><code class="language-sh">nft add table inet airgap
+nft add chain inet airgap out '{ type filter hook output priority 0; policy accept; }'
+nft add rule inet airgap out oifname enp0s3 ct state established,related accept
+nft add rule inet airgap out oifname enp0s3 drop
+</code></pre>
+<p>Inbound SSH survives on established/related, anything the guest initiates is dropped, and <code>enp0s4</code> and the CNI’s interfaces are untouched. It belongs in the microvm provisioning path after the cloud-init wait, not in the suite, so that <code>mage dev:vmUp</code> can produce an air-gapped fleet to poke at by hand as well.</p>
+<h2 id="two-things-not-to-try"><a class="header" href="#two-things-not-to-try">Two things not to try</a></h2>
+<p><strong><code>-netdev user,restrict=on</code> has the right semantics and the wrong timing.</strong> It isolates the guest while leaving <code>hostfwd</code> working, which is exactly what is wanted, but it is a launch-time flag and cloud-init installs <code>firewalld</code>, <code>fapolicyd</code> and <code>python3-dnf-plugin-versionlock</code> with <code>dnf</code> (<code>internal/microvm/image.go</code>). A node that boots restricted never provisions. Hot-swapping the netdev over QMP after bringup avoids that at the cost of a QMP socket and dropping the NIC’s connections, which is more machinery than this is worth.</p>
+<p><strong><code>ip route del default</code> is half a blackout.</strong> <code>/etc/resolv.conf</code> points at <code>10.0.2.3</code>, which is on-link on <code>10.0.2.0/24</code>, so name resolution keeps working after the default route is gone and only routed egress dies. A test that still resolves names is not testing an air gap.</p>
+<h2 id="what-to-expect-and-what-this-does-not-cover"><a class="header" href="#what-to-expect-and-what-this-does-not-cover">What to expect, and what this does not cover</a></h2>
+<ul>
+<li><strong>The first run will not be green.</strong> Any step quietly relying on node egress starts failing, which is the point, but budget for fallout rather than a clean pass.</li>
+<li><strong>firewalld is cargoship’s to manage on these nodes.</strong> A separate <code>inet airgap</code> table should be independent of firewalld’s own and survive its reloads - that is the claim most worth testing first, because the phases reload firewalld during a walk.</li>
+<li><strong>Package assembly is not in scope and must stay out of it.</strong> <code>distro.Create</code> runs on the machine running the suite, not on a node, and downloading the sources a <code>distro.yaml</code> names is what a build is for. A transient DNS failure there already failed an upgrade walk at <code>Test_00_UpgradePackage</code>; blacking out the nodes neither causes nor fixes that. Pre-warming the download cache is a separate idea.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="todo-unit-tests-for-the-option-gated-branches-in-pkgaction"><a class="header" href="#todo-unit-tests-for-the-option-gated-branches-in-pkgaction">TODO: unit tests for the option-gated branches in <code>pkg/action</code></a></h1>
 <p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. It exists because a coverage review of the repo flagged <code>pkg/action</code> (<code>apply.go</code>, <code>prepare.go</code>, <code>reset.go</code>, <code>kube-config.go</code>, <code>engine_config_sync.go</code>) at 0% under <code>go test -short</code>, and the obvious response – write unit tests for the whole package – turned out to be the wrong scope once <code>test/e2e/cluster/cluster_lifecycle_test.go</code> was checked. Read that file’s comments before touching this list; they already say more about the intended coverage boundary than this document repeats.</p>
 <h2 id="what-is-already-covered-and-why-more-of-the-same-is-not-the-ask"><a class="header" href="#what-is-already-covered-and-why-more-of-the-same-is-not-the-ask">What is already covered, and why more of the same is not the ask</a></h2>
@@ -18779,7 +18841,7 @@ pre-commit run --all-files
 <h2 id="how-to-approach-it"><a class="header" href="#how-to-approach-it">How to approach it</a></h2>
 <p>Follow the pattern already established in <code>pkg/coci/push_test.go</code> / <code>fetch_test.go</code>: <code>test.SetupInMemoryRegistry(t)</code> (documented in <code>docs/agent/choice-in-memory-oci-registry.md</code>) plus the local helpers <code>testRemote</code>, <code>pushManifest</code>/<code>pushManifestTagged</code>, <code>pushBlob</code>, <code>readIndex</code>. For <code>CopyPackage</code>, that means two <code>testRemote</code> instances against two registry addresses (or two repos on one in-memory registry, whichever <code>test.SetupInMemoryRegistry</code> supports without a rewrite – check before assuming you need two servers).</p>
 <p>For <code>PullDistro</code>/<code>PushPackage</code>, you’ll need a real <code>layout.DistroLayout</code> – reuse <code>writeChecksummedPackage</code> (<code>pkg/packager/layout/package_test.go</code>) or a similar minimal on-disk fixture rather than inventing a new one, since it already produces a package that passes <code>validateDistroIntegrity</code>.</p>
-<h2 id="scope-1"><a class="header" href="#scope-1">Scope</a></h2>
+<h2 id="scope-2"><a class="header" href="#scope-2">Scope</a></h2>
 <p>Don’t expand this into re-covering Tier 1/2 logic through a registry “for realism” – that’s duplicated effort for the same reason <code>pkg/action</code>’s punch list (<code>todo-pkg-action-unit-tests.md</code>) says not to re-prove wiring the e2e suite already proves. The value here is specifically the registry-interaction code paths (auth, tagging, index read-modify-write against a real target, oras.Copy semantics) that the Tier 2 fakes cannot exercise.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>

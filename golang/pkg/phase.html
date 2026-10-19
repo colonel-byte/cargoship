@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-7f79c84e.js";
+            window.path_to_searchindex_js = "../../searchindex-1c04171e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-8b8ee343.js"></script>
+        <script src="../../toc-85cbcabe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -714,7 +714,7 @@
 <pre><code class="language-go">var NoWait bool
 </code></pre>
 <p><a name="CheckTargetHosts"></a></p>
-<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L323">CheckTargetHosts</a></a></h2>
+<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L245">CheckTargetHosts</a></a></h2>
 <pre><code class="language-go">func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
 </code></pre>
 <p>CheckTargetHosts reports a target that names no host in the configuration.</p>
@@ -941,7 +941,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="DeleteCommon"></a></p>
-<h2 id="type-deletecommon"><a class="header" href="#type-deletecommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L50-L61">DeleteCommon</a></a></h2>
+<h2 id="type-deletecommon"><a class="header" href="#type-deletecommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L38-L49">DeleteCommon</a></a></h2>
 <p>DeleteCommon phase state</p>
 <pre><code class="language-go">type DeleteCommon struct {
     GenericPhase
@@ -951,7 +951,7 @@
 }
 </code></pre>
 <p><a name="DeleteCommon.Prepare"></a></p>
-<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L104">Prepare</a></a></h3>
+<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L92">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
@@ -1182,7 +1182,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="EngineConfigSyncHosts"></a></p>
-<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L68">EngineConfigSyncHosts</a></a></h2>
+<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L71">EngineConfigSyncHosts</a></a></h2>
 <p>EngineConfigSyncHosts phase state</p>
 <pre><code class="language-go">type EngineConfigSyncHosts struct {
     GenericPhase
@@ -1193,20 +1193,20 @@
 }
 </code></pre>
 <p><a name="EngineConfigSyncHosts.Changed"></a></p>
-<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L163">Changed</a></a></h3>
+<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L166">Changed</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) Changed() bool
 </code></pre>
 <p>Changed reports whether this phase altered any host, which is what Ansible’s changed is built from. See changedReporter in 05_manager.go.</p>
 <p>There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.</p>
 <p><a name="EngineConfigSyncHosts.HostsChanged"></a></p>
-<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L132">HostsChanged</a></a></h3>
+<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L135">HostsChanged</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
 </code></pre>
 <p>HostsChanged reports what this phase did to each host it looked at. See hostChangedReporter in 05_manager.go.</p>
 <p>Every host Prepare checked is reported, including the ones that turned out to be in sync. A host that was checked and found correct is a different answer from a host nothing looked at, and only one of them means the fleet was fully assessed.</p>
 <p>The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.</p>
 <p><a name="EngineConfigSyncHosts.ShouldRun"></a></p>
-<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L170">ShouldRun</a></a></h3>
+<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L173">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are hosts to sync</p>
@@ -2012,7 +2012,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ReconfigureSurvivors"></a></p>
-<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L66">ReconfigureSurvivors</a></a></h2>
+<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L69">ReconfigureSurvivors</a></a></h2>
 <p>ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.</p>
 <p>A controller that is not the first one carries `server:` naming the first, written when it joined. That value is read at startup, so removing the first controller leaves a cluster that keeps working and cannot come back: every survivor names a machine that is gone, and the next restart or reboot of any of them fails to rejoin.</p>
 <p>cargoship apply already fixes this -- it re-elects the first controller from the hosts that are left and rewrites `server:` on the rest -- and the documented procedure is to run one after a removal. The trouble with leaving it there is that a reset reports success having created that state, so the safety of the operation rests on the operator remembering a second command. This phase converges the survivors itself, and says so when it cannot.</p>
@@ -2026,28 +2026,28 @@
 }
 </code></pre>
 <p><a name="ReconfigureSurvivors.Explanation"></a></p>
-<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L74">Explanation</a></a></h3>
+<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L77">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ReconfigureSurvivors.Prepare"></a></p>
-<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L79">Prepare</a></a></h3>
+<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L82">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ReconfigureSurvivors.Run"></a></p>
-<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L112">Run</a></a></h3>
+<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L132">Run</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="ReconfigureSurvivors.ShouldRun"></a></p>
-<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L107">ShouldRun</a></a></h3>
+<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L127">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) ShouldRun() bool
 </code></pre>
-<p>ShouldRun is true when the run removed a controller and kept at least one.</p>
+<p>ShouldRun is true when the run removed a controller and kept at least one, on a distro this phase knows how to repoint.</p>
 <p>Removing every controller is a whole-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.</p>
 <p><a name="ReconfigureSurvivors.Title"></a></p>
-<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L69">Title</a></a></h3>
+<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L72">Title</a></a></h3>
 <pre><code class="language-go">func (p *ReconfigureSurvivors) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -2253,7 +2253,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UpgradeHosts"></a></p>
-<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L37-L44">UpgradeHosts</a></a></h2>
+<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L38-L48">UpgradeHosts</a></a></h2>
 <p>UpgradeHosts phase state</p>
 <pre><code class="language-go">type UpgradeHosts struct {
     GenericPhase
@@ -2262,7 +2262,7 @@
 }
 </code></pre>
 <p><a name="UpgradeHosts.ShouldRun"></a></p>
-<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L47">ShouldRun</a></a></h3>
+<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L61">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
