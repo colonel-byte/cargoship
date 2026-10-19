@@ -49,7 +49,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
   -h, --help                              help for engine-config-sync
   -k, --key string                        Path to public key file for validating signed packages
       --kubeconfig string                 Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
-      --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig.
       --receipt-path string               Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                    Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                     Specify the temporary directory to use for intermediate files (default "/tmp")
