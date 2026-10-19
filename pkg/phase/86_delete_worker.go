@@ -68,7 +68,7 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.Cluster, d *dist
 	}
 
 	candidates := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
-	p.nodeNames = p.resolveNodeNames(ctx, candidates)
+	p.nodeNames = resolveNodeNames(ctx, p.leader, p.Distro, candidates)
 	p.hosts = candidates.Filter(func(h *cluster.Host) bool {
 		if _, inCluster := p.nodeNames[h.String()]; !inCluster {
 			return false

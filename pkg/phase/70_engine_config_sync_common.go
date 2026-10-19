@@ -51,6 +51,9 @@ type EngineConfigSyncHosts struct {
 	service           string
 	hosts             cluster.Hosts
 	leader            *cluster.Host
+	// nodeNames maps a host to the name its node carries in the cluster. See nodeName.
+	nodeNames     map[string]string
+	nodeNamesOnce sync.Once
 	// drift records why each host was selected. Prepare fills it while deciding which hosts to
 	// sync, so Run can say what it is draining a node for without reading every file off that
 	// host a second time. It is keyed by host pointer rather than by name: the same pointers
@@ -169,6 +172,16 @@ func (p *EngineConfigSyncHosts) Changed() bool {
 // ShouldRun is true when there are hosts to sync
 func (p *EngineConfigSyncHosts) ShouldRun() bool {
 	return len(p.hosts) > 0
+}
+
+// nodeName is what the cluster calls h's node, resolved once for the whole phase the first time
+// a node has to be named. Resolved here rather than in Prepare because it costs a kubectl call
+// on the leader, and a phase with no drift to sync should not make one.
+func (p *EngineConfigSyncHosts) nodeName(ctx context.Context, h *cluster.Host) string {
+	p.nodeNamesOnce.Do(func() {
+		p.nodeNames = resolveNodeNames(ctx, p.leader, p.Distro, p.hosts)
+	})
+	return nodeNameFor(p.nodeNames, h)
 }
 
 func (p *EngineConfigSyncHosts) prepareLeader(ctx context.Context) error {
@@ -389,7 +402,7 @@ func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.Host) e
 func (p *EngineConfigSyncHosts) drainNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("draining node to sync engine config", "node", h, "drifted", p.driftReason(h))
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, p.nodeName(ctx, h)))
 	})
 }
 
@@ -415,7 +428,7 @@ func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		out, err := p.leader.Sudo().ExecOutput(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)))
+		out, err := p.leader.Sudo().ExecOutput(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), readyNode, p.nodeName(ctx, h)))
 		if err != nil {
 			return err
 		}
@@ -426,6 +439,6 @@ func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster
 	})
 }
 
-func (p *EngineConfigSyncHosts) uncordonNode(_ context.Context, h *cluster.Host) error {
-	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)))
+func (p *EngineConfigSyncHosts) uncordonNode(ctx context.Context, h *cluster.Host) error {
+	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, p.nodeName(ctx, h)))
 }

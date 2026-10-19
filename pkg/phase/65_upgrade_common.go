@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
@@ -41,6 +42,19 @@ type UpgradeHosts struct {
 	hosts   cluster.Hosts
 	leader  *cluster.Host
 	dis     *distro.Distro
+	// nodeNames maps a host to the name its node carries in the cluster. See nodeName.
+	nodeNames     map[string]string
+	nodeNamesOnce sync.Once
+}
+
+// nodeName is what the cluster calls h's node, resolved once for the whole phase the first time
+// a node has to be named. Resolved here rather than in Prepare because it costs a kubectl call
+// on the leader, and a phase with nothing to upgrade should not make one.
+func (p *UpgradeHosts) nodeName(ctx context.Context, h *cluster.Host) string {
+	p.nodeNamesOnce.Do(func() {
+		p.nodeNames = resolveNodeNames(ctx, p.leader, p.Distro, p.hosts)
+	})
+	return nodeNameFor(p.nodeNames, h)
 }
 
 // ShouldRun is true when there are workers
@@ -51,7 +65,7 @@ func (p *UpgradeHosts) ShouldRun() bool {
 func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("draining nodes", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, p.nodeName(ctx, h)))
 	})
 }
 
@@ -97,7 +111,7 @@ func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.Host) er
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		out, err := p.leader.Sudo().ExecOutput(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)))
+		out, err := p.leader.Sudo().ExecOutput(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), readyNode, p.nodeName(ctx, h)))
 		if err != nil {
 			return err
 		}
@@ -108,6 +122,6 @@ func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.Host) er
 	})
 }
 
-func (p *UpgradeHosts) uncordonNode(_ context.Context, h *cluster.Host) error {
-	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)))
+func (p *UpgradeHosts) uncordonNode(ctx context.Context, h *cluster.Host) error {
+	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, p.nodeName(ctx, h)))
 }
