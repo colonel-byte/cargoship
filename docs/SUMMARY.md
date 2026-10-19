@@ -83,6 +83,15 @@
 
 -----------
 
+# OpenTofu
+
+- [provider: cargoship](tofu/index.md)
+  - [resource: cargoship_cluster](tofu/resources/cluster.md)
+  - [data source: cargoship_cluster_facts](tofu/data-sources/cluster_facts.md)
+
+
+-----------
+
 # Phases
 
 - [apply](phases/apply.md)

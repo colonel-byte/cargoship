@@ -70,6 +70,7 @@ func GenerateDocument() error {
 		"./docs/phases",
 		"./" + golangDocsDir,
 		"./" + schema.SchemaDocsDir,
+		"./" + tofuDocsDir,
 	}
 
 	for _, dir := range docsDirs {
@@ -100,6 +101,9 @@ func GenerateDocument() error {
 		return err
 	}
 	if err := generateGolangDocs(); err != nil {
+		return err
+	}
+	if err := generateTofuDocs(); err != nil {
 		return err
 	}
 	if err := generateBookPages(); err != nil {
