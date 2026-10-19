@@ -451,7 +451,7 @@ var NoWait bool
 ```
 
 <a name="CheckTargetHosts"></a>
-## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L338>)
+## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L245>)
 
 ```go
 func CheckTargetHosts(hosts cluster.Hosts, targets []string) error
@@ -839,7 +839,7 @@ func (p *DaemonReload) Title() string
 Title for the phase
 
 <a name="DeleteCommon"></a>
-## type [DeleteCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L50-L61>)
+## type [DeleteCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L38-L49>)
 
 DeleteCommon phase state
 
@@ -853,7 +853,7 @@ type DeleteCommon struct {
 ```
 
 <a name="DeleteCommon.Prepare"></a>
-### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L104>)
+### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L92>)
 
 ```go
 func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -1244,7 +1244,7 @@ func (p *EngineConfigSyncController) Title() string
 Title for the phase
 
 <a name="EngineConfigSyncHosts"></a>
-## type [EngineConfigSyncHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L68>)
+## type [EngineConfigSyncHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L71>)
 
 EngineConfigSyncHosts phase state
 
@@ -1259,7 +1259,7 @@ type EngineConfigSyncHosts struct {
 ```
 
 <a name="EngineConfigSyncHosts.Changed"></a>
-### func \(\*EngineConfigSyncHosts\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L163>)
+### func \(\*EngineConfigSyncHosts\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L166>)
 
 ```go
 func (p *EngineConfigSyncHosts) Changed() bool
@@ -1270,7 +1270,7 @@ Changed reports whether this phase altered any host, which is what Ansible's cha
 There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re\-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.
 
 <a name="EngineConfigSyncHosts.HostsChanged"></a>
-### func \(\*EngineConfigSyncHosts\) [HostsChanged](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L132>)
+### func \(\*EngineConfigSyncHosts\) [HostsChanged](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L135>)
 
 ```go
 func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
@@ -1283,7 +1283,7 @@ Every host Prepare checked is reported, including the ones that turned out to be
 The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.
 
 <a name="EngineConfigSyncHosts.ShouldRun"></a>
-### func \(\*EngineConfigSyncHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L170>)
+### func \(\*EngineConfigSyncHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L173>)
 
 ```go
 func (p *EngineConfigSyncHosts) ShouldRun() bool
@@ -2601,7 +2601,7 @@ func (p *RPMUploadFiles) Title() string
 Title for the phase
 
 <a name="ReconfigureSurvivors"></a>
-## type [ReconfigureSurvivors](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L66>)
+## type [ReconfigureSurvivors](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L69>)
 
 ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.
 
@@ -2622,7 +2622,7 @@ type ReconfigureSurvivors struct {
 ```
 
 <a name="ReconfigureSurvivors.Explanation"></a>
-### func \(\*ReconfigureSurvivors\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L74>)
+### func \(\*ReconfigureSurvivors\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L77>)
 
 ```go
 func (p *ReconfigureSurvivors) Explanation() string
@@ -2631,7 +2631,7 @@ func (p *ReconfigureSurvivors) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="ReconfigureSurvivors.Prepare"></a>
-### func \(\*ReconfigureSurvivors\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L79>)
+### func \(\*ReconfigureSurvivors\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L82>)
 
 ```go
 func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
@@ -2640,7 +2640,7 @@ func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, 
 Prepare the phase
 
 <a name="ReconfigureSurvivors.Run"></a>
-### func \(\*ReconfigureSurvivors\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L112>)
+### func \(\*ReconfigureSurvivors\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L132>)
 
 ```go
 func (p *ReconfigureSurvivors) Run(ctx context.Context) error
@@ -2649,18 +2649,18 @@ func (p *ReconfigureSurvivors) Run(ctx context.Context) error
 Run the phase
 
 <a name="ReconfigureSurvivors.ShouldRun"></a>
-### func \(\*ReconfigureSurvivors\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L107>)
+### func \(\*ReconfigureSurvivors\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L127>)
 
 ```go
 func (p *ReconfigureSurvivors) ShouldRun() bool
 ```
 
-ShouldRun is true when the run removed a controller and kept at least one.
+ShouldRun is true when the run removed a controller and kept at least one, on a distro this phase knows how to repoint.
 
 Removing every controller is a whole\-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.
 
 <a name="ReconfigureSurvivors.Title"></a>
-### func \(\*ReconfigureSurvivors\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L69>)
+### func \(\*ReconfigureSurvivors\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L72>)
 
 ```go
 func (p *ReconfigureSurvivors) Title() string
@@ -3005,7 +3005,7 @@ func (p *UpgradeController) Title() string
 Title for the phase
 
 <a name="UpgradeHosts"></a>
-## type [UpgradeHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L37-L44>)
+## type [UpgradeHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L38-L48>)
 
 UpgradeHosts phase state
 
@@ -3018,7 +3018,7 @@ type UpgradeHosts struct {
 ```
 
 <a name="UpgradeHosts.ShouldRun"></a>
-### func \(\*UpgradeHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L47>)
+### func \(\*UpgradeHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L61>)
 
 ```go
 func (p *UpgradeHosts) ShouldRun() bool
