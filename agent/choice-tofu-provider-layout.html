@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "../searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-85cbcabe.js"></script>
+        <script src="../toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -204,7 +204,7 @@
 }
 </code></pre>
 <p>This matters for three reasons. The repository name is unconstrained, so <code>{owner}/terraform-provider-{name}</code> never enters into it. The artifact wants no GPG signature and no <code>SHA256SUMS</code> – an image index with <code>artifactType: application/vnd.opentofu.provider</code>, a per-platform manifest each with <code>artifactType: application/vnd.opentofu.provider-target</code> and a <code>platform</code>, and one layer of media type <code>archive/zip</code> holding the same <code>.zip</code> the registry protocol would serve – while <code>.goreleaser.yaml</code> signs with cosign, which the <a href="https://opentofu.org/docs/internals/provider-registry-protocol/">registry protocol</a> does not accept. And credentials come from the OCI ecosystem’s own locations, the ones <code>docker login</code> already writes, so an operator who can pull cargoship’s images can install its provider.</p>
-<p>It also reuses what this repository already does. <code>.goreleaser.yaml</code> pushes four image variants to ghcr.io on every release, so the registry, the authentication and the publish step all exist; the provider adds an artifact to a registry already in use rather than a new distribution channel. Tags are the version in SemVer 2.0.0 form, with <code>_</code> in place of <code>+</code> for build metadata, and ORAS 1.3.0 or newer is the tooling for assembling the index.</p>
+<p>It also reuses what this repository already does. <code>.goreleaser.yaml</code> pushes four image variants to ghcr.io on every release, so the registry, the authentication and the publish step all exist; the provider adds an artifact to a registry already in use rather than a new distribution channel. Tags are the version in SemVer 2.0.0 form, with <code>_</code> in place of <code>+</code> for build metadata, and the index is assembled with <code>oras.land/oras-go/v2</code> – the same client library <code>pkg/coci</code> already uses to talk to registries, rather than the ORAS CLI as a build-time dependency.</p>
 <p>Two limits worth stating plainly. OpenTofu does not yet support an OCI registry as the <strong>primary</strong> installation source for a provider, so a mirror is a redirection of a source address rather than a source address of its own: the configuration still names <code>registry.opentofu.org/colonel-byte/cargoship</code> (or whatever hostname is chosen), and the <code>oci_mirror</code> block is what sends the request to ghcr.io instead. And an airgapped operator still needs either a reachable internal OCI registry or a <code>filesystem_mirror</code>, exactly as they do for images today.</p>
 <p>So the publishing plan is: ghcr.io as an OCI mirror first, since it needs no listing and no second signing path, and a registry listing only if connected users turn out to want discovery. That ordering is why the GPG work stays deferred rather than being a prerequisite.</p>
 <p>The pipeline for it is <code>mage release:tofuProvider</code> (<code>magefiles/pkg/release</code>), run by <a href="../workflows/release-tofu-provider.html"><code>release-tofu-provider.yaml</code></a> on the same <code>v*</code> tag the CLI release fires on. It is a mage target rather than another <code>builds:</code> entry in <code>.goreleaser.yaml</code> because what has to be published is not a release asset: it is an OCI image index assembled to the shape above, and goreleaser has nothing to say about composing one. Building the zips there too keeps the artifact in one place and lets them carry a fixed entry timestamp, so the same commit produces the same bytes – which <code>zip(1)</code> does not. <code>mage release:tofuProviderLayout</code> runs everything but the copy to the registry and leaves the layout under <code>build/</code>, so the artifact shape can be checked without pushing anything.</p>
@@ -220,11 +220,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../agent/choice-signing-fork.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../agent/choice-tofu-host-removal.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../agent/choice-tofu-secrets.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../agent/choice-tofu-provider-removal.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -234,11 +234,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../agent/choice-signing-fork.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../agent/choice-tofu-host-removal.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../agent/choice-tofu-secrets.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../agent/choice-tofu-provider-removal.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

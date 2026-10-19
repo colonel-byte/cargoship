@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "../searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-85cbcabe.js"></script>
+        <script src="../toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -264,6 +264,27 @@ internal/tofuprovider/
 <li><strong><code>tofu init</code> pins the binary’s checksum</strong>, so a rebuilt provider fails the next plan until <code>.terraform.lock.hcl</code> is deleted and <code>init</code> re-run. That is the development loop, not a bug.</li>
 <li><strong>The connect phase retries for ten minutes</strong>, which is right for an apply and wrong for a plan. The provider bounds every read at <code>connect_timeout</code> (one minute by default) and says so when it gives up. An authentication failure is retried the same way a refused connection is, so a wrong key also takes the full timeout – worth fixing in <code>pkg/phase/07_connect.go</code> rather than in the provider, since the CLI has the same problem.</li>
 </ul>
+<h3 id="the-core-changes"><a class="header" href="#the-core-changes">The core changes</a></h3>
+<p><code>pkg/action</code> now reports what it cannot do rather than returning something that cannot be used:</p>
+<ul>
+<li><code>NewApply</code>, <code>NewReset</code>, <code>NewKubeConfig</code> and <code>NewEngineConfigSync</code> return <code>(*T, error)</code>. They returned a nil action for a distro ID they could not resolve, which every caller dereferenced. The CLI reached that through a flag default; a provider reaches it through an attribute somebody types.</li>
+<li><code>KubeConfigOptions</code> gains <code>NoWrite</code>, and the action gains <code>Bytes()</code> and <code>Config()</code>. The field is the negative so the zero value still writes, which is what <code>cargoship install kube-config</code> exists to do; a caller that wants the value instead reads it back after <code>Run</code>.</li>
+<li><code>action.NewRefresh</code> is the read-only phase list as a named action, with <code>AllowDowngrade</code> set because a refresh reports rather than installs and has no package to refuse. <code>docs/phases/refresh.md</code> is generated from it, and the provider calls it instead of assembling phases itself.</li>
+</ul>
+<p><code>TestNewRefreshIsEntirelyReadOnly</code> holds the property the action rests on, with one documented exception: <code>Disconnect</code> declares its own dry-run path rather than being read-only, because in an apply it has a staged binary to remove. After a refresh there is nothing to remove, and what it does is close connections.</p>
+<h3 id="the-resource-1"><a class="header" href="#the-resource-1">The resource</a></h3>
+<p><code>cargoship_cluster</code> with <code>Create</code>, <code>Read</code>, <code>Update</code> and <code>Delete</code>. The decisions worth recording, because the natural code shape gets each of them wrong:</p>
+<ul>
+<li><strong>State is written on failure.</strong> <code>converge</code> sets state before reporting the error, and the converger returns a result alongside a non-nil error for the same reason: an apply that failed part way through has changed hosts, and a plan reading an empty state would re-bootstrap a live cluster. <code>fillUnknown</code> exists because state cannot hold an unknown value, so a run that failed before producing a computed attribute would fail to write state at all – and then the only thing reported would be the framework complaining about unknowns.</li>
+<li><strong>The engine is read from the package, not stated twice.</strong> <code>distro</code> is computed from what <code>distro.Load</code> reports, and it is what <code>Read</code> and <code>Delete</code> need. A reset loads no package, so a teardown with no recorded engine is refused rather than guessed at.</li>
+<li><strong>The apply never writes the operator’s kubeconfig.</strong> <code>ApplyOptions.NoKubeConfigFile</code> is what the provider sets: merging credentials into <code>~/.kube/config</code> as a side effect of an apply would change a machine the resource does not describe. The credentials are read back through <code>Apply.KubeConfigBytes</code> instead, and only when <code>export_kubeconfig</code> asks for them.</li>
+<li><strong>A failed destroy leaves the resource in state.</strong> A reset that failed part way has removed the engine from some hosts and not others; dropping the resource would leave nothing describing the half that remains.</li>
+</ul>
+<p>Still missing from the resource: <code>ModifyPlan</code>, and acceptance tests. <code>ImportState</code> is deliberately absent – an ID alone cannot recover the host blocks or their key paths.</p>
+<h3 id="profiles-and-per-host-overrides"><a class="header" href="#profiles-and-per-host-overrides">Profiles and per-host overrides</a></h3>
+<p>The resource’s <code>profiles</code> map renders <code>Spec.Config.Profiles</code>, and the host block carries the node-configuring half: <code>node_labels</code>, <code>node_taints</code>, <code>environment</code>, <code>private_interface</code>, <code>ports</code>, <code>firewall_rules</code> and <code>bastion</code>. Before this a host could select a profile and get only the node-role label its name implies, because nothing filled the profiles map in.</p>
+<p>Two decisions in it. A host selecting a profile the map does not define is refused, because nothing downstream treats that as wrong – the lookup returns a zero value and the taints the operator wrote never exist. And a <code>profile</code> with no profiles map at all is still accepted, since it names the <code>node-role.kubernetes.io</code> label and groups hosts for concurrency.</p>
+<p>The data source keeps the smaller host block: a read needs an address, a role and the connection details. <code>TestTheDataSourceHostBlockIsASubsetOfTheResource</code> holds the relationship rather than pinning the two to be equal.</p>
 <h2 id="order-of-work"><a class="header" href="#order-of-work">Order of work</a></h2>
 <p>Five layers, stacked on #609 (the stack is linear and these all depend on the package existing):</p>
 <ol>

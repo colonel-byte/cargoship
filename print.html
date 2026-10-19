@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-85cbcabe.js"></script>
+        <script src="toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -374,6 +374,15 @@ cargoship redact-receipt ./receipt.json -o ./share.json
 <li><a href="#running-cargoship-as-an-ansible-module">Running Cargoship as an Ansible Module</a> - the modules, their parameters, check mode, and what <code>changed</code> means.</li>
 <li><a href="#generating-an-inventory-from-ansible">Generating an Inventory from Ansible</a> - the group and host-variable translation, usable with or without the modules.</li>
 <li><a href="#running-the-collection-from-the-container">The Ansible Container Image</a> - <code>ghcr.io/colonel-byte/cargoship-ansible</code>, which carries the binary and the collections together.</li>
+</ul>
+<hr>
+<h2 id="opentofu-integration"><a class="header" href="#opentofu-integration">OpenTofu Integration</a></h2>
+<p>Cargoship is also an OpenTofu provider, so the same phases run from a declarative configuration: <code>cargoship_cluster</code> converges a cluster – install, join and upgrade are one apply, because the engine version already on each host is what tells them apart – and <code>cargoship_cluster_facts</code> reads a fleet without changing it. The provider drives cargoship in process, so it still opens every SSH connection itself from the machine OpenTofu runs on.</p>
+<p>It is early: the resource and the data source work, and plan-time version checks, <code>import</code> and acceptance tests do not exist yet.</p>
+<ul>
+<li><a href="#driving-cargoship-from-opentofu-and-terragrunt">Driving Cargoship from OpenTofu and Terragrunt</a> - installing the provider from a mirror, the module and inventory layout, and the behaviours that differ from an ordinary resource.</li>
+<li><a href="https://github.com/colonel-byte/cargoship/tree/main/example/terragrunt"><code>example/terragrunt/</code></a> - the worked layout that guide describes.</li>
+<li><a href="#running-the-opentofu-provider">Running the OpenTofu provider</a> - building it, pointing OpenTofu at the build, and testing it.</li>
 </ul>
 <hr>
 <h2 id="configuration-and-schemas"><a class="header" href="#configuration-and-schemas">Configuration and Schemas</a></h2>
@@ -1475,7 +1484,209 @@ metadata:
 <h2 id="applying"><a class="header" href="#applying">Applying</a></h2>
 <p>Each host in the inventory receives the files its own architecture selects, so a mixed-architecture cluster installs from the one package: an <code>arm64</code> worker gets the <code>arm64</code> binary, an <code>amd64</code> controller gets the <code>amd64</code> one, and both get the entries with no <code>arch</code> selector. Images are likewise exported per host architecture, so each host loads a tarball holding the images built for it.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="package-values"><a class="header" href="#package-values">Package Values</a></h1>
+<h1 id="driving-cargoship-from-opentofu-and-terragrunt"><a class="header" href="#driving-cargoship-from-opentofu-and-terragrunt">Driving Cargoship from OpenTofu and Terragrunt</a></h1>
+<p>This guide covers installing the cargoship OpenTofu provider, the layout that keeps one module serving many clusters, and the four behaviours that make this resource different from the ones a practitioner is used to. The worked layout it describes is in <a href="https://github.com/colonel-byte/cargoship/tree/main/example/terragrunt"><code>example/terragrunt/</code></a>; <a href="#running-the-opentofu-provider">tofu-provider</a> is the developer-facing page for building and debugging the provider itself.</p>
+<p>The provider is early. A <code>cargoship_cluster</code> resource converges a cluster and a <code>cargoship_cluster_facts</code> data source reads one, and what is not there yet is named at the end.</p>
+<h2 id="installing-the-provider"><a class="header" href="#installing-the-provider">Installing the provider</a></h2>
+<p>The provider is not published to a registry, and for an airgapped site it would not matter if it were: <code>tofu init</code> on a management node with no route out resolves nothing from <code>registry.opentofu.org</code>. Both ways in are mirrors, declared in the CLI configuration rather than in a module.</p>
+<p>A directory of provider binaries:</p>
+<pre><code class="language-hcl"># ~/.tofurc, or anywhere named by TF_CLI_CONFIG_FILE
+provider_installation {
+  filesystem_mirror {
+    path    = "/srv/staging/tofu-providers"
+    include = ["registry.opentofu.org/colonel-byte/*"]
+  }
+
+  direct {
+    exclude = ["registry.opentofu.org/colonel-byte/*"]
+  }
+}
+</code></pre>
+<p>Or an OCI registry, which is the one a site with an internal registry already has:</p>
+<pre><code class="language-hcl">provider_installation {
+  oci_mirror {
+    repository_template = "registry.bubbles.test/tofu-providers/${namespace}/${type}"
+    include             = ["registry.opentofu.org/colonel-byte/*"]
+  }
+}
+</code></pre>
+<p>The <code>direct</code> block with the matching exclusion is what stops OpenTofu reaching for the registry for this provider while leaving every other provider alone. The registry hostname stays in the source address either way: a mirror redirects an address rather than replacing it, so a configuration still names <code>colonel-byte/cargoship</code>.</p>
+<p>A <code>filesystem_mirror</code> expects the binary at <code>&lt;path&gt;/&lt;hostname&gt;/&lt;namespace&gt;/&lt;type&gt;/&lt;version&gt;/&lt;os&gt;_&lt;arch&gt;/terraform-provider-cargoship_v&lt;version&gt;</code>. Two things about that bite once each: the version has to be one OpenTofu accepts – <code>0.0.0</code> is refused, since it is reserved for a provider that is not published – and <code>tofu init</code> records the binary’s checksum in <code>.terraform.lock.hcl</code>, so a replaced binary fails the next plan until the lock file is deleted and <code>init</code> re-run.</p>
+<h2 id="the-layout"><a class="header" href="#the-layout">The layout</a></h2>
+<p>A module that names a cluster is a module you copy to get a second cluster. So the cluster lives in the inventory and the module takes a fleet:</p>
+<pre><code>terraform/
+  modules/
+    cluster/        # cargoship_cluster
+    facts/          # cargoship_cluster_facts
+  inventory/
+    root.hcl        # what the whole inventory shares
+    bubbles/
+      cluster/      # terragrunt.hcl: source, dependencies, inputs
+      facts/
+    staging/
+      cluster/
+</code></pre>
+<p>A leaf is small, because everything structural is in the module:</p>
+<pre><code class="language-hcl">include {
+  path = find_in_parent_folders("root.hcl")
+}
+
+terraform {
+  source = "../../../modules/cluster/"
+}
+
+inputs = {
+  name          = "bubbles"
+  load_balancer = "10.3.20.10"
+  package       = "/srv/staging/k3s-v1.36.4+k3s1.tar.zst"
+
+  hosts = {
+    kc0 = { address = "10.3.20.11", role = "controller", key_path = "~/.ssh/bubbles" }
+    kw0 = { address = "10.3.20.21", role = "worker", key_path = "~/.ssh/bubbles" }
+  }
+}
+</code></pre>
+<p>Two conventions worth copying. The root is <code>root.hcl</code>, not <code>terragrunt.hcl</code>: current Terragrunt warns that a <code>terragrunt.hcl</code> at the root of a tree is an anti-pattern and will become an error, because it makes the root indistinguishable from a unit – and the <code>skip = true</code> that used to paper over that has been removed outright. And Terragrunt has to be told to drive OpenTofu rather than Terraform:</p>
+<pre><code class="language-sh">export TG_TF_PATH=tofu
+</code></pre>
+<p>A <code>facts</code> leaf that reads a cluster this inventory also installs declares a dependency on the <code>cluster</code> leaf, so the read reports what the apply installed rather than racing it. Reading a fleet nothing here installs needs no dependency at all: the data source takes no lock and changes nothing.</p>
+<h2 id="profiles-and-per-host-overrides"><a class="header" href="#profiles-and-per-host-overrides">Profiles and per-host overrides</a></h2>
+<p>A fleet is not uniform. Controllers want a port open and a label; infra nodes want a taint so ordinary workloads stay off them; one node has a second interface or sits behind a jump host. A <code>profiles</code> map says what a profile means once, and a host selects one by name:</p>
+<pre><code class="language-hcl">resource "cargoship_cluster" "prod" {
+  # ...
+
+  profiles = {
+    control = {
+      node_labels = { "adrp.xyz/purpose-control" = "true" }
+      ports       = [{ port = "6443" }]
+      concurrency = "1"
+    }
+
+    general = {}
+
+    infra = {
+      node_taints = ["adrp.xyz/infra=true:NoSchedule"]
+      firewall_rules = [
+        { name = "allow-backup", action = "allow", source = "10.0.0.0/8", port = "2049" },
+      ]
+    }
+  }
+
+  hosts = {
+    kc01 = {
+      address  = "10.3.20.11"
+      role     = "controller"
+      key_path = "~/.ssh/bubbles"
+      profile  = "control"
+    }
+
+    kw03 = {
+      address           = "10.3.20.22"
+      role              = "worker"
+      key_path          = "~/.ssh/bubbles"
+      profile           = "infra"
+      private_interface = "ens224"
+      node_labels       = { "adrp.xyz/purpose-infra" = "true" }
+      environment       = { NO_PROXY = "10.0.0.0/8" }
+    }
+  }
+}
+</code></pre>
+<p><code>concurrency</code> on a profile is how many of the hosts sharing it cargoship acts on at once – draining, upgrading, initializing, uninstalling – as a count or a percentage of that group. <code>control = { concurrency = "1" }</code> is why an embedded etcd cluster forms its quorum before the next member joins.</p>
+<p>Three rules decide what a host ends up with, and they are not all the same:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Field</th><th style="text-align: left">A host’s own value…</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>node_labels</code>, <code>node_taints</code>, <code>ports</code></td><td style="text-align: left"><strong>replaces</strong> the profile’s</td></tr>
+<tr><td style="text-align: left"><code>firewall_rules</code></td><td style="text-align: left">is <strong>unioned</strong> with the profile’s</td></tr>
+<tr><td style="text-align: left">everything else</td><td style="text-align: left">belongs to the host alone</td></tr>
+</tbody>
+</table>
+</div>
+<p>So a host that sets one label does not inherit the profile’s others. That is <code>cluster.ZarfHostEngine.Merge</code>’s behaviour rather than a provider choice, and it matches what the Ansible collection does with <code>cargoship_node_labels</code> in <code>host_vars</code>.</p>
+<p><strong>A host selecting a profile the map does not define is a configuration error.</strong> That matters more than it sounds: nothing downstream treats an undefined profile as wrong. The lookup returns a zero value, the concurrency falls back to the phase’s own, and the taint the operator wrote simply never exists – a cluster that looks configured and is not. A <code>profile</code> with <strong>no</strong> <code>profiles</code> map at all is still fine, and still useful: it names the <code>node-role.kubernetes.io/&lt;profile&gt;</code> label <code>label_nodes</code> writes, and still groups hosts for concurrency.</p>
+<p>A host behind a jump host states it, because cargoship opens its own SSH connections and inherits nothing from an SSH client configuration:</p>
+<pre><code class="language-hcl">kw04 = {
+  address  = "10.3.40.21"
+  role     = "worker"
+  key_path = "~/.ssh/bubbles"
+
+  bastion = {
+    address  = "10.3.20.1"
+    user     = "jump"
+    key_path = "~/.ssh/bubbles-jump"
+  }
+}
+</code></pre>
+<p>The facts data source has none of this, and it still takes <code>host</code> blocks rather than a map, because a read has nothing to key. Its block takes an address, a role and the connection details, because a read needs nothing else – so a fleet described for an apply is a superset of one described for a read.</p>
+<h2 id="package-values"><a class="header" href="#package-values">Package values</a></h2>
+<p>A package ships with values, and a cluster usually wants some of them changed. Two attributes do that, and they are merged in order – the package’s own values first, then <code>values</code>, then each file in <code>values_files</code> – so the last one to set a key wins:</p>
+<pre><code class="language-hcl">resource "cargoship_cluster" "prod" {
+  # ...
+
+  values = yamlencode({
+    cilium = {
+      hubble = { enabled = true }
+    }
+  })
+
+  values_files = ["/srv/staging/values/bubbles.yaml"]
+}
+</code></pre>
+<p><code>values</code> is a YAML string, so <code>yamlencode(...)</code> and <code>file("values.yaml")</code> both work; <code>values_files</code> are paths read on the machine running OpenTofu when the apply runs, not at plan time. What they override is the same <code>.spec.config.values</code> a cluster inventory carries, and the package’s own <code>values.schema.json</code> is what validates the result – so a key the package does not define fails the apply rather than being ignored.</p>
+<h2 id="credentials"><a class="header" href="#credentials">Credentials</a></h2>
+<p>The provider takes <strong>no credentials as attributes</strong>. A value an attribute carries is a value the state file carries, and a state file is committed, pushed to a remote backend, and readable by everyone with access to that backend. <a href="#what-the-opentofu-providers-schema-may-hold-and-what-it-may-not">choice-tofu-secrets</a> records the reasoning.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">What</th><th style="text-align: left">Where it comes from</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left">SSH private key</td><td style="text-align: left"><code>key_path</code> on a host entry – a path on the machine running OpenTofu, never the key</td></tr>
+<tr><td style="text-align: left">Ansible Vault password</td><td style="text-align: left"><code>CARGOSHIP_VAULT_PASSWORD</code>, or <code>ANSIBLE_VAULT_PASSWORD</code></td></tr>
+<tr><td style="text-align: left">age identity</td><td style="text-align: left"><code>CARGOSHIP_AGE_IDENTITY_FILE</code></td></tr>
+<tr><td style="text-align: left">Cluster admin credentials</td><td style="text-align: left">The <code>kubeconfig</code> attribute, only when <code>export_kubeconfig</code> is set</td></tr>
+</tbody>
+</table>
+</div>
+<p>So the environment is where a secrets manager hands them over, and <code>sops exec-env secrets.enc.yml 'terragrunt apply'</code> is one way to do that.</p>
+<p>Leave <code>export_kubeconfig</code> off unless something in the configuration consumes the credentials. Any computed attribute lands in the state file whether or not it is marked sensitive, and these are cluster-admin; <code>cargoship install kube-config</code> writes a kubeconfig without putting one in state.</p>
+<h2 id="four-behaviours-to-know-before-the-first-apply"><a class="header" href="#four-behaviours-to-know-before-the-first-apply">Four behaviours to know before the first apply</a></h2>
+<p><strong>One resource holds the whole cluster.</strong> Cargoship takes a cluster-wide lock and starts controllers in a batch of one for quorum, so a resource per node would contend on that lock and lose the ordering the batching expresses. Adding a node is an entry in <code>hosts</code>, not a second resource.</p>
+<p><strong>A failed apply still writes state.</strong> An apply that failed part way through has already changed hosts, so the resource records what it reached and reports the error alongside it. The alternative – writing nothing – would leave the next plan deciding nothing is installed, and re-bootstrapping a live cluster. Read the error, fix the cause, and apply again: the phases are convergent, so the second run resumes rather than restarting.</p>
+<p><strong>Removing a host is <code>state = "absent"</code>, not a deleted block.</strong> Deleting the block takes the address and the key path with it, so nothing is left that can reach the machine – the apply stops rather than walking past a node nothing accounts for. Marking the host absent removes it in one apply: drained and deleted through a controller that is staying, then its engine uninstalled over SSH, while every other host is left alone. The block then stays where it is with <code>removed = true</code>, which is what keeps later applies from repeating the teardown against a machine that may since have been decommissioned; delete it whenever it suits. A removal that fails stops the apply and keeps the block, because that block is the only thing that can still reach the node. Marking <em>every</em> host absent is refused at plan time – that is a destroy, and an apply cannot drop the resource that describes the cluster. Removing a controller carries its own rules, and one of them is that the apply after the removal is not optional. <a href="#removing-a-host-from-the-cluster">Removing a host from the cluster</a> is the full account.</p>
+<p><strong>A destroy resets the cluster.</strong> <code>tofu destroy</code> drains the nodes, deletes them, and uninstalls the engine, because that is what destroy means everywhere else. It ignores the <code>state</code> markers: anything still installed is torn down, including a host marked absent whose removal did not finish, and excluding one whose removal did. <code>retain_on_destroy = true</code> drops the resource and leaves the cluster running instead, with a warning naming the cluster and the <code>cargoship install reset</code> that would tear it down.</p>
+<h3 id="destroying-the-machines-as-well"><a class="header" href="#destroying-the-machines-as-well">Destroying the machines as well</a></h3>
+<p>If the nodes themselves are OpenTofu resources – VMs, instances, bare metal through some other provider – then a <code>tofu destroy</code> is deleting the machines too, and the cluster teardown is work nobody will see the result of. Two things decide whether that goes well.</p>
+<p><strong>Make the dependency real.</strong> OpenTofu destroys a resource before the things it depends on, so the cluster is reset while the machines are still up – but only if the dependency exists. A host block whose <code>address</code> is <code>libvirt_domain.node["kw0"].network_interface[0].addresses[0]</code> creates that edge; one with a hard-coded <code>"10.3.20.21"</code> does not, and the machines can be deleted first, leaving the reset to fail against addresses that no longer answer. Reference the node resource, or say <code>depends_on</code> and mean it.</p>
+<p><strong>Consider not resetting at all.</strong> Draining a node and uninstalling its engine takes minutes per host, and every second of it is spent on a machine that is about to be deleted. <code>retain_on_destroy = true</code> skips the teardown entirely and lets the machines carry the cluster to the grave with them – which is what you want for a lab, a preview environment, or anything rebuilt from scratch. Keep the teardown for a fleet whose machines outlive the cluster: bare metal, or a VM you are handing back rather than deleting.</p>
+<p>That attribute is the awkward part of the design, and it is worth knowing why. It belongs to the resource, so it is decided when the configuration is written – while “am I deleting the machines in this run?” is a property of the run. OpenTofu tells a provider nothing about what else is being destroyed, so it cannot be inferred, and there is no destroy-time flag for it. Make it a variable, and the decision becomes an argument instead of an edit:</p>
+<pre><code class="language-hcl">variable "retain_cluster_on_destroy" {
+  type    = bool
+  default = false
+}
+
+resource "cargoship_cluster" "prod" {
+  # ...
+  retain_on_destroy = var.retain_cluster_on_destroy
+}
+</code></pre>
+<pre><code class="language-sh">tofu destroy -var retain_cluster_on_destroy=true     # the machines are going too
+tofu destroy                                         # the machines are staying; reset them properly
+</code></pre>
+<p><a href="#how-a-host-is-removed-through-the-opentofu-provider">choice-tofu-host-removal</a> records the rest of the reasoning, including what a failed removal keeps and why.</p>
+<p>The tombstones do not matter here either way. <code>state = "absent"</code> is for removing one host from a cluster that stays; a destroy is the whole thing going, and the markers are read only to tell what is still out there.</p>
+<h2 id="what-is-not-there-yet"><a class="header" href="#what-is-not-there-yet">What is not there yet</a></h2>
+<ul>
+<li><strong>No plan-time version or removal checks.</strong> A lowered engine version and a deleted <code>hosts</code> entry are both caught during the apply, by cargoship’s own phases, rather than during the plan. The <code>engine_version</code> each node reports is already in state, which is what the plan-time comparison will read.</li>
+<li><strong>No <code>import</code>.</strong> A cluster’s host entries and their key paths are not recoverable from the cluster itself, so an existing cluster cannot be adopted into state. Read it with the facts data source instead.</li>
+<li><strong>An apply looks silent.</strong> The phases log through cargoship’s own logger and OpenTofu shows the resource as “Still creating…” until the whole run returns. <code>TF_LOG=debug</code> is how to watch one.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="package-values-1"><a class="header" href="#package-values-1">Package Values</a></h1>
 <p>A cargoship package ships with a set of values: Helm-style configuration, addressed by dotted paths, that a cluster can override without rebuilding the package. Values reach the engine configuration in two ways – structural <em>mappings</em>, and Go <em>templates</em> that read <code>.Values</code> – and they are also available to the files a package uploads and to the actions that build it.</p>
 <p>This guide covers authoring values in a package, overriding them from a cluster inventory or the command line, and choosing between mappings and templates.</p>
 <h2 id="declaring-values-in-a-package"><a class="header" href="#declaring-values-in-a-package">Declaring values in a package</a></h2>
@@ -1868,7 +2079,42 @@ apply anyway: worker3 (worker)
 <p>Draining a node and deleting its <code>Node</code> object needs the node’s name, which the API server will happily give us. Uninstalling the engine – stopping the service, removing the packages, deleting the data directory and certificates – needs an SSH connection to the machine, and the address, user and key for that lived in the <code>hosts</code> entry you just deleted. An apply has no memory of previous runs, so it has no way to reach a machine the config no longer describes.</p>
 <p>Doing only the first half would be worse than doing nothing, because it looks like the removal worked. The machine keeps its certificates and keeps trying to rejoin, and if it was a controller it stays an etcd member: the cluster looks smaller while quorum is still counted against a member nobody can reach.</p>
 <p>So an apply reports the gap and leaves the cluster alone.</p>
-<h2 id="removing-the-machine-with-the-cli"><a class="header" href="#removing-the-machine-with-the-cli">Removing the machine with the CLI</a></h2>
+<h2 id="removing-a-host-in-opentofu"><a class="header" href="#removing-a-host-in-opentofu">Removing a host in OpenTofu</a></h2>
+<p>In OpenTofu, mark the host as <code>state = "absent"</code> in your <code>cargoship_cluster</code> resource:</p>
+<pre><code class="language-hcl">resource "cargoship_cluster" "prod" {
+  # ...
+
+  hosts = {
+    controller1 = {
+      address  = "10.0.0.11"
+      role     = "controller"
+      key_path = "~/.ssh/id_ed25519"
+      profile  = "control"
+    }
+
+    # worker3 is marked for removal:
+    worker3 = {
+      address  = "10.0.0.31"
+      role     = "worker"
+      key_path = "~/.ssh/id_ed25519"
+      state    = "absent"
+    }
+  }
+}
+</code></pre>
+<p>One <code>tofu apply</code> does the whole removal:</p>
+<ol>
+<li>The node is drained and deleted from the cluster, through a controller that is staying. The run refuses rather than guessing if every running controller is itself marked absent – removing all of them is a teardown, and <code>tofu destroy</code> is what does that.</li>
+<li>Cargoship connects to <code>10.0.0.31</code> over SSH, stops the engine and uninstalls it.</li>
+<li>Every other host is left alone, and the apply then converges them as usual.</li>
+<li>The host’s <code>removed</code> attribute becomes <code>true</code>.</li>
+</ol>
+<p><strong>Leave the entry where it is.</strong> <code>removed</code> is what tells later applies the work is done, so they neither repeat the teardown nor try to reach a machine that may since have been decommissioned. Delete the entry whenever it suits; nothing depends on it going, and deleting it changes nothing on any host.</p>
+<p>If the removal fails, the apply stops there and says so. The entry stays in state with <code>removed</code> still false, which is deliberate: the machine is still running and still joined, and that entry holds the only address and key path that can reach it. Fix the cause and apply again. The rest of the convergence does not run, because converging on top of a half-removed cluster would report success over a node that is still in it.</p>
+<h3 id="what-a-destroy-does-with-the-markers"><a class="header" href="#what-a-destroy-does-with-the-markers">What a destroy does with the markers</a></h3>
+<p>Nothing, beyond reading them. <code>tofu destroy</code> tears down everything the cluster still holds: a host marked absent whose removal failed is included, because the machine is still running and still joined, and one whose removal finished is left out, because reaching for a decommissioned machine would fail. The markers are not something to clean up before destroying.</p>
+<p>If the machines are OpenTofu resources too and are being destroyed in the same run, consider <code>retain_on_destroy = true</code> – draining and uninstalling a node that is about to be deleted is minutes spent on a result nobody sees. See <a href="#destroying-the-machines-as-well">opentofu-terragrunt</a>.</p>
+<h2 id="removing-the-machine-by-hand-cli"><a class="header" href="#removing-the-machine-by-hand-cli">Removing the machine by hand (CLI)</a></h2>
 <p>With the CLI, use targeted reset with <code>--target-hosts</code>:</p>
 <pre><code class="language-console">$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts worker3 --confirm
 </code></pre>
@@ -1879,7 +2125,8 @@ apply anyway: worker3 (worker)
 <p><strong>Cargoship stops the engine on the target before deleting its node.</strong> That is what makes the deletion stick: k3s and RKE2 remove the etcd member when the Node object is deleted, but only once the engine behind it has stopped, and an engine that is still running re-registers the node seconds later. The one exception is a removal that leaves a single controller, where the member being removed has to still be up to form the majority of two that commits its own removal – there the engine stays running through the deletion and is uninstalled immediately after.</p>
 <p><strong>One controller per run.</strong> A run that keeps the cluster and targets two running controllers is refused. Each removal is a raft reconfiguration that needs a majority of the membership it starts from; the second one in a run would start from three members with one already stopped, and taking the next one down leaves one of two, which hangs with the cluster unavailable rather than failing cleanly. Removing them in separate runs is safe, because the cluster is whole again at the start of each.</p>
 <h3 id="removing-the-first-controller"><a class="header" href="#removing-the-first-controller">Removing the first controller</a></h3>
-<p>There is nothing special about the first controller at runtime – it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:</p>
+<p>This section is about <code>k3s</code> and <code>rke2</code>. On <code>upstream</code> there is nothing to do: kubeadm is given <code>controlPlaneEndpoint: &lt;load_balancer&gt;</code> at init and every host – controllers included – joins through <code>apiServerEndpoint: &lt;load_balancer&gt;</code>, so no host holds the first controller’s name. The removed controller lingers in the API server’s <code>certSANs</code> until the next apply re-renders them, which changes nothing.</p>
+<p>On k3s and RKE2 there is nothing special about the first controller at runtime either – it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -1893,7 +2140,8 @@ apply anyway: worker3 (worker)
 </table>
 </div>
 <p>So the step that makes it safe is re-rendering <code>config.yaml</code> on the controllers that stayed, which <code>cargoship apply</code> does: it re-elects the first controller from the remaining hosts and writes the new <code>server:</code> to every one of them. The engines are not restarted for it, which is the point – the file is correct again before anything reads it.</p>
-<p>The targeted reset and the apply are two commands, and the apply is not optional:</p>
+<p>In OpenTofu this is already one operation. <code>tofu apply</code> removes the host and then converges what is left, in that order, in the same run.</p>
+<p>With the CLI, the targeted reset and the apply are two commands, and the apply is not optional:</p>
 <pre><code class="language-console">$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts controller1 --confirm
 $ cargoship apply ./package.tar.zst --config ./cargoship-config.yaml --confirm
 </code></pre>
@@ -1932,7 +2180,7 @@ kind: Cluster
 metadata:
   name: bubbles
 </code></pre>
-<h2 id="package-values-1"><a class="header" href="#package-values-1">Package Values</a></h2>
+<h2 id="package-values-2"><a class="header" href="#package-values-2">Package Values</a></h2>
 <p>The <code>.spec.config.values</code> section overrides the values the distro package was built with. It is the one part of an inventory whose vocabulary belongs to the package rather than to cargoship, so the schema above leaves it untyped – and a hosted schema never could do better:</p>
 <pre><code class="language-yaml">spec:
   config:
@@ -1944,7 +2192,7 @@ metadata:
 <p>Pass <code>--package</code> to compose the package’s own values schema into the inventory schema, and the block completes and checks like the rest of the file:</p>
 <pre><code class="language-sh">cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json
 </code></pre>
-<p><code>--package</code> takes anything <code>cargoship apply</code> takes – a tarball, an <code>oci://</code> or <code>https://</code> reference – or a package source directory, so it works before the package is built. The composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships: it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation. See the <a href="#package-values">package values guide</a> for what a package may expose and how the merge works.</p>
+<p><code>--package</code> takes anything <code>cargoship apply</code> takes – a tarball, an <code>oci://</code> or <code>https://</code> reference – or a package source directory, so it works before the package is built. The composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships: it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation. See the <a href="#package-values-1">package values guide</a> for what a package may expose and how the merge works.</p>
 <h2 id="checking-an-inventory"><a class="header" href="#checking-an-inventory">Checking an Inventory</a></h2>
 <p>An editor is not the only place this check belongs. Cargoship unmarshals an inventory without strict key checking, so a misspelled key is dropped rather than reported: a file that says <code>loadbalancr:</code> parses cleanly and installs a cluster with no load balancer address. <code>cargoship validate</code> runs the same schema over a file with no editor and no network:</p>
 <pre><code class="language-sh">cargoship validate ./inventory.yaml
@@ -2372,7 +2620,7 @@ ansible-vault decrypt --vault-password-file ./vault-pass.txt --output - &lt; ct.
 <li><a href="#pull">cargoship pull</a>	 - Pulls a Cargoship package from a remote registry and saves it to the local filesystem</li>
 <li><a href="#redact-receipt">cargoship redact-receipt</a>	 - Rewrites a run receipt so it can be attached to an issue</li>
 <li><a href="#reset">cargoship reset</a>	 - Reset a cluster, stopping, uninstalling, and removing all data for an engine</li>
-<li><a href="#schema-1">cargoship schema</a>	 - Writes out a JSON Schema for one of cargoship’s own file formats</li>
+<li><a href="#schema-4">cargoship schema</a>	 - Writes out a JSON Schema for one of cargoship’s own file formats</li>
 <li><a href="#sha256sum">cargoship sha256sum</a>	 - Generates a SHA256SUM for the given file</li>
 <li><a href="#sign">cargoship sign</a>	 - Signs an existing Cargoship distro package</li>
 <li><a href="#validate">cargoship validate</a>	 - Checks a cluster inventory, package definition, or config file against its schema</li>
@@ -2425,7 +2673,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
   -H, --hosts                             Whether to update every host node's /etc/hosts file.
   -k, --key string                        Path to public key file for validating signed packages
       --kubeconfig string                 Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
-      --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig.
       --receipt-path string               Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                    Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                     Specify the temporary directory to use for intermediate files (default "/tmp")
@@ -2545,7 +2793,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
   -h, --help                              help for engine-config-sync
   -k, --key string                        Path to public key file for validating signed packages
       --kubeconfig string                 Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
-      --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig.
       --receipt-path string               Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
       --timeout string                    Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                     Specify the temporary directory to use for intermediate files (default "/tmp")
@@ -2900,7 +3148,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="schema-1"><a href="#schema-1" class="header">schema</a></h1>
+<h1 id="schema-4"><a href="#schema-4" class="header">schema</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-schema"><a class="header" href="#cargoship-schema">cargoship schema</a></h2>
 <p>Writes out a JSON Schema for one of cargoship’s own file formats</p>
@@ -5007,6 +5255,223 @@ $ cargoship version -o json
 </tbody>
 </table>
 </div>
+<div style="break-before: page; page-break-before: always;"></div><!-- Page generated by Cargoship; DO NOT EDIT -->
+<h1 id="cargoship-provider"><a class="header" href="#cargoship-provider">cargoship Provider</a></h1>
+<p>Drives cargoship: the configuration describes the fleet, cargoship owns the phase ordering, and an apply converges the cluster. Credentials are read from the environment rather than taken here – <code>CARGOSHIP_VAULT_PASSWORD</code> or <code>ANSIBLE_VAULT_PASSWORD</code> for an Ansible Vault password, <code>CARGOSHIP_AGE_IDENTITY_FILE</code> for an age identity – so that no key material reaches the state file.</p>
+<h2 id="example-usage"><a class="header" href="#example-usage">Example Usage</a></h2>
+<pre><code class="language-terraform"># ~/.tofurc or provider configuration
+provider "cargoship" {
+  concurrency     = 0
+  connect_timeout = "1m"
+}
+</code></pre>
+<h2 id="schema"><a class="header" href="#schema">Schema</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>concurrency</code></td><td><code>Number</code></td><td>Optional</td><td>How many hosts a phase acts on at once. Zero, the default, is unlimited. It is the provider-wide equivalent of cargoship’s <code>--concurrency</code>.</td></tr>
+<tr><td><code>connect_timeout</code></td><td><code>String</code></td><td>Optional</td><td>How long to wait for the fleet to answer, as a Go duration (<code>30s</code>, <code>5m</code>). Defaults to <code>1m</code>. cargoship’s connect phase retries for ten minutes, which is right for an apply somebody is watching and wrong for a plan: without this, a typo in an address would make a plan sit silent for ten minutes. Raise it for a fleet that is genuinely slow to answer.</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div><!-- Page generated by Cargoship; DO NOT EDIT -->
+<h1 id="cargoship_cluster"><a class="header" href="#cargoship_cluster">cargoship_cluster</a></h1>
+<p>A Kubernetes cluster cargoship installs, joins and upgrades. One resource holds every host: cargoship takes a cluster-wide lock and starts controllers in a batch of one for quorum, so a resource per node would contend on the lock and lose the ordering batching expresses.</p>
+<p>An apply converges the cluster on the configuration. There is no separate install and upgrade: the engine version already on each host is what tells one from the other, and a downgrade is refused rather than attempted.</p>
+<h2 id="example-usage-1"><a class="header" href="#example-usage-1">Example Usage</a></h2>
+<pre><code class="language-terraform">resource "cargoship_cluster" "prod" {
+  name          = "prod-cluster"
+  load_balancer = "10.0.0.10"
+  package       = "/srv/staging/k3s-v1.33.4.tar.zst"
+
+  profiles = {
+    control = {
+      node_labels = { "purpose-control" = "true" }
+      ports       = [{ port = "6443" }]
+      concurrency = "1"
+    }
+    worker = {
+      node_labels = { "purpose-worker" = "true" }
+    }
+  }
+
+  values = yamlencode({
+    addons = {
+      disabled = ["traefik"]
+    }
+  })
+
+  hosts = {
+    controller1 = {
+      address  = "10.0.0.11"
+      role     = "controller"
+      key_path = "~/.ssh/id_ed25519"
+      profile  = "control"
+    }
+
+    worker1 = {
+      address  = "10.0.0.21"
+      role     = "worker"
+      key_path = "~/.ssh/id_ed25519"
+      profile  = "worker"
+    }
+  }
+}
+</code></pre>
+<h2 id="schema-1"><a class="header" href="#schema-1">Schema</a></h2>
+<h3 id="required"><a class="header" href="#required">Required</a></h3>
+<ul>
+<li><code>load_balancer</code> (String) The address clients use to reach the control plane.</li>
+<li><code>name</code> (String) The cluster’s name. It becomes <code>metadata.name</code> and the kubeconfig context, and changing it replaces the cluster.</li>
+<li><code>package</code> (String) The distro package to install: a path to a <code>.tar.zst</code> built by <code>cargoship package create</code>, or an OCI reference. A package reference is resolved when the apply runs, so an airgapped management node wants a path.</li>
+</ul>
+<h3 id="optional"><a class="header" href="#optional">Optional</a></h3>
+<ul>
+<li><code>allow_downgrade</code> (Boolean) Continue when a host already runs an engine newer than the package carries. A downgrade is refused by default, because an engine does not support being moved backwards.</li>
+<li><code>allow_unmanaged_nodes</code> (Boolean) Continue when the cluster holds a node no <code>hosts</code> entry accounts for. An apply removes nothing, so by default a node left behind by a deleted entry stops the run.</li>
+<li><code>export_kubeconfig</code> (Boolean) Return the cluster’s admin credentials in the <code>kubeconfig</code> attribute. It is off by default and should stay off unless something in the configuration consumes it: the credentials are cluster-admin, and any computed attribute lands in the state file whether or not it is marked sensitive. <code>cargoship install kube-config</code> writes a kubeconfig without putting one in state.</li>
+<li><code>hosts</code> (Map of Object) The fleet, keyed by hostname or an identifier of your choosing. The key names the host when <code>hostname</code> is not set, and it is what orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader.</li>
+<li><code>label_nodes</code> (Boolean) Add the <code>node-role.kubernetes.io/&lt;profile&gt;</code> label to each node, from the host’s <code>profile</code>.</li>
+<li><code>modify_firewall</code> (Boolean) Rewrite the host firewall (firewalld, ufw or nftables) with the engine’s rules.</li>
+<li><code>modify_hosts</code> (Boolean) Rewrite <code>/etc/hosts</code> on every host with the cluster’s own nodes.</li>
+<li><code>no_drain_on_destroy</code> (Boolean) Skip draining each node before it is deleted during a destroy. Faster, and it gives workloads no chance to move.</li>
+<li><code>profiles</code> (Map of Object) The profiles a host can select, keyed by name. A profile is how a fleet says “every infra node is tainted this way” once rather than per host, and it is also where per-profile concurrency is set.</li>
+</ul>
+<p>A host’s own <code>node_labels</code>, <code>node_taints</code> and <code>ports</code> <strong>replace</strong> its profile’s rather than merging with them; firewall rules are the exception and are unioned. A host that selects a profile this map does not define is a configuration error, since the labels and taints it expected would otherwise silently never exist.</p>
+<ul>
+<li><code>retain_on_destroy</code> (Boolean) Leave the cluster running when the resource is destroyed, dropping it from state with a warning instead of resetting it. Destroying resets by default, because that is what destroy means everywhere else.</li>
+<li><code>timeout</code> (String) How long the phases wait for a host to reach the state they want, as a Go duration (<code>20m</code>). It bounds the retry loops inside a run, not the run itself.</li>
+<li><code>values</code> (String) Overrides for the values the distro package was built with, as a YAML string (e.g. from <code>file("values.yaml")</code> or <code>yamlencode(...)</code>).</li>
+<li><code>values_files</code> (List of Object) Paths to YAML values files overriding the values the package ships with. Loaded and merged in order, winning over inline <code>values</code>.</li>
+<li><code>worker_concurrency</code> (String) How many workers are installed or upgraded at a time, as a count (<code>5</code>) or a percentage of the batch (<code>25%</code>).</li>
+</ul>
+<h3 id="read-only"><a class="header" href="#read-only">Read-Only</a></h3>
+<ul>
+<li><code>distro</code> (String) The engine the package carries, read from the package rather than stated twice. It is what a later refresh and a destroy need.</li>
+<li><code>engine_version</code> (String) The engine version the package carries.</li>
+<li><code>id</code> (String) The cluster’s name, which is its identity here. There is no <code>import</code>: the <code>hosts</code> entries and their key paths are not recoverable from a running cluster.</li>
+<li><code>kubeconfig</code> (String (Sensitive)) The cluster’s admin credentials, populated only when <code>export_kubeconfig</code> is set.</li>
+<li><code>nodes</code> (List of Object) What each host reported during the run, in the order the apply acted on them: controllers first.</li>
+</ul>
+<h3 id="nested-attributes"><a class="header" href="#nested-attributes">Nested Attributes</a></h3>
+<h4 id="hosts-map-of-object"><a class="header" href="#hosts-map-of-object"><code>hosts</code> (Map of Object)</a></h4>
+<p>The fleet, keyed by hostname or an identifier of your choosing. The key names the host when <code>hostname</code> is not set, and it is what orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Attribute</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>address</code></td><td><code>String</code></td><td>Required</td><td>The address or hostname cargoship opens an SSH connection to.</td></tr>
+<tr><td><code>bastion</code></td><td><code>Object</code></td><td>Optional</td><td>The jump host this host is reached through. Cargoship opens its own SSH connections, so a bastion has to be stated here rather than inherited from an SSH client configuration.</td></tr>
+<tr><td><code>environment</code></td><td><code>Map of Object</code></td><td>Optional</td><td>Environment variables cargoship sets on the host, for a proxy or a no-proxy list.</td></tr>
+<tr><td><code>firewall_rules</code></td><td><code>List of Object</code></td><td>Optional</td><td>Firewall rules for this host. Unlike the fields above, these are unioned with the profile’s rather than replacing them.</td></tr>
+<tr><td><code>hostname</code></td><td><code>String</code></td><td>Optional</td><td>The name the host is known by before it has been visited.</td></tr>
+<tr><td><code>key_path</code></td><td><code>String</code></td><td>Optional</td><td>Path to the SSH private key on the machine running OpenTofu. There is no attribute for key material, and there will not be: a key in the configuration is a key in the state file.</td></tr>
+<tr><td><code>node_labels</code></td><td><code>Map of Object</code></td><td>Optional</td><td>Kubernetes node labels for this host. They <strong>replace</strong> the labels of the profile the host selects rather than merging with them.</td></tr>
+<tr><td><code>node_taints</code></td><td><code>List of Object</code></td><td>Optional</td><td>Kubernetes node taints for this host, as <code>key=value:Effect</code>. They replace the profile’s rather than merging with them.</td></tr>
+<tr><td><code>port</code></td><td><code>Number</code></td><td>Optional</td><td>The SSH port. Defaults to 22.</td></tr>
+<tr><td><code>ports</code></td><td><code>List of Object</code></td><td>Optional</td><td>Ports opened on this host, replacing the profile’s.</td></tr>
+<tr><td><code>private_address</code></td><td><code>String</code></td><td>Optional</td><td>Overrides the private address the facts phase would discover.</td></tr>
+<tr><td><code>private_interface</code></td><td><code>String</code></td><td>Optional</td><td>Overrides the private interface the facts phase would discover, for a node with more than one.</td></tr>
+<tr><td><code>profile</code></td><td><code>String</code></td><td>Optional</td><td>The profile this host selects from the cluster’s profile map, which also becomes its <code>node-role.kubernetes.io/&amp;lt;profile&amp;gt;</code> label when <code>label_nodes</code> is set.</td></tr>
+<tr><td><code>removed</code></td><td><code>Boolean</code></td><td>Read-Only</td><td>Whether this host has been removed from the cluster. Computed: it becomes true once a host marked <code>absent</code> has been torn down, and that is what stops the removal from running again.</td></tr>
+<tr><td><code>role</code></td><td><code>String</code></td><td>Required</td><td>The host’s role: one of <code>controller</code>, <code>controller+worker</code>, <code>single</code>, <code>worker</code>.</td></tr>
+<tr><td><code>state</code></td><td><code>String</code></td><td>Optional</td><td>The lifecycle state of this host: <code>present</code> (the default) or <code>absent</code>. Marking a host <code>absent</code> drains it, deletes it from the cluster and uninstalls its engine on the next apply, while every other host keeps running.<br><br>The block stays where it is afterwards – <code>removed</code> records that the work is done, so later applies leave the machine alone and never try to reach one that has been decommissioned. Delete the block whenever it suits; nothing depends on it going.<br><br>Removal is stated rather than inferred from a deleted block, because deleting the block takes the address and the key path with it: see <a href="https://github.com/colonel-byte/cargoship/blob/main/docs/agent/choice-removed-hosts.md">choice-removed-hosts</a>.</td></tr>
+<tr><td><code>user</code></td><td><code>String</code></td><td>Optional</td><td>The SSH user. Defaults to <code>root</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="nodes-list-of-object"><a class="header" href="#nodes-list-of-object"><code>nodes</code> (List of Object)</a></h4>
+<p>What each host reported during the run, in the order the apply acted on them: controllers first.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Attribute</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>address</code></td><td><code>String</code></td><td>Read-Only</td><td>The address cargoship connected to.</td></tr>
+<tr><td><code>arch</code></td><td><code>String</code></td><td>Read-Only</td><td>The CPU architecture the host reports.</td></tr>
+<tr><td><code>engine_version</code></td><td><code>String</code></td><td>Read-Only</td><td>The engine version running on the host, or <code>v0.0.0</code> for a host with no engine installed. This is the value a plan-time downgrade check compares a package against.</td></tr>
+<tr><td><code>hostname</code></td><td><code>String</code></td><td>Read-Only</td><td>The hostname the host reports.</td></tr>
+<tr><td><code>os</code></td><td><code>String</code></td><td>Read-Only</td><td>The <code>ID</code> from the host’s os-release.</td></tr>
+<tr><td><code>os_version</code></td><td><code>String</code></td><td>Read-Only</td><td>The <code>VERSION_ID</code> from the host’s os-release.</td></tr>
+<tr><td><code>private_address</code></td><td><code>String</code></td><td>Read-Only</td><td>The private address cargoship discovered, or the one the host block declared.</td></tr>
+<tr><td><code>role</code></td><td><code>String</code></td><td>Read-Only</td><td>The role the host block gave it.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="profiles-map-of-object"><a class="header" href="#profiles-map-of-object"><code>profiles</code> (Map of Object)</a></h4>
+<p>The profiles a host can select, keyed by name. A profile is how a fleet says “every infra node is tainted this way” once rather than per host, and it is also where per-profile concurrency is set.</p>
+<p>A host’s own <code>node_labels</code>, <code>node_taints</code> and <code>ports</code> <strong>replace</strong> its profile’s rather than merging with them; firewall rules are the exception and are unioned. A host that selects a profile this map does not define is a configuration error, since the labels and taints it expected would otherwise silently never exist.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Attribute</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>concurrency</code></td><td><code>String</code></td><td>Optional</td><td>How many hosts sharing this profile cargoship acts on at once – draining, upgrading, initializing, uninstalling – as a count (<code>1</code>) or a percentage of those hosts (<code>25%</code>). Empty falls back to the phase’s own concurrency.</td></tr>
+<tr><td><code>firewall_rules</code></td><td><code>List of Object</code></td><td>Optional</td><td>Firewall rules applied to a host selecting this profile. A host’s own rules are unioned with these rather than replacing them.</td></tr>
+<tr><td><code>node_labels</code></td><td><code>Map of Object</code></td><td>Optional</td><td>Kubernetes node labels applied to a host selecting this profile.</td></tr>
+<tr><td><code>node_taints</code></td><td><code>List of Object</code></td><td>Optional</td><td>Kubernetes node taints applied to a host selecting this profile, as <code>key=value:Effect</code>.</td></tr>
+<tr><td><code>ports</code></td><td><code>List of Object</code></td><td>Optional</td><td>Ports opened on a host selecting this profile.</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div><!-- Page generated by Cargoship; DO NOT EDIT -->
+<h1 id="cargoship_cluster_facts"><a class="header" href="#cargoship_cluster_facts">cargoship_cluster_facts</a></h1>
+<p>Reads what cargoship can learn about a fleet without changing it: each host’s operating system, architecture, hostname, private address, and the engine version it is running. It runs the five read-only phases of an apply (<code>Connect</code>, <code>DetectOS</code>, <code>GatherFacts</code>, <code>GatherFactsDistro</code>, <code>Disconnect</code>), takes no cluster lock, and writes nothing to any host.</p>
+<h2 id="example-usage-2"><a class="header" href="#example-usage-2">Example Usage</a></h2>
+<pre><code class="language-terraform">data "cargoship_cluster_facts" "fleet" {
+  name          = "fleet-facts"
+  load_balancer = "10.0.0.10"
+  distro        = "k3s"
+
+  host {
+    address  = "10.0.0.11"
+    role     = "controller"
+    key_path = "~/.ssh/id_ed25519"
+  }
+}
+
+output "installed_versions" {
+  value = { for n in data.cargoship_cluster_facts.fleet.nodes : n.hostname =&gt; n.engine_version }
+}
+</code></pre>
+<h2 id="schema-2"><a class="header" href="#schema-2">Schema</a></h2>
+<h3 id="required-1"><a class="header" href="#required-1">Required</a></h3>
+<ul>
+<li><code>distro</code> (String) The engine to read: <code>k3s</code> or <code>rke2</code>. It is what tells cargoship which version string to look for on each host.</li>
+<li><code>load_balancer</code> (String) The address clients use to reach the control plane. Nothing is contacted through it here – the facts are read over SSH – but the cluster document requires it.</li>
+<li><code>name</code> (String) The cluster’s name. It becomes <code>metadata.name</code> in the cluster document cargoship reads.</li>
+</ul>
+<h3 id="read-only-1"><a class="header" href="#read-only-1">Read-Only</a></h3>
+<ul>
+<li><code>nodes</code> (List of Object) What was read back, one entry per host block, in the same order.</li>
+</ul>
+<h3 id="nested-blocks"><a class="header" href="#nested-blocks">Nested Blocks</a></h3>
+<h4 id="host-list-block"><a class="header" href="#host-list-block"><code>host</code> (List Block)</a></h4>
+<p>A host to read. Controllers are read first whatever order the blocks are in, because that is the order an apply uses.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Attribute</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>address</code></td><td><code>String</code></td><td>Required</td><td>The address or hostname cargoship opens an SSH connection to.</td></tr>
+<tr><td><code>hostname</code></td><td><code>String</code></td><td>Optional</td><td>The name the host is known by before it has been visited.</td></tr>
+<tr><td><code>key_path</code></td><td><code>String</code></td><td>Optional</td><td>Path to the SSH private key on the machine running OpenTofu. There is no attribute for key material, and there will not be: a key in the configuration is a key in the state file.</td></tr>
+<tr><td><code>port</code></td><td><code>Number</code></td><td>Optional</td><td>The SSH port. Defaults to 22.</td></tr>
+<tr><td><code>private_address</code></td><td><code>String</code></td><td>Optional</td><td>Overrides the private address the facts phase would discover.</td></tr>
+<tr><td><code>profile</code></td><td><code>String</code></td><td>Optional</td><td>The profile this host selects from the cluster’s profile map.</td></tr>
+<tr><td><code>role</code></td><td><code>String</code></td><td>Required</td><td>The host’s role: one of <code>controller</code>, <code>controller+worker</code>, <code>single</code>, <code>worker</code>.</td></tr>
+<tr><td><code>user</code></td><td><code>String</code></td><td>Optional</td><td>The SSH user. Defaults to <code>root</code>.</td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="apply-2"><a href="#apply-2" class="header">apply</a></h1>
 <h2 id="apply-phases"><a class="header" href="#apply-phases">apply phases</a></h2>
@@ -5380,6 +5845,36 @@ $ cargoship version -o json
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
 <li>Dry run: runs its own dry-run path</li>
+</ul>
+</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="refresh"><a href="#refresh" class="header">refresh</a></h1>
+<h2 id="refresh-phases"><a class="header" href="#refresh-phases">refresh phases</a></h2>
+<ol>
+<li>Connect to hosts
+<ul>
+<li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
+</ul>
+</li>
+<li>Detect host operating systems
+<ul>
+<li>Gathers information about the remote host, including: OS and OS version</li>
+</ul>
+</li>
+<li>Gather host facts
+<ul>
+<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
+</ul>
+</li>
+<li>Gathering facts about the distro installed
+<ul>
+<li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
+</ul>
+</li>
+<li>Disconnect from hosts
+<ul>
+<li>Deletes any lingering temp files and disconnects from the remote node</li>
 </ul>
 </li>
 </ol>
@@ -6993,6 +7488,7 @@ $ cargoship version -o json
 <li><a href="#Apply">type Apply</a>
 <ul>
 <li><a href="#NewApply">func NewApply(opts ApplyOptions) (*Apply, error)</a></li>
+<li><a href="#Apply.KubeConfigBytes">func (a Apply) KubeConfigBytes() ([]byte, error)</a></li>
 <li><a href="#Apply.Run">func (a Apply) Run(ctx context.Context) error</a></li>
 </ul>
 </li>
@@ -7007,6 +7503,8 @@ $ cargoship version -o json
 <li><a href="#KubeConfig">type KubeConfig</a>
 <ul>
 <li><a href="#NewKubeConfig">func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)</a></li>
+<li><a href="#KubeConfig.Bytes">func (a KubeConfig) Bytes() ([]byte, error)</a></li>
+<li><a href="#KubeConfig.Config">func (a KubeConfig) Config() *clientcmdapi.Config</a></li>
 <li><a href="#KubeConfig.Run">func (a KubeConfig) Run(ctx context.Context) error</a></li>
 </ul>
 </li>
@@ -7018,6 +7516,13 @@ $ cargoship version -o json
 </ul>
 </li>
 <li><a href="#PrepareOptions">type PrepareOptions</a></li>
+<li><a href="#Refresh">type Refresh</a>
+<ul>
+<li><a href="#NewRefresh">func NewRefresh(opts RefreshOptions) (*Refresh, error)</a></li>
+<li><a href="#Refresh.Run">func (a Refresh) Run(ctx context.Context) error</a></li>
+</ul>
+</li>
+<li><a href="#RefreshOptions">type RefreshOptions</a></li>
 <li><a href="#Reset">type Reset</a>
 <ul>
 <li><a href="#NewReset">func NewReset(opts ResetOptions) (*Reset, error)</a></li>
@@ -7031,25 +7536,32 @@ $ cargoship version -o json
 <pre><code class="language-go">var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
 </code></pre>
 <p><a name="Apply"></a></p>
-<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L66-L69">Apply</a></a></h2>
+<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75-L81">Apply</a></a></h2>
 <p>Apply state logic</p>
 <pre><code class="language-go">type Apply struct {
     ApplyOptions
     Phases phase.Phases
+    // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="NewApply"></a></p>
-<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L72">NewApply</a></a></h3>
+<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L84">NewApply</a></a></h3>
 <pre><code class="language-go">func NewApply(opts ApplyOptions) (*Apply, error)
 </code></pre>
 <p>NewApply an apply action object</p>
+<p><a name="Apply.KubeConfigBytes"></a></p>
+<h3 id="func-apply-kubeconfigbytes"><a class="header" href="#func-apply-kubeconfigbytes">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L207">KubeConfigBytes</a></a></h3>
+<pre><code class="language-go">func (a Apply) KubeConfigBytes() ([]byte, error)
+</code></pre>
+<p>KubeConfigBytes is the cluster’s admin credentials, serialized, as the run built them.</p>
+<p>It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase is skipped otherwise and there is nothing to return. What comes back is cluster-admin, so a caller holding it is holding the cluster.</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L215">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L63">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L72">ApplyOptions</a></a></h2>
 <p>ApplyOptions struct</p>
 <pre><code class="language-go">type ApplyOptions struct {
     // Manager is the phase manager
@@ -7073,6 +7585,15 @@ $ cargoship version -o json
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // NoKubeConfigFile builds the admin credentials without merging them into the operator's
+    // kubeconfig, so that a caller can read them through KubeConfigBytes and nothing on the
+    // machine running the apply is changed.
+    //
+    // It is phrased as the negative for the reason KubeConfigOptions.NoWrite is: the zero value
+    // writes, which is what every caller before this field existed did. The OpenTofu provider is
+    // the caller that sets it -- an apply that merged credentials into ~/.kube/config as a side
+    // effect would be changing a machine the resource does not describe.
+    NoKubeConfigFile bool
     // LabelNodes whether to check and add the node-role.kubernetes.io/&lt;profile&gt; label on nodes
     LabelNodes bool
     // AllowUnmanagedNodes lets an apply continue when the cluster holds a node no host in the
@@ -7124,25 +7645,38 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="KubeConfig"></a></p>
-<h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L41-L44">KubeConfig</a></a></h2>
+<h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L51-L57">KubeConfig</a></a></h2>
 <p>KubeConfig state logic</p>
 <pre><code class="language-go">type KubeConfig struct {
     KubeConfigOptions
     Phases phase.Phases
+    // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="NewKubeConfig"></a></p>
-<h3 id="func-newkubeconfig"><a class="header" href="#func-newkubeconfig">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L47">NewKubeConfig</a></a></h3>
+<h3 id="func-newkubeconfig"><a class="header" href="#func-newkubeconfig">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L60">NewKubeConfig</a></a></h3>
 <pre><code class="language-go">func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)
 </code></pre>
 <p>NewKubeConfig pulls the admin cert from a control-plane node and updates the local kube-config</p>
+<p><a name="KubeConfig.Bytes"></a></p>
+<h3 id="func-kubeconfig-bytes"><a class="header" href="#func-kubeconfig-bytes">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L98">Bytes</a></a></h3>
+<pre><code class="language-go">func (a KubeConfig) Bytes() ([]byte, error)
+</code></pre>
+<p>Bytes is the kubeconfig the run built, serialized.</p>
+<p>It is read after Run, and it is the half of this action that has nothing to do with the operator’s own kubeconfig: phase.KubeConfig builds the credentials whether or not it writes them, and #305 separated the two so a caller could have the value without touching ~/.kube/config. Before this, the only way to reach it was to rebuild the phase list by hand.</p>
+<p>What comes back is cluster-admin credentials, so a caller holding them is holding the cluster.</p>
+<p><a name="KubeConfig.Config"></a></p>
+<h3 id="func-kubeconfig-config"><a class="header" href="#func-kubeconfig-config">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L107">Config</a></a></h3>
+<pre><code class="language-go">func (a KubeConfig) Config() *clientcmdapi.Config
+</code></pre>
+<p>Config is the same credentials as a structure, for a caller that wants to read a field rather than a file. Nil until Run has built it.</p>
 <p><a name="KubeConfig.Run"></a></p>
-<h3 id="func-kubeconfig-run"><a class="header" href="#func-kubeconfig-run">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L75">Run</a></a></h3>
+<h3 id="func-kubeconfig-run"><a class="header" href="#func-kubeconfig-run">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L115">Run</a></a></h3>
 <pre><code class="language-go">func (a KubeConfig) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="KubeConfigOptions"></a></p>
-<h2 id="type-kubeconfigoptions"><a class="header" href="#type-kubeconfigoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L32-L38">KubeConfigOptions</a></a></h2>
+<h2 id="type-kubeconfigoptions"><a class="header" href="#type-kubeconfigoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L33-L48">KubeConfigOptions</a></a></h2>
 <p>KubeConfigOptions struct</p>
 <pre><code class="language-go">type KubeConfigOptions struct {
     // Manager is the phase manager
@@ -7150,6 +7684,15 @@ $ cargoship version -o json
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // NoWrite leaves the operator's kubeconfig alone, so the credentials are built and returned
+    // and nothing on this machine is touched.
+    //
+    // It is phrased as the negative so that the zero value writes, which is what every caller
+    // before this field existed did: `cargoship install kube-config` exists to write the file.
+    // A caller that wants the value instead reads Bytes or Config after Run; see
+    // docs/agent/choice-tofu-secrets.md for why the OpenTofu provider is that caller and why it
+    // does not expose the result unless it is asked to.
+    NoWrite bool
 }
 </code></pre>
 <p><a name="Prepare"></a></p>
@@ -7186,6 +7729,35 @@ $ cargoship version -o json
     ModifyFirewall bool
     // ModifyModules whether to update the host kernel modules
     ModifyModules bool
+}
+</code></pre>
+<p><a name="Refresh"></a></p>
+<h2 id="type-refresh"><a class="header" href="#type-refresh">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L35-L38">Refresh</a></a></h2>
+<p>Refresh state logic</p>
+<pre><code class="language-go">type Refresh struct {
+    RefreshOptions
+    Phases phase.Phases
+}
+</code></pre>
+<p><a name="NewRefresh"></a></p>
+<h3 id="func-newrefresh"><a class="header" href="#func-newrefresh">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L57">NewRefresh</a></a></h3>
+<pre><code class="language-go">func NewRefresh(opts RefreshOptions) (*Refresh, error)
+</code></pre>
+<p>NewRefresh a refresh action object.</p>
+<p>Refresh is the read-only half of an apply: it connects to every host the configuration names, resolves each one’s OS, gathers its network facts and reads the engine version already installed on it, and disconnects. Every phase in the list declares ReadOnly(), which is the property that makes the whole action safe to run against a live fleet -- nothing is written, and no cluster lock is taken, because Lock deliberately declares neither interface.</p>
+<p>It exists as an action rather than as a phase list each caller assembles because there is now more than one caller. The OpenTofu provider reads a fleet during a plan and during a refresh, and a provider that built its own list would be a second place where “which phases are safe to run” is decided -- which is exactly the question ReadOnly() exists to answer once. The CLI has no command for it yet; see docs/agent/design-tofu-provider-install.md.</p>
+<p>What it leaves behind is on the hosts themselves: each phase records what it learned on the Host it ran against, so a caller reads the facts off Manager.Config.Spec.Hosts afterwards rather than out of a return value.</p>
+<p><a name="Refresh.Run"></a></p>
+<h3 id="func-refresh-run"><a class="header" href="#func-refresh-run">func (Refresh) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L90">Run</a></a></h3>
+<pre><code class="language-go">func (a Refresh) Run(ctx context.Context) error
+</code></pre>
+<p>Run the actions</p>
+<p><a name="RefreshOptions"></a></p>
+<h2 id="type-refreshoptions"><a class="header" href="#type-refreshoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L29-L32">RefreshOptions</a></a></h2>
+<p>RefreshOptions struct</p>
+<pre><code class="language-go">type RefreshOptions struct {
+    // Manager is the phase manager
+    Manager *phase.Manager
 }
 </code></pre>
 <p><a name="Reset"></a></p>
@@ -12365,12 +12937,12 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="KubeConfig.Bytes"></a></p>
-<h3 id="func-kubeconfig-bytes"><a class="header" href="#func-kubeconfig-bytes">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L143">Bytes</a></a></h3>
+<h3 id="func-kubeconfig-bytes-1"><a class="header" href="#func-kubeconfig-bytes-1">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L143">Bytes</a></a></h3>
 <pre><code class="language-go">func (p *KubeConfig) Bytes() ([]byte, error)
 </code></pre>
 <p>Bytes is Config serialized as a kubeconfig file, which is the form a caller storing it elsewhere wants.</p>
 <p><a name="KubeConfig.Config"></a></p>
-<h3 id="func-kubeconfig-config"><a class="header" href="#func-kubeconfig-config">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L137">Config</a></a></h3>
+<h3 id="func-kubeconfig-config-1"><a class="header" href="#func-kubeconfig-config-1">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L137">Config</a></a></h3>
 <pre><code class="language-go">func (p *KubeConfig) Config() *clientcmdapi.Config
 </code></pre>
 <p>Config is the kubeconfig for this cluster, built during Run from the admin credentials on the leader. It is nil until the phase has run.</p>
@@ -13270,7 +13842,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>WithDefaultTimeout wraps f with Timeout using DefaultTimeout.</p>
 <p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
 <div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="schema"><a class="header" href="#schema">schema</a></h1>
+<h1 id="schema-3"><a class="header" href="#schema-3">schema</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/schema"
 </code></pre>
 <p>Package schema serves the JSON Schema documents cargoship generates for its own file formats, out of the binary rather than over the network. The documents under embedded/ are byte-identical copies of the repository’s schema/ directory, written by the same `mage generate:schema` target; go:embed cannot reach outside its own package directory, which is why the copy exists at all.</p>
@@ -15726,14 +16298,16 @@ $ docker exec -it &lt;container&gt; sh
 <h1 id="running-the-end-to-end-tests"><a class="header" href="#running-the-end-to-end-tests">Running the End-to-End Tests</a></h1>
 <p>The <code>noncluster</code> e2e suite drives the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. It does not import the command packages, so what it proves is that the shipped binary behaves, not that the internals compile. Everything below is about that suite and is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it. The <code>cluster</code> suite is the other way round – it calls the cargoship packages directly and needs no binary at all; see <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a>.</p>
 <h2 id="layout-1"><a class="header" href="#layout-1">Layout</a></h2>
-<pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, the vault and age suites, ssh, create,
-                       publish, pull, sign, verify, schema, validate, the Ansible module, and the zarf info modules
-test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
-test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
-test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
-test/registry.go       in-process OCI registry used by the publish/pull/sign/verify tests
-test/kube.go           kubernetes helpers for the suites that read a cluster back
-test/e2e/AGENTS.md     the fixture rule: test documents live in testdata/, not in Go string constants
+<pre><code>test/e2e/noncluster/        misc + package command groups: version, sha256sum, the vault and age suites, ssh, create,
+                            publish, pull, sign, verify, schema, validate, the Ansible module, and the zarf info modules
+test/e2e/cluster/           the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
+test/e2e/tofu/              the OpenTofu provider: a three-machine bootloose cluster installed, reduced and destroyed through the real `tofu` CLI -- see [e2e-tofu-tests](e2e-tofu-tests.md)
+test/common.go              the CargoE2ETest harness (e2e.Cargoship) shared by the suites
+test/container_package.go   copies a shipped example definition and strips the sysctls a container cannot apply, for the suites that build a package and install it
+test/bootstrap.go           TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
+test/registry.go            in-process OCI registry used by the publish/pull/sign/verify tests
+test/kube.go                kubernetes helpers for the suites that read a cluster back
+test/e2e/AGENTS.md          the fixture rule: test documents live in testdata/, not in Go string constants
 </code></pre>
 <p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary. The <code>cluster</code> package needs Docker and takes tens of minutes, and needs no binary; everything below is about <code>noncluster</code>, and <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a> covers the cluster suite and how to extend it when a phase is added.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
@@ -15806,6 +16380,113 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 <pre><code class="language-console">$ dlv test ./test/e2e/noncluster -- -test.run 'TestCargoshipPull' -test.v
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="running-the-opentofu-provider-end-to-end-tests"><a class="header" href="#running-the-opentofu-provider-end-to-end-tests">Running the OpenTofu Provider End-to-End Tests</a></h1>
+<p><code>test/e2e/tofu/</code> is the only suite that drives cargoship the way an OpenTofu practitioner does: it runs the real <code>tofu</code> binary over the module in <code>example/terragrunt/terraform/modules/cluster</code>, which loads the provider out of a local filesystem mirror, which starts the phases in a process the test does not control.</p>
+<p>That layer is what has no coverage anywhere else. The <a href="#adding-an-e2e-test-for-a-new-apply-phase">phase suite</a> calls the phases in-process, and the provider’s unit tests use a fake converger, so everything between a configuration and the phases is untested by both: schema decoding, the map-keyed <code>hosts</code> set, the computed attributes a plan has to be able to promise, state, the <code>state = "absent"</code> removal, and a destroy.</p>
+<h2 id="what-it-provisions"><a class="header" href="#what-it-provisions">What it provisions</a></h2>
+<p>Three machines, as containers by default and as local virtual machines when asked. <code>CARGOSHIP_E2E_BACKEND=microvm</code>, or <code>mage test:endToEndTofuVM</code>, picks the second; everything downstream of the fleet is the same walk either way. The sections below describe the container fleet unless they say otherwise, and <a href="#the-two-backends">the two backends</a> covers what differs.</p>
+<p>Three bootloose machines on one image - <code>tkc0</code>, a controller, and <code>tkw0</code>/<code>tkw1</code>, workers - each privileged, each with a Docker volume over <code>/var/lib/rancher</code>. The reasons are the ones <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a> sets out for the larger cluster: the engine loads modules and runs its own containerd, and overlayfs cannot be stacked on itself.</p>
+<p>One image rather than three, because nothing in this suite routes on the OS family; that is the phase suite’s job, and repeating it here would cost a second and third engine install for assertions already held. Three machines rather than one, because a removal needs a worker to remove and a controller that stays to drive it.</p>
+<p>Cargoship does not load those modules itself, which is worth knowing because it is not an oversight in the suite: <code>PrepareKernelModules</code> belongs to the <code>prepare</code> action rather than to <code>apply</code>, it is gated on the package declaring an <code>os.kernel</code> list, and no shipped definition declares one. What a node’s kernel carries is the machine image’s business – and here the machine image is a bootloose container, so it is this suite’s. Without the legacy <code>iptable_nat</code> table, kube-proxy exits and the engine shuts itself down a few seconds after reporting ready, which systemd then repeats for the whole phase timeout.</p>
+<p>The package is built from <code>example/k3s-flannel/v1_36/v1.36.4-k3s1</code> through <code>test.ContainerSafeDefinition</code>, which is the shipped definition with the two <code>net.netfilter</code> sysctls a container cannot apply removed. k3s rather than rke2 for the reason the phase suite’s full walk is k3s: a single controller means a SQLite datastore and no etcd quorum to time out under the contention of three nested node containers.</p>
+<h2 id="prerequisites-1"><a class="header" href="#prerequisites-1">Prerequisites</a></h2>
+<ul>
+<li><strong>Docker</strong>, for the machines.</li>
+<li><strong><code>tofu</code></strong> on <code>PATH</code>. The suite skips without it rather than failing - a machine that has no OpenTofu was never set up to run this. <code>CARGOSHIP_E2E_TOFU_BINARY</code> names it differently if yours is installed under another name.</li>
+<li><strong>container-to-container networking</strong>. A worker joins by reaching the controller’s supervisor, so a host that forwards no traffic between containers cannot run a cluster – and host-to-container still works in that situation, so SSH and the controller’s own install succeed and only the worker join fails. The suite probes it with two throwaway containers before provisioning anything. The usual cause is a host firewall: firewalld with Docker’s nftables backend drops forwarded traffic between containers even with <code>enable_icc=true</code> on the bridge, and a user-defined network does not escape it. Either put the bridge in firewalld’s docker zone, or put Docker back on the iptables firewall backend with <code>{"firewall-backend": "iptables"}</code> in <code>/etc/docker/daemon.json</code> – which also loads the modules below, making this host’s two problems one fix.</li>
+<li><strong>the kernel modules the engine needs</strong>: <code>br_netfilter</code>, <code>ip_tables</code>, <code>iptable_filter</code>, <code>iptable_nat</code>, <code>overlay</code> and <code>vxlan</code>. The suite checks <code>/proc/modules</code> and loads only what is missing, from a throwaway privileged container – the node image carries no <code>kmod</code> at all, so it cannot load them itself. Set <code>CARGOSHIP_E2E_SKIP_MODPROBE=1</code> to leave the kernel alone; the check still runs and names what to load.</li>
+<li><strong>the provider in the local mirror</strong>, at <code>build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/&lt;os&gt;_&lt;arch&gt;/</code>. The suite skips if it is not there, and the skip names the target that builds it.</li>
+</ul>
+<p>The version is <code>0.1.0</code> rather than <code>0.0.0</code> because OpenTofu refuses <code>0.0.0</code> - it is reserved for a provider that is not published - and the module’s <code>required_providers</code> asks for <code>&gt;=0.1.0</code>. See <a href="#running-the-opentofu-provider">tofu-provider</a> for the development loop this shares its mirror with.</p>
+<h2 id="running-1"><a class="header" href="#running-1">Running</a></h2>
+<pre><code class="language-console">$ mage test:endToEndTofu                    # builds the mirror, removes stale bootloose containers, runs the suite
+$ mage test:endToEndTofuVM                  # the same walk against local virtual machines (needs KVM)
+$ go run ./magefiles/core test:endToEndTofu # same, with no mage binary installed
+</code></pre>
+<p>The mage target is the normal way in because it builds the mirror first. A plain <code>go test</code> works once the mirror exists:</p>
+<pre><code class="language-console">$ mage release:tofuProviderDev 0.1.0
+$ go test -mod=vendor -count=1 -v -timeout=90m ./test/e2e/tofu/...
+</code></pre>
+<p>Expect tens of minutes: the walk is four real applies, each one an engine install, convergence, removal or teardown over SSH.</p>
+<h2 id="the-walk"><a class="header" href="#the-walk">The walk</a></h2>
+<p>One test with ordered subtests, because every step starts from what the one before it left on the hosts and in state. A step that fails stops the walk rather than asserting against a cluster that was never built, and the destroy is registered with <code>t.Cleanup</code> before the first apply, so a failure anywhere still takes the engine off the machines.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Step</th><th style="text-align: left">What it holds</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>init</code></td><td style="text-align: left">The provider resolves with no registry, out of the filesystem mirror the generated CLI configuration points at</td></tr>
+<tr><td style="text-align: left"><code>plan</code></td><td style="text-align: left">The plan holds a <code>cargoship_cluster</code> and creates it - a plan that quietly plans nothing because the module took no hosts is not otherwise visible</td></tr>
+<tr><td style="text-align: left"><code>apply</code></td><td style="text-align: left">The engine in state is the one the package carried, every host is unmarked, and the controller’s own <code>kubectl</code> reports three nodes</td></tr>
+<tr><td style="text-align: left"><code>kubeconfig</code></td><td style="text-align: left">The credentials <code>export_kubeconfig</code> returned reach the cluster: every node Ready through them</td></tr>
+<tr><td style="text-align: left"><code>converge</code></td><td style="text-align: left">A second plan over an unchanged configuration reports no changes, which is also where a computed attribute that cannot be promised would show up</td></tr>
+<tr><td style="text-align: left"><code>remove</code></td><td style="text-align: left"><code>state = "absent"</code> on one worker drains, deletes and uninstalls it in one apply; <code>removed</code> is true for it and false for the rest, the node is gone and its engine is stopped</td></tr>
+<tr><td style="text-align: left"><code>destroy</code></td><td style="text-align: left">State is emptied and the controller’s engine is no longer running</td></tr>
+</tbody>
+</table>
+</div>
+<p>The node counts come from the controller’s own <code>kubectl</code> rather than from the provider’s <code>nodes</code> attribute. The attribute is what the provider believes, and a provider that believed the wrong thing is the failure worth catching.</p>
+<h2 id="the-two-backends"><a class="header" href="#the-two-backends">The two backends</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th><code>bootloose</code> (default)</th><th><code>microvm</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Machines</td><td><code>tkc0</code>, <code>tkw0</code>, <code>tkw1</code></td><td><code>kc0</code>, <code>kw0</code>, <code>kw1</code></td></tr>
+<tr><td>Guest</td><td>Ubuntu 26 containers</td><td>Rocky 10 virtual machines</td></tr>
+<tr><td>Needs</td><td>Docker, container-to-container TCP, the host’s kernel modules</td><td>KVM</td></tr>
+<tr><td>Bring-up</td><td>seconds</td><td>a minute or two</td></tr>
+<tr><td>Node-to-node traffic</td><td>Docker’s bridge</td><td>the fleet’s own layer 2 segment</td></tr>
+</tbody>
+</table>
+</div>
+<p>The reason to have the second is not coverage but reachability. A worker joins by reaching the controller’s supervisor, and a host whose firewall drops forwarded traffic between containers cannot run that – while host-to-container keeps working, so the failure arrives twenty minutes in, at the worker join. A VM fleet never asks Docker for anything: the nodes are on a segment of their own, so that whole class of host problem does not apply.</p>
+<p>What it costs is the preflights’ subject matter. A VM has its own kernel, so what the engine needs loaded is the guest image’s business rather than this machine’s, and none of <code>requireKernelModules</code>, <code>requireContainerNetworking</code> or <code>detachHostsFile</code> runs. It also means the two backends run different distributions – Ubuntu against Rocky – so they are worth running as a pair rather than as alternatives.</p>
+<p>Two attributes are off on the VM path: <code>label_nodes</code> and <code>export_kubeconfig</code>. Both need a route from the management node to the cluster’s API server, and a VM fleet does not have one – its load balancer is the leader’s address on a segment private to the qemu processes, which is what the other nodes join through and not an address this host is on. Asking for them anyway fails the apply inside the labelling phase, which says nothing about the provider. The phase suite probes for the route instead of deciding per backend, but it can only do that after an install; <code>label_nodes</code> is an attribute the apply carries, so it has to be decided before one. The <code>kubeconfig</code> step skips for the same reason, with the reason logged.</p>
+<p>Everything the node counts assert still runs, because they go through the controller’s own <code>kubectl</code> over SSH rather than from here. The firewall phase, by contrast, only does anything on this backend: Rocky boots with firewalld up, so <code>modify_firewall</code> is the difference between a worker that joins and one whose join is refused outright.</p>
+<p>One thing is set only on the VM path: each host’s <code>private_address</code> and <code>private_interface</code>. A VM is reached on a forwarded loopback port, but its default route is the slirp management interface, whose address is the same on every node and reachable from none of them. Without naming the segment address explicitly, every peer address the phases distribute would be one that does not work. The fleet comes from <code>microvm.Inventory</code>, which is the same document <code>cargoship apply --config</code> takes, so the suite and the CLI hand the phases the same hosts.</p>
+<p>The fleet is called <code>tofu</code>, which is neither the phase suite’s nor <code>dev:vmUp</code>’s. All three derive their loopback ports from the fleet name, so two fleets sharing one cannot be up at the same time – a run that finds its ports taken is usually a <code>dev:vmUp</code> fleet still up, and <code>mage dev:vmDown</code> takes it away.</p>
+<h2 id="why-the-root-module-is-a-fixture-and-the-fleet-is-not"><a class="header" href="#why-the-root-module-is-a-fixture-and-the-fleet-is-not">Why the root module is a fixture and the fleet is not</a></h2>
+<p><code>test/e2e/tofu/testdata/main.tf</code> is the root module, copied into a temp directory beside a symlink named <code>module</code> that points at the shipped module. The fleet, the package path and the per-step settings arrive as a generated <code>terraform.tfvars.json</code>.</p>
+<p>The split follows <a href="https://github.com/colonel-byte/cargoship/blob/main/test/e2e/AGENTS.md"><code>test/e2e/AGENTS.md</code></a>: the HCL is a document a reviewer reads as HCL, and the only part that varies per run is data. The module arrives as a symlink rather than a copy because a local module source resolves relative to the file naming it, so a copied root module could not reach back into the repository without a path that depends on where the temp directory landed.</p>
+<p>It consumes the shipped module rather than declaring the resource itself, which buys one thing a bare resource would not: the module’s variable types have to keep accepting what the provider’s schema wants. A <code>hosts</code> object type that no longer converts is a failure nothing else here would see.</p>
+<h2 id="environment-variables-2"><a class="header" href="#environment-variables-2">Environment variables</a></h2>
+<ul>
+<li><strong><code>CARGOSHIP_E2E_BACKEND</code></strong> - <code>bootloose</code> (default) or <code>microvm</code>, as above. Anything else stops the run naming what it was given, rather than quietly provisioning the default. The phase suite reads the same variable and means the same thing by it, except that it has a third backend, <code>inventory</code>, which this suite does not.</li>
+<li><strong><code>CARGOSHIP_E2E_TOFU_BINARY</code></strong> - the binary to run instead of <code>tofu</code>.</li>
+<li><strong><code>CARGOSHIP_E2E_SKIP_MODPROBE</code></strong> - do not load kernel modules. The check that they are loaded is not turned off with it, so a missing module fails the run naming <code>sudo modprobe ...</code> rather than being discovered twenty minutes later in a journal. Worth setting on a machine whose kernel is not a test’s to change.</li>
+<li><strong><code>CARGOSHIP_E2E_TOFU_PHASE_TIMEOUT</code></strong> - how long a phase waits on a host, as a Go duration (default <code>20m</code>). Lower it when investigating a failure: a phase that is going to fail waits out the whole timeout first, so the default costs twenty minutes to arrive at the same error <code>6m</code> reaches in six.</li>
+<li><strong><code>CARGOSHIP_E2E_KEEP_CLUSTER</code></strong> - leave the machines running when the run failed. The same variable the phase suite reads, for the same reason: a failed engine install is explained by the journals in the node containers, and deleting the containers takes them with it. Remove them afterwards with <code>mage test:cleanCluster</code>.</li>
+<li><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> / <strong><code>TMPDIR</code></strong> - where the package build and the OpenTofu working directory are staged. <code>mage test:endToEndTofu</code> points both at <code>build/tmp</code>.</li>
+</ul>
+<h2 id="the-two-preflights-and-why-they-exist"><a class="header" href="#the-two-preflights-and-why-they-exist">The two preflights, and why they exist</a></h2>
+<p>Both failures they catch were found the expensive way, and both look like something else while they happen.</p>
+<p>A missing kernel module lets the engine start, notify readiness, and shut itself down a few seconds later – which systemd repeats for the whole phase timeout, so the symptom is twenty minutes of restarts and no error from cargoship. Blocked inter-container traffic lets everything up to the worker join succeed, so the symptom is one worker timing out with <code>service k3s-agent is not running</code> and nothing to say why.</p>
+<p>Neither runs on the microvm backend, where neither applies. Neither is cargoship’s to fix either: the first is what the machine image carries, the second is the host’s firewall. What the suite owes a contributor is to say so in seconds rather than after a phase timeout, which is what <code>requireKernelModules</code> and <code>requireContainerNetworking</code> are for. They run before the machines, so a host that cannot run the suite starts no container.</p>
+<h2 id="debugging-a-failure-1"><a class="header" href="#debugging-a-failure-1">Debugging a failure</a></h2>
+<p>Run with <code>-v</code>. Every <code>tofu</code> invocation is logged with its combined output through <code>t.Log</code>. The provider’s own diagnostics do not come back that way - it reports them through <code>tflog</code>, which OpenTofu writes to a log file rather than to stdout - so the suite sets <code>TF_LOG</code> and <code>TF_LOG_PATH</code> into the workspace and reads the <code>@module=cargoship</code> lines back into the test output when a command fails. Those are the lines that say which hosts a removal targeted, and a run that fails without them is very hard to read; the rest of that file is OpenTofu’s own RPC traffic and is left alone.</p>
+<p>A failure during an apply leaves the machines up for as long as the process lives, and the destroy in <code>t.Cleanup</code> then tears the cluster down. To keep the machines, set <code>CARGOSHIP_E2E_KEEP_CLUSTER=1</code> and read them with <code>docker exec</code>:</p>
+<pre><code class="language-console">$ docker exec cargoship-e2e-tofu-tkc0 journalctl -u k3s-server --no-pager | tail -50
+$ docker exec cargoship-e2e-tofu-tkw1 systemctl status k3s-agent
+</code></pre>
+<p>The container name is the cluster name and the machine name, not the hostname – <code>docker ps --filter label=io.k0sproject.bootloose.owner=bootloose</code> lists them.</p>
+<p>On the microvm backend the equivalent is a shell on the node, and the fleet outlives a failed run the same way:</p>
+<pre><code class="language-console">$ mage dev:vmList -fleet=tofu
+$ mage dev:vmShell kc0 -fleet=tofu
+$ mage dev:vmDown -fleet=tofu
+</code></pre>
+<p>The OpenTofu working directory is a <code>t.TempDir()</code>, which <code>go test</code> removes at the end of the test - including the state file. A failure that needs the state inspected is the case to copy it out from inside the test rather than to go looking for it afterwards.</p>
+<h2 id="what-it-does-not-cover"><a class="header" href="#what-it-does-not-cover">What it does not cover</a></h2>
+<ul>
+<li><strong>Node labelling and the exported kubeconfig, on the microvm backend.</strong> Both need a route to the API server that a VM fleet does not have; see <a href="#the-two-backends">the two backends</a>. The container backend covers them.</li>
+<li><strong>The data source.</strong> <code>cargoship_cluster_facts</code> reads a fleet and is covered by the provider’s unit tests only; it still takes <code>host</code> blocks rather than a map, which this suite never exercises.</li>
+<li><strong>Terragrunt.</strong> The suite runs <code>tofu</code> directly. The terragrunt layout in <code>example/terragrunt</code> is checked by <code>terragrunt validate</code> by hand; nothing automated reads <code>terragrunt.hcl</code>.</li>
+<li><strong>A controller removal.</strong> The removal step removes a worker. Removing a controller is the dangerous case - it gives up an etcd member - and the rules around it are unit-tested and documented rather than proven here. See <a href="https://github.com/colonel-byte/cargoship/blob/main/docs/agent/choice-tofu-host-removal.md"><code>docs/agent/choice-tofu-host-removal.md</code></a>.</li>
+<li><strong>An OCI mirror.</strong> The provider resolves out of a <code>filesystem_mirror</code>. The <code>oci_mirror</code> path a release publishes to is checked by reading the artifact with the ORAS CLI, not by an init through it.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="running-the-fuzz-tests"><a class="header" href="#running-the-fuzz-tests">Running the Fuzz Tests</a></h1>
 <p>The <code>fuzz</code> package holds Go’s native fuzz targets. It is not an e2e suite and does not sit with them: it does not drive the built binary and starts no containers, and the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions – scalar style, quoting, indentation, byte offsets – where a wrong answer produces a file that still parses and fails much later. Nothing here needs <code>build/</code>, a cluster, or the network.</p>
 <p>It also has to stay out of <code>src/test/</code>. OpenSSF Scorecard’s file walker discards every path beginning <code>src/test/</code> before any check reads it – <code>isTestdataFile</code> in <a href="https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go"><code>checks/fileparser/listing.go</code></a>, which carries the Maven <code>src/test/java</code> convention – so for as long as these targets lived at <code>src/test/e2e/fuzz</code> the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under <code>src/test/</code> would silently take it to 0 again. The e2e suites themselves moved out of <code>src/test/</code> to <code>test/</code> for unrelated reasons, which loses that same exclusion for their tree – worth knowing if a future Scorecard run starts flagging something in <code>test/</code> that it did not before.</p>
@@ -15849,11 +16530,11 @@ ansiblemod_fuzz_test.go              module argument reading and module naming
 <li><code>FuzzAnsibleHostVar</code> varies one host variable against an inventory that is otherwise fixed. A variable under the <code>cargoship_</code> prefix that cargoship does not read is refused by name. A variable outside the prefix that cargoship does not read leaves the generated document byte-for-byte unchanged.</li>
 <li><code>FuzzAnsibleRoleGroups</code> varies the role mapping and the group names it points at. No host reaches the document twice, and controllers come before workers.</li>
 </ul>
-<p>They need no key material, but they are not all fast: <code>FuzzAnsibleRequest</code> translates a request and manages tens of thousands of executions per second, while <code>FuzzAnsibleHostVar</code> translates the inventory twice on every execution, with and without the variable, and manages under a thousand. Measured numbers are in the table under <a href="#running-1">Running</a>; a minute each is a real sweep for the first two and a thin one for <code>FuzzAnsibleHostVar</code>.</p>
+<p>They need no key material, but they are not all fast: <code>FuzzAnsibleRequest</code> translates a request and manages tens of thousands of executions per second, while <code>FuzzAnsibleHostVar</code> translates the inventory twice on every execution, with and without the variable, and manages under a thousand. Measured numbers are in the table under <a href="#running-2">Running</a>; a minute each is a real sweep for the first two and a thin one for <code>FuzzAnsibleHostVar</code>.</p>
 <h2 id="both-formats-every-time"><a class="header" href="#both-formats-every-time">Both formats, every time</a></h2>
 <p>cargoship writes two ciphertext formats, Ansible Vault and age, and one keyring can carry both. Every target that encrypts therefore runs its body once per format rather than picking one: <code>encryptKeyrings()</code> returns the two encrypting keyrings and <code>rekeyPairs()</code> returns the four rekey directions (vault to vault, vault to age, age to age, age to vault). Both are in <code>keyring_test.go</code>, and both are built once in <code>TestMain</code> so that key generation is not paid per execution.</p>
 <p><code>TestMain</code> also unsets <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, <code>CARGOSHIP_AGE_RECIPIENTS</code>, <code>CARGOSHIP_VAULT_PASSWORD</code> and <code>ANSIBLE_VAULT_PASSWORD</code> before it builds anything. A developer who has those set in their shell would otherwise be fuzzing against different key material than CI, which is the kind of difference that makes a reported crasher unreproducible.</p>
-<h2 id="running-1"><a class="header" href="#running-1">Running</a></h2>
+<h2 id="running-2"><a class="header" href="#running-2">Running</a></h2>
 <p>A plain <code>go test</code> runs the <strong>seed corpus only</strong> – the <code>f.Add</code> values in each target, plus anything committed under <code>testdata/fuzz/&lt;Target&gt;/</code>. That is about half a second and is what <code>mage test:fuzz</code> and <code>go test ./...</code> do. <code>.github/workflows/unit-tests.yaml</code> runs it on every pull request, as a second step beside <code>test:unit</code>, because it needs nothing that step did not already need:</p>
 <pre><code class="language-console">$ mage test:fuzz
 $ go test -mod=vendor -count=1 ./fuzz/     # the same thing, spelled out
@@ -16240,6 +16921,29 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UP
     go test -mod=vendor -timeout=3h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 </code></pre>
 <p>No CI job runs this; it is the only way to cover the upgrade phases.</p>
+<h2 id="testendtoendtofu"><a class="header" href="#testendtoendtofu"><code>Test.EndToEndTofu</code></a></h2>
+<p>Same cleanup, plus the provider build the suite resolves against. The build is <code>release:tofuProviderDev</code> in one line: the provider for this machine, into the mirror layout, stamped with the version the module’s constraint asks for.</p>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"
+$ go build -ldflags "-X main.version=0.1.0 -X github.com/colonel-byte/cargoship/internal/tofuprovider.Version=0.1.0" \
+    -o build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"/terraform-provider-cargoship_v0.1.0 \
+    ./cmd/terraform-provider-cargoship
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/tofu/...
+</code></pre>
+<p>The suite skips rather than fails when <code>tofu</code> is not on PATH or the mirror does not hold that binary, so a run that prints two skips and passes means one of those two is missing. See <a href="#running-the-opentofu-provider-end-to-end-tests">e2e-tofu-tests</a>.</p>
+<h2 id="testendtoendtofuvm"><a class="header" href="#testendtoendtofuvm"><code>Test.EndToEndTofuVM</code></a></h2>
+<p>The same build and the same walk, against local virtual machines. The bootloose cleanup is not needed, because this backend starts no containers; what it needs instead is that no other fleet holds its loopback ports.</p>
+<pre><code class="language-console">$ mkdir -p build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"
+$ go build -ldflags "-X main.version=0.1.0 -X github.com/colonel-byte/cargoship/internal/tofuprovider.Version=0.1.0" \
+    -o build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"/terraform-provider-cargoship_v0.1.0 \
+    ./cmd/terraform-provider-cargoship
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/tofu/...
+</code></pre>
+<p>Needs KVM. The fleet is called <code>tofu</code>; <code>mage dev:vmList -fleet=tofu</code> shows what a killed run left behind and <code>mage dev:vmDown -fleet=tofu</code> removes it.</p>
 <h2 id="testcleanzarfclusters"><a class="header" href="#testcleanzarfclusters"><code>Test.CleanZarfClusters</code></a></h2>
 <pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
 </code></pre>
@@ -16311,6 +17015,8 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <li><code>EndToEndCluster</code> - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
 <li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node. It provisions a different five machines rather than fewer: <code>stageOS</code> is one per OS family per role, including a Fedora controller and the upload-only Alpine host, where the full walk’s <code>k3sOS</code> is a single Ubuntu controller and four workers.</li>
 <li><code>EndToEndClusterDryRun</code> - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with <code>--dry-run</code> against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.</li>
+<li><code>EndToEndTofu</code> - Runs the OpenTofu provider suite: three bootloose machines installed, reduced by one worker and destroyed through the real <code>tofu</code> CLI over the module in <code>example/terragrunt</code>. It builds the provider into the local filesystem mirror first, which is where the suite resolves it from. Needs Docker and a <code>tofu</code> on PATH; the suite skips with a reason when either is missing. See <a href="#running-the-opentofu-provider-end-to-end-tests">e2e-tofu-tests</a>.</li>
+<li><code>EndToEndTofuVM</code> - Runs the same suite against local Rocky virtual machines instead of containers, by setting <code>CARGOSHIP_E2E_BACKEND=microvm</code>. Needs KVM. It is the backend to reach for on a host whose Docker forwards no traffic between containers, since a VM fleet routes over its own segment. See <a href="#running-the-opentofu-provider-end-to-end-tests">e2e-tofu-tests</a>.</li>
 <li><code>CleanCluster</code> - Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
 <li><code>Fuzz</code> - Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="#running-the-fuzz-tests">fuzz-tests</a>.</li>
 </ul>
@@ -16319,13 +17025,15 @@ mage test:endToEndNonCluster    # run the misc/package command suites, no cluste
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
 mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
+mage test:endToEndTofu          # run the OpenTofu provider suite against a three-machine cluster (needs tofu)
+mage test:endToEndTofuVM        # the same walk against local virtual machines (needs KVM)
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
 </code></pre>
 <h3 id="release-namespace"><a class="header" href="#release-namespace"><code>Release</code> Namespace</a></h3>
 <p>The <code>Release</code> namespace holds the release artifacts goreleaser does not build. Only the OpenTofu provider is here, because what has to be published for it is an OCI image index assembled to the shape an OpenTofu provider mirror serves rather than a release asset. See <a href="#why-the-opentofu-provider-is-a-package-of-this-module">choice-tofu-provider-layout</a>.</p>
 <ul>
-<li><code>TofuProvider</code> - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading <code>v</code>, and optionally the repository to publish to. Needs ORAS 1.3.0 or newer on <code>PATH</code>, which is what <code>--artifact-platform</code> needs.</li>
+<li><code>TofuProvider</code> - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading <code>v</code>, and optionally the repository to publish to.</li>
 <li><code>TofuProviderLayout</code> - The same build and assembly, stopping before the push and leaving the OCI layout under <code>build/tofu-provider/layout</code>. This is how the artifact shape is checked without a registry.</li>
 <li><code>TofuProviderDev</code> - Builds the provider for this machine only, into a <code>filesystem_mirror</code> layout under <code>build/tofu-provider/mirror/</code>, and prints the directory to point a <code>.tofurc</code> at. This is the development loop; see <a href="#running-the-opentofu-provider">tofu-provider</a>.</li>
 </ul>
@@ -17018,8 +17726,10 @@ mage generate:updatePins            # refresh every line already pinned
 <h1 id="running-the-opentofu-provider"><a class="header" href="#running-the-opentofu-provider">Running the OpenTofu provider</a></h1>
 <p>The provider lives at <code>cmd/terraform-provider-cargoship</code>, with its implementation in <code>internal/tofuprovider</code>. It is a package of this module rather than a module of its own; <a href="#why-the-opentofu-provider-is-a-package-of-this-module">choice-tofu-provider-layout</a> records why, and <a href="#how-the-opentofu-provider-will-perform-an-install">design-tofu-provider-install</a> is the plan for what it will do. This page is how to run what exists.</p>
 <h2 id="what-exists"><a class="header" href="#what-exists">What exists</a></h2>
-<p>One data source, <code>cargoship_cluster_facts</code>. It runs the five read-only phases of an apply – <code>Connect</code>, <code>DetectOS</code>, <code>GatherFacts</code>, <code>GatherFactsDistro</code>, <code>Disconnect</code> – and reports what each host says: operating system, version, architecture, hostname, private address, and the engine version it is running. It takes no cluster lock and writes nothing to any host.</p>
-<p>There is no resource yet, so nothing the provider can do changes a fleet. That is deliberate: the first slice exercises the schema, the translation into a cluster document, the SSH connections, the logging and cancellation in a place where the worst outcome of a bug is a failed plan.</p>
+<p>One resource, <code>cargoship_cluster</code>, and one data source, <code>cargoship_cluster_facts</code>.</p>
+<p><code>cargoship_cluster</code> converges a cluster on its configuration: <code>Create</code> and <code>Update</code> are the same call, because <code>action.NewApply</code> builds one phase list covering install, join and upgrade with each phase gated by its own <code>ShouldRun</code>. <code>Read</code> refreshes what the hosts report. <code>Delete</code> resets the cluster unless <code>retain_on_destroy</code> is set, in which case it drops it from state with a warning and leaves it running.</p>
+<p>The data source, <code>cargoship_cluster_facts</code>. It runs <code>action.NewRefresh</code>, the read-only half of an apply – <code>Connect</code>, <code>DetectOS</code>, <code>GatherFacts</code>, <code>GatherFactsDistro</code>, <code>Disconnect</code> – and reports what each host says: operating system, version, architecture, hostname, private address, and the engine version it is running. It takes no cluster lock and writes nothing to any host. The phase list lives in <code>pkg/action</code> rather than in the provider so that “which phases are safe to run” is decided once; <a href="#refresh">docs/phases/refresh.md</a> is generated from it.</p>
+<p>What is <strong>not</strong> there yet: <code>ModifyPlan</code>, so the plan-time downgrade and removed-host checks of <a href="https://github.com/colonel-byte/cargoship/issues/307">#307</a> do not run; <code>ImportState</code>, which cannot work from an ID alone because the host blocks and their key paths are not recoverable from a running cluster; and acceptance tests. The <code>engine_version</code> of each node is in state, which is the input the plan-time check needs.</p>
 <h2 id="the-development-loop"><a class="header" href="#the-development-loop">The development loop</a></h2>
 <pre><code class="language-sh">mage release:tofuProviderDev 0.1.0
 </code></pre>
@@ -17117,6 +17827,17 @@ docker exec facts-host systemctl start ssh
 <p>Both the <code>chown</code> and the mode matter: <code>docker cp</code> leaves the file owned by whichever uid the image’s build left in place, and sshd refuses a key file it does not trust. The symptom is an authentication failure that looks like a wrong key, and it retries for the whole <code>connect_timeout</code> before saying so.</p>
 <p>Then point a host block at <code>127.0.0.1</code> port <code>2223</code> with <code>key_path = "/tmp/facts-key"</code>, and <code>SSH_KNOWN_HOSTS=""</code> so the container’s regenerated host key is not checked against a known-hosts file. Remove it with <code>docker rm -f facts-host</code> when finished.</p>
 <p>For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs – see <a href="#running-the-end-to-end-tests">e2e-tests</a> – and the addresses, user and key path in it are what a host block needs. <code>mage dev:vmUp -control=1 -worker=0</code> writes the same thing for a single virtual machine, which is the easier route when the host needs a real kernel rather than only an sshd; see <a href="#a-local-vm-fleet">microvm</a>.</p>
+<h2 id="where-the-phase-logs-go"><a class="header" href="#where-the-phase-logs-go">Where the phase logs go</a></h2>
+<p>cargoship’s phases log through a context-scoped <code>slog</code> logger, and OpenTofu shows a provider’s logs only through <code>tflog</code>. <code>withTofuLogger</code> bridges the two: every <code>Refresh</code>, <code>Apply</code> and <code>Teardown</code> installs a handler that maps slog levels onto <code>tflog</code> and flattens grouped attributes into the flat map <code>tflog</code> takes. So <code>TF_LOG=debug</code> is how to watch an apply, and without it a long run looks silent.</p>
+<p>The handler is on the path of every log line a run produces, which is why it is tested for every level and attribute kind rather than only for the happy one: a kind it could not render would take the provider down mid-installation rather than lose a line.</p>
+<h2 id="applying-for-real"><a class="header" href="#applying-for-real">Applying for real</a></h2>
+<p>An apply needs a package and a fleet, so the loop is longer than the data source’s:</p>
+<pre><code class="language-sh">mage build:binary
+./build/cargoship_linux_amd64 package create example/k3s-flannel/v1_36/v1.36.4-k3s1 --output /srv/staging
+</code></pre>
+<p>That pulls the engine’s artifacts and images, which is the one step that needs a network and around 1.5GB. Point <code>package</code> at the <code>.tar.zst</code> it writes, and the host blocks at a fleet – the cluster e2e suite’s bootloose inventory is the cheapest one to hand, see <a href="#running-the-end-to-end-tests">e2e-tests</a>.</p>
+<p>Two things to expect from the first apply. It is long and it looks silent: the phases log through cargoship’s own logger, and OpenTofu shows a resource as “Still creating…” until the whole run returns. And a run that fails part way through <strong>still writes state</strong> – deliberately, because an apply that failed has already changed hosts, and a resource that returned without writing would leave the next plan deciding nothing is installed and re-bootstrapping a live cluster. The error says so, and the nodes it reached are in state.</p>
+<p>A destroy resets the cluster by default. <code>retain_on_destroy = true</code> drops the resource and leaves the cluster running, with a warning naming it and the <code>cargoship install reset</code> that would tear it down.</p>
 <h2 id="connect_timeout-and-why-it-exists"><a class="header" href="#connect_timeout-and-why-it-exists"><code>connect_timeout</code>, and why it exists</a></h2>
 <p>cargoship’s connect phase retries for <strong>ten minutes</strong> (<code>pkg/phase/07_connect.go</code>), because a host rebooting into a new kernel mid-apply is ordinary. That is the wrong answer for a plan: a typo in an address would make <code>tofu plan</code> sit silent for ten minutes before failing. The provider bounds every read at <code>connect_timeout</code>, one minute by default, and says so when it gives up:</p>
 <pre><code>cargoship could not gather facts for bubbles: gave up after 1m0s: failed on 1 hosts:
@@ -17128,11 +17849,16 @@ ssh dial: dial tcp 127.0.0.1:1: connect: connection refused
 <p>Raise it for a fleet that is genuinely slow to answer. Note that an authentication failure is retried the same way a refused connection is, so a wrong key also takes the full timeout to report.</p>
 <h2 id="running-the-tests"><a class="header" href="#running-the-tests">Running the tests</a></h2>
 <pre><code class="language-sh">go test ./internal/tofuprovider/...     # unit: translation, state mapping, diagnostics
+go test ./pkg/action/...                # the actions the provider calls, including the read-only one
 go test ./cmd/cargoship/                # holds that the CLI does not reach the provider's packages
 </code></pre>
 <p>The unit tests need no cluster, no SSH and no <code>tofu</code> binary, and they are the ones that cover most of what a provider gets wrong. They can, because the provider calls cargoship through one interface – <code>converger</code> – which a fake implements from a table: everything below it needs a fleet, and everything above it is the state mapping and the diagnostics.</p>
 <p><code>TestCargoshipDoesNotDependOnTheProvider</code> is what keeps the provider’s dependencies out of the CLI. The property it holds is that the linker never loads a package the import graph does not reach, so <code>cargoship</code> is the same size whatever the provider depends on – and one import from a package the CLI already uses would undo that silently. It reads <code>go list -deps</code> and fails on any dependency under the provider’s packages or <code>terraform-plugin</code>.</p>
-<p>Acceptance tests with <code>terraform-plugin-testing</code> come with the resource, since what they are for is asserting that an apply converges a cluster. When they land they will need a <code>tofu</code> binary on the runner, and <code>TF_ACC_TERRAFORM_PATH</code> pointing at it – the framework’s harness looks for <code>terraform</code> by default.</p>
+<p>The end-to-end half is <code>mage test:endToEndTofu</code>: three bootloose machines, the real <code>tofu</code> CLI, and the shipped module, walked from <code>init</code> through a removal to a destroy. It builds the provider into the same mirror this page’s development loop uses, and skips when there is no <code>tofu</code> on PATH. See <a href="#running-the-opentofu-provider-end-to-end-tests">e2e-tofu-tests</a> for what each step holds and what it leaves uncovered.</p>
+<p>That suite stands in for acceptance tests with <code>terraform-plugin-testing</code>, which would need the same <code>tofu</code> binary and <code>TF_ACC_TERRAFORM_PATH</code> pointing at it – the framework’s harness looks for <code>terraform</code> by default. What the framework would add over the suite is per-step plan assertions; what it would not is the module, which is the layer a practitioner actually consumes.</p>
+<h2 id="driving-it-from-terragrunt"><a class="header" href="#driving-it-from-terragrunt">Driving it from Terragrunt</a></h2>
+<p><a href="https://github.com/colonel-byte/cargoship/tree/main/example/terragrunt"><code>example/terragrunt/</code></a> is a worked layout: modules under <code>terraform/modules/</code>, one directory per cluster under <code>terraform/inventory/</code>, and nothing in a module that names a cluster. <a href="#driving-cargoship-from-opentofu-and-terragrunt">opentofu-terragrunt</a> is the operator-facing guide to it.</p>
+<p>Two things that cost a run each when they are missed. Terragrunt drives Terraform unless told otherwise, so <code>TG_TF_PATH=tofu</code> has to be exported. And the root of the inventory is <code>root.hcl</code> rather than <code>terragrunt.hcl</code>, because current Terragrunt warns that a <code>terragrunt.hcl</code> at the root of a tree is an anti-pattern and will become an error – and it errors outright on the <code>skip = true</code> that used to accompany it.</p>
 <h2 id="publishing-1"><a class="header" href="#publishing-1">Publishing</a></h2>
 <p><code>mage release:tofuProvider &lt;version&gt;</code> builds every published platform and pushes an OCI image index to <code>ghcr.io</code> as an OpenTofu provider mirror; <code>mage release:tofuProviderLayout &lt;version&gt;</code> stops before the push and leaves the artifact under <code>build/</code> to inspect. See <a href="#mage-tasks-and-automation">mage</a> and <a href="#release-tofu-provideryaml">release-tofu-provider</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -17245,8 +17971,8 @@ go test ./cmd/cargoship/                # holds that the CLI does not reach the 
 <p><strong>Triggers:</strong> push of a <code>v*</code> tag, or <code>workflow_dispatch</code> with a version.</p>
 <p>Publishes the OpenTofu provider to <code>ghcr.io</code> as a provider mirror artifact. The provider is a package of this module, so it ships on the CLI’s version: this fires on the same <code>v*</code> tag <a href="#releaseyaml">release.yaml</a> does. It is a separate workflow rather than another job there because it shares nothing with the goreleaser run - no signing keys, no GitHub Release, no attestations - and a provider that failed to publish should not read as a failed CLI release.</p>
 <p>One job, <strong>publish</strong>, granted <code>packages: write</code> on top of the top-level <code>contents: read</code>. Nothing else is needed: an OCI mirror takes no GitHub Release, no <code>SHA256SUMS</code> and no GPG signature, which is most of why it is the distribution path rather than a registry listing. See <a href="#why-the-opentofu-provider-is-a-package-of-this-module">choice-tofu-provider-layout</a>.</p>
-<p>It sets up Go, installs ORAS 1.3.0 or newer, logs into <code>ghcr.io</code> with the workflow token, reads the version out of the tag with the leading <code>v</code> removed, and runs <code>go run ./magefiles/core release:tofuProvider</code>. The version reaches the target through <code>env</code> rather than being interpolated into the <code>run</code> block.</p>
-<p>That target cross-compiles the provider for each published platform, zips each binary as <code>terraform-provider-cargoship_v&lt;version&gt;</code> with a fixed entry timestamp so the same commit produces the same bytes, pushes one manifest per platform with <code>--artifact-type application/vnd.opentofu.provider-target --artifact-platform &lt;os&gt;/&lt;arch&gt;</code>, assembles an index with <code>--artifact-type application/vnd.opentofu.provider</code>, and copies the index to the repository. <code>mage release:tofuProviderLayout &lt;version&gt;</code> does everything but the copy and leaves the OCI layout under <code>build/</code>, which is how the artifact shape is checked without a registry. See <a href="#mage-tasks-and-automation">mage</a>.</p>
+<p>It sets up Go, logs into <code>ghcr.io</code> with the workflow token, reads the version out of the tag with the leading <code>v</code> removed, and runs <code>go run ./magefiles/core release:tofuProvider</code>. The version reaches the target through <code>env</code> rather than being interpolated into the <code>run</code> block.</p>
+<p>That target cross-compiles the provider for each published platform, zips each binary as <code>terraform-provider-cargoship_v&lt;version&gt;</code> with a fixed entry timestamp so the same commit produces the same bytes, generates one manifest per platform with artifactType <code>application/vnd.opentofu.provider-target</code> and the target platform, assembles an index with artifactType <code>application/vnd.opentofu.provider</code>, and copies the index to the repository using the oras-go library. <code>mage release:tofuProviderLayout &lt;version&gt;</code> does everything but the copy and leaves the OCI layout under <code>build/</code>, which is how the artifact shape is checked without a registry. See <a href="#mage-tasks-and-automation">mage</a>.</p>
 <p>An operator installs the result through a <code>provider_installation</code> block in their CLI configuration:</p>
 <pre><code class="language-hcl">provider_installation {
   oci_mirror {
@@ -17911,7 +18637,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p><strong>Recording what was written, as the ufw backend does.</strong> The ufw firewall backend keeps a state file of the rules it applied, because ufw cannot express “replace everything I own”. Here the desired set is already in hand at prune time – <code>filesFor(host)</code> is what drift detection just compared against – so a state file would add a thing to keep in sync for no new information.</p>
 <p><strong>A prefix instead of a suffix.</strong> A prefix would have to be cargoship’s own, which would rename every <code>HelmChartConfig</code> the project has ever written and orphan the files already on upgraded nodes. The suffix is what the files are already called.</p>
 <p>A malformed pattern matches nothing rather than everything (<code>ManagedDir.prunes</code>). Pruning is cleanup, and cleanup is not worth deleting something on a guess.</p>
-<p>See <a href="#package-values">package-values</a> for how a package produces the <code>HelmChartConfig</code> files this glob scopes pruning to.</p>
+<p>See <a href="#package-values-1">package-values</a> for how a package produces the <code>HelmChartConfig</code> files this glob scopes pruning to.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace"><a class="header" href="#why-the-local-vm-fleet-runs-on-plain-qemu-and-what-it-does-not-replace">Why the local VM fleet runs on plain qemu, and what it does not replace</a></h1>
 <p><code>internal/microvm</code> brings Enterprise Linux virtual machines up and down on a developer’s own machine so that the phases routing on OS family can be exercised against a real kernel. It exists because a container cannot answer the question <code>pkg/phase/21_prepare_selinux.go</code> asks: that phase gates on <code>getenforce</code> reporting <code>Enforcing</code>, no container reports it, and the phase is fatal on failure – so the one branch able to stop an apply was the one branch never run. <code>pkg/phase/22_prepare_fapolicyd.go</code>, the firewalld backend in <code>pkg/firewall/firewalld.go</code>, the <code>semodule</code> scriptlets in <code>k3s-selinux</code> and <code>rke2-selinux</code>, and the reboot in <code>pkg/phase/23_prepare_kernel_modules.go</code> are all in the same position, and <code>selinux: true</code> is set by every shipped package under <code>example/</code> without anything ever having checked that an engine configured that way starts.</p>
@@ -18290,6 +19016,116 @@ import (
 <p>The fork looks like duplication, and from inside <code>pkg/signing</code> there is nothing to show what reverting would cost: the option structs have the same field names, and <code>CosignSignBlobWithOptions</code> and <code>CosignVerifyBlobWithOptions</code> have the same signatures they always had. Going back to <code>zarf/src/pkg/signing</code> relinks four cloud SDKs and the whole cosign CLI tree – <strong>37.73MiB across the two steps</strong>, on a binary that is now 39.48MiB – none of it reachable from an air-gapped host.</p>
 <p>If the fork needs resyncing with upstream zarf, resync <code>bundle.go</code> and leave the rest alone. <code>cosign.go</code> is no longer zarf’s code in any meaningful sense: the option structs are cargoship’s, and the bodies delegate to <code>signkey.go</code> and <code>verifykey.go</code> rather than to cosign’s commands. The attribution header stays because the structs and <code>CheckOverwrite</code> began as zarf’s.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="how-the-opentofu-provider-is-tested-end-to-end"><a class="header" href="#how-the-opentofu-provider-is-tested-end-to-end">How the OpenTofu provider is tested end to end</a></h1>
+<p><code>test/e2e/tofu/</code> runs the real <code>tofu</code> binary over the shipped module against three machines - bootloose containers by default, local virtual machines when asked. Several of its shapes look like arbitrary choices and are not, and two of its preflight checks look like paranoia until the failure they catch happens to you. This records both, plus what the suite has actually proven and what it found while proving it.</p>
+<h2 id="why-the-real-cli-rather-than-terraform-plugin-testing"><a class="header" href="#why-the-real-cli-rather-than-terraform-plugin-testing">Why the real CLI rather than <code>terraform-plugin-testing</code></a></h2>
+<p>The framework’s acceptance harness is the obvious answer and was deliberately not taken. What it would add over this suite is per-step plan assertions; what it cannot add is the module, which is the layer a practitioner consumes. Driving <code>tofu</code> directly also means the suite exercises the pieces an acceptance test replaces with its own machinery: provider resolution out of a <code>filesystem_mirror</code> with no registry, the CLI configuration that keeps the run offline, and <code>tofu show -json</code> as the way state is read back.</p>
+<p>The cost is that failures arrive as CLI output rather than as typed diagnostics, so the suite strips ANSI escapes from everything it captures and logs each invocation with its output. <code>NO_COLOR</code> and <code>TF_IN_AUTOMATION</code> do not turn the colour off, and <code>-no-color</code> is not accepted by every subcommand.</p>
+<h2 id="why-it-consumes-the-module-and-not-a-bare-resource"><a class="header" href="#why-it-consumes-the-module-and-not-a-bare-resource">Why it consumes the module and not a bare resource</a></h2>
+<p>A root module in <code>testdata/main.tf</code> calls <code>example/terragrunt/terraform/modules/cluster</code>. A bare <code>cargoship_cluster</code> resource would test the provider and nothing else; going through the module also holds that the module’s variable types still accept what the provider’s schema wants. That is the half which breaks silently: when <code>host</code> blocks became a <code>hosts</code> map, nothing but a real <code>tofu plan</code> would have shown whether <code>hosts = var.hosts</code> still converted against a <code>map(object({...optional...}))</code> carrying a computed <code>removed</code> attribute.</p>
+<p>The module arrives as a <strong>symlink</strong> named <code>module</code>, not a copy. A local module source resolves relative to the file naming it, so a copied root module could not reach back into the repository without a path that depends on where the temp directory landed.</p>
+<p>The HCL is a checked-in fixture and the fleet is generated <code>terraform.tfvars.json</code>, which is <a href="https://github.com/colonel-byte/cargoship/blob/main/test/e2e/AGENTS.md"><code>test/e2e/AGENTS.md</code></a>’s rule applied honestly: the configuration is a document a reviewer reads as HCL, and the only part that varies per run is data.</p>
+<h2 id="why-three-machines-on-one-image-and-k3s"><a class="header" href="#why-three-machines-on-one-image-and-k3s">Why three machines on one image, and k3s</a></h2>
+<p>One image because nothing in this suite routes on the OS family - that is the phase suite’s job, machine by machine, and repeating it here would buy a second and third engine install for assertions already held elsewhere. Three machines because two of the three things the suite exists for need more than one node: a worker has to be removable while the cluster keeps running, and the controller driving that removal has to be a different machine from the one going.</p>
+<p>k3s rather than rke2 for the reason the phase suite’s full walk is k3s: a single controller means a SQLite datastore and no etcd quorum to time out under the CPU contention of three nested node containers.</p>
+<h2 id="the-two-preflights"><a class="header" href="#the-two-preflights">The two preflights</a></h2>
+<p>Both guard failures that were found the expensive way, and both masquerade as something else while they happen. They run before the machines are created, so a host that cannot run the suite starts no container. Neither runs on the microvm backend, where a guest kernel and a private segment make both questions somebody else’s.</p>
+<p><strong>Kernel modules.</strong> Without the legacy iptables tables, k3s starts, notifies readiness, and shuts itself down about three seconds later - <code>kube-proxy exited: iptables is not available on this host</code> - and systemd restarts it for the whole phase timeout. Seventy-seven restarts in eleven minutes, exit status 0 every time, and nothing from cargoship to say why; the explanation is only in the node’s journal.</p>
+<p>Cargoship does not load these itself, and that is not an oversight in the suite: <code>PrepareKernelModules</code> belongs to <code>action.NewPrepare</code> rather than to <code>NewApply</code>, it is gated on <code>opts.ModifyModules</code>, and it is gated again on the package declaring <code>spec.config.os.kernel</code>, which no shipped definition under <code>example/</code> does. What a node’s kernel carries is the machine image’s business - and a bootloose container’s image is the suite’s business. The provider has no prepare surface at all, so a fleet driven only through OpenTofu never runs those phases.</p>
+<p>The loading happens from a throwaway privileged container with <code>/lib/modules</code> mounted, because the Ubuntu node image carries no kmod - no <code>modprobe</code>, no <code>insmod</code>. Modules belong to the host kernel, so one container loads them for every machine. <code>CARGOSHIP_E2E_SKIP_MODPROBE=1</code> turns the loading off and keeps the check, for a machine whose kernel is not a test’s to change.</p>
+<p><strong>Inter-container networking.</strong> A worker joins by reaching the controller’s supervisor, so a host that forwards no traffic between containers cannot run a cluster - and host-to-container still works in that situation, which is what makes it slow to find. SSH reaches the machines through published ports and the controller installs itself locally, so an apply succeeds all the way to the worker join, then spends a phase timeout on <code>service k3s-agent is not running</code>.</p>
+<p>The usual cause is a host firewall rather than anything Docker was asked for: firewalld with Docker’s nftables backend drops forwarded traffic between containers even with <code>enable_icc=true</code> on the bridge, and a user-defined network does not escape it. The probe is two throwaway containers and one TCP connection, and it names both fixes - the bridge into firewalld’s docker zone, or <code>{"firewall-backend": "iptables"}</code> in <code>/etc/docker/daemon.json</code>. The second also makes Docker load the legacy iptables modules, which is why a host with this problem usually has both.</p>
+<h2 id="one-run-at-a-time"><a class="header" href="#one-run-at-a-time">One run at a time</a></h2>
+<p>The bootloose cluster name is fixed, as it is in the phase suite, so two runs of a suite share three container names. The loser is not the second run: the <strong>first</strong> run’s <code>TestMain</code> teardown deletes the machines the second one is using, minutes after the second one started. That happened twice while this suite was being written, once because a <code>go test -short</code> did not skip the walk.</p>
+<p><code>-short</code> now skips, which closes the accidental route. Nothing prevents two deliberate runs, and nothing should: a lock would be machinery for a case a sentence covers.</p>
+<h2 id="why-there-is-a-second-backend"><a class="header" href="#why-there-is-a-second-backend">Why there is a second backend</a></h2>
+<p><code>CARGOSHIP_E2E_BACKEND=microvm</code> provisions the three machines as local Rocky virtual machines instead of containers. It is not redundancy for its own sake: the inter-container networking failure above is a host condition a contributor cannot always fix, and a VM fleet routes over its own layer 2 segment, so that whole class of problem never arises. It is also how the walk was first seen green - see <a href="#what-the-walk-has-proven-and-what-it-found">what the walk has proven</a>.</p>
+<p>What the two buy on top of each other is the guest. Ubuntu containers against Rocky virtual machines put different halves of the phases under the same configuration, and <code>modify_firewall</code> only does anything on the second: Rocky boots with firewalld up, so a worker’s join is refused outright where a container’s phase correctly finds nothing to do. Run both rather than choosing.</p>
+<p><code>label_nodes</code> and <code>export_kubeconfig</code> are decided from the backend rather than probed, which is the one place this suite departs from the phase suite’s equivalent. A VM fleet’s load balancer is the leader’s address on a segment private to the qemu processes, so the management node has no route to the API server; the phase suite can probe for one because it asks after an install, while <code>label_nodes</code> is an attribute the apply carries and so has to be answered before one.</p>
+<h2 id="why-the-phase-timeout-is-tunable"><a class="header" href="#why-the-phase-timeout-is-tunable">Why the phase timeout is tunable</a></h2>
+<p><code>CARGOSHIP_E2E_TOFU_PHASE_TIMEOUT</code> exists for diagnosis, not for tuning. A phase that is going to fail waits out its whole timeout first, so investigating at the module’s own 20 minutes costs twenty minutes to arrive at an error that six reaches in six. It is the <code>timeout</code> the configuration hands the provider, so it changes nothing else.</p>
+<h2 id="what-the-walk-has-proven-and-what-it-found"><a class="header" href="#what-the-walk-has-proven-and-what-it-found">What the walk has proven, and what it found</a></h2>
+<p>The microvm backend ran the whole walk on 2026-10-16, which is the first time anything past the install has been seen: <code>init</code> resolves the provider out of the mirror with no registry, <code>plan</code> renders the resource with the fleet keyed by machine name, <code>apply</code> installs a three-node Rocky cluster through the provider in a little over two minutes - the node count read back through the controller’s own <code>kubectl</code>, not the provider’s <code>nodes</code> attribute - and <code>destroy</code> empties state and leaves no engine running. <code>kubeconfig</code> skips, as this backend decides it must.</p>
+<p>The two steps that failed are the suite earning its place. Both are provider defects, both are invisible to the unit tests and to the phase suite, and neither is this suite’s to fix.</p>
+<ul>
+<li><strong><code>converge</code>: a second plan is never empty.</strong> The nodes an apply records carry <code>engine_version = "v0.0.0"</code>, and the next refresh reads the engine’s real <code>v1.36.4+k3s1</code> off the hosts, so OpenTofu reports a change made “outside of OpenTofu” on every plan from then on. A resource that cannot converge is the first promise a practitioner tests.</li>
+<li><strong><code>remove</code>: the apply contradicts its own plan.</strong> Marking <code>kw1</code> absent plans <code>removed = false</code> for it - <code>useBoolStateForUnknownModifier</code> hands the prior state value through - and the apply then records <code>true</code>, which OpenTofu rejects with <code>Provider produced inconsistent result after apply ... .hosts["kw1"].removed: was cty.False, but now cty.True</code>. The removal work itself ran; the plan modifier has to leave <code>removed</code> unknown for a host the configuration marks absent.</li>
+</ul>
+<p>The container backend is still unproven past the install, for the inter-container reason above rather than for anything in the code.</p>
+<p>Also uncovered, by design for now:</p>
+<ul>
+<li><strong>The data source.</strong> <code>cargoship_cluster_facts</code> still takes <code>host</code> blocks rather than a map, and nothing here exercises it.</li>
+<li><strong>Terragrunt.</strong> The suite runs <code>tofu</code> directly; the layout in <code>example/terragrunt</code> is checked by hand.</li>
+<li><strong>A controller removal.</strong> The removal step removes a worker. Removing a controller gives up an etcd member, and the rules around it are unit-tested and documented rather than proven here - see <a href="#how-a-host-is-removed-through-the-opentofu-provider">choice-tofu-host-removal</a>.</li>
+<li><strong>An OCI mirror.</strong> The provider resolves out of a <code>filesystem_mirror</code>; the <code>oci_mirror</code> path a release publishes to is checked by reading the artifact with the ORAS CLI.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="how-a-host-is-removed-through-the-opentofu-provider"><a class="header" href="#how-a-host-is-removed-through-the-opentofu-provider">How a host is removed through the OpenTofu provider</a></h1>
+<p><a href="#why-apply-refuses-a-removed-host-instead-of-reconciling-it">choice-removed-hosts</a> decided that an apply refuses a removal rather than reconciling one, and named the single variant that survives every argument against it: a <strong>tombstone</strong>, where the host stays in the configuration for one apply with a marker saying to remove it. That is what <code>state = "absent"</code> is, and <a href="https://github.com/colonel-byte/cargoship/issues/339">#339</a> built the thing it needed from the phases – a reset that acts on a named subset while driving the node deletions through a controller that stays.</p>
+<p>This records the decisions taken while wiring the two together, because most of them are about failure rather than about the happy path, and each one is a shape the obvious code gets wrong.</p>
+<h2 id="why-the-marker-and-not-the-missing-block"><a class="header" href="#why-the-marker-and-not-the-missing-block">Why the marker and not the missing block</a></h2>
+<p>Deleting a <code>host</code> block deletes the address, the user and the key path with it. The provider still has them in prior state for one plan, and driving a teardown from that is the thing <code>choice-removed-hosts</code> argues against at length: a state file records what was true after the last apply, reset is destructive, and the address is the least stable identifier a host has. The tombstone keeps the machine described in the present tense while it is being removed.</p>
+<p>What the earlier document could not settle was “a decision on when the marker is cleaned up after the apply that acted on it”. That is the next section.</p>
+<h2 id="the-marker-stays-and-removed-is-why"><a class="header" href="#the-marker-stays-and-removed-is-why">The marker stays, and <code>removed</code> is why</a></h2>
+<p>The first implementation pruned the host from state once it was torn down, so the operator had to delete the block afterwards. That is one edit, one apply, one more edit – and if they forgot the last one, the configuration and the state disagreed on every subsequent plan, each of which would attempt the teardown again. Attempting it again means reaching a machine that has been removed, which works until the machine is decommissioned and then fails forever.</p>
+<p>So the block stays, and a computed <code>removed</code> attribute records that the work is done. <code>Update</code> reads the prior state, skips any host already recorded as removed, and the configuration can keep the tombstone indefinitely. Deleting the block is tidying, not a step.</p>
+<p>The cost is a marker in the configuration that outlives its meaning. It is a smaller cost than a plan that never converges.</p>
+<h2 id="a-failed-removal-keeps-everything"><a class="header" href="#a-failed-removal-keeps-everything">A failed removal keeps everything</a></h2>
+<p>Three rules, all learned from the same mistake:</p>
+<ul>
+<li><strong>The host stays in state.</strong> Pruning it after a failed teardown leaves a machine that is still running and still joined, described nowhere – and the block that was pruned held the only address and key path that could reach it. That rebuilds, from inside the provider, exactly the dead end <code>choice-removed-hosts</code> exists to prevent.</li>
+<li><strong>The failure is a diagnostic, not a warning.</strong> <code>tflog</code> output is invisible without <code>TF_LOG</code>, so a warning meant an apply that printed “Apply complete!” over a cluster that still held the node.</li>
+<li><strong>The apply stops.</strong> Converging on top of a half-removed cluster – drained and deleted but not uninstalled, or the reverse – is the other way to report success over a broken state.</li>
+</ul>
+<h2 id="what-a-destroy-does-with-the-markers-1"><a class="header" href="#what-a-destroy-does-with-the-markers-1">What a destroy does with the markers</a></h2>
+<p>It reads them and tears down what is still there. A host marked absent whose removal <strong>failed</strong> is included, because the machine is still running; one whose removal <strong>finished</strong> is excluded, because reaching for a decommissioned machine would fail. The markers are not something to clean up before destroying.</p>
+<p>This is deliberately not the list an apply uses. An apply converges the hosts that are staying, so it drops every absent host; a destroy has to act on what exists. Taking the apply’s list for a destroy walks past the one machine a failed removal left behind.</p>
+<h2 id="refusals-and-why-each-one-is-not-pedantry"><a class="header" href="#refusals-and-why-each-one-is-not-pedantry">Refusals, and why each one is not pedantry</a></h2>
+<p>Each of these is a case where the natural behaviour is a silent no-op or a quiet half-change:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Refused</th><th style="text-align: left">What would otherwise happen</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left">A <code>--target-hosts</code> entry naming no host</td><td style="text-align: left">Every phase filters down to nothing and the reset reports success having removed nothing. A typo is the ordinary route</td></tr>
+<tr><td style="text-align: left">Every running controller targeted, some host kept</td><td style="text-align: left">Nodes drained and deleted through a controller the same run is about to uninstall, with the outcome depending on host order</td></tr>
+<tr><td style="text-align: left">Every host marked <code>absent</code></td><td style="text-align: left">The whole cluster reset through the apply path, then a translation failure for a cluster with no hosts</td></tr>
+<tr><td style="text-align: left">More than one running controller removed in one run</td><td style="text-align: left">The second removal starts from a membership with a member already stopped, and hangs with the cluster unavailable</td></tr>
+</tbody>
+</table>
+</div>
+<p>The third is raised twice – once from <code>ModifyPlan</code>, once during the apply – because a saved plan is applied later and the apply is also where hosts already recorded as removed are known. It is a destroy written the long way, and an apply cannot do the part that matters: dropping the resource. It points at <code>tofu destroy</code>.</p>
+<h2 id="the-limit-worth-knowing-retain_on_destroy-is-the-wrong-shape"><a class="header" href="#the-limit-worth-knowing-retain_on_destroy-is-the-wrong-shape">The limit worth knowing: <code>retain_on_destroy</code> is the wrong shape</a></h2>
+<p>When the machines are OpenTofu resources too, a <code>tofu destroy</code> deletes them as well, and the cluster teardown is minutes of draining and uninstalling nodes that are about to cease to exist. <code>retain_on_destroy = true</code> skips it.</p>
+<p>But it is a <strong>resource attribute</strong>, so it is decided when the configuration is written, while “am I deleting the machines in this run?” is a property of the run. OpenTofu gives a resource no signal about what else is being destroyed – there is no “the thing I depend on is also going” in the provider protocol – so the provider cannot infer it, and a <code>-destroy</code>-time flag does not exist.</p>
+<p>What is left is to make the attribute a variable, so the decision is a <code>-var</code> rather than a code edit:</p>
+<pre><code class="language-hcl">variable "retain_cluster_on_destroy" {
+  type        = bool
+  description = "Leave the cluster running when the resource is destroyed. Set it when the machines are being destroyed in the same run: draining and uninstalling a node that is about to be deleted is work nobody sees the result of"
+  default     = false
+}
+
+resource "cargoship_cluster" "prod" {
+  # ...
+  retain_on_destroy = var.retain_cluster_on_destroy
+}
+</code></pre>
+<pre><code class="language-sh">tofu destroy -var retain_cluster_on_destroy=true
+</code></pre>
+<p>That is documented rather than solved, and it is the honest state of it.</p>
+<h2 id="removing-the-first-controller-is-a-configuration-problem-not-an-etcd-one"><a class="header" href="#removing-the-first-controller-is-a-configuration-problem-not-an-etcd-one">Removing the first controller is a configuration problem, not an etcd one</a></h2>
+<p>This one is <code>rke2</code> and <code>k3s</code> only: <code>upstream</code> renders <code>controlPlaneEndpoint</code> and every join’s <code>apiServerEndpoint</code> as the load balancer (<code>types/distrocfg/upstream_kubeadm.go</code>), so no host holds the first controller’s name and <code>run.Leader</code> is read only while joining.</p>
+<p>The membership arithmetic above is the part that looks dangerous, and it is handled in the phases. What is specific to the <em>first</em> controller is a file: every other controller’s <code>config.yaml</code> carries <code>server: https://&lt;first controller&gt;:9345</code>, written by <code>ConfigureEngine</code> when it joined (<code>types/distrocfg/rancher_common.go</code>), while workers and the kubeconfig both point at the load balancer instead.</p>
+<p>A running controller never reads that key – it is the join address, read at startup – so removing the machine it names breaks nothing until something restarts. <code>ConfigureEngine</code> re-renders it on every apply from the remaining hosts, with no restart, so the fix is an apply rather than new code. <code>EngineConfigSync</code> does not cover it: its desired-file set is registries, audit, PSS and chart manifests, and <code>config.yaml</code> is not in it.</p>
+<p>That is why the provider does removals and then convergence in one <code>tofu apply</code>, and why the CLI guide tells an operator to follow a targeted reset with an apply rather than treating the reset as finished. The window between the two is the only time the cluster holds a join address that resolves to nothing.</p>
+<h2 id="what-is-not-done"><a class="header" href="#what-is-not-done">What is not done</a></h2>
+<ul>
+<li><strong>Only one plan-time check.</strong> <code>ModifyPlan</code> raises the emptied cluster, which is the one refusal visible from the configuration alone. The others – a target naming no host, every running controller targeted, more than one controller in a run – all depend on which engines are answering, and a plan does not connect. They stay apply-time.</li>
+<li><strong>No e2e coverage of a targeted reset.</strong> <a href="https://github.com/colonel-byte/cargoship/issues/339">#339</a>’s own “done when” asks for a named worker and a named controller removed from a live cluster, with a host used only for leader selection keeping its engine. The unit tests cover the filtering and the refusals; nothing yet proves it against bootloose.</li>
+<li><strong>A quorum guard that counts hosts, not etcd members.</strong> A run that keeps the cluster and targets more than one running controller is refused (<code>ErrControllersNotOneAtATime</code>), and the removal that leaves a single controller keeps its engine up through the node deletion so the member can commit its own removal. Both count controllers whose engine answers, which is not the same as etcd’s view of the membership: a cluster already one member down looks whole to this check. Asking etcd directly needs an etcdctl path onto a controller, which no phase has today.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-opentofu-provider-is-a-package-of-this-module"><a class="header" href="#why-the-opentofu-provider-is-a-package-of-this-module">Why the OpenTofu provider is a package of this module</a></h1>
 <p>The provider that <a href="https://github.com/colonel-byte/cargoship/issues/302">#302</a> scopes lives at <code>cmd/terraform-provider-cargoship</code>, in this repository and in this Go module. Two alternatives were live: its own repository, <code>colonel-byte/terraform-provider-cargoship</code>, which is the only layout the OpenTofu registry accepts; and a second Go module here at <code>tofu/provider</code>, which would let the provider carry its own tags and keep its dependencies out of the committed vendor tree. This records why neither was taken, and what would make one of them right later.</p>
 <h2 id="the-registry-constraint-and-why-it-is-not-decisive"><a class="header" href="#the-registry-constraint-and-why-it-is-not-decisive">The registry constraint, and why it is not decisive</a></h2>
@@ -18312,7 +19148,7 @@ import (
 }
 </code></pre>
 <p>This matters for three reasons. The repository name is unconstrained, so <code>{owner}/terraform-provider-{name}</code> never enters into it. The artifact wants no GPG signature and no <code>SHA256SUMS</code> – an image index with <code>artifactType: application/vnd.opentofu.provider</code>, a per-platform manifest each with <code>artifactType: application/vnd.opentofu.provider-target</code> and a <code>platform</code>, and one layer of media type <code>archive/zip</code> holding the same <code>.zip</code> the registry protocol would serve – while <code>.goreleaser.yaml</code> signs with cosign, which the <a href="https://opentofu.org/docs/internals/provider-registry-protocol/">registry protocol</a> does not accept. And credentials come from the OCI ecosystem’s own locations, the ones <code>docker login</code> already writes, so an operator who can pull cargoship’s images can install its provider.</p>
-<p>It also reuses what this repository already does. <code>.goreleaser.yaml</code> pushes four image variants to ghcr.io on every release, so the registry, the authentication and the publish step all exist; the provider adds an artifact to a registry already in use rather than a new distribution channel. Tags are the version in SemVer 2.0.0 form, with <code>_</code> in place of <code>+</code> for build metadata, and ORAS 1.3.0 or newer is the tooling for assembling the index.</p>
+<p>It also reuses what this repository already does. <code>.goreleaser.yaml</code> pushes four image variants to ghcr.io on every release, so the registry, the authentication and the publish step all exist; the provider adds an artifact to a registry already in use rather than a new distribution channel. Tags are the version in SemVer 2.0.0 form, with <code>_</code> in place of <code>+</code> for build metadata, and the index is assembled with <code>oras.land/oras-go/v2</code> – the same client library <code>pkg/coci</code> already uses to talk to registries, rather than the ORAS CLI as a build-time dependency.</p>
 <p>Two limits worth stating plainly. OpenTofu does not yet support an OCI registry as the <strong>primary</strong> installation source for a provider, so a mirror is a redirection of a source address rather than a source address of its own: the configuration still names <code>registry.opentofu.org/colonel-byte/cargoship</code> (or whatever hostname is chosen), and the <code>oci_mirror</code> block is what sends the request to ghcr.io instead. And an airgapped operator still needs either a reachable internal OCI registry or a <code>filesystem_mirror</code>, exactly as they do for images today.</p>
 <p>So the publishing plan is: ghcr.io as an OCI mirror first, since it needs no listing and no second signing path, and a registry listing only if connected users turn out to want discovery. That ordering is why the GPG work stays deferred rather than being a prerequisite.</p>
 <p>The pipeline for it is <code>mage release:tofuProvider</code> (<code>magefiles/pkg/release</code>), run by <a href="#release-tofu-provideryaml"><code>release-tofu-provider.yaml</code></a> on the same <code>v*</code> tag the CLI release fires on. It is a mage target rather than another <code>builds:</code> entry in <code>.goreleaser.yaml</code> because what has to be published is not a release asset: it is an OCI image index assembled to the shape above, and goreleaser has nothing to say about composing one. Building the zips there too keeps the artifact in one place and lets them carry a fixed entry timestamp, so the same commit produces the same bytes – which <code>zip(1)</code> does not. <code>mage release:tofuProviderLayout</code> runs everything but the copy to the registry and leaves the layout under <code>build/</code>, so the artifact shape can be checked without pushing anything.</p>
@@ -18323,6 +19159,65 @@ import (
 <p>Two triggers, pointing at different answers.</p>
 <p><strong>Independent versioning starts to matter</strong> – the provider needs a patch the CLI does not, or the reverse, often enough to be worth paying for. That is the second module at <code>tofu/provider</code>, with a release-please component, <code>exclude-paths</code> on the root package, <code>separate-pull-requests</code>, a <code>v*</code> narrowing on <code>release.yaml</code>’s tag trigger so a component tag cannot cut a CLI release, and the six CI accommodations listed above. Everything in this document except the package path survives that move.</p>
 <p><strong>A registry listing is actually wanted</strong>, because enough connected users resolve providers through <code>registry.opentofu.org</code> for discovery to matter. That is the separate repository, and it is the one move that cannot be undone cheaply from inside this one. It is still not a rewrite: nobody imports a provider as a library, so the package path changing breaks no consumer, and <code>git subtree split</code> carries the history across. What it adds is a GPG signing path and a goreleaser configuration the OCI mirror does not need.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="removing-the-opentofu-provider-once-it-lives-in-its-own-repository"><a class="header" href="#removing-the-opentofu-provider-once-it-lives-in-its-own-repository">Removing the OpenTofu provider, once it lives in its own repository</a></h1>
+<p>This is the procedure for taking the provider out of this repository after it has moved to <code>colonel-byte/terraform-provider-cargoship</code>. It is written ahead of the move rather than after it, because the one thing a removal of this shape gets wrong is deleting a little too much: most of what carries <code>tofu</code> in its name belongs to the provider, and a handful of things that look like they do are load-bearing for the CLI.</p>
+<p><a href="#why-the-opentofu-provider-is-a-package-of-this-module">choice-tofu-provider-layout</a> is the companion piece and should be read first: it records why the provider is a package of this module today, and the conditions under which moving it becomes right. Nothing here argues for the move. <a href="#the-zarf-collection-was-removed-and-where-it-went">choice-zarf-collection-removal</a> is the precedent for how the last one went, and the shape this file should take afterwards - a record of where the code went, kept at this name so published links still resolve.</p>
+<h2 id="before-deleting-anything"><a class="header" href="#before-deleting-anything">Before deleting anything</a></h2>
+<p>The move itself is <code>git subtree split</code> on the paths below, into a repository named <code>{owner}/terraform-provider-{name}</code> - the registry validates that name and no tag or directory layout substitutes for it. Do that first and confirm the new repository builds and releases, because the history is much easier to carry across while it is still here.</p>
+<p>Two things to settle with a person rather than from the code:</p>
+<ul>
+<li><strong>Whether the provider keeps resolving through this repository’s OCI mirror</strong> during a transition. If it does, the release target below stays until the new repository’s registry listing works, and this removal is two changes rather than one.</li>
+<li><strong>What happens to <code>pkg/action.NewRefresh</code>.</strong> It exists for the provider: a read-only run used during a plan. After the move its only callers here are the phase-reference generator and its own tests, so it is either kept as a documented action the CLI does not expose, or it goes with the provider and <code>docs/phases/refresh.md</code> goes with it. Both are defensible; deleting it quietly is not.</li>
+</ul>
+<h2 id="what-is-the-providers-and-goes"><a class="header" href="#what-is-the-providers-and-goes">What is the provider’s, and goes</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Path</th><th style="text-align: left">What it is</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>cmd/terraform-provider-cargoship/</code></td><td style="text-align: left">the released binary’s <code>main</code></td></tr>
+<tr><td style="text-align: left"><code>internal/tofuprovider/</code></td><td style="text-align: left">the schema, the resource, the data source, the converger</td></tr>
+<tr><td style="text-align: left"><code>test/e2e/tofu/</code></td><td style="text-align: left">the provider e2e suite, including its microvm backend</td></tr>
+<tr><td style="text-align: left"><code>example/terragrunt/</code></td><td style="text-align: left">the shipped module and the Terragrunt layout the suite consumes</td></tr>
+<tr><td style="text-align: left"><code>docs/tofu/</code></td><td style="text-align: left">the generated provider reference, one of the trees <a href="AGENTS.html"><code>docs/AGENTS.md</code></a> lists</td></tr>
+<tr><td style="text-align: left"><code>magefiles/pkg/release/tofuprovider.go</code></td><td style="text-align: left">the OCI mirror build and push</td></tr>
+<tr><td style="text-align: left"><code>magefiles/pkg/gen/docs/tofu.go</code></td><td style="text-align: left">the generator that writes <code>docs/tofu/</code></td></tr>
+<tr><td style="text-align: left"><code>docs/agent/choice-tofu-provider-layout.md</code></td><td style="text-align: left">why it was a package of this module</td></tr>
+<tr><td style="text-align: left"><code>docs/agent/choice-tofu-secrets.md</code></td><td style="text-align: left">why the kubeconfig is withheld unless asked for</td></tr>
+<tr><td style="text-align: left"><code>docs/agent/choice-tofu-host-removal.md</code></td><td style="text-align: left">why a removal is a marker rather than a deletion</td></tr>
+<tr><td style="text-align: left"><code>docs/agent/choice-tofu-e2e.md</code></td><td style="text-align: left">why the suite drives the shipped module</td></tr>
+<tr><td style="text-align: left"><code>docs/agent/design-tofu-provider-install.md</code></td><td style="text-align: left">the install path’s design notes</td></tr>
+<tr><td style="text-align: left"><code>docs/dev/tofu-provider.md</code></td><td style="text-align: left">the development loop</td></tr>
+<tr><td style="text-align: left"><code>docs/dev/e2e-tofu-tests.md</code></td><td style="text-align: left">how to run the suite</td></tr>
+<tr><td style="text-align: left"><code>docs/guides/opentofu-terragrunt.md</code></td><td style="text-align: left">the practitioner guide</td></tr>
+</tbody>
+</table>
+</div>
+<p>The four <code>choice-tofu-*</code> records should be published in the new repository before they are deleted here, the way the zarf records were, and this file should then link to them at their new addresses. A decision record that simply disappears costs more than the page it occupied.</p>
+<h2 id="what-is-shared-and-is-edited-rather-than-deleted"><a class="header" href="#what-is-shared-and-is-edited-rather-than-deleted">What is shared, and is edited rather than deleted</a></h2>
+<ul>
+<li><strong><code>magefiles/release.go</code></strong> - drop <code>Release.TofuProvider</code>, <code>Release.TofuProviderDev</code> and <code>Release.TofuProviderLayout</code>. The <code>Release</code> namespace holds nothing else, so it goes with them; see <a href="#mage-tasks-and-automation">mage</a>, which documents the namespace as existing for the provider alone.</li>
+<li><strong><code>magefiles/test.go</code></strong> - drop <code>Test.EndToEndTofu</code> and <code>Test.EndToEndTofuVM</code>.</li>
+<li><strong><code>magefiles/pkg/testrunner/testrunner.go</code></strong> - drop <code>RunE2ETofu</code> and <code>TofuProviderVersion</code>.</li>
+<li><strong><code>magefiles/pkg/gen/docs/</code></strong> - drop the <code>docs/tofu</code> call from <code>Document()</code>, and the <code>refresh</code> entry from <code>phaseDocs()</code> if <code>NewRefresh</code> goes too.</li>
+<li><strong><code>.gitattributes</code></strong> - drop <code>docs/tofu/**/*.md linguist-generated</code>. Per <a href="../AGENTS.html">the rule in <code>AGENTS.md</code></a>, a pattern matching nothing is not an error anybody sees, so this is easy to leave behind.</li>
+<li><strong><code>README.md</code></strong> and <strong><code>docs/SUMMARY.md</code></strong> - the README is hand-written and will not correct itself; <code>SUMMARY.md</code> and <code>docs/index.md</code> are generated, so <code>go run ./magefiles/core generate:document</code> fixes them once the README is right.</li>
+<li><strong><code>cmd/cargoship/deps_test.go</code></strong> - see below. This one is a decision, not a deletion.</li>
+<li><strong><code>go.mod</code> / <code>go.sum</code> / <code>vendor/</code></strong> - <code>go mod tidy &amp;&amp; go mod vendor</code>. <code>go mod vendor</code> deletes the four generated <code>osv-scanner.toml</code> files under <code>vendor/</code>; restore them, per the records in this directory.</li>
+</ul>
+<h2 id="what-looks-like-the-providers-and-is-not"><a class="header" href="#what-looks-like-the-providers-and-is-not">What looks like the provider’s and is not</a></h2>
+<ul>
+<li><strong><code>cmd/cargoship/deps_test.go</code></strong> asserts that <code>internal/tofuprovider</code> and <code>hashicorp/terraform-plugin</code> are <strong>not</strong> linked into the CLI binary. Today that holds: <code>go list -deps ./cmd/cargoship</code> reports zero such packages. The test becomes vacuous when the provider leaves, but what it protects does not - it is the guard that keeps a provider-shaped dependency out of an air-gapped binary, and the <a href="../AGENTS.html">binary size budget</a> is why that matters. Keep the file and its other entries; drop only the two lines that name packages no longer in the module.</li>
+<li><strong><code>api/colonel-byte.dev/v1alpha1/cluster.Host.ConfiguredAddress</code></strong> was added for the provider’s <code>address</code> attribute and is now also what the run receipt identifies a host by. It stays.</li>
+<li><strong><code>pkg/action.KubeConfigOptions.NoWrite</code>, <code>KubeConfig.Bytes</code> and <code>KubeConfig.Config</code></strong> were added so the provider could have the credentials without writing <code>~/.kube/config</code>. <code>cargoship kube-config --no-write</code> is not the same thing, so check the CLI’s own callers before assuming these go.</li>
+<li><strong><code>zarf-dev/zarf</code></strong> in <code>go.mod</code> has nothing to do with any of this. It is a library dependency for package formats, architecture detection and OCI handling, and predates both the provider and the collection that did leave. The zarf removal record exists partly to stop exactly this mistake being made twice.</li>
+<li><strong><code>pkg/phase</code> and <code>pkg/action</code></strong> generally. The provider drives the same phases the CLI does; that is the whole premise. Nothing under <code>pkg/</code> is the provider’s except the three members named above.</li>
+</ul>
+<h2 id="afterwards"><a class="header" href="#afterwards">Afterwards</a></h2>
+<p>Rewrite this page as the record of where the provider went, following <a href="#the-zarf-collection-was-removed-and-where-it-went">choice-zarf-collection-removal</a>: keep the file at this name, because every page under <code>docs/</code> is published and a rename costs an <code>[output.html.redirect]</code> entry in <a href="../book.toml"><code>book.toml</code></a> that has to be kept for as long as anything outside the repository might hold the old link - see <a href="AGENTS.html"><code>docs/AGENTS.md</code></a>, say which repository and which release carries it now, link the decision records at their new addresses, and say plainly what was <em>not</em> lost - a reader who finds <code>tofu</code> in <code>go.mod</code> and no provider should not have to work that out.</p>
+<p>Then measure the binary. The provider’s dependencies are vendored for the provider and linked only into its own binary, so <code>mage build:binary</code> should not move much - but “should not” is not a measurement, and <a href="#build-flags-and-environment">build-flags</a> is the only safe way to produce a number that can be compared with the one before the removal.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="what-the-opentofu-providers-schema-may-hold-and-what-it-may-not"><a class="header" href="#what-the-opentofu-providers-schema-may-hold-and-what-it-may-not">What the OpenTofu provider’s schema may hold, and what it may not</a></h1>
 <p>A tofu state file is a record of everything a resource knows, written in plaintext. It is committed, pushed to remote backends, and readable by everyone with access to that backend. So any attribute the <code>cargoship_cluster</code> resource accepts or computes is, in practice, published to whoever can read the state - and a published schema is hard to narrow afterwards, because narrowing it breaks every configuration already using it.</p>
@@ -18669,6 +19564,27 @@ internal/tofuprovider/
 <li><strong><code>tofu init</code> pins the binary’s checksum</strong>, so a rebuilt provider fails the next plan until <code>.terraform.lock.hcl</code> is deleted and <code>init</code> re-run. That is the development loop, not a bug.</li>
 <li><strong>The connect phase retries for ten minutes</strong>, which is right for an apply and wrong for a plan. The provider bounds every read at <code>connect_timeout</code> (one minute by default) and says so when it gives up. An authentication failure is retried the same way a refused connection is, so a wrong key also takes the full timeout – worth fixing in <code>pkg/phase/07_connect.go</code> rather than in the provider, since the CLI has the same problem.</li>
 </ul>
+<h3 id="the-core-changes"><a class="header" href="#the-core-changes">The core changes</a></h3>
+<p><code>pkg/action</code> now reports what it cannot do rather than returning something that cannot be used:</p>
+<ul>
+<li><code>NewApply</code>, <code>NewReset</code>, <code>NewKubeConfig</code> and <code>NewEngineConfigSync</code> return <code>(*T, error)</code>. They returned a nil action for a distro ID they could not resolve, which every caller dereferenced. The CLI reached that through a flag default; a provider reaches it through an attribute somebody types.</li>
+<li><code>KubeConfigOptions</code> gains <code>NoWrite</code>, and the action gains <code>Bytes()</code> and <code>Config()</code>. The field is the negative so the zero value still writes, which is what <code>cargoship install kube-config</code> exists to do; a caller that wants the value instead reads it back after <code>Run</code>.</li>
+<li><code>action.NewRefresh</code> is the read-only phase list as a named action, with <code>AllowDowngrade</code> set because a refresh reports rather than installs and has no package to refuse. <code>docs/phases/refresh.md</code> is generated from it, and the provider calls it instead of assembling phases itself.</li>
+</ul>
+<p><code>TestNewRefreshIsEntirelyReadOnly</code> holds the property the action rests on, with one documented exception: <code>Disconnect</code> declares its own dry-run path rather than being read-only, because in an apply it has a staged binary to remove. After a refresh there is nothing to remove, and what it does is close connections.</p>
+<h3 id="the-resource-1"><a class="header" href="#the-resource-1">The resource</a></h3>
+<p><code>cargoship_cluster</code> with <code>Create</code>, <code>Read</code>, <code>Update</code> and <code>Delete</code>. The decisions worth recording, because the natural code shape gets each of them wrong:</p>
+<ul>
+<li><strong>State is written on failure.</strong> <code>converge</code> sets state before reporting the error, and the converger returns a result alongside a non-nil error for the same reason: an apply that failed part way through has changed hosts, and a plan reading an empty state would re-bootstrap a live cluster. <code>fillUnknown</code> exists because state cannot hold an unknown value, so a run that failed before producing a computed attribute would fail to write state at all – and then the only thing reported would be the framework complaining about unknowns.</li>
+<li><strong>The engine is read from the package, not stated twice.</strong> <code>distro</code> is computed from what <code>distro.Load</code> reports, and it is what <code>Read</code> and <code>Delete</code> need. A reset loads no package, so a teardown with no recorded engine is refused rather than guessed at.</li>
+<li><strong>The apply never writes the operator’s kubeconfig.</strong> <code>ApplyOptions.NoKubeConfigFile</code> is what the provider sets: merging credentials into <code>~/.kube/config</code> as a side effect of an apply would change a machine the resource does not describe. The credentials are read back through <code>Apply.KubeConfigBytes</code> instead, and only when <code>export_kubeconfig</code> asks for them.</li>
+<li><strong>A failed destroy leaves the resource in state.</strong> A reset that failed part way has removed the engine from some hosts and not others; dropping the resource would leave nothing describing the half that remains.</li>
+</ul>
+<p>Still missing from the resource: <code>ModifyPlan</code>, and acceptance tests. <code>ImportState</code> is deliberately absent – an ID alone cannot recover the host blocks or their key paths.</p>
+<h3 id="profiles-and-per-host-overrides-1"><a class="header" href="#profiles-and-per-host-overrides-1">Profiles and per-host overrides</a></h3>
+<p>The resource’s <code>profiles</code> map renders <code>Spec.Config.Profiles</code>, and the host block carries the node-configuring half: <code>node_labels</code>, <code>node_taints</code>, <code>environment</code>, <code>private_interface</code>, <code>ports</code>, <code>firewall_rules</code> and <code>bastion</code>. Before this a host could select a profile and get only the node-role label its name implies, because nothing filled the profiles map in.</p>
+<p>Two decisions in it. A host selecting a profile the map does not define is refused, because nothing downstream treats that as wrong – the lookup returns a zero value and the taints the operator wrote never exist. And a <code>profile</code> with no profiles map at all is still accepted, since it names the <code>node-role.kubernetes.io</code> label and groups hosts for concurrency.</p>
+<p>The data source keeps the smaller host block: a read needs an address, a role and the connection details. <code>TestTheDataSourceHostBlockIsASubsetOfTheResource</code> holds the relationship rather than pinning the two to be equal.</p>
 <h2 id="order-of-work"><a class="header" href="#order-of-work">Order of work</a></h2>
 <p>Five layers, stacked on #609 (the stack is linear and these all depend on the package existing):</p>
 <ol>

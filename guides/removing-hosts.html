@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "../searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-85cbcabe.js"></script>
+        <script src="../toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -198,7 +198,42 @@ apply anyway: worker3 (worker)
 <p>Draining a node and deleting its <code>Node</code> object needs the node’s name, which the API server will happily give us. Uninstalling the engine – stopping the service, removing the packages, deleting the data directory and certificates – needs an SSH connection to the machine, and the address, user and key for that lived in the <code>hosts</code> entry you just deleted. An apply has no memory of previous runs, so it has no way to reach a machine the config no longer describes.</p>
 <p>Doing only the first half would be worse than doing nothing, because it looks like the removal worked. The machine keeps its certificates and keeps trying to rejoin, and if it was a controller it stays an etcd member: the cluster looks smaller while quorum is still counted against a member nobody can reach.</p>
 <p>So an apply reports the gap and leaves the cluster alone.</p>
-<h2 id="removing-the-machine-with-the-cli"><a class="header" href="#removing-the-machine-with-the-cli">Removing the machine with the CLI</a></h2>
+<h2 id="removing-a-host-in-opentofu"><a class="header" href="#removing-a-host-in-opentofu">Removing a host in OpenTofu</a></h2>
+<p>In OpenTofu, mark the host as <code>state = "absent"</code> in your <code>cargoship_cluster</code> resource:</p>
+<pre><code class="language-hcl">resource "cargoship_cluster" "prod" {
+  # ...
+
+  hosts = {
+    controller1 = {
+      address  = "10.0.0.11"
+      role     = "controller"
+      key_path = "~/.ssh/id_ed25519"
+      profile  = "control"
+    }
+
+    # worker3 is marked for removal:
+    worker3 = {
+      address  = "10.0.0.31"
+      role     = "worker"
+      key_path = "~/.ssh/id_ed25519"
+      state    = "absent"
+    }
+  }
+}
+</code></pre>
+<p>One <code>tofu apply</code> does the whole removal:</p>
+<ol>
+<li>The node is drained and deleted from the cluster, through a controller that is staying. The run refuses rather than guessing if every running controller is itself marked absent – removing all of them is a teardown, and <code>tofu destroy</code> is what does that.</li>
+<li>Cargoship connects to <code>10.0.0.31</code> over SSH, stops the engine and uninstalls it.</li>
+<li>Every other host is left alone, and the apply then converges them as usual.</li>
+<li>The host’s <code>removed</code> attribute becomes <code>true</code>.</li>
+</ol>
+<p><strong>Leave the entry where it is.</strong> <code>removed</code> is what tells later applies the work is done, so they neither repeat the teardown nor try to reach a machine that may since have been decommissioned. Delete the entry whenever it suits; nothing depends on it going, and deleting it changes nothing on any host.</p>
+<p>If the removal fails, the apply stops there and says so. The entry stays in state with <code>removed</code> still false, which is deliberate: the machine is still running and still joined, and that entry holds the only address and key path that can reach it. Fix the cause and apply again. The rest of the convergence does not run, because converging on top of a half-removed cluster would report success over a node that is still in it.</p>
+<h3 id="what-a-destroy-does-with-the-markers"><a class="header" href="#what-a-destroy-does-with-the-markers">What a destroy does with the markers</a></h3>
+<p>Nothing, beyond reading them. <code>tofu destroy</code> tears down everything the cluster still holds: a host marked absent whose removal failed is included, because the machine is still running and still joined, and one whose removal finished is left out, because reaching for a decommissioned machine would fail. The markers are not something to clean up before destroying.</p>
+<p>If the machines are OpenTofu resources too and are being destroyed in the same run, consider <code>retain_on_destroy = true</code> – draining and uninstalling a node that is about to be deleted is minutes spent on a result nobody sees. See <a href="opentofu-terragrunt.html#destroying-the-machines-as-well">opentofu-terragrunt</a>.</p>
+<h2 id="removing-the-machine-by-hand-cli"><a class="header" href="#removing-the-machine-by-hand-cli">Removing the machine by hand (CLI)</a></h2>
 <p>With the CLI, use targeted reset with <code>--target-hosts</code>:</p>
 <pre><code class="language-console">$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts worker3 --confirm
 </code></pre>
@@ -209,7 +244,8 @@ apply anyway: worker3 (worker)
 <p><strong>Cargoship stops the engine on the target before deleting its node.</strong> That is what makes the deletion stick: k3s and RKE2 remove the etcd member when the Node object is deleted, but only once the engine behind it has stopped, and an engine that is still running re-registers the node seconds later. The one exception is a removal that leaves a single controller, where the member being removed has to still be up to form the majority of two that commits its own removal – there the engine stays running through the deletion and is uninstalled immediately after.</p>
 <p><strong>One controller per run.</strong> A run that keeps the cluster and targets two running controllers is refused. Each removal is a raft reconfiguration that needs a majority of the membership it starts from; the second one in a run would start from three members with one already stopped, and taking the next one down leaves one of two, which hangs with the cluster unavailable rather than failing cleanly. Removing them in separate runs is safe, because the cluster is whole again at the start of each.</p>
 <h3 id="removing-the-first-controller"><a class="header" href="#removing-the-first-controller">Removing the first controller</a></h3>
-<p>There is nothing special about the first controller at runtime – it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:</p>
+<p>This section is about <code>k3s</code> and <code>rke2</code>. On <code>upstream</code> there is nothing to do: kubeadm is given <code>controlPlaneEndpoint: &lt;load_balancer&gt;</code> at init and every host – controllers included – joins through <code>apiServerEndpoint: &lt;load_balancer&gt;</code>, so no host holds the first controller’s name. The removed controller lingers in the API server’s <code>certSANs</code> until the next apply re-renders them, which changes nothing.</p>
+<p>On k3s and RKE2 there is nothing special about the first controller at runtime either – it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -223,7 +259,8 @@ apply anyway: worker3 (worker)
 </table>
 </div>
 <p>So the step that makes it safe is re-rendering <code>config.yaml</code> on the controllers that stayed, which <code>cargoship apply</code> does: it re-elects the first controller from the remaining hosts and writes the new <code>server:</code> to every one of them. The engines are not restarted for it, which is the point – the file is correct again before anything reads it.</p>
-<p>The targeted reset and the apply are two commands, and the apply is not optional:</p>
+<p>In OpenTofu this is already one operation. <code>tofu apply</code> removes the host and then converges what is left, in that order, in the same run.</p>
+<p>With the CLI, the targeted reset and the apply are two commands, and the apply is not optional:</p>
 <pre><code class="language-console">$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts controller1 --confirm
 $ cargoship apply ./package.tar.zst --config ./cargoship-config.yaml --confirm
 </code></pre>

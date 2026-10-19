@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "../../searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-85cbcabe.js"></script>
+        <script src="../../toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,6 +193,7 @@
 <li><a href="#Apply">type Apply</a>
 <ul>
 <li><a href="#NewApply">func NewApply(opts ApplyOptions) (*Apply, error)</a></li>
+<li><a href="#Apply.KubeConfigBytes">func (a Apply) KubeConfigBytes() ([]byte, error)</a></li>
 <li><a href="#Apply.Run">func (a Apply) Run(ctx context.Context) error</a></li>
 </ul>
 </li>
@@ -207,6 +208,8 @@
 <li><a href="#KubeConfig">type KubeConfig</a>
 <ul>
 <li><a href="#NewKubeConfig">func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)</a></li>
+<li><a href="#KubeConfig.Bytes">func (a KubeConfig) Bytes() ([]byte, error)</a></li>
+<li><a href="#KubeConfig.Config">func (a KubeConfig) Config() *clientcmdapi.Config</a></li>
 <li><a href="#KubeConfig.Run">func (a KubeConfig) Run(ctx context.Context) error</a></li>
 </ul>
 </li>
@@ -218,6 +221,13 @@
 </ul>
 </li>
 <li><a href="#PrepareOptions">type PrepareOptions</a></li>
+<li><a href="#Refresh">type Refresh</a>
+<ul>
+<li><a href="#NewRefresh">func NewRefresh(opts RefreshOptions) (*Refresh, error)</a></li>
+<li><a href="#Refresh.Run">func (a Refresh) Run(ctx context.Context) error</a></li>
+</ul>
+</li>
+<li><a href="#RefreshOptions">type RefreshOptions</a></li>
 <li><a href="#Reset">type Reset</a>
 <ul>
 <li><a href="#NewReset">func NewReset(opts ResetOptions) (*Reset, error)</a></li>
@@ -231,25 +241,32 @@
 <pre><code class="language-go">var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
 </code></pre>
 <p><a name="Apply"></a></p>
-<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L66-L69">Apply</a></a></h2>
+<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75-L81">Apply</a></a></h2>
 <p>Apply state logic</p>
 <pre><code class="language-go">type Apply struct {
     ApplyOptions
     Phases phase.Phases
+    // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="NewApply"></a></p>
-<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L72">NewApply</a></a></h3>
+<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L84">NewApply</a></a></h3>
 <pre><code class="language-go">func NewApply(opts ApplyOptions) (*Apply, error)
 </code></pre>
 <p>NewApply an apply action object</p>
+<p><a name="Apply.KubeConfigBytes"></a></p>
+<h3 id="func-apply-kubeconfigbytes"><a class="header" href="#func-apply-kubeconfigbytes">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L207">KubeConfigBytes</a></a></h3>
+<pre><code class="language-go">func (a Apply) KubeConfigBytes() ([]byte, error)
+</code></pre>
+<p>KubeConfigBytes is the cluster’s admin credentials, serialized, as the run built them.</p>
+<p>It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase is skipped otherwise and there is nothing to return. What comes back is cluster-admin, so a caller holding it is holding the cluster.</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L215">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L63">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L72">ApplyOptions</a></a></h2>
 <p>ApplyOptions struct</p>
 <pre><code class="language-go">type ApplyOptions struct {
     // Manager is the phase manager
@@ -273,6 +290,15 @@
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // NoKubeConfigFile builds the admin credentials without merging them into the operator's
+    // kubeconfig, so that a caller can read them through KubeConfigBytes and nothing on the
+    // machine running the apply is changed.
+    //
+    // It is phrased as the negative for the reason KubeConfigOptions.NoWrite is: the zero value
+    // writes, which is what every caller before this field existed did. The OpenTofu provider is
+    // the caller that sets it -- an apply that merged credentials into ~/.kube/config as a side
+    // effect would be changing a machine the resource does not describe.
+    NoKubeConfigFile bool
     // LabelNodes whether to check and add the node-role.kubernetes.io/&lt;profile&gt; label on nodes
     LabelNodes bool
     // AllowUnmanagedNodes lets an apply continue when the cluster holds a node no host in the
@@ -324,25 +350,38 @@
 }
 </code></pre>
 <p><a name="KubeConfig"></a></p>
-<h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L41-L44">KubeConfig</a></a></h2>
+<h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L51-L57">KubeConfig</a></a></h2>
 <p>KubeConfig state logic</p>
 <pre><code class="language-go">type KubeConfig struct {
     KubeConfigOptions
     Phases phase.Phases
+    // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="NewKubeConfig"></a></p>
-<h3 id="func-newkubeconfig"><a class="header" href="#func-newkubeconfig">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L47">NewKubeConfig</a></a></h3>
+<h3 id="func-newkubeconfig"><a class="header" href="#func-newkubeconfig">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L60">NewKubeConfig</a></a></h3>
 <pre><code class="language-go">func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)
 </code></pre>
 <p>NewKubeConfig pulls the admin cert from a control-plane node and updates the local kube-config</p>
+<p><a name="KubeConfig.Bytes"></a></p>
+<h3 id="func-kubeconfig-bytes"><a class="header" href="#func-kubeconfig-bytes">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L98">Bytes</a></a></h3>
+<pre><code class="language-go">func (a KubeConfig) Bytes() ([]byte, error)
+</code></pre>
+<p>Bytes is the kubeconfig the run built, serialized.</p>
+<p>It is read after Run, and it is the half of this action that has nothing to do with the operator’s own kubeconfig: phase.KubeConfig builds the credentials whether or not it writes them, and #305 separated the two so a caller could have the value without touching ~/.kube/config. Before this, the only way to reach it was to rebuild the phase list by hand.</p>
+<p>What comes back is cluster-admin credentials, so a caller holding them is holding the cluster.</p>
+<p><a name="KubeConfig.Config"></a></p>
+<h3 id="func-kubeconfig-config"><a class="header" href="#func-kubeconfig-config">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L107">Config</a></a></h3>
+<pre><code class="language-go">func (a KubeConfig) Config() *clientcmdapi.Config
+</code></pre>
+<p>Config is the same credentials as a structure, for a caller that wants to read a field rather than a file. Nil until Run has built it.</p>
 <p><a name="KubeConfig.Run"></a></p>
-<h3 id="func-kubeconfig-run"><a class="header" href="#func-kubeconfig-run">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L75">Run</a></a></h3>
+<h3 id="func-kubeconfig-run"><a class="header" href="#func-kubeconfig-run">func (KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L115">Run</a></a></h3>
 <pre><code class="language-go">func (a KubeConfig) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="KubeConfigOptions"></a></p>
-<h2 id="type-kubeconfigoptions"><a class="header" href="#type-kubeconfigoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L32-L38">KubeConfigOptions</a></a></h2>
+<h2 id="type-kubeconfigoptions"><a class="header" href="#type-kubeconfigoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L33-L48">KubeConfigOptions</a></a></h2>
 <p>KubeConfigOptions struct</p>
 <pre><code class="language-go">type KubeConfigOptions struct {
     // Manager is the phase manager
@@ -350,6 +389,15 @@
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // NoWrite leaves the operator's kubeconfig alone, so the credentials are built and returned
+    // and nothing on this machine is touched.
+    //
+    // It is phrased as the negative so that the zero value writes, which is what every caller
+    // before this field existed did: `cargoship install kube-config` exists to write the file.
+    // A caller that wants the value instead reads Bytes or Config after Run; see
+    // docs/agent/choice-tofu-secrets.md for why the OpenTofu provider is that caller and why it
+    // does not expose the result unless it is asked to.
+    NoWrite bool
 }
 </code></pre>
 <p><a name="Prepare"></a></p>
@@ -386,6 +434,35 @@
     ModifyFirewall bool
     // ModifyModules whether to update the host kernel modules
     ModifyModules bool
+}
+</code></pre>
+<p><a name="Refresh"></a></p>
+<h2 id="type-refresh"><a class="header" href="#type-refresh">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L35-L38">Refresh</a></a></h2>
+<p>Refresh state logic</p>
+<pre><code class="language-go">type Refresh struct {
+    RefreshOptions
+    Phases phase.Phases
+}
+</code></pre>
+<p><a name="NewRefresh"></a></p>
+<h3 id="func-newrefresh"><a class="header" href="#func-newrefresh">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L57">NewRefresh</a></a></h3>
+<pre><code class="language-go">func NewRefresh(opts RefreshOptions) (*Refresh, error)
+</code></pre>
+<p>NewRefresh a refresh action object.</p>
+<p>Refresh is the read-only half of an apply: it connects to every host the configuration names, resolves each one’s OS, gathers its network facts and reads the engine version already installed on it, and disconnects. Every phase in the list declares ReadOnly(), which is the property that makes the whole action safe to run against a live fleet -- nothing is written, and no cluster lock is taken, because Lock deliberately declares neither interface.</p>
+<p>It exists as an action rather than as a phase list each caller assembles because there is now more than one caller. The OpenTofu provider reads a fleet during a plan and during a refresh, and a provider that built its own list would be a second place where “which phases are safe to run” is decided -- which is exactly the question ReadOnly() exists to answer once. The CLI has no command for it yet; see docs/agent/design-tofu-provider-install.md.</p>
+<p>What it leaves behind is on the hosts themselves: each phase records what it learned on the Host it ran against, so a caller reads the facts off Manager.Config.Spec.Hosts afterwards rather than out of a return value.</p>
+<p><a name="Refresh.Run"></a></p>
+<h3 id="func-refresh-run"><a class="header" href="#func-refresh-run">func (Refresh) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L90">Run</a></a></h3>
+<pre><code class="language-go">func (a Refresh) Run(ctx context.Context) error
+</code></pre>
+<p>Run the actions</p>
+<p><a name="RefreshOptions"></a></p>
+<h2 id="type-refreshoptions"><a class="header" href="#type-refreshoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L29-L32">RefreshOptions</a></a></h2>
+<p>RefreshOptions struct</p>
+<pre><code class="language-go">type RefreshOptions struct {
+    // Manager is the phase manager
+    Manager *phase.Manager
 }
 </code></pre>
 <p><a name="Reset"></a></p>

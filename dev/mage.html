@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "../searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-85cbcabe.js"></script>
+        <script src="../toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -236,6 +236,8 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <li><code>EndToEndCluster</code> - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
 <li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node. It provisions a different five machines rather than fewer: <code>stageOS</code> is one per OS family per role, including a Fedora controller and the upload-only Alpine host, where the full walk’s <code>k3sOS</code> is a single Ubuntu controller and four workers.</li>
 <li><code>EndToEndClusterDryRun</code> - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with <code>--dry-run</code> against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.</li>
+<li><code>EndToEndTofu</code> - Runs the OpenTofu provider suite: three bootloose machines installed, reduced by one worker and destroyed through the real <code>tofu</code> CLI over the module in <code>example/terragrunt</code>. It builds the provider into the local filesystem mirror first, which is where the suite resolves it from. Needs Docker and a <code>tofu</code> on PATH; the suite skips with a reason when either is missing. See <a href="e2e-tofu-tests.html">e2e-tofu-tests</a>.</li>
+<li><code>EndToEndTofuVM</code> - Runs the same suite against local Rocky virtual machines instead of containers, by setting <code>CARGOSHIP_E2E_BACKEND=microvm</code>. Needs KVM. It is the backend to reach for on a host whose Docker forwards no traffic between containers, since a VM fleet routes over its own segment. See <a href="e2e-tofu-tests.html">e2e-tofu-tests</a>.</li>
 <li><code>CleanCluster</code> - Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
 <li><code>Fuzz</code> - Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="fuzz-tests.html">fuzz-tests</a>.</li>
 </ul>
@@ -244,13 +246,15 @@ mage test:endToEndNonCluster    # run the misc/package command suites, no cluste
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
 mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
+mage test:endToEndTofu          # run the OpenTofu provider suite against a three-machine cluster (needs tofu)
+mage test:endToEndTofuVM        # the same walk against local virtual machines (needs KVM)
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
 </code></pre>
 <h3 id="release-namespace"><a class="header" href="#release-namespace"><code>Release</code> Namespace</a></h3>
 <p>The <code>Release</code> namespace holds the release artifacts goreleaser does not build. Only the OpenTofu provider is here, because what has to be published for it is an OCI image index assembled to the shape an OpenTofu provider mirror serves rather than a release asset. See <a href="../agent/choice-tofu-provider-layout.html">choice-tofu-provider-layout</a>.</p>
 <ul>
-<li><code>TofuProvider</code> - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading <code>v</code>, and optionally the repository to publish to. Needs ORAS 1.3.0 or newer on <code>PATH</code>, which is what <code>--artifact-platform</code> needs.</li>
+<li><code>TofuProvider</code> - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading <code>v</code>, and optionally the repository to publish to.</li>
 <li><code>TofuProviderLayout</code> - The same build and assembly, stopping before the push and leaving the OCI layout under <code>build/tofu-provider/layout</code>. This is how the artifact shape is checked without a registry.</li>
 <li><code>TofuProviderDev</code> - Builds the provider for this machine only, into a <code>filesystem_mirror</code> layout under <code>build/tofu-provider/mirror/</code>, and prints the directory to point a <code>.tofurc</code> at. This is the development loop; see <a href="tofu-provider.html">tofu-provider</a>.</li>
 </ul>

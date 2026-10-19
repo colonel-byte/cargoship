@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "../searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-85cbcabe.js"></script>
+        <script src="../toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -242,6 +242,29 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UP
     go test -mod=vendor -timeout=3h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 </code></pre>
 <p>No CI job runs this; it is the only way to cover the upgrade phases.</p>
+<h2 id="testendtoendtofu"><a class="header" href="#testendtoendtofu"><code>Test.EndToEndTofu</code></a></h2>
+<p>Same cleanup, plus the provider build the suite resolves against. The build is <code>release:tofuProviderDev</code> in one line: the provider for this machine, into the mirror layout, stamped with the version the module’s constraint asks for.</p>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"
+$ go build -ldflags "-X main.version=0.1.0 -X github.com/colonel-byte/cargoship/internal/tofuprovider.Version=0.1.0" \
+    -o build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"/terraform-provider-cargoship_v0.1.0 \
+    ./cmd/terraform-provider-cargoship
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/tofu/...
+</code></pre>
+<p>The suite skips rather than fails when <code>tofu</code> is not on PATH or the mirror does not hold that binary, so a run that prints two skips and passes means one of those two is missing. See <a href="e2e-tofu-tests.html">e2e-tofu-tests</a>.</p>
+<h2 id="testendtoendtofuvm"><a class="header" href="#testendtoendtofuvm"><code>Test.EndToEndTofuVM</code></a></h2>
+<p>The same build and the same walk, against local virtual machines. The bootloose cleanup is not needed, because this backend starts no containers; what it needs instead is that no other fleet holds its loopback ports.</p>
+<pre><code class="language-console">$ mkdir -p build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"
+$ go build -ldflags "-X main.version=0.1.0 -X github.com/colonel-byte/cargoship/internal/tofuprovider.Version=0.1.0" \
+    -o build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"/terraform-provider-cargoship_v0.1.0 \
+    ./cmd/terraform-provider-cargoship
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/tofu/...
+</code></pre>
+<p>Needs KVM. The fleet is called <code>tofu</code>; <code>mage dev:vmList -fleet=tofu</code> shows what a killed run left behind and <code>mage dev:vmDown -fleet=tofu</code> removes it.</p>
 <h2 id="testcleanzarfclusters"><a class="header" href="#testcleanzarfclusters"><code>Test.CleanZarfClusters</code></a></h2>
 <pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
 </code></pre>

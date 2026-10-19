@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-85cbcabe.js"></script>
+        <script src="toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -376,6 +376,15 @@ cargoship redact-receipt ./receipt.json -o ./share.json
 <li><a href="guides/ansible-module.html">Running Cargoship as an Ansible Module</a> - the modules, their parameters, check mode, and what <code>changed</code> means.</li>
 <li><a href="guides/ansible-inv.html">Generating an Inventory from Ansible</a> - the group and host-variable translation, usable with or without the modules.</li>
 <li><a href="guides/ansible-container.html">The Ansible Container Image</a> - <code>ghcr.io/colonel-byte/cargoship-ansible</code>, which carries the binary and the collections together.</li>
+</ul>
+<hr>
+<h2 id="opentofu-integration"><a class="header" href="#opentofu-integration">OpenTofu Integration</a></h2>
+<p>Cargoship is also an OpenTofu provider, so the same phases run from a declarative configuration: <code>cargoship_cluster</code> converges a cluster – install, join and upgrade are one apply, because the engine version already on each host is what tells them apart – and <code>cargoship_cluster_facts</code> reads a fleet without changing it. The provider drives cargoship in process, so it still opens every SSH connection itself from the machine OpenTofu runs on.</p>
+<p>It is early: the resource and the data source work, and plan-time version checks, <code>import</code> and acceptance tests do not exist yet.</p>
+<ul>
+<li><a href="guides/opentofu-terragrunt.html">Driving Cargoship from OpenTofu and Terragrunt</a> - installing the provider from a mirror, the module and inventory layout, and the behaviours that differ from an ordinary resource.</li>
+<li><a href="https://github.com/colonel-byte/cargoship/tree/main/example/terragrunt"><code>example/terragrunt/</code></a> - the worked layout that guide describes.</li>
+<li><a href="dev/tofu-provider.html">Running the OpenTofu provider</a> - building it, pointing OpenTofu at the build, and testing it.</li>
 </ul>
 <hr>
 <h2 id="configuration-and-schemas"><a class="header" href="#configuration-and-schemas">Configuration and Schemas</a></h2>

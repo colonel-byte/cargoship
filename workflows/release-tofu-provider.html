@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1c04171e.js";
+            window.path_to_searchindex_js = "../searchindex-52f39780.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-85cbcabe.js"></script>
+        <script src="../toc-2f8c3bd5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,8 +186,8 @@
 <p><strong>Triggers:</strong> push of a <code>v*</code> tag, or <code>workflow_dispatch</code> with a version.</p>
 <p>Publishes the OpenTofu provider to <code>ghcr.io</code> as a provider mirror artifact. The provider is a package of this module, so it ships on the CLI’s version: this fires on the same <code>v*</code> tag <a href="release.html">release.yaml</a> does. It is a separate workflow rather than another job there because it shares nothing with the goreleaser run - no signing keys, no GitHub Release, no attestations - and a provider that failed to publish should not read as a failed CLI release.</p>
 <p>One job, <strong>publish</strong>, granted <code>packages: write</code> on top of the top-level <code>contents: read</code>. Nothing else is needed: an OCI mirror takes no GitHub Release, no <code>SHA256SUMS</code> and no GPG signature, which is most of why it is the distribution path rather than a registry listing. See <a href="../agent/choice-tofu-provider-layout.html">choice-tofu-provider-layout</a>.</p>
-<p>It sets up Go, installs ORAS 1.3.0 or newer, logs into <code>ghcr.io</code> with the workflow token, reads the version out of the tag with the leading <code>v</code> removed, and runs <code>go run ./magefiles/core release:tofuProvider</code>. The version reaches the target through <code>env</code> rather than being interpolated into the <code>run</code> block.</p>
-<p>That target cross-compiles the provider for each published platform, zips each binary as <code>terraform-provider-cargoship_v&lt;version&gt;</code> with a fixed entry timestamp so the same commit produces the same bytes, pushes one manifest per platform with <code>--artifact-type application/vnd.opentofu.provider-target --artifact-platform &lt;os&gt;/&lt;arch&gt;</code>, assembles an index with <code>--artifact-type application/vnd.opentofu.provider</code>, and copies the index to the repository. <code>mage release:tofuProviderLayout &lt;version&gt;</code> does everything but the copy and leaves the OCI layout under <code>build/</code>, which is how the artifact shape is checked without a registry. See <a href="../dev/mage.html">mage</a>.</p>
+<p>It sets up Go, logs into <code>ghcr.io</code> with the workflow token, reads the version out of the tag with the leading <code>v</code> removed, and runs <code>go run ./magefiles/core release:tofuProvider</code>. The version reaches the target through <code>env</code> rather than being interpolated into the <code>run</code> block.</p>
+<p>That target cross-compiles the provider for each published platform, zips each binary as <code>terraform-provider-cargoship_v&lt;version&gt;</code> with a fixed entry timestamp so the same commit produces the same bytes, generates one manifest per platform with artifactType <code>application/vnd.opentofu.provider-target</code> and the target platform, assembles an index with artifactType <code>application/vnd.opentofu.provider</code>, and copies the index to the repository using the oras-go library. <code>mage release:tofuProviderLayout &lt;version&gt;</code> does everything but the copy and leaves the OCI layout under <code>build/</code>, which is how the artifact shape is checked without a registry. See <a href="../dev/mage.html">mage</a>.</p>
 <p>An operator installs the result through a <code>provider_installation</code> block in their CLI configuration:</p>
 <pre><code class="language-hcl">provider_installation {
   oci_mirror {
