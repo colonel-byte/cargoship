@@ -68,7 +68,7 @@ repos:
         language_version: "1.27.2"
         exclude: vendor/.*
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.0
+    rev: v0.17.1
     hooks:
       # Errors only, and deliberately not the formatter. All of this repository's Python is Ansible
       # action plugins, written against ansible-core's plugin API: a style rule would have opinions
