@@ -33,6 +33,8 @@ A module takes a fleet and settings and knows nothing about which cluster it is 
 | `bubbles` | Four nodes, two controllers, labelled and firewalled. The shape a real cluster has         |
 | `staging` | One node carrying both roles, through the `single` role. The cheapest thing to try against |
 
+`bubbles` is also where the profiles are: `control` carries a label, a port and `concurrency = "1"` so controllers come up one at a time; `infra` carries a taint and a firewall rule; `general` carries nothing and exists so every host names a profile the map defines. One worker selects `infra` and adds its own label and second interface, and one sits behind a jump host. [opentofu-terragrunt](../../docs/guides/opentofu-terragrunt.md) covers which of those replace a profile's values and which are unioned with them.
+
 `bubbles` holds two leaves. `cluster` converges the cluster; `facts` reads it back afterwards and depends on `cluster` so the read reports what the apply installed rather than racing it. A fleet that nothing here installs needs no dependency: the data source takes no lock and changes nothing.
 
 ## Running it

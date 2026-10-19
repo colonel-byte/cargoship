@@ -27,6 +27,31 @@ variable "package" {
   description = "The distro package to install: a path to a .tar.zst built by `cargoship package create`, or an OCI reference"
 }
 
+variable "profiles" {
+  type = map(object({
+    node_labels = optional(map(string), null)
+    node_taints = optional(list(string), null)
+    ports = optional(list(object({
+      port     = string
+      protocol = optional(string, null)
+    })), null)
+    firewall_rules = optional(list(object({
+      action      = string
+      name        = optional(string, null)
+      direction   = optional(string, null)
+      source      = optional(string, null)
+      destination = optional(string, null)
+      ingress     = optional(string, null)
+      egress      = optional(string, null)
+      port        = optional(string, null)
+      protocol    = optional(string, null)
+    })), null)
+    concurrency = optional(string, null)
+  }))
+  description = "What each profile means, keyed by name. A host selects one by name, and a host selecting a profile this map does not define is a configuration error"
+  default     = {}
+}
+
 variable "hosts" {
   type = map(object({
     address         = string
@@ -37,6 +62,32 @@ variable "hosts" {
     profile         = optional(string, null)
     hostname        = optional(string, null)
     private_address = optional(string, null)
+
+    private_interface = optional(string, null)
+    environment       = optional(map(string), null)
+    node_labels       = optional(map(string), null)
+    node_taints       = optional(list(string), null)
+    ports = optional(list(object({
+      port     = string
+      protocol = optional(string, null)
+    })), null)
+    firewall_rules = optional(list(object({
+      action      = string
+      name        = optional(string, null)
+      direction   = optional(string, null)
+      source      = optional(string, null)
+      destination = optional(string, null)
+      ingress     = optional(string, null)
+      egress      = optional(string, null)
+      port        = optional(string, null)
+      protocol    = optional(string, null)
+    })), null)
+    bastion = optional(object({
+      address  = string
+      user     = optional(string, null)
+      port     = optional(number, null)
+      key_path = optional(string, null)
+    }), null)
   }))
   description = "The fleet, keyed by a name of your choosing. key_path is a path on the machine running OpenTofu; there is no attribute for key material, because a key in the configuration is a key in the state file"
 }

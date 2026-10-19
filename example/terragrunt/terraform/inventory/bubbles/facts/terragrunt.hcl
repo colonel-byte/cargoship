@@ -60,4 +60,8 @@ inputs = {
       key_path = "~/.ssh/bubbles"
     }
   }
+
+  # kw2 is deliberately absent: the facts data source has no bastion attribute, because a read
+  # needs an address and a role and nothing else. A fleet behind jump hosts is read from a
+  # machine that can reach it directly.
 }
