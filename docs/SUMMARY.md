@@ -233,6 +233,8 @@
 - [design-config-codegen](agent/design-config-codegen.md)
 - [design-tofu-provider-install](agent/design-tofu-provider-install.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
+- [todo-extractpath-archive-cache](agent/todo-extractpath-archive-cache.md)
+- [todo-microvm-egress-blackout](agent/todo-microvm-egress-blackout.md)
 - [todo-pkg-action-unit-tests](agent/todo-pkg-action-unit-tests.md)
 - [todo-pkg-coci-registry-tests](agent/todo-pkg-coci-registry-tests.md)
 

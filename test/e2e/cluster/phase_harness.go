@@ -123,6 +123,22 @@ func newManager(
 		return nil, nil, fmt.Errorf("failed to load distro package %s: %w", pkgPath, err)
 	}
 
+	// Resolve the package against its values before any phase runs, the way cmd/common.go
+	// does: ApplyValues renders and maps the engine configuration, RenderFiles renders the
+	// files the package marked as templates. Without these the walk installs a flavor whose
+	// engine config still holds raw `{{ ... }}`, which reaches the host as invalid YAML -
+	// rke2-multi-cni-cilium's HelmChartConfig did, and the CNI never installed.
+	values, err := layout.Values(ctx, inventory.Spec.Config.Values)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve the values for %s: %w", pkgPath, err)
+	}
+	if err := layout.ApplyValues(values); err != nil {
+		return nil, nil, fmt.Errorf("failed to apply the values for %s: %w", pkgPath, err)
+	}
+	if err := layout.RenderFiles(ctx, values); err != nil {
+		return nil, nil, fmt.Errorf("failed to render the templated files of %s: %w", pkgPath, err)
+	}
+
 	dis, err := distroModule(layout.Distro.Spec.Type)
 	if err != nil {
 		return nil, nil, err

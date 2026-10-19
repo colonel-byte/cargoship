@@ -149,6 +149,18 @@ func sameVersion(want, got string) (bool, error) {
 func (s *phaseWalk) requireSchedulable(hosts apicluster.Hosts) {
 	s.T().Helper()
 
+	// The cordon check is the one assertion in the upgrade steps that talks to Kubernetes from
+	// the management node rather than to a host over SSH, so it is gated for the same reason
+	// requireClusterAPI gates the steps that do nothing else: the phase already proved its work
+	// over SSH, and failing here reports an unroutable network as a defect in it. Logged and
+	// returned rather than skipped, because the SSH assertions in the same step did run and a
+	// skip would throw them away.
+	lb := s.harness.manager.Config.Spec.Config.LoadBalancer
+	if !reachesClusterAPI(lb) {
+		s.T().Logf("this machine cannot reach the cluster API at %s:6443, so the cordon check did not run; see docs/dev/microvm.md", lb)
+		return
+	}
+
 	cs, err := e2e.KubeClient(s.T())
 	s.Require().NoError(err)
 
