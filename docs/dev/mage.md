@@ -65,6 +65,8 @@ The `Test` namespace hosts the integration and validation suites:
 *   `EndToEndCluster` - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.
 *   `EndToEndClusterStage` - Runs the same suite as `EndToEndCluster`, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node. It provisions a different five machines rather than fewer: `stageOS` is one per OS family per role, including a Fedora controller and the upload-only Alpine host, where the full walk's `k3sOS` is a single Ubuntu controller and four workers.
 *   `EndToEndClusterDryRun` - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with `--dry-run` against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.
+*   `EndToEndTofu` - Runs the OpenTofu provider suite: three bootloose machines installed, reduced by one worker and destroyed through the real `tofu` CLI over the module in `example/terragrunt`. It builds the provider into the local filesystem mirror first, which is where the suite resolves it from. Needs Docker and a `tofu` on PATH; the suite skips with a reason when either is missing. See [e2e-tofu-tests](e2e-tofu-tests.md).
+*   `EndToEndTofuVM` - Runs the same suite against local Rocky virtual machines instead of containers, by setting `CARGOSHIP_E2E_BACKEND=microvm`. Needs KVM. It is the backend to reach for on a host whose Docker forwards no traffic between containers, since a VM fleet routes over its own segment. See [e2e-tofu-tests](e2e-tofu-tests.md).
 *   `CleanCluster` - Removes the containers a bootloose cluster left behind. `EndToEndCluster` does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.
 *   `Fuzz` - Replays the fuzz seed corpus (the `f.Add` values in each target plus anything committed under `fuzz/testdata/fuzz/<Target>/`). Calls the packages in process; needs no binary, cluster, or network. See [fuzz-tests](fuzz-tests.md).
 
@@ -74,6 +76,8 @@ mage test:endToEndNonCluster    # run the misc/package command suites, no cluste
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
 mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
+mage test:endToEndTofu          # run the OpenTofu provider suite against a three-machine cluster (needs tofu)
+mage test:endToEndTofuVM        # the same walk against local virtual machines (needs KVM)
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
 ```
