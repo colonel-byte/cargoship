@@ -56,8 +56,7 @@ func (s *phaseWalk) rpmUploadFiles() {
 				"%s: the RPM phase changed a host it does not claim", host)
 			continue
 		}
-		s.Require().Subsetf(after, before[host.String()],
-			"%s: the RPM phase dropped files an earlier upload phase staged", host)
+		s.requireKeptStagedFiles(host, before[host.String()], after, "RPM")
 	}
 }
 

@@ -63,7 +63,8 @@ type Distro interface {
 	// CleanupPaths returns every path on a host the engine owns outright, for an uninstall
 	// to remove recursively. Paths that are unset or too broad to safely remove are left out.
 	CleanupPaths() []string
-	// ConfigPath returns the full path for the config directory used by the engine
+	// ConfigPath returns the full path of the engine's own config file. The directory holding
+	// it is filepath.Dir of this -- there is no separate accessor for it.
 	ConfigPath() string
 	// SupervisorPort returns the port a joining node registers with the cluster on.
 	SupervisorPort() int

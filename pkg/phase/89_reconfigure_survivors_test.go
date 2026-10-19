@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -145,4 +146,54 @@ func TestReconfigureSurvivorsServerForDropsTheKeyOnTheLeader(t *testing.T) {
 	url, set := p.serverFor(other)
 	require.True(t, set, "every other controller names the first one")
 	require.Equal(t, p.leaderURL, url)
+}
+
+// TestReconfigureSurvivorsSkipsADistroWithNoServerKey covers the guard that keeps this phase off
+// kubeadm. Its config is a multi-document file holding no `server:`, so the in-place rewrite
+// this phase does to an rke2 config.yaml would drop two of the three documents. Doing nothing
+// and saying so is the gap tracked in #862; doing it wrong is not a gap but a broken host.
+func TestReconfigureSurvivorsSkipsADistroWithNoServerKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		distro  distrocfg.Distro
+		wantRun bool
+	}{
+		{
+			name:    "a distro with a server key repoints its survivors",
+			distro:  &distrocfg.RKE2{},
+			wantRun: true,
+		},
+		{
+			name:    "a distro that bootstraps instead is left alone",
+			distro:  &distrocfg.Upstream{},
+			wantRun: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			hosts := controllerHosts("kc0", "kc1", "kc2")
+			m := &Manager{
+				Config: &cluster.Cluster{
+					Spec: cluster.Spec{
+						Hosts: hosts,
+					},
+				},
+			}
+
+			p := &ReconfigureSurvivors{
+				Distro:      tt.distro,
+				TargetHosts: []string{"kc0"},
+			}
+			p.SetManager(m)
+			require.NoError(t, p.Prepare(context.Background(), m.Config, nil))
+
+			require.Len(t, p.removed, 1, "the target is a controller, so it is removed either way")
+			require.Equal(t, tt.wantRun, p.ShouldRun())
+		})
+	}
 }

@@ -33,7 +33,12 @@ const (
 	DistroUpstream = "upstream"
 
 	// upstreamKubeconfig is the fixed path kubeadm writes the cluster admin kubeconfig to.
-	upstreamKubeconfig = "/etc/kubernetes/admin.conf"
+	upstreamKubeconfig = upstreamConfigDir + "/admin.conf"
+	// upstreamConfigDir is the tree kubeadm owns -- pki, the component kubeconfigs, the static
+	// pod manifests, kubeadm-config.yaml -- and the whole of what an uninstall removes. Named
+	// rather than taken as filepath.Dir of ConfigPath: a Config SetPath moved elsewhere would
+	// hand a recursive remove the parent of wherever it was moved to.
+	upstreamConfigDir = "/etc/kubernetes"
 
 	// upstreamServiceCIDR is kubeadm's default service subnet, used when the engine config does
 	// not set one. Unlike the pod subnet, kubeadm always has this default.
@@ -76,7 +81,7 @@ func init() {
 					ID:         DistroUpstream,
 					BinaryDir:  "/usr/bin",
 					Binary:     "kubectl",
-					Config:     "/etc/kubernetes",
+					Config:     kubeadmConfigPath,
 					Data:       "/var/lib/kubelet",
 					PackageDir: "/var/lib/kubernetes",
 					// kubeadm has no separate supervisor; a node joins through the apiserver.
@@ -320,7 +325,7 @@ func (d *Upstream) ManifestPaths(dis distro.Distro) []string {
 // directory, the kubelet data directory, and the staged package directory, all of which
 // upstream owns outright.
 func (d *Upstream) CleanupPaths() []string {
-	return removablePaths(d.DataDirPath(), d.ConfigPath(), d.PackageStagingDir(), "/etc/cni/net.d")
+	return removablePaths(d.DataDirPath(), upstreamConfigDir, d.PackageStagingDir(), "/etc/cni/net.d")
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has

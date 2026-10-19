@@ -145,7 +145,10 @@ func (r *Common) BinaryName() string {
 	return r.Binary
 }
 
-// ConfigPath returns the full path for the config directory used by the engine
+// ConfigPath returns the full path of the engine's own config file -- rke2 and k3s's
+// config.yaml, upstream's kubeadm-config.yaml. A caller that wants the directory holding it
+// takes filepath.Dir of this; several of the files cargoship writes beside it are found that
+// way, and so is the tree an uninstall removes.
 func (r *Common) ConfigPath() string {
 	return r.Config
 }

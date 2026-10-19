@@ -168,3 +168,27 @@ func TestDiffManifestIsScopedByCategory(t *testing.T) {
 		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/app_v1.tar"},
 	}, diffManifest(oldImages, currentImages))
 }
+
+// TestDiffManifestPrunesWhatAStaleUploadRemoved is the composition removeStaleManifestEntries
+// relies on: the manifest as old, the files it just deleted as current. It is what the upgrade
+// walk caught -- the previous version's engine RPMs were deleted from the host and left in the
+// manifest, which then claimed paths that were not there.
+func TestDiffManifestPrunesWhatAStaleUploadRemoved(t *testing.T) {
+	manifest := []ManifestEntry{
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.36.4.rpm"},
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.37.0.rpm"},
+		{Category: "image", Path: "/var/lib/rancher/rke2/agent/images/app_v1.tar"},
+	}
+	removed := []ManifestEntry{
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.36.4.rpm"},
+	}
+
+	kept := diffManifest(manifest, removed)
+
+	// The version this run installed stays, and so does every other category.
+	require.Equal(t, []ManifestEntry{
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.37.0.rpm"},
+		{Category: "image", Path: "/var/lib/rancher/rke2/agent/images/app_v1.tar"},
+	}, kept)
+	require.Equal(t, kept, ParseManifest(encodeManifest(kept)), "what is written back has to read back")
+}

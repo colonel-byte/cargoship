@@ -63,6 +63,9 @@ type ReconfigureSurvivors struct {
 	// leaderURL is what the other survivors should name, resolved once rather than per host:
 	// it needs the leader's configurer, which only exists after the OS has been detected.
 	leaderURL string
+	// unsupported is set when the distro has no `server:` key for this phase to rewrite, which
+	// is a reason to do nothing rather than a reason to do it wrong. See Prepare.
+	unsupported bool
 }
 
 // Title for the phase
@@ -88,6 +91,22 @@ func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, 
 		p.survivors = append(p.survivors, h)
 	}
 
+	// A distro that forms its cluster with a bootstrap command has no single config file with a
+	// `server:` key in it, so there is nothing here to rewrite. kubeadm is the one such distro
+	// today: its kubeadm-config.yaml is a multi-document file -- ClusterConfiguration, Init or
+	// JoinConfiguration, KubeletConfiguration -- and none of them hold the endpoint a running
+	// node uses, which lives in kubelet.conf and admin.conf. Editing it the way this phase edits
+	// an rke2 config.yaml would read one document and write back one, dropping the other two.
+	// Repointing a kubeadm survivor properly is https://github.com/colonel-byte/cargoship/issues/862.
+	if _, ok := p.Distro.(distrocfg.Bootstrapper); ok {
+		p.unsupported = true
+		if len(p.removed) > 0 && len(p.survivors) > 0 {
+			logger.From(ctx).Warn("this distro joins its nodes with a bootstrap command rather than a `server:` key, so the controllers that stayed are left naming whatever they already named; check them before they restart",
+				"kept", len(p.survivors), "removed", len(p.removed))
+		}
+		return nil
+	}
+
 	// The first surviving controller becomes the leader, which is the same election
 	// ConfigureEngine makes -- control[0] of the hosts it is given.
 	if len(p.survivors) > 0 {
@@ -100,12 +119,13 @@ func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.Cluster, 
 	return nil
 }
 
-// ShouldRun is true when the run removed a controller and kept at least one.
+// ShouldRun is true when the run removed a controller and kept at least one, on a distro this
+// phase knows how to repoint.
 //
 // Removing every controller is a whole-cluster teardown, where there is nothing to repoint. An
 // empty target list means every host, which is that same case.
 func (p *ReconfigureSurvivors) ShouldRun() bool {
-	return len(p.removed) > 0 && len(p.survivors) > 0
+	return !p.unsupported && len(p.removed) > 0 && len(p.survivors) > 0
 }
 
 // Run the phase
@@ -120,11 +140,12 @@ func (p *ReconfigureSurvivors) Run(ctx context.Context) error {
 func (p *ReconfigureSurvivors) repoint(ctx context.Context, h *cluster.Host) error {
 	path := p.Distro.ConfigPath()
 
+	// Failing here rather than warning past it: a survivor whose config cannot be read is a
+	// survivor still naming a controller that was removed, and a reset that reports success
+	// having left the cluster in that state is the failure shape #709 and #339 kept finding.
 	content, err := h.ReadFile(path)
 	if err != nil {
-		logger.From(ctx).Warn("could not read the engine config, so this host still names a controller that was removed; run `cargoship apply` before it restarts",
-			"host", h, "path", path, "error", err)
-		return nil
+		return fmt.Errorf("reading the engine config on %s, so it still names a controller that was removed: %w", h, err)
 	}
 
 	cfg := map[string]any{}

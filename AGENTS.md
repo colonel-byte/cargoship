@@ -88,6 +88,8 @@ They are not interchangeable, and a walk that passed on one says less than it lo
 
 A result is only as good as the backend that produced it. Before reporting a suite run, check which steps **skipped** rather than only which failed - a skip on this suite usually means a capability the backend does not have, and reading a run with fifteen of them as a pass is the mistake this section exists to prevent. [`test/AGENTS.md`](test/AGENTS.md) has the per-backend detail and the gaps each one leaves.
 
+None of them need elevation, and neither does inspecting one. The suite brings its fleet up and tears it down itself, and a whole run logs no `sudo`, no polkit and no `modprobe` - so read the run's own log to tell whether it is healthy. In particular **do not reach for `virsh`**: `virsh -c qemu:///system` goes through polkit and interrupts whoever is at the keyboard with an authentication prompt, to answer a question the log already answers. A fleet a killed run left behind comes down with `mage dev:vmDown -fleet=<name>`, which needs no prompt either.
+
 ### Measuring binary size means building the way a release does
 
 Checking the budget above means producing a number that means something, which is easy to get wrong, because a plain `go build` of this repo is about 35% larger than the shipped artifact and the gap is not uniform: `CGO_ENABLED=0` alone accounts for most of it, and `-gcflags=all="-l"` for another 13%.

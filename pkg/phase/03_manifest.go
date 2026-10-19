@@ -90,7 +90,8 @@ func mergeManifest(entries []ManifestEntry) []ManifestEntry {
 
 // diffManifest returns entries present in old but missing from current, keyed by Path. This is
 // how a stale file from a previous version (e.g. a renamed engine binary) is found after an
-// upgrade uploads its replacement.
+// upgrade uploads its replacement, and -- with the manifest as old and the files just deleted
+// as current -- how the manifest stops claiming them.
 func diffManifest(old, current []ManifestEntry) []ManifestEntry {
 	keep := make(map[string]bool, len(current))
 	for _, e := range current {
@@ -155,13 +156,29 @@ func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.Host,
 }
 
 // removeStaleManifestEntries deletes files on h that appear in old but not in current, e.g. an
-// engine binary left behind after a version bump renamed it.
+// engine binary left behind after a version bump renamed it, and stops the manifest claiming
+// them. Without that second half the manifest only grows: recordManifestEntry appends, nothing
+// subtracts, so every version an upgrade replaces stays in it naming a path that is gone.
 func (p *GenericPhase) removeStaleManifestEntries(ctx context.Context, h *cluster.Host, old, current []ManifestEntry) {
+	removed := []ManifestEntry{}
 	for _, e := range diffManifest(old, current) {
 		logger.From(ctx).Info("removing stale upload from previous install", "host", h, "category", e.Category, "path", e.Path)
 		if err := deleteRecordedUpload(ctx, h, e.Path); err != nil {
+			// Left in the manifest, so the next run tries again.
 			logger.From(ctx).Warn("failed to remove stale upload", "host", h, "path", e.Path, "error", err)
+			continue
 		}
+		removed = append(removed, e)
+	}
+	if len(removed) == 0 {
+		return
+	}
+
+	// Re-read rather than reuse current: this pass is scoped to one category, and every other
+	// category's entries have to survive it. Swallowed like recordManifestEntry's failures.
+	kept := diffManifest(p.readManifest(h), removed)
+	if err := h.WriteFile(manifestFile, encodeManifest(kept), "0644"); err != nil {
+		logger.From(ctx).Warn("failed to prune the upload manifest, so it still names files this run removed", "host", h, "error", err)
 	}
 }
 
