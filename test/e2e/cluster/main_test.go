@@ -390,6 +390,7 @@ func requireJoinMachine(t *testing.T) {
 // load.ClusterDefinition exactly as the CLI does.
 func writeInventories(inv apicluster.Cluster) error {
 	invDir := filepath.Join(rootDir, "test/e2e/cluster")
+	enableEtcdctl(&inv)
 
 	fullPath := filepath.Join(invDir, "generated-cluster-full.yaml")
 	if err := writeClusterInventory(inv, fullPath); err != nil {
@@ -404,6 +405,28 @@ func writeInventories(inv apicluster.Cluster) error {
 	e2e.ClusterConfigPath = invPath
 
 	return nil
+}
+
+// enableEtcdctl turns on the rke2 package's optional etcdctl tool, which is the only
+// executable in its spec.config.files. Without it nothing in the suite exercises a
+// `when`-gated executable upload, or the allow rule phase 22 generates for an executable
+// target -- the rke2 package's own `os.fapolicyd` block would hide the generated file
+// behind the hand-written one.
+//
+// Only the rke2 package declares `tools.etcdctl`, and the generated values.schema.json sets
+// additionalProperties:false, so setting it for k3s or upstream would fail validation before
+// a host was touched.
+
+func enableEtcdctl(inv *apicluster.Cluster) {
+	if distroID() != "rke2" {
+		return
+	}
+	if inv.Spec.Config.Values == nil {
+		inv.Spec.Config.Values = map[string]any{}
+	}
+	inv.Spec.Config.Values["tools"] = map[string]any{
+		"etcdctl": map[string]any{"enabled": true},
+	}
 }
 
 // setup provisions a fleet as bootloose containers.
