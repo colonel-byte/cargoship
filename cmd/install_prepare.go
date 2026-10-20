@@ -35,9 +35,8 @@ import (
 
 type installPrepareOptions struct {
 	InstallCommon
-	workerCon string
-	hosts     bool
-	firewall  bool
+	hosts    bool
+	firewall bool
 }
 
 func newInstallPrepareCommand() *cobra.Command {
@@ -63,24 +62,9 @@ func newInstallPrepareCommand() *cobra.Command {
 	registerFlagReceiptPath(cmd, &o.receiptPath)
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
-	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
-
-	val, err := cmd.Flags().GetString(RootLoggingLevel)
-	if err != nil {
-		val = loggingLevelDefault
-	}
-
-	o.logLevel = val
-
-	val, err = cmd.Flags().GetString(RootLoggingFormat)
-	if err != nil {
-		val = string(logger.FormatConsole)
-	}
-
-	o.LogFormat = val
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 
 	markRequired(cmd, InstallConfig)
 
@@ -116,7 +100,7 @@ func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, arg
 		return runErr
 	}
 
-	manager, distroLayout, runErr = initManager(ctx, cmd, args[0], o.InstallCommon)
+	manager, distroLayout, runErr = initManager(ctx, args[0], o.InstallCommon)
 	if runErr != nil {
 		return runErr
 	}

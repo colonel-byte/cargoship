@@ -89,7 +89,7 @@ func newPackageSignCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *packageSignOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
+func (o *packageSignOptions) run(ctx context.Context, _ *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	packageSource := args[0]
 
@@ -148,7 +148,7 @@ func (o *packageSignOptions) run(ctx context.Context, cmd *cobra.Command, args [
 	// To prevent a warning for package not being signed -- we'll only run verification when enforced.
 	if signed {
 		if o.verify == verifyModeAlways {
-			verifyOpts := o.buildVerifyBlobOptions(cmd, v)
+			verifyOpts := o.buildVerifyBlobOptions()
 			if err := distroLayout.VerifyPackageSignature(ctx, *verifyOpts); err != nil {
 				return err
 			}

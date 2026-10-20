@@ -79,21 +79,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 	addAgeFlags(cmd, &o.keyFlags)
 
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
-
-	val, err := cmd.Flags().GetString(RootLoggingLevel)
-	if err != nil {
-		val = loggingLevelDefault
-	}
-
-	o.logLevel = val
-
-	val, err = cmd.Flags().GetString(RootLoggingFormat)
-	if err != nil {
-		val = string(logger.FormatConsole)
-	}
-
-	o.LogFormat = val
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 
 	markRequired(cmd, InstallConfig)
 
@@ -129,7 +115,7 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		return runErr
 	}
 
-	manager, distroLayout, runErr = initManager(ctx, cmd, args[0], o.InstallCommon)
+	manager, distroLayout, runErr = initManager(ctx, args[0], o.InstallCommon)
 	if runErr != nil {
 		return runErr
 	}

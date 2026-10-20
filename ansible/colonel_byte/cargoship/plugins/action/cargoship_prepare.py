@@ -71,12 +71,6 @@ options:
     type: int
     required: false
     cli_flag: "--concurrency"
-  work_concurrency:
-    description:
-      - "How much work to run concurrently on each host. A count or a percentage, as a string."
-    type: str
-    required: false
-    cli_flag: "--work-concurrency"
   hosts:
     description:
       - "Whether to manage C(/etc/hosts) entries on the fleet."

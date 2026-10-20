@@ -32,10 +32,9 @@ type prepareParams struct {
 	// Package is the distro package to stage, the positional argument of the command.
 	Package string `json:"package"`
 
-	Concurrency     *int     `json:"concurrency"`
-	WorkConcurrency string   `json:"work_concurrency"`
-	Values          []string `json:"values"`
-	Timeout         string   `json:"timeout"`
+	Concurrency *int     `json:"concurrency"`
+	Values      []string `json:"values"`
+	Timeout     string   `json:"timeout"`
 }
 
 // runPrepare stages a package across the fleet described by an Ansible inventory.
@@ -67,7 +66,6 @@ func buildPrepareArgs(p *prepareParams, inventory string, control Control) []str
 		surface{confirm: true, dryRun: true})
 
 	c.intFlag(flagConcurrency, p.Concurrency)
-	c.flag(flagWorkConcurrency, p.WorkConcurrency)
 	c.updates(p.hostUpdates)
 	c.repeated(flagValues, p.Values)
 	c.flag(flagTimeout, p.Timeout)

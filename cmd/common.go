@@ -55,8 +55,6 @@ type InstallCommon struct {
 	// the refusal needs a package version to compare a host against. Reset and kube-config load
 	// none, so the check never fires for them.
 	allowDowngrade bool
-	logLevel       string
-	LogFormat      string
 	// values holds the --values files. They are merged after the cluster config's own
 	// spec.config.values, so the command line wins over the file. Commands that do not
 	// load a package never register the flag and carry the field empty.
@@ -104,7 +102,7 @@ func getCachePath(ctx context.Context) (string, error) {
 // It returns the package layout alongside the manager because the run receipt records what the
 // package can prove about itself -- its digest, and whether its signature was checked -- and the
 // layout is the only thing that knows. A caller with no use for it discards it.
-func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt InstallCommon) (*phase.Manager, *layout.DistroLayout, error) {
+func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*phase.Manager, *layout.DistroLayout, error) {
 	path, err := filepath.Abs(opt.config)
 	if err != nil {
 		return nil, nil, err
@@ -129,7 +127,7 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 		Architecture:         config.CLIArch,
 		Output:               config.CommonOptions.TempDirectory,
 		VerificationStrategy: opt.verify.toStrategy(),
-		VerifyBlobOptions:    opt.buildVerifyBlobOptions(cmd, v),
+		VerifyBlobOptions:    opt.buildVerifyBlobOptions(),
 	}
 
 	distroLayout, err := distro.Load(ctx, distroPath, loadOpts)
