@@ -35,7 +35,7 @@ import (
 type File struct {
 	// Data holds the inline file content.
 	Data string `json:"data,omitempty"`
-	// Executable sets executable permissions on the file when true.
+	// Executable sets executable permissions on the file when true. On a host running fapolicyd, the prepare phase also writes an allow rule for the file's target path, so a package's own executables are not denied by policy.
 	Executable bool `json:"executable,omitempty"`
 	// ExtractPath is the path cargoship extracts from a tarball.
 	ExtractPath string `json:"extractPath,omitempty"`

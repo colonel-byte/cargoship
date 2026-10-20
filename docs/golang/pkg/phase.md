@@ -2290,7 +2290,7 @@ type PrepareFapolicy struct {
 ```
 
 <a name="PrepareFapolicy.Explanation"></a>
-### func \(\*PrepareFapolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L89>)
+### func \(\*PrepareFapolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L91>)
 
 ```go
 func (p *PrepareFapolicy) Explanation() string
@@ -2308,7 +2308,7 @@ func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.Cluster, _ *di
 Prepare the phase
 
 <a name="PrepareFapolicy.Run"></a>
-### func \(\*PrepareFapolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L94>)
+### func \(\*PrepareFapolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L96>)
 
 ```go
 func (p *PrepareFapolicy) Run(ctx context.Context) error
@@ -2317,7 +2317,7 @@ func (p *PrepareFapolicy) Run(ctx context.Context) error
 Run the phase
 
 <a name="PrepareFapolicy.ShouldRun"></a>
-### func \(\*PrepareFapolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L99>)
+### func \(\*PrepareFapolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L101>)
 
 ```go
 func (p *PrepareFapolicy) ShouldRun() bool
@@ -2326,7 +2326,7 @@ func (p *PrepareFapolicy) ShouldRun() bool
 ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
 
 <a name="PrepareFapolicy.Title"></a>
-### func \(\*PrepareFapolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L84>)
+### func \(\*PrepareFapolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L86>)
 
 ```go
 func (p *PrepareFapolicy) Title() string

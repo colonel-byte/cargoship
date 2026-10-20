@@ -17,10 +17,10 @@ package phase
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -71,8 +71,10 @@ func (p *PrepareFapolicy) warnOnMissingRules(ctx context.Context) {
 		return
 	}
 
-	logger.From(ctx).Warn("hosts run fapolicyd and this package declares no rules for it, so none are "+
-		"written: fapolicyd may deny the container runtime's own executions, which surfaces later as a "+
+	// The rules cargoship generates for the package's own executables do not cover the container
+	// runtime, so this stays a warning even when executableRules writes a file.
+	logger.From(ctx).Warn("hosts run fapolicyd and this package declares no rules for it: "+
+		"fapolicyd may deny the container runtime's own executions, which surfaces later as a "+
 		"container that cannot start rather than as a policy refusal. Add an `os.fapolicyd` block to the "+
 		"package, or stop fapolicyd on these hosts",
 		"hosts", len(p.fapolicydhosts),
@@ -103,27 +105,23 @@ func (p *PrepareFapolicy) ShouldRun() bool {
 	return p.manager.Distro.Spec.Config.OS.FAPolicyd != "" || len(p.executableRules()) > 0
 }
 
+// executableRules allows every file the package marks executable to run. perm=any rather
+// than perm=execute because a script is read by its interpreter, which fapolicyd sees as an
+// open rather than an exec, and the package's executables include shell scripts.
 func (p *PrepareFapolicy) executableRules() string {
 	if p.manager.Distro == nil {
 		return ""
 	}
-	var targets []string
-	addFiles := func(files v1alpha1.Files) {
-		for _, f := range files {
-			if f.Executable && f.Target != "" && !slices.Contains(targets, f.Target) {
-				targets = append(targets, f.Target)
-			}
+
+	targets := map[string]struct{}{}
+	for _, f := range slices.Concat(p.manager.Distro.Spec.Config.Files, p.manager.Distro.Spec.Config.OS.Files) {
+		if f.Executable && f.Target != "" {
+			targets[f.Target] = struct{}{}
 		}
 	}
-	addFiles(p.manager.Distro.Spec.Config.Files)
-	addFiles(p.manager.Distro.Spec.Config.OS.Files)
 
-	if len(targets) == 0 {
-		return ""
-	}
-	slices.Sort(targets)
 	var b strings.Builder
-	for _, target := range targets {
+	for _, target := range slices.Sorted(maps.Keys(targets)) {
 		fmt.Fprintf(&b, "allow perm=any all : path=%s\n", target)
 	}
 	return b.String()
