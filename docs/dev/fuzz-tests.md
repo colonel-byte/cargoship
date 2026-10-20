@@ -175,4 +175,3 @@ Include the input in failure messages. `require.NoError(t, err, "%q canonicalise
 Fuzzing pays where a wrong answer still parses, so the targets worth writing next are the places that choose an encoding, canonicalise a string, or hand a path to a parser:
 
 *   `distrocfg.marshalRegistriesYAML` and `quoteRegistryKeys` (`types/distrocfg/distro_common.go`) choose a quoting style for keys the engine reparses -- the same shape as the bugs above, over registry names and `rewrite` regex patterns.
-*   `split.SplitFile` and `split.ReassembleFile` are a round trip over content bytes and a chunk size, and `ReassembleFile` trusts the `part000` metadata it unmarshals from disk.
