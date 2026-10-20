@@ -37,10 +37,6 @@ holds the values for the `.age` section of the config file, the age alternative 
 
 </div>
 
-### ApplyOptions
-
-holds the values for the `.distro.apply` section of the config file
-
 ### DistroCreateOptions
 
 holds the values for the `.distro.create` section of the config file
@@ -54,18 +50,6 @@ holds the values for the `.distro.create` section of the config file
 
 </div>
 
-### DistroDeployOptions
-
-holds the values for the `.distro.deploy` section of the config file
-
-<div class="schema-table">
-
-| Property  | Type      | Required | Default | Description                                  |
-| --------- | --------- | -------- | ------- | -------------------------------------------- |
-| `retries` | `integer` | no       |         | how many times we will try to push a package |
-
-</div>
-
 ### DistroOptions
 
 holds the values for the `.distro` section of the config file
@@ -76,10 +60,8 @@ holds the values for the `.distro` section of the config file
 | ----------------------- | --------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `allow_downgrade`       | `boolean`                                     | no       |         | whether a run continues when a host already runs an engine version newer<br>than the one the package carries                                                                                                                                                                                                                                                                                   |
 | `allow_unmanaged_nodes` | `boolean`                                     | no       |         | whether an apply continues when the cluster holds a node that no host<br>in the config accounts for                                                                                                                                                                                                                                                                                            |
-| `apply`                 | [ApplyOptions](#applyoptions)                 | no       |         | are options used by the apply subcommand                                                                                                                                                                                                                                                                                                                                                       |
 | `concurrency`           | `integer`                                     | no       |         | how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once                                                                                                                                                                                                                                                                                             |
 | `create`                | [DistroCreateOptions](#distrocreateoptions)   | no       |         | are options used by the create subcommand                                                                                                                                                                                                                                                                                                                                                      |
-| `deploy`                | [DistroDeployOptions](#distrodeployoptions)   | no       |         | are options used by the deploy subcommand                                                                                                                                                                                                                                                                                                                                                      |
 | `fapolicyd`             | `boolean`                                     | no       | `true`  | whether we will update hosts with fapolicyd                                                                                                                                                                                                                                                                                                                                                    |
 | `firewall`              | `boolean`                                     | no       | `true`  | whether we will update the host firewall                                                                                                                                                                                                                                                                                                                                                       |
 | `hosts`                 | `boolean`                                     | no       | `true`  | whether we will update the etc host file                                                                                                                                                                                                                                                                                                                                                       |
@@ -90,8 +72,7 @@ holds the values for the `.distro` section of the config file
 | `public_key`            | `string`                                      | no       |         | path to public key file for validating signed packages                                                                                                                                                                                                                                                                                                                                         |
 | `publish`               | [DistroPublishOptions](#distropublishoptions) | no       |         | are options used by the publish subcommand                                                                                                                                                                                                                                                                                                                                                     |
 | `receipt_path`          | `string`                                      | no       |         | is where the lifecycle commands -- apply, prepare, reset and<br>engine-config-sync -- write the structured JSON record of a run, empty for no receipt.<br>Equivalent to --receipt-path, and templated the same way: {command} expands to the<br>command that ran and {timestamp} to when it started, so one configured value gives<br>every run its own file rather than overwriting the last. |
-| `reset`                 | [ResetOptions](#resetoptions)                 | no       |         | ResetOptions are options used by the reset subcommand                                                                                                                                                                                                                                                                                                                                          |
-| `retry`                 | `integer`                                     | no       |         | number of retries we will try                                                                                                                                                                                                                                                                                                                                                                  |
+| `retry`                 | `integer`                                     | no       |         | how many times an operation is retried before the run fails, including a<br>package push to an OCI registry -- it is what --retries defaults to on publish<br>and sign                                                                                                                                                                                                                         |
 | `type`                  | `string`                                      | no       |         | of distro we are interacting with One of `rke2`, `k3s`.                                                                                                                                                                                                                                                                                                                                        |
 | `update_kubeconfig`     | `boolean`                                     | no       | `true`  | whether we will update a kubeconfig file with the admin creds for the cluster                                                                                                                                                                                                                                                                                                                  |
 | `verify`                | `string`                                      | no       |         | the Cargoship package signature One of `never`, `if-possible`, `always`.                                                                                                                                                                                                                                                                                                                       |
@@ -144,7 +125,3 @@ maps a source registry to the registry cargoship uses instead.
 | `registry.k8s.io` | `string` | no       |         |             |
 
 </div>
-
-### ResetOptions
-
-holds the values for the `.distro.reset` section of the config file

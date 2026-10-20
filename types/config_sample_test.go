@@ -30,13 +30,6 @@ const sampleConfigPath = "../cargoship-config.yaml"
 // a commented key is how the sample carries a setting that should not be on by default.
 var sampleKey = regexp.MustCompile(`(?m)^[\t #]*([a-z0-9_]+):`)
 
-// unreadSettings are config fields nothing in the tree reads, so the sample deliberately
-// does not advertise them. `.distro.deploy.retries` is the only one: every --retries flag
-// reads DistroOpts.Retry (`.distro.retry`) instead, which leaves DistroDeployOptions a
-// section an operator can write and no command will honour. Fix the field or delete it
-// rather than lengthening this map.
-var unreadSettings = map[string]bool{"retries": true}
-
 // TestSampleConfigNamesEverySetting fails when a field in DistroConfig has no key in
 // cargoship-config.yaml. The sample is what an operator copies, so a key missing from it
 // is a setting nobody discovers, and nothing else in the build notices the omission --
@@ -53,7 +46,7 @@ func TestSampleConfigNamesEverySetting(t *testing.T) {
 	}
 
 	for _, key := range settingKeys(reflect.TypeOf(DistroConfig{})) {
-		if !present[key] && !unreadSettings[key] {
+		if !present[key] {
 			t.Errorf("%s names no %q key; add it, commented out where it should not be on by default", sampleConfigPath, key)
 		}
 	}
