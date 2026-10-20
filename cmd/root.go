@@ -82,8 +82,6 @@ const (
 	InstallUpdateHost = "hosts"
 	// InstallUpdateFirewall flag
 	InstallUpdateFirewall = "firewall"
-	// InstallUpdateFAPolicyD flag
-	InstallUpdateFAPolicyD = "fapolicyd"
 	// InstallLabelNodes flag
 	InstallLabelNodes = "label-nodes"
 	// InstallAllowUnmanagedNodes flag

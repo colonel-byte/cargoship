@@ -213,7 +213,7 @@ func fullCommon() common {
 
 func fullHostUpdates() hostUpdates {
 	yes := true
-	return hostUpdates{Hosts: &yes, Firewall: &yes, FAPolicyd: &yes}
+	return hostUpdates{Hosts: &yes, Firewall: &yes}
 }
 
 func fullVerification() verification {

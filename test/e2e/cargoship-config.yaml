@@ -13,5 +13,4 @@ distro:
   worker_concurrency: 5
   hosts: true
   firewall: true
-  fapolicyd: true
   output: test/e2e

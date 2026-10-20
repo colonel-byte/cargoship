@@ -31,7 +31,6 @@
           # applies. That is why `firewall: false` and omitting `firewall` are different.
           hosts: true
           firewall: true
-          fapolicyd: false
 
           # Signature verification, key-based. A Cosign key pair is cargoship's only signing
           # method; keyless verification was removed because identifying a signer against a

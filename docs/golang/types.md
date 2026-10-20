@@ -106,7 +106,7 @@ type DistroConfig struct {
 ```
 
 <a name="DistroCreateOptions"></a>
-## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L151-L159>)
+## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L149-L157>)
 
 DistroCreateOptions holds the values for the \`.distro.create\` section of the config file
 
@@ -123,7 +123,7 @@ type DistroCreateOptions struct {
 ```
 
 <a name="DistroOptions"></a>
-## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L148>)
+## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L146>)
 
 DistroOptions holds the values for the \`.distro\` section of the config file
 
@@ -137,8 +137,6 @@ type DistroOptions struct {
     OCIConcurrency int `json:"oci_concurrency,omitempty" mapstructure:"oci_concurrency"`
     // Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
     Concurrency int `json:"concurrency,omitempty" mapstructure:"concurrency" jsonschema:"minimum=0"`
-    // FAPolicyd whether we will update hosts with fapolicyd
-    FAPolicyd bool `json:"fapolicyd,omitempty" mapstructure:"fapolicyd" jsonschema:"default=true"`
     // FirewallUpdate whether we will update the host firewall
     FirewallUpdate bool `json:"firewall,omitempty" mapstructure:"firewall" jsonschema:"default=true"`
     // HostUpdate whether we will update the etc host file
@@ -181,7 +179,7 @@ type DistroOptions struct {
 ```
 
 <a name="DistroPublishOptions"></a>
-## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L162-L167>)
+## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L160-L165>)
 
 DistroPublishOptions holds the values for the \`.distro.publish\` section of the config file
 
@@ -195,7 +193,7 @@ type DistroPublishOptions struct {
 ```
 
 <a name="FileOverrideMap"></a>
-## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L189>)
+## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L187>)
 
 FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.
 
@@ -204,7 +202,7 @@ type FileOverrideMap map[string]string
 ```
 
 <a name="FileOverrideMap.JSONSchemaExtend"></a>
-### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194>)
+### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L192>)
 
 ```go
 func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -213,7 +211,7 @@ func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonFileSources to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="RegistryOverrideMap"></a>
-## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L173>)
+## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L171>)
 
 RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It's a named type \(rather than a bare map\[string\]string\) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.
 
@@ -222,7 +220,7 @@ type RegistryOverrideMap map[string]string
 ```
 
 <a name="RegistryOverrideMap.JSONSchemaExtend"></a>
-### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L178>)
+### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L176>)
 
 ```go
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)

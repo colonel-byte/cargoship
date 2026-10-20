@@ -86,11 +86,6 @@
           "$ref": "#/$defs/DistroCreateOptions",
           "description": "are options used by the create subcommand"
         },
-        "fapolicyd": {
-          "default": true,
-          "description": "whether we will update hosts with fapolicyd",
-          "type": "boolean"
-        },
         "firewall": {
           "default": true,
           "description": "whether we will update the host firewall",
