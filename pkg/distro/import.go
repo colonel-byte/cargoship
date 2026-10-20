@@ -153,6 +153,12 @@ func extractPackage(ctx context.Context, store *orasoci.Store, layersToExtract [
 		if title == "" {
 			continue
 		}
+		// The title is the one string from the archive that becomes a path on this machine.
+		// AssembleLayers only selects titles cargoship computed, so nothing reaching here
+		// escapes today; the check is what keeps that true of a future caller.
+		if !layout.IsContainedPath(title) {
+			return nil, fmt.Errorf("layer %s declares the title %q, which does not stay inside the package", layer.Digest, title)
+		}
 		if err := writeLayer(ctx, store, layer, filepath.Join(pkgDir, title)); err != nil {
 			return nil, err
 		}

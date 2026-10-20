@@ -28,6 +28,7 @@ import (
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	orasoci "oras.land/oras-go/v2/content/oci"
 )
 
 func TestImport(t *testing.T) {
@@ -193,4 +194,39 @@ func TestImportRejectsBadInput(t *testing.T) {
 	// A directory that is not an OCI layout names the file it is missing.
 	_, err = Import(ctx, t.TempDir(), ImportOptions{Output: t.TempDir()})
 	require.ErrorContains(t, err, "is not an OCI Image Layout")
+}
+
+// TestExtractPackageRejectsAnEscapingLayerTitle covers the guard on the one hop where a
+// string from the archive becomes a path on this machine.
+//
+// AssembleLayers does not hand this function a free-form title today - it locates layers by
+// paths cargoship computes, from PackageAlwaysPull and from the package's own validated file
+// list - so this is the check that keeps that true for a future caller that assembles layers
+// some other way. The guard returns before any blob is fetched, so the store is empty.
+func TestExtractPackageRejectsAnEscapingLayerTitle(t *testing.T) {
+	ctx := context.Background()
+
+	store, err := orasoci.New(t.TempDir())
+	require.NoError(t, err)
+
+	pkgDir := t.TempDir()
+	hostile := []ocispec.Descriptor{
+		{
+			MediaType: "application/vnd.cargoship.layer.v1.blob",
+			Digest:    digest.FromString("payload"),
+			Annotations: map[string]string{
+				ocispec.AnnotationTitle: "../../escaped",
+			},
+		},
+	}
+
+	_, err = extractPackage(ctx, store, hostile, pkgDir, ImportOptions{
+		VerificationStrategy: layout.VerifyNever,
+	})
+	require.ErrorContains(t, err, "does not stay inside the package")
+
+	// The guard ran before the write, so nothing landed beside the package directory.
+	siblings, err := filepath.Glob(filepath.Join(filepath.Dir(pkgDir), "escaped"))
+	require.NoError(t, err)
+	require.Empty(t, siblings)
 }
