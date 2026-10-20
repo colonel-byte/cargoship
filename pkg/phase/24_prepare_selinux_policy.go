@@ -148,7 +148,7 @@ func (p *PrepareSelinuxPolicy) applyModules(ctx context.Context, h *cluster.Host
 		}
 
 		if current != m.CIL {
-			if err := p.Wet(h, "write "+path, func() error {
+			if err := p.Wet(func() error {
 				return h.WriteFile(path, m.CIL, "0600")
 			}); err != nil {
 				return fmt.Errorf("failed to write %s: %w", path, err)
@@ -167,7 +167,7 @@ func (p *PrepareSelinuxPolicy) applyModules(ctx context.Context, h *cluster.Host
 
 		install := fmt.Sprintf("%s -X %d -i %s", SEModule, selinuxModulePriority(m), shellQuote(path))
 		logger.From(ctx).Info("installing selinux module", "host", h, "module", m.Name, "priority", selinuxModulePriority(m))
-		if err := p.Wet(h, install, func() error {
+		if err := p.Wet(func() error {
 			return h.SudoExec(install)
 		}); err != nil {
 			return fmt.Errorf("failed to install selinux module %q: %w", m.Name, err)
@@ -189,7 +189,7 @@ func (p *PrepareSelinuxPolicy) applyBooleans(ctx context.Context, h *cluster.Hos
 
 	set := "setsebool -P " + strings.Join(selinuxBooleanArgs(booleans, names), " ")
 	logger.From(ctx).Info("setting selinux booleans", "host", h, "booleans", names)
-	if err := p.Wet(h, set, func() error {
+	if err := p.Wet(func() error {
 		return h.SudoExec(set)
 	}); err != nil {
 		return fmt.Errorf("failed to set selinux booleans: %w", err)
@@ -208,7 +208,7 @@ func (p *PrepareSelinuxPolicy) applyFileContexts(ctx context.Context, h *cluster
 	for _, fc := range contexts {
 		add := selinuxFcontextCommand("-a", fc)
 		logger.From(ctx).Info("adding selinux file context", "host", h, "path", fc.Path, "type", fc.Type)
-		if err := p.Wet(h, add, func() error {
+		if err := p.Wet(func() error {
 			if err := h.SudoExec(add); err == nil {
 				return nil
 			}
@@ -240,7 +240,7 @@ func (p *GenericPhase) relabelSELinux(ctx context.Context, h *cluster.Host, path
 	}
 
 	restore := "restorecon -R -F " + shellQuote(target)
-	if err := p.Wet(h, restore, func() error {
+	if err := p.Wet(func() error {
 		return h.SudoExec(restore)
 	}); err != nil {
 		return fmt.Errorf("failed to relabel %q: %w", target, err)
@@ -307,13 +307,13 @@ func (p *PrepareSelinuxPolicy) recordState(ctx context.Context, h *cluster.Host)
 		return fmt.Errorf("failed to encode selinux state: %w", err)
 	}
 
-	if err := p.Wet(h, "create "+SELinuxPolicyDir, func() error {
+	if err := p.Wet(func() error {
 		return h.Sudo().FS().MkdirAll(SELinuxPolicyDir, 0o700)
 	}); err != nil {
 		return fmt.Errorf("failed to create %s: %w", SELinuxPolicyDir, err)
 	}
 
-	if err := p.Wet(h, "write "+SELinuxStateFile, func() error {
+	if err := p.Wet(func() error {
 		return h.WriteFile(SELinuxStateFile, string(b)+"\n", "0600")
 	}); err != nil {
 		return fmt.Errorf("failed to write %s: %w", SELinuxStateFile, err)

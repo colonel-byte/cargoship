@@ -118,7 +118,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*GenericPhase\) VersionGreater\(host \*cluster.Host, version string\) bool](<#GenericPhase.VersionGreater>)
   - [func \(p \*GenericPhase\) VersionLess\(host \*cluster.Host, version string\) bool](<#GenericPhase.VersionLess>)
   - [func \(p \*GenericPhase\) VersionSkewTooGreat\(host \*cluster.Host, target string\) bool](<#GenericPhase.VersionSkewTooGreat>)
-  - [func \(p \*GenericPhase\) Wet\(host fmt.Stringer, msg string, funcs ...errorfunc\) error](<#GenericPhase.Wet>)
+  - [func \(p \*GenericPhase\) Wet\(f errorfunc\) error](<#GenericPhase.Wet>)
 - [type HostChange](<#HostChange>)
 - [type HostChangeDetail](<#HostChangeDetail>)
 - [type HostSummary](<#HostSummary>)
@@ -163,12 +163,11 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*Lock\) Title\(\) string](<#Lock.Title>)
   - [func \(p \*Lock\) UnlockPhase\(\) Phase](<#Lock.UnlockPhase>)
 - [type Manager](<#Manager>)
-  - [func \(m \*Manager\) AddPhase\(p ...Phase\)](<#Manager.AddPhase>)
   - [func \(m \*Manager\) RetryTimeout\(ctx context.Context, f func\(ctx context.Context\) error\) error](<#Manager.RetryTimeout>)
   - [func \(m \*Manager\) Run\(ctx context.Context\) error](<#Manager.Run>)
   - [func \(m \*Manager\) SetPhases\(p Phases\)](<#Manager.SetPhases>)
   - [func \(m \*Manager\) SetTimeout\(tm time.Duration\)](<#Manager.SetTimeout>)
-  - [func \(m \*Manager\) Wet\(\_ fmt.Stringer, \_ string, funcs ...errorfunc\) error](<#Manager.Wet>)
+  - [func \(m \*Manager\) Wet\(f errorfunc\) error](<#Manager.Wet>)
 - [type ManifestEntry](<#ManifestEntry>)
   - [func ParseManifest\(content string\) \[\]ManifestEntry](<#ParseManifest>)
 - [type ModifyHosts](<#ModifyHosts>)
@@ -1489,7 +1488,7 @@ VersionSkewTooGreat reports whether host's running version is more than one mino
 ### func \(\*GenericPhase\) [Wet](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L166>)
 
 ```go
-func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
+func (p *GenericPhase) Wet(f errorfunc) error
 ```
 
 Wet is a shorthand for manager.Wet
@@ -1983,17 +1982,8 @@ type Manager struct {
 }
 ```
 
-<a name="Manager.AddPhase"></a>
-### func \(\*Manager\) [AddPhase](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L516>)
-
-```go
-func (m *Manager) AddPhase(p ...Phase)
-```
-
-AddPhase adds a Phase to Manager
-
 <a name="Manager.RetryTimeout"></a>
-### func \(\*Manager\) [RetryTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L531>)
+### func \(\*Manager\) [RetryTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L526>)
 
 ```go
 func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error
@@ -2002,7 +1992,7 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 RetryTimeout wraps retry Timeout logic
 
 <a name="Manager.Run"></a>
-### func \(\*Manager\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L559>)
+### func \(\*Manager\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L552>)
 
 ```go
 func (m *Manager) Run(ctx context.Context) error
@@ -2011,7 +2001,7 @@ func (m *Manager) Run(ctx context.Context) error
 Run executes all the added Phases in order
 
 <a name="Manager.SetPhases"></a>
-### func \(\*Manager\) [SetPhases](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L521>)
+### func \(\*Manager\) [SetPhases](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L516>)
 
 ```go
 func (m *Manager) SetPhases(p Phases)
@@ -2020,7 +2010,7 @@ func (m *Manager) SetPhases(p Phases)
 SetPhases sets the list of phases
 
 <a name="Manager.SetTimeout"></a>
-### func \(\*Manager\) [SetTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L526>)
+### func \(\*Manager\) [SetTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L521>)
 
 ```go
 func (m *Manager) SetTimeout(tm time.Duration)
@@ -2029,13 +2019,15 @@ func (m *Manager) SetTimeout(tm time.Duration)
 SetTimeout sets the timeout for the manager
 
 <a name="Manager.Wet"></a>
-### func \(\*Manager\) [Wet](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L543>)
+### func \(\*Manager\) [Wet](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L544>)
 
 ```go
-func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
+func (m *Manager) Wet(f errorfunc) error
 ```
 
-Wet runs the first given function when not in dry\-run mode. The second function will be run when in dry\-mode and the message will be displayed. Any error returned from the functions will be returned and will halt the operation.
+Wet runs f unless this is a dry run, where it does nothing and reports no error. It is how a phase that changes a host declares which part of itself is the change.
+
+It used to take a host and a message as well, and a second function to run instead during a dry run. Neither parameter was ever read \-\- the signature named them \`\_\` \-\- and no caller ever passed the second function, so a dry run's account of a phase came from nowhere. What reports a dry run now is the DryRunBehavior classification above: a phase says what it would do through ClassifyDryRun and DryRunNote, once per phase, rather than per operation through a message that was built with fmt.Sprintf on every uploaded file and then discarded.
 
 <a name="ManifestEntry"></a>
 ## type [ManifestEntry](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L40-L45>)

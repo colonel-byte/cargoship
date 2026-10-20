@@ -163,8 +163,8 @@ func (p *GenericPhase) batchedParallelPerProfileWithMessage(ctx context.Context,
 }
 
 // Wet is a shorthand for manager.Wet
-func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error {
-	return p.manager.Wet(host, msg, funcs...)
+func (p *GenericPhase) Wet(f errorfunc) error {
+	return p.manager.Wet(f)
 }
 
 // VersionLess if host version is less then the distro version

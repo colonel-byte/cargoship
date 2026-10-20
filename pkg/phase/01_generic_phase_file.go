@@ -44,7 +44,7 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.Host, dir, perm
 		if targetPerm == "" {
 			targetPerm = "0755"
 		}
-		err := p.Wet(h, fmt.Sprintf("create a directory for uploading: `mkdir -p \"%s\"`", dir), func() error {
+		err := p.Wet(func() error {
 			mode := fs.FileMode(0o755)
 			if v, perr := strconv.ParseUint(targetPerm, 8, 32); perr == nil {
 				mode = fs.FileMode(v)
@@ -57,7 +57,7 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.Host, dir, perm
 	}
 
 	if owner != "" {
-		err := p.Wet(h, fmt.Sprintf("set owner for directory %s to %s", dir, owner), func() error {
+		err := p.Wet(func() error {
 			return h.Sudo().FS().Chown(dir, owner)
 		})
 		if err != nil {
@@ -69,7 +69,7 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.Host, dir, perm
 		perm = "0755"
 	}
 
-	return p.Wet(h, fmt.Sprintf("set permissions for directory %s to %s", dir, perm), func() error {
+	return p.Wet(func() error {
 		return chmodWithString(h, dir, perm)
 	})
 }
@@ -105,7 +105,7 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.Host, f *v1alp
 	}
 
 	if h.FileChanged(src, target) {
-		err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, target), func() error {
+		err := p.Wet(func() error {
 			stat, err := os.Stat(src)
 			if err != nil {
 				return fmt.Errorf("failed to stat local file %s: %w", src, err)
@@ -152,7 +152,7 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.Host, f *v1alp
 		return err
 	}
 
-	err := p.Wet(h, fmt.Sprintf("upload inline data => %s", dest), func() error {
+	err := p.Wet(func() error {
 		fileMode, err := strconv.ParseUint(f.PermString, 8, 32)
 		if err != nil {
 			logger.From(ctx).Warn("got an", "error", err)

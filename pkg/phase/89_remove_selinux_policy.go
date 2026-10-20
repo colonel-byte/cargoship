@@ -101,7 +101,7 @@ func (p *RemoveSelinuxPolicy) removeHost(ctx context.Context, h *cluster.Host) e
 	p.restoreBooleans(ctx, h, state)
 	p.removeModules(ctx, h, state)
 
-	if err := p.Wet(h, "delete "+SELinuxStateFile, func() error {
+	if err := p.Wet(func() error {
 		return h.DeleteFile(SELinuxStateFile)
 	}); err != nil {
 		logger.From(ctx).Warn("could not delete the selinux state file", "host", h, "file", SELinuxStateFile, "error", err)
@@ -119,7 +119,7 @@ func (p *RemoveSelinuxPolicy) removeFileContexts(ctx context.Context, h *cluster
 			FileType: fc.FileType,
 		})
 		logger.From(ctx).Info("removing selinux file context", "host", h, "path", fc.Path)
-		if err := p.Wet(h, del, func() error {
+		if err := p.Wet(func() error {
 			return h.SudoExec(del)
 		}); err != nil {
 			logger.From(ctx).Warn("could not remove selinux file context", "host", h, "path", fc.Path, "error", err)
@@ -141,7 +141,7 @@ func (p *RemoveSelinuxPolicy) restoreBooleans(ctx context.Context, h *cluster.Ho
 	names := slices.Sorted(maps.Keys(state.Booleans))
 	set := "setsebool -P " + strings.Join(selinuxBooleanArgs(state.Booleans, names), " ")
 	logger.From(ctx).Info("restoring selinux booleans", "host", h, "booleans", names)
-	if err := p.Wet(h, set, func() error {
+	if err := p.Wet(func() error {
 		return h.SudoExec(set)
 	}); err != nil {
 		logger.From(ctx).Warn("could not restore selinux booleans", "host", h, "booleans", names, "error", err)
@@ -153,7 +153,7 @@ func (p *RemoveSelinuxPolicy) removeModules(ctx context.Context, h *cluster.Host
 	for _, m := range state.Modules {
 		remove := fmt.Sprintf("%s -X %d -r %s", SEModule, m.Priority, shellQuote(m.Name))
 		logger.From(ctx).Info("removing selinux module", "host", h, "module", m.Name, "priority", m.Priority)
-		if err := p.Wet(h, remove, func() error {
+		if err := p.Wet(func() error {
 			return h.SudoExec(remove)
 		}); err != nil {
 			logger.From(ctx).Warn("could not remove selinux module", "host", h, "module", m.Name, "error", err)
@@ -163,7 +163,7 @@ func (p *RemoveSelinuxPolicy) removeModules(ctx context.Context, h *cluster.Host
 		if !h.FileExist(path) {
 			continue
 		}
-		if err := p.Wet(h, "delete "+path, func() error {
+		if err := p.Wet(func() error {
 			return h.DeleteFile(path)
 		}); err != nil {
 			logger.From(ctx).Warn("could not delete selinux module source", "host", h, "file", path, "error", err)
