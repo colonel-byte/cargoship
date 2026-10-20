@@ -29,6 +29,10 @@ import (
 // tests. Paths are relative to the repo root, which TestMain chdirs into.
 const minimalDistroDir = "test/e2e/noncluster/testdata/minimal"
 
+// imageDistroDir is minimalDistroDir with one image, for the tests that need a package
+// carrying an images layer. Its registry address is a placeholder: see imagePackage.
+const imageDistroDir = "test/e2e/noncluster/testdata/minimal-image"
+
 // multiArchDistroDir is the same definition targeting two architectures, for the tests that need
 // a package no single architecture can claim on its own.
 const multiArchDistroDir = "test/e2e/noncluster/testdata/minimal-multi"

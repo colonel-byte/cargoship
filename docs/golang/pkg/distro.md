@@ -11,10 +11,13 @@ Package distro is used for creating/deploying distro package
 ## Index
 
 - [func Create\(ctx context.Context, distroPath string, output string, opts CreateOptions\) \(string, error\)](<#Create>)
+- [func Import\(ctx context.Context, source string, opts ImportOptions\) \(string, error\)](<#Import>)
+- [func ImportLayout\(ctx context.Context, source string, opts ImportOptions\) \(\*layout.DistroLayout, error\)](<#ImportLayout>)
 - [func Load\(ctx context.Context, source string, opts LoadOptions\) \(\*layout.DistroLayout, error\)](<#Load>)
 - [func Publish\(ctx context.Context, disLayout \*layout.DistroLayout, dst registry.Reference, opts PublishOptions\) \(registry.Reference, error\)](<#Publish>)
 - [func Pull\(ctx context.Context, source, destination string, opts PullOptions\) \(string, error\)](<#Pull>)
 - [type CreateOptions](<#CreateOptions>)
+- [type ImportOptions](<#ImportOptions>)
 - [type LoadOptions](<#LoadOptions>)
 - [type PublishOptions](<#PublishOptions>)
 - [type PullOptions](<#PullOptions>)
@@ -28,6 +31,24 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 ```
 
 Create used to create a distro package
+
+<a name="Import"></a>
+## func [Import](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L50>)
+
+```go
+func Import(ctx context.Context, source string, opts ImportOptions) (string, error)
+```
+
+Import converts an OCI Image Layout archive or directory, such as one written by \`skopeo copy ... oci\-archive:\`, into a native Cargoship package.
+
+<a name="ImportLayout"></a>
+## func [ImportLayout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L68>)
+
+```go
+func ImportLayout(ctx context.Context, source string, opts ImportOptions) (*layout.DistroLayout, error)
+```
+
+ImportLayout reads an OCI Image Layout archive or directory and unpacks it into a DistroLayout.
 
 <a name="Load"></a>
 ## func [Load](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/load.go#L56>)
@@ -84,6 +105,20 @@ type CreateOptions struct {
     // Tag overrides the package metadata version.
     Tag string
     types.RemoteOptions
+}
+```
+
+<a name="ImportOptions"></a>
+## type [ImportOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L41-L46>)
+
+ImportOptions declares optional parameters for an Import operation.
+
+```go
+type ImportOptions struct {
+    Architecture         string
+    Output               string
+    VerifyBlobOptions    *signing.VerifyBlobOptions
+    VerificationStrategy layout.VerificationStrategy
 }
 ```
 

@@ -197,6 +197,18 @@ cargoship sign ./build/cargoship-distro-amd64.tar.zst --signing-key ./private-ke
 cargoship verify ./build/cargoship-distro-amd64.tar.zst --key ./cosign.pub
 ```
 
+An operator who cannot reach the registry from the management node moves the package across the airlock with Skopeo instead, then converts the resulting OCI archive into a native package:
+
+```bash
+# On the connected side: export the package as an OCI archive
+skopeo copy --override-os multi docker://ghcr.io/my-org/my-package:1.0.0 oci-archive:my-package.tar:1.0.0
+
+# On the disconnected side: convert it into a package apply can install
+cargoship import ./my-package.tar -o ./build/
+```
+
+`import` reads an OCI Image Layout, as a `.tar` or as an unpacked directory; see [Importing Archives](docs/guides/importing-archives.md) for the other tools that write one, and why a `docker-archive` cannot carry a package.
+
 A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see [#848](https://github.com/colonel-byte/cargoship/issues/848). The commands that load a package - `apply`, `prepare`, `engine-config-sync`, `publish`, `pull`, `validate`, `schema` - verify as part of loading, gated on `--verify=never|if-possible|always`. `verify` does nothing but check the signature, which is what makes it the one to run before a playbook.
 
 ### 8. Encrypt Credentials in a Config File

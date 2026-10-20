@@ -41,6 +41,10 @@ const (
 		"--shasum checks the downloaded archive against a checksum you already hold, which is the check to use when the package is to be trusted on the strength of something other than its signature."
 	// CmdPackagePullFlagShasum pull shasum flag
 	CmdPackagePullFlagShasum = "Shasum of the package to pull."
+	// CmdPackageImportShort import short
+	CmdPackageImportShort = "Converts an OCI Image Layout archive into a native Cargoship package"
+	// CmdPackageImportLong import long
+	CmdPackageImportLong = "Converts an OCI Image Layout archive (such as one written by skopeo copy ... oci-archive:) or an OCI layout directory into a native Cargoship package archive, extracting all package layers and verifying package integrity."
 	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
 	// CmdDistroApplyLong apply long
