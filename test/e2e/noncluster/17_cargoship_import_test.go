@@ -70,7 +70,7 @@ func TestCargoshipImportRoundTrip(t *testing.T) {
 	_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst, "--plain-http", "--confirm")
 	require.NoError(t, err)
 
-	layoutDir := ociLayoutFromRegistry(t, addr, "e2e-import")
+	layoutDir := ociLayoutFromRegistry(t, addr, "e2e-import/"+imagePackageName, imagePackageVersion)
 	requireImageLayer(t, layoutDir)
 
 	for _, tc := range []struct {
@@ -91,17 +91,80 @@ func TestCargoshipImportRoundTrip(t *testing.T) {
 			_, _, err := e2e.Cargoship(t, "import", tc.source, "-o", outDir)
 			require.NoError(t, err)
 
-			imported, err := filepath.Glob(filepath.Join(outDir, "*.tar.zst"))
-			require.NoError(t, err)
-			require.Len(t, imported, 1, "expected exactly one package imported")
-
 			wantBytes, err := os.ReadFile(pkgPath)
 			require.NoError(t, err)
-			gotBytes, err := os.ReadFile(imported[0])
+			gotBytes, err := os.ReadFile(requireSinglePackage(t, outDir))
 			require.NoError(t, err)
 			require.Equal(t, wantBytes, gotBytes, "imported package must be byte-identical to the published one")
 		})
 	}
+}
+
+// TestCargoshipImportMultiArch covers importing a package that covers two architectures.
+//
+// It is the case the unit tests cannot reach: a cargoship multi-arch package holds one set
+// of blobs, so the registry tags an index listing that one manifest digest once per
+// architecture, and copying the tagged index into a layout nests it under the layout's own
+// index.json. Selecting the package therefore takes both halves of selectManifest - the
+// descent into a nested index, and the platform match inside it - over an index the
+// publisher really wrote rather than one the test hand-built.
+func TestCargoshipImportMultiArch(t *testing.T) {
+	pkgPath := multiArchPackage(t)
+	addr := test.SetupInMemoryRegistry(t)
+	dst := fmt.Sprintf("oci://%s/e2e-import-multi", addr)
+
+	_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst, "--plain-http", "--confirm")
+	require.NoError(t, err)
+
+	repoPath := "e2e-import-multi/" + multiArchPackageName
+	index := fetchIndex(t, addr, repoPath, imagePackageVersion)
+	require.Equal(t, []string{"amd64", "arm64"}, indexArchitectures(index),
+		"the import below is only a multi-arch case while the published index covers both")
+
+	layoutDir := ociLayoutFromRegistry(t, addr, repoPath, imagePackageVersion)
+	requireNestedIndex(t, layoutDir)
+	tarPath := tarDir(t, layoutDir)
+
+	wantBytes, err := os.ReadFile(pkgPath)
+	require.NoError(t, err)
+
+	// Both architectures resolve to the one manifest the package pushed, so either import
+	// returns the same bytes. What differs is the path taken to find it.
+	for _, arch := range []string{"amd64", "arm64"} {
+		t.Run("imports as "+arch, func(t *testing.T) {
+			outDir := t.TempDir()
+			_, _, err := e2e.Cargoship(t, "import", tarPath, "-o", outDir, "-a", arch)
+			require.NoError(t, err)
+
+			gotBytes, err := os.ReadFile(requireSinglePackage(t, outDir))
+			require.NoError(t, err)
+			require.Equal(t, wantBytes, gotBytes, "imported package must be byte-identical to the published one")
+		})
+	}
+}
+
+// requireNestedIndex fails unless the layout's own index.json points at an image index
+// rather than straight at a manifest. That nesting is what makes this test cover the
+// descent in selectManifest, and it is a property of how the index was copied rather than
+// anything the test states, so it is checked instead of assumed.
+func requireNestedIndex(t *testing.T, layoutDir string) {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(layoutDir, ocispec.ImageIndexFile))
+	require.NoError(t, err)
+
+	var index ocispec.Index
+	require.NoError(t, json.Unmarshal(data, &index))
+
+	// The store lists every manifest it holds, so the copied index sits beside the manifest
+	// it points at. One image index among them is what sends the import down the descent.
+	var nested int
+	for _, m := range index.Manifests {
+		if m.MediaType == ocispec.MediaTypeImageIndex {
+			nested++
+		}
+	}
+	require.NotZerof(t, nested, "%s names no image index, so importing it never descends into one", ocispec.ImageIndexFile)
 }
 
 // requireImageLayer fails unless the archive carries a layer from the bundled image. The
@@ -194,21 +257,16 @@ func imagePackage(t *testing.T, addr string) string {
 	_, _, err = e2e.Cargoship(t, "create", defDir, "-o", outDir)
 	require.NoError(t, err)
 
-	matches, err := filepath.Glob(filepath.Join(outDir, "*.tar.zst"))
-	require.NoError(t, err)
-	require.Len(t, matches, 1, "expected exactly one package in %s, got %v", outDir, matches)
-
-	return matches[0]
+	return requireSinglePackage(t, outDir)
 }
 
 // ociLayoutFromRegistry copies a published package out of the registry into an OCI Image
 // Layout directory, which is what `skopeo copy docker://... oci-archive:` produces.
-func ociLayoutFromRegistry(t *testing.T, addr string, namespace string) string {
+func ociLayoutFromRegistry(t *testing.T, addr string, repoPath string, tag string) string {
 	t.Helper()
 	ctx := context.Background()
 
-	ref := fmt.Sprintf("%s/%s/%s:%s", addr, namespace, imagePackageName, imagePackageVersion)
-	repo, err := remote.NewRepository(ref)
+	repo, err := remote.NewRepository(fmt.Sprintf("%s/%s:%s", addr, repoPath, tag))
 	require.NoError(t, err)
 	repo.PlainHTTP = true
 
@@ -216,7 +274,6 @@ func ociLayoutFromRegistry(t *testing.T, addr string, namespace string) string {
 	store, err := orasoci.New(layoutDir)
 	require.NoError(t, err)
 
-	tag := imagePackageVersion
 	_, err = oras.Copy(ctx, repo, tag, store, tag, oras.DefaultCopyOptions)
 	require.NoError(t, err)
 
