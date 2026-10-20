@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-b1bd1fab.js";
+            window.path_to_searchindex_js = "../../searchindex-40b8dc17.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-8dc70692.js"></script>
@@ -422,7 +422,6 @@
 </li>
 <li><a href="#Manager">type Manager</a>
 <ul>
-<li><a href="#NewManager">func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)</a></li>
 <li><a href="#Manager.AddPhase">func (m *Manager) AddPhase(p …Phase)</a></li>
 <li><a href="#Manager.GetDistroOSFiles">func (m *Manager) GetDistroOSFiles() v1alpha1.Files</a></li>
 <li><a href="#Manager.RetryTimeout">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
@@ -722,12 +721,12 @@
 <p>CheckTargetHosts reports a target that names no host in the configuration.</p>
 <p>A target nobody matches is the quiet failure this whole feature could have: the filter returns an empty set, every phase reports nothing to do, and the run succeeds having removed nothing. A typo in a hostname is the ordinary way to get there.</p>
 <p><a name="DryRunNote"></a></p>
-<h2 id="func-dryrunnote"><a class="header" href="#func-dryrunnote">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L174">DryRunNote</a></a></h2>
+<h2 id="func-dryrunnote"><a class="header" href="#func-dryrunnote">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L172">DryRunNote</a></a></h2>
 <pre><code class="language-go">func DryRunNote(p Phase) string
 </code></pre>
 <p>DryRunNote returns the phase’s own account of why a dry run runs it, or “” for a phase that gives none. Only read-only phases carry one: they are the phases a dry run runs against live hosts, so they are the ones a reader is entitled to an argument about.</p>
 <p><a name="Titles"></a></p>
-<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L417">Titles</a></a></h2>
+<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L415">Titles</a></a></h2>
 <pre><code class="language-go">func Titles(results []PhaseResult) []string
 </code></pre>
 <p>Titles names the phases in a slice, for a caller that reports a list of names rather than the detail behind them.</p>
@@ -1129,7 +1128,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="DryRunBehavior"></a></p>
-<h2 id="type-dryrunbehavior"><a class="header" href="#type-dryrunbehavior">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L134">DryRunBehavior</a></a></h2>
+<h2 id="type-dryrunbehavior"><a class="header" href="#type-dryrunbehavior">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L132">DryRunBehavior</a></a></h2>
 <p>DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the phase implements, and it is exported so magefiles/pkg/gen/docs/phase.go can label each phase in docs/phases/&lt;name&gt;.md with the same classification Run() gates on. The docs and the gate cannot disagree, because there is only one classifier.</p>
 <pre><code class="language-go">type DryRunBehavior int
 </code></pre>
@@ -1147,12 +1146,12 @@
 )
 </code></pre>
 <p><a name="ClassifyDryRun"></a></p>
-<h3 id="func-classifydryrun"><a class="header" href="#func-classifydryrun">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L161">ClassifyDryRun</a></a></h3>
+<h3 id="func-classifydryrun"><a class="header" href="#func-classifydryrun">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L159">ClassifyDryRun</a></a></h3>
 <pre><code class="language-go">func ClassifyDryRun(p Phase) DryRunBehavior
 </code></pre>
 <p>ClassifyDryRun reports what a dry run does with p.</p>
 <p><a name="DryRunBehavior.String"></a></p>
-<h3 id="func-dryrunbehavior-string"><a class="header" href="#func-dryrunbehavior-string">func (DryRunBehavior) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L149">String</a></a></h3>
+<h3 id="func-dryrunbehavior-string"><a class="header" href="#func-dryrunbehavior-string">func (DryRunBehavior) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L147">String</a></a></h3>
 <pre><code class="language-go">func (b DryRunBehavior) String() string
 </code></pre>
 <p>String is the label written into the phase docs.</p>
@@ -1354,7 +1353,7 @@
 </code></pre>
 <p>Wet is a shorthand for manager.Wet</p>
 <p><a name="HostChange"></a></p>
-<h2 id="type-hostchange"><a class="header" href="#type-hostchange">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L212-L222">HostChange</a></a></h2>
+<h2 id="type-hostchange"><a class="header" href="#type-hostchange">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L210-L220">HostChange</a></a></h2>
 <p>HostChange is what one phase did to one host.</p>
 <pre><code class="language-go">type HostChange struct {
     // Host identifies the host as the cluster configuration would: the address from its host
@@ -1369,7 +1368,7 @@
 }
 </code></pre>
 <p><a name="HostChangeDetail"></a></p>
-<h2 id="type-hostchangedetail"><a class="header" href="#type-hostchangedetail">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L225-L239">HostChangeDetail</a></a></h2>
+<h2 id="type-hostchangedetail"><a class="header" href="#type-hostchangedetail">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L223-L237">HostChangeDetail</a></a></h2>
 <p>HostChangeDetail is one thing a phase did to one host.</p>
 <pre><code class="language-go">type HostChangeDetail struct {
     // Path is the file this is about, absolute as the host sees it.
@@ -1388,7 +1387,7 @@
 }
 </code></pre>
 <p><a name="HostSummary"></a></p>
-<h2 id="type-hostsummary"><a class="header" href="#type-hostsummary">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L368-L377">HostSummary</a></a></h2>
+<h2 id="type-hostsummary"><a class="header" href="#type-hostsummary">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L366-L375">HostSummary</a></a></h2>
 <p>HostSummary is one host’s line in a run summary.</p>
 <pre><code class="language-go">type HostSummary struct {
     Host    string
@@ -1641,7 +1640,7 @@
 </code></pre>
 <p>UnlockPhase returns an unlock phase for this lock phase</p>
 <p><a name="Manager"></a></p>
-<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L538-L559">Manager</a></a></h2>
+<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L536-L557">Manager</a></a></h2>
 <p>Manager executes phases to construct the cluster</p>
 <pre><code class="language-go">type Manager struct {
     Config *cluster.Cluster
@@ -1666,48 +1665,43 @@
     // contains filtered or unexported fields
 }
 </code></pre>
-<p><a name="NewManager"></a></p>
-<h3 id="func-newmanager"><a class="header" href="#func-newmanager">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L572">NewManager</a></a></h3>
-<pre><code class="language-go">func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error)
-</code></pre>
-<p>NewManager creates a new Manager</p>
 <p><a name="Manager.AddPhase"></a></p>
-<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L584">AddPhase</a></a></h3>
+<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L570">AddPhase</a></a></h3>
 <pre><code class="language-go">func (m *Manager) AddPhase(p ...Phase)
 </code></pre>
 <p>AddPhase adds a Phase to Manager</p>
 <p><a name="Manager.GetDistroOSFiles"></a></p>
-<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L607">GetDistroOSFiles</a></a></h3>
+<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L593">GetDistroOSFiles</a></a></h3>
 <pre><code class="language-go">func (m *Manager) GetDistroOSFiles() v1alpha1.Files
 </code></pre>
 <p>GetDistroOSFiles returns the ZarfFiles for a distro</p>
 <p><a name="Manager.RetryTimeout"></a></p>
-<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L599">RetryTimeout</a></a></h3>
+<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L585">RetryTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error
 </code></pre>
 <p>RetryTimeout wraps retry Timeout logic</p>
 <p><a name="Manager.Run"></a></p>
-<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L632">Run</a></a></h3>
+<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L618">Run</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Run(ctx context.Context) error
 </code></pre>
 <p>Run executes all the added Phases in order</p>
 <p><a name="Manager.SetPhases"></a></p>
-<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L589">SetPhases</a></a></h3>
+<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L575">SetPhases</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetPhases(p Phases)
 </code></pre>
 <p>SetPhases sets the list of phases</p>
 <p><a name="Manager.SetTimeout"></a></p>
-<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L594">SetTimeout</a></a></h3>
+<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L580">SetTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetTimeout(tm time.Duration)
 </code></pre>
 <p>SetTimeout sets the timeout for the manager</p>
 <p><a name="Manager.Wet"></a></p>
-<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L616">Wet</a></a></h3>
+<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L602">Wet</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
 </code></pre>
 <p>Wet runs the first given function when not in dry-run mode. The second function will be run when in dry-mode and the message will be displayed. Any error returned from the functions will be returned and will halt the operation.</p>
 <p><a name="ManagerDistroConfig"></a></p>
-<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L562-L569">ManagerDistroConfig</a></a></h2>
+<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L560-L567">ManagerDistroConfig</a></a></h2>
 <p>ManagerDistroConfig stores some values for manager distro config</p>
 <pre><code class="language-go">type ManagerDistroConfig struct {
     BinaryDir string
@@ -1769,7 +1763,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="Phase"></a></p>
-<h2 id="type-phase"><a class="header" href="#type-phase">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L48-L52">Phase</a></a></h2>
+<h2 id="type-phase"><a class="header" href="#type-phase">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L46-L50">Phase</a></a></h2>
 <p>Phase represents a runnable phase which can be added to Manager.</p>
 <pre><code class="language-go">type Phase interface {
     Run(context.Context) error
@@ -1778,7 +1772,7 @@
 }
 </code></pre>
 <p><a name="PhaseResult"></a></p>
-<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L242-L259">PhaseResult</a></a></h2>
+<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L240-L257">PhaseResult</a></a></h2>
 <p>PhaseResult is what a single phase did during a run.</p>
 <pre><code class="language-go">type PhaseResult struct {
     Title       string
@@ -1800,27 +1794,27 @@
 }
 </code></pre>
 <p><a name="Phases"></a></p>
-<h2 id="type-phases"><a class="header" href="#type-phases">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L55">Phases</a></a></h2>
+<h2 id="type-phases"><a class="header" href="#type-phases">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L53">Phases</a></a></h2>
 <p>Phases is a slice of Phases</p>
 <pre><code class="language-go">type Phases []Phase
 </code></pre>
 <p><a name="Phases.Index"></a></p>
-<h3 id="func-phases-index"><a class="header" href="#func-phases-index">func (Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L58">Index</a></a></h3>
+<h3 id="func-phases-index"><a class="header" href="#func-phases-index">func (Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L56">Index</a></a></h3>
 <pre><code class="language-go">func (p Phases) Index(title string) int
 </code></pre>
 <p>Index returns the index of the first occurrence matching the given phase title or -1 if not found</p>
 <p><a name="Phases.InsertAfter"></a></p>
-<h3 id="func-phases-insertafter"><a class="header" href="#func-phases-insertafter">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L68">InsertAfter</a></a></h3>
+<h3 id="func-phases-insertafter"><a class="header" href="#func-phases-insertafter">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L66">InsertAfter</a></a></h3>
 <pre><code class="language-go">func (p *Phases) InsertAfter(title string, phase Phase)
 </code></pre>
 <p>InsertAfter inserts a phase after the first occurrence of a phase with the given title</p>
 <p><a name="Phases.InsertBefore"></a></p>
-<h3 id="func-phases-insertbefore"><a class="header" href="#func-phases-insertbefore">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L77">InsertBefore</a></a></h3>
+<h3 id="func-phases-insertbefore"><a class="header" href="#func-phases-insertbefore">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L75">InsertBefore</a></a></h3>
 <pre><code class="language-go">func (p *Phases) InsertBefore(title string, phase Phase)
 </code></pre>
 <p>InsertBefore inserts a phase before the first occurrence of a phase with the given title</p>
 <p><a name="Phases.Replace"></a></p>
-<h3 id="func-phases-replace"><a class="header" href="#func-phases-replace">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L86">Replace</a></a></h3>
+<h3 id="func-phases-replace"><a class="header" href="#func-phases-replace">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L84">Replace</a></a></h3>
 <pre><code class="language-go">func (p *Phases) Replace(title string, phase Phase)
 </code></pre>
 <p>Replace replaces the first occurrence of a phase with the given title</p>
@@ -2091,7 +2085,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ResultSink"></a></p>
-<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L445-L449">ResultSink</a></a></h2>
+<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L443-L447">ResultSink</a></a></h2>
 <p>ResultSink collects the RunResult of every Manager.Run that happens on a context.</p>
 <p>It exists because the Ansible module mode runs cargoship by building an argument vector and calling the ordinary command, which returns an error and nothing else -- see src/cmd.ExecuteArgs. Threading a return value back through cobra, the action and the manager would change five call sites to serve one caller. A sink on the context that nobody else installs does not, and a run with no sink on its context pays nothing for this.</p>
 <pre><code class="language-go">type ResultSink struct {
@@ -2099,22 +2093,22 @@
 }
 </code></pre>
 <p><a name="WithResultSink"></a></p>
-<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L452">WithResultSink</a></a></h3>
+<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L450">WithResultSink</a></a></h3>
 <pre><code class="language-go">func WithResultSink(ctx context.Context) (context.Context, *ResultSink)
 </code></pre>
 <p>WithResultSink returns a context carrying a sink, and the sink itself.</p>
 <p><a name="ResultSink.Observed"></a></p>
-<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L474">Observed</a></a></h3>
+<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L472">Observed</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Observed() bool
 </code></pre>
 <p>Observed reports whether any run reached its phases at all. A command that failed before that -- an unreadable package, a configuration that does not validate -- publishes nothing, and that is a different thing from a run in which no phase changed anything.</p>
 <p><a name="ResultSink.Result"></a></p>
-<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L465">Result</a></a></h3>
+<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L463">Result</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Result() RunResult
 </code></pre>
 <p>Result is every run that reached its phases on this context, flattened into one.</p>
 <p><a name="RunResult"></a></p>
-<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L263-L276">RunResult</a></a></h2>
+<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L261-L274">RunResult</a></a></h2>
 <p>RunResult is what a whole Manager.Run did, phase by phase. Manager.Run fills it in on the way through, so a run that returned an error still carries the phases it got through first.</p>
 <pre><code class="language-go">type RunResult struct {
     // Ran are the phases that executed, in order. That includes the read-only phases a dry run
@@ -2132,39 +2126,39 @@
 }
 </code></pre>
 <p><a name="RunResult.Changed"></a></p>
-<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L280">Changed</a></a></h3>
+<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L278">Changed</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Changed() bool
 </code></pre>
 <p>Changed reports whether any phase said it changed something on the fleet. Phases that declared nothing do not contribute; read Complete to find out whether that leaves the answer partial.</p>
 <p><a name="RunResult.Complete"></a></p>
-<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L319">Complete</a></a></h3>
+<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L317">Complete</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Complete() bool
 </code></pre>
 <p>Complete reports whether every phase the run reached declared whether it changed anything.</p>
 <p><a name="RunResult.HostSummaries"></a></p>
-<h3 id="func-runresult-hostsummaries"><a class="header" href="#func-runresult-hostsummaries">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L385">HostSummaries</a></a></h3>
+<h3 id="func-runresult-hostsummaries"><a class="header" href="#func-runresult-hostsummaries">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L383">HostSummaries</a></a></h3>
 <pre><code class="language-go">func (r RunResult) HostSummaries() []HostSummary
 </code></pre>
 <p>HostSummaries rolls the per-host answers up across every phase of the run, in the order the hosts were first named.</p>
 <p>A host appears here only if some phase named it, so this is not a roster of the fleet: a caller wanting every host, including the ones no phase spoke for, is expected to start from the cluster configuration and look each one up.</p>
 <p><a name="RunResult.HostsUndeclared"></a></p>
-<h3 id="func-runresult-hostsundeclared"><a class="header" href="#func-runresult-hostsundeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L355">HostsUndeclared</a></a></h3>
+<h3 id="func-runresult-hostsundeclared"><a class="header" href="#func-runresult-hostsundeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L353">HostsUndeclared</a></a></h3>
 <pre><code class="language-go">func (r RunResult) HostsUndeclared() []string
 </code></pre>
 <p>HostsUndeclared names the phases that did not say which hosts they changed, in the order the run reached them. It stands to the per-host answer as Undeclared stands to the fleet-wide one: a caller rendering a per-host summary is expected to report these alongside it, because a host missing from the summary may simply never have been spoken for.</p>
 <p><a name="RunResult.Outstanding"></a></p>
-<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L295">Outstanding</a></a></h3>
+<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L293">Outstanding</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Outstanding() bool
 </code></pre>
 <p>Outstanding is the dry-run counterpart of Changed: it reports whether any phase that can report a change was reported rather than run. A phase reaches Planned only after its ShouldRun said there was work to do, so this answers “would a real run change anything” for the phases that have said how to tell.</p>
 <p><a name="RunResult.Signal"></a></p>
-<h3 id="func-runresult-signal"><a class="header" href="#func-runresult-signal">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L344">Signal</a></a></h3>
+<h3 id="func-runresult-signal"><a class="header" href="#func-runresult-signal">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L342">Signal</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Signal() string
 </code></pre>
 <p>Signal reports how much Changed is worth, as one of SignalComplete or SignalPartial.</p>
 <p>SignalUnknown is deliberately not among the answers. It means no run reached its phases at all, which is a property of the sink rather than of a result -- an empty RunResult and a run in which nothing was declared are the same value here. See ResultSink.Observed.</p>
 <p><a name="RunResult.Undeclared"></a></p>
-<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L306">Undeclared</a></a></h3>
+<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L304">Undeclared</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Undeclared() []string
 </code></pre>
 <p>Undeclared names the phases that did not say whether they changed anything, in the order the run reached them. A caller reporting Changed is expected to report these alongside it.</p>

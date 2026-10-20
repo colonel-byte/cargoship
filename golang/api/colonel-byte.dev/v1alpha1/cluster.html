@@ -37,7 +37,7 @@
             const path_to_root = "../../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../../searchindex-b1bd1fab.js";
+            window.path_to_searchindex_js = "../../../../searchindex-40b8dc17.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../../toc-8dc70692.js"></script>
@@ -223,7 +223,6 @@
 <ul>
 <li><a href="#Host.Address">func (h *Host) Address() string</a></li>
 <li><a href="#Host.Arch">func (h *Host) Arch() (string, error)</a></li>
-<li><a href="#Host.CheckHTTPStatus">func (h *Host) CheckHTTPStatus(ctx context.Context, url string, expected …int) error</a></li>
 <li><a href="#Host.ConfiguredAddress">func (h *Host) ConfiguredAddress() string</a></li>
 <li><a href="#Host.Connect">func (h *Host) Connect(ctx context.Context) error</a></li>
 <li><a href="#Host.DeleteFile">func (h *Host) DeleteFile(path string) error</a></li>
@@ -621,11 +620,6 @@
 <pre><code class="language-go">func (h *Host) Arch() (string, error)
 </code></pre>
 <p>Arch returns the host architecture, caching the result in metadata</p>
-<p><a name="Host.CheckHTTPStatus"></a></p>
-<h3 id="func-host-checkhttpstatus"><a class="header" href="#func-host-checkhttpstatus">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L692">CheckHTTPStatus</a></a></h3>
-<pre><code class="language-go">func (h *Host) CheckHTTPStatus(ctx context.Context, url string, expected ...int) error
-</code></pre>
-<p>CheckHTTPStatus requests url and returns an error if the response status is not one of expected.</p>
 <p><a name="Host.ConfiguredAddress"></a></p>
 <h3 id="func-host-configuredaddress"><a class="header" href="#func-host-configuredaddress">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568">ConfiguredAddress</a></a></h3>
 <pre><code class="language-go">func (h *Host) ConfiguredAddress() string

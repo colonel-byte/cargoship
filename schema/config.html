@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b1bd1fab.js";
+            window.path_to_searchindex_js = "../searchindex-40b8dc17.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-8dc70692.js"></script>
@@ -225,8 +225,6 @@
 </div>
 </div>
 
-<h3 id="applyoptions"><a class="header" href="#applyoptions">ApplyOptions</a></h3>
-<p>holds the values for the <code>.distro.apply</code> section of the config file</p>
 <h3 id="distrocreateoptions"><a class="header" href="#distrocreateoptions">DistroCreateOptions</a></h3>
 <p>holds the values for the <code>.distro.create</code> section of the config file</p>
 <div class="schema-table">
@@ -243,21 +241,6 @@
 </div>
 </div>
 
-<h3 id="distrodeployoptions"><a class="header" href="#distrodeployoptions">DistroDeployOptions</a></h3>
-<p>holds the values for the <code>.distro.deploy</code> section of the config file</p>
-<div class="schema-table">
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>retries</code></td><td><code>integer</code></td><td>no</td><td></td><td>how many times we will try to push a package</td></tr>
-</tbody>
-</table>
-</div>
-</div>
-
 <h3 id="distrooptions"><a class="header" href="#distrooptions">DistroOptions</a></h3>
 <p>holds the values for the <code>.distro</code> section of the config file</p>
 <div class="schema-table">
@@ -269,10 +252,8 @@
 <tbody>
 <tr><td><code>allow_downgrade</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether a run continues when a host already runs an engine version newer<br>than the one the package carries</td></tr>
 <tr><td><code>allow_unmanaged_nodes</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether an apply continues when the cluster holds a node that no host<br>in the config accounts for</td></tr>
-<tr><td><code>apply</code></td><td><a href="#applyoptions">ApplyOptions</a></td><td>no</td><td></td><td>are options used by the apply subcommand</td></tr>
 <tr><td><code>concurrency</code></td><td><code>integer</code></td><td>no</td><td></td><td>how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once</td></tr>
 <tr><td><code>create</code></td><td><a href="#distrocreateoptions">DistroCreateOptions</a></td><td>no</td><td></td><td>are options used by the create subcommand</td></tr>
-<tr><td><code>deploy</code></td><td><a href="#distrodeployoptions">DistroDeployOptions</a></td><td>no</td><td></td><td>are options used by the deploy subcommand</td></tr>
 <tr><td><code>fapolicyd</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update hosts with fapolicyd</td></tr>
 <tr><td><code>firewall</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update the host firewall</td></tr>
 <tr><td><code>hosts</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update the etc host file</td></tr>
@@ -283,8 +264,7 @@
 <tr><td><code>public_key</code></td><td><code>string</code></td><td>no</td><td></td><td>path to public key file for validating signed packages</td></tr>
 <tr><td><code>publish</code></td><td><a href="#distropublishoptions">DistroPublishOptions</a></td><td>no</td><td></td><td>are options used by the publish subcommand</td></tr>
 <tr><td><code>receipt_path</code></td><td><code>string</code></td><td>no</td><td></td><td>is where the lifecycle commands – apply, prepare, reset and<br>engine-config-sync – write the structured JSON record of a run, empty for no receipt.<br>Equivalent to –receipt-path, and templated the same way: {command} expands to the<br>command that ran and {timestamp} to when it started, so one configured value gives<br>every run its own file rather than overwriting the last.</td></tr>
-<tr><td><code>reset</code></td><td><a href="#resetoptions">ResetOptions</a></td><td>no</td><td></td><td>ResetOptions are options used by the reset subcommand</td></tr>
-<tr><td><code>retry</code></td><td><code>integer</code></td><td>no</td><td></td><td>number of retries we will try</td></tr>
+<tr><td><code>retry</code></td><td><code>integer</code></td><td>no</td><td></td><td>how many times an operation is retried before the run fails, including a<br>package push to an OCI registry – it is what –retries defaults to on publish<br>and sign</td></tr>
 <tr><td><code>type</code></td><td><code>string</code></td><td>no</td><td></td><td>of distro we are interacting with One of <code>rke2</code>, <code>k3s</code>.</td></tr>
 <tr><td><code>update_kubeconfig</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update a kubeconfig file with the admin creds for the cluster</td></tr>
 <tr><td><code>verify</code></td><td><code>string</code></td><td>no</td><td></td><td>the Cargoship package signature One of <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
@@ -349,8 +329,6 @@
 </div>
 </div>
 
-<h3 id="resetoptions"><a class="header" href="#resetoptions">ResetOptions</a></h3>
-<p>holds the values for the <code>.distro.reset</code> section of the config file</p>
 
                     </main>
 

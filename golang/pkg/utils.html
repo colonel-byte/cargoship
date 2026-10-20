@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-b1bd1fab.js";
+            window.path_to_searchindex_js = "../../searchindex-40b8dc17.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-8dc70692.js"></script>
@@ -205,10 +205,8 @@
 <li><a href="#MakeTempDir">func MakeTempDir(basePath string) (string, error)</a></li>
 <li><a href="#ParseChecksum">func ParseChecksum(src string) (string, string, error)</a></li>
 <li><a href="#ParseRetryAfter">func ParseRetryAfter(value string) time.Duration</a></li>
-<li><a href="#PrintJSON">func PrintJSON(obj any) string</a></li>
 <li><a href="#RandomString">func RandomString(length int) (string, error)</a></li>
 <li><a href="#ReadByteStrict">func ReadByteStrict(data []byte, destConfig any) error</a></li>
-<li><a href="#ReadYAMLStrict">func ReadYAMLStrict(path string, destConfig any) error</a></li>
 <li><a href="#ResolveCachePath">func ResolveCachePath(cachePath string) (string, error)</a></li>
 </ul>
 <h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
@@ -260,7 +258,7 @@
 </code></pre>
 <p>FilterEnterpriseLinux is a function used to filter whether a host is an Enterprise Linux OS</p>
 <p><a name="IdentifySource"></a></p>
-<h2 id="func-identifysource"><a class="header" href="#func-identifysource">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L89">IdentifySource</a></a></h2>
+<h2 id="func-identifysource"><a class="header" href="#func-identifysource">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L58">IdentifySource</a></a></h2>
 <pre><code class="language-go">func IdentifySource(src string) (string, error)
 </code></pre>
 <p>IdentifySource returns the source type for the given source string.</p>
@@ -294,26 +292,16 @@
 <pre><code class="language-go">func ParseRetryAfter(value string) time.Duration
 </code></pre>
 <p>ParseRetryAfter parses the Retry-After header value into a duration. It supports both delay-seconds (integer) and HTTP-date formats.</p>
-<p><a name="PrintJSON"></a></p>
-<h2 id="func-printjson"><a class="header" href="#func-printjson">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L107">PrintJSON</a></a></h2>
-<pre><code class="language-go">func PrintJSON(obj any) string
-</code></pre>
-<p>PrintJSON returns a string representation of a given object</p>
 <p><a name="RandomString"></a></p>
-<h2 id="func-randomstring"><a class="header" href="#func-randomstring">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L116">RandomString</a></a></h2>
+<h2 id="func-randomstring"><a class="header" href="#func-randomstring">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L76">RandomString</a></a></h2>
 <pre><code class="language-go">func RandomString(length int) (string, error)
 </code></pre>
 <p>RandomString returns a string of hexadecimal characters of a given length that is cryptographically secure, or an error</p>
 <p><a name="ReadByteStrict"></a></p>
-<h2 id="func-readbytestrict"><a class="header" href="#func-readbytestrict">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L68">ReadByteStrict</a></a></h2>
+<h2 id="func-readbytestrict"><a class="header" href="#func-readbytestrict">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L37">ReadByteStrict</a></a></h2>
 <pre><code class="language-go">func ReadByteStrict(data []byte, destConfig any) error
 </code></pre>
 <p>ReadByteStrict reads a byte array and tries to place it in the provided “destConfig” object</p>
-<p><a name="ReadYAMLStrict"></a></p>
-<h2 id="func-readyamlstrict"><a class="header" href="#func-readyamlstrict">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L40">ReadYAMLStrict</a></a></h2>
-<pre><code class="language-go">func ReadYAMLStrict(path string, destConfig any) error
-</code></pre>
-<p>ReadYAMLStrict reads a YAML file into a struct, with strict parsing</p>
 <p><a name="ResolveCachePath"></a></p>
 <h2 id="func-resolvecachepath"><a class="header" href="#func-resolvecachepath">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/cache.go#L190">ResolveCachePath</a></a></h2>
 <pre><code class="language-go">func ResolveCachePath(cachePath string) (string, error)

@@ -37,7 +37,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-b1bd1fab.js";
+            window.path_to_searchindex_js = "../../../searchindex-40b8dc17.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-8dc70692.js"></script>
@@ -200,11 +200,6 @@
 <li><a href="#ResolveClusterPath">func ResolveClusterPath(path string) (ClusterPath, error)</a></li>
 </ul>
 </li>
-<li><a href="#Distro">type Distro</a>
-<ul>
-<li><a href="#New">func New(cfg *types.DistroConfig) (*Distro, error)</a></li>
-</ul>
-</li>
 <li><a href="#DistroLayout">type DistroLayout</a>
 <ul>
 <li><a href="#LoadFromDir">func LoadFromDir(ctx context.Context, dirPath string, opts DistroLayoutOptions) (*DistroLayout, error)</a></li>
@@ -293,20 +288,8 @@
 <pre><code class="language-go">func ResolveClusterPath(path string) (ClusterPath, error)
 </code></pre>
 <p>ResolveClusterPath returns an object of ClusterPath from a given path</p>
-<p><a name="Distro"></a></p>
-<h2 id="type-distro"><a class="header" href="#type-distro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L33-L37">Distro</a></a></h2>
-<p>Distro struct</p>
-<pre><code class="language-go">type Distro struct {
-    // contains filtered or unexported fields
-}
-</code></pre>
-<p><a name="New"></a></p>
-<h3 id="func-new"><a class="header" href="#func-new">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L73">New</a></a></h3>
-<pre><code class="language-go">func New(cfg *types.DistroConfig) (*Distro, error)
-</code></pre>
-<p>New creates a new Distro object</p>
 <p><a name="DistroLayout"></a></p>
-<h2 id="type-distrolayout"><a class="header" href="#type-distrolayout">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L40-L45">DistroLayout</a></a></h2>
+<h2 id="type-distrolayout"><a class="header" href="#type-distrolayout">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L32-L37">DistroLayout</a></a></h2>
 <p>DistroLayout struct</p>
 <pre><code class="language-go">type DistroLayout struct {
     Distro distro.Distro
@@ -428,7 +411,7 @@
 </code></pre>
 <p>VerifyPackageSignature verifies the package signature</p>
 <p><a name="DistroLayoutOptions"></a></p>
-<h2 id="type-distrolayoutoptions"><a class="header" href="#type-distrolayoutoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L48-L52">DistroLayoutOptions</a></a></h2>
+<h2 id="type-distrolayoutoptions"><a class="header" href="#type-distrolayoutoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L40-L44">DistroLayoutOptions</a></a></h2>
 <p>DistroLayoutOptions struct</p>
 <pre><code class="language-go">type DistroLayoutOptions struct {
     VerifyBlobOptions *signing.VerifyBlobOptions
@@ -462,7 +445,7 @@
 </code></pre>
 <p>ShouldSign returns true if a signing key is configured. A cosign keypair is the only signing method; KeyRef is included for backward compatibility and is synced to Key in signing.CosignSignBlobWithOptions.</p>
 <p><a name="VerificationStrategy"></a></p>
-<h2 id="type-verificationstrategy"><a class="header" href="#type-verificationstrategy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L55">VerificationStrategy</a></a></h2>
+<h2 id="type-verificationstrategy"><a class="header" href="#type-verificationstrategy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L47">VerificationStrategy</a></a></h2>
 <p>VerificationStrategy describes a strategy for determining whether to verify a package.</p>
 <pre><code class="language-go">type VerificationStrategy int
 </code></pre>
