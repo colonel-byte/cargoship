@@ -13,6 +13,7 @@
 - [ansible-module](guides/ansible-module.md)
 - [file-override](guides/file-override.md)
 - [firewall](guides/firewall.md)
+- [importing-archives](guides/importing-archives.md)
 - [multi-architecture](guides/multi-architecture.md)
 - [opentofu-terragrunt](guides/opentofu-terragrunt.md)
 - [package-values](guides/package-values.md)
@@ -32,6 +33,7 @@
   - [apply](commands/cargoship_apply.md)
   - [create](commands/cargoship_create.md)
   - [engine-config-sync](commands/cargoship_engine-config-sync.md)
+  - [import](commands/cargoship_import.md)
   - [inventory](commands/cargoship_inventory.md)
     - [from-ansible](commands/cargoship_inventory_from-ansible.md)
   - [kube-config](commands/cargoship_kube-config.md)
@@ -250,6 +252,7 @@
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
 - [todo-extractpath-archive-cache](agent/todo-extractpath-archive-cache.md)
 - [todo-microvm-egress-blackout](agent/todo-microvm-egress-blackout.md)
+- [todo-oci-archive-direct-load](agent/todo-oci-archive-direct-load.md)
 - [todo-pkg-action-unit-tests](agent/todo-pkg-action-unit-tests.md)
 - [todo-pkg-coci-registry-tests](agent/todo-pkg-coci-registry-tests.md)
 

@@ -34,3 +34,10 @@ func TestRegisterOCIConcurrency(t *testing.T) {
 	require.Equal(t, getOCIConcurrency(), values)
 	require.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
 }
+
+func TestRegisterImportFormat(t *testing.T) {
+	values, directive := RegisterImportFormat(nil, nil, "")
+	require.Equal(t, getImportFormat(), values)
+	require.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+	require.Len(t, values, 3)
+}

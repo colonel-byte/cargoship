@@ -25,10 +25,19 @@ func RegisterOCIConcurrency(_ *cobra.Command, _ []string, _ string) ([]string, c
 	return getOCIConcurrency(), cobra.ShellCompDirectiveNoFileComp
 }
 
+// RegisterImportFormat provides shell completion suggestions for the import format flag.
+func RegisterImportFormat(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return getImportFormat(), cobra.ShellCompDirectiveNoFileComp
+}
+
 const (
 	ociConcurrencyMinimumDescription = "minimum: safest for rate-limited or unstable registries"
 	ociConcurrencyDefaultDescription = "default: balanced for most registries"
 	ociConcurrencyMaximumDescription = "recommended upper limit: risks registry throttling above this"
+
+	importFormatAutoDescription          = "automatically detect archive format"
+	importFormatOCIArchiveDescription    = "OCI Image Layout archive or directory"
+	importFormatDockerArchiveDescription = "Docker image archive (docker save format)"
 )
 
 func getOCIConcurrency() []string {
@@ -36,5 +45,13 @@ func getOCIConcurrency() []string {
 		fmt.Sprintf("%d\t%s", 1, ociConcurrencyMinimumDescription),
 		fmt.Sprintf("%d\t%s", 6, ociConcurrencyDefaultDescription),
 		fmt.Sprintf("%d\t%s", 10, ociConcurrencyMaximumDescription),
+	}
+}
+
+func getImportFormat() []string {
+	return []string{
+		fmt.Sprintf("%s\t%s", "auto", importFormatAutoDescription),
+		fmt.Sprintf("%s\t%s", "oci-archive", importFormatOCIArchiveDescription),
+		fmt.Sprintf("%s\t%s", "docker-archive", importFormatDockerArchiveDescription),
 	}
 }

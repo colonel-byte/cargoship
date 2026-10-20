@@ -135,6 +135,20 @@ $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --shasum 4a4f1f5eb0a1e3f2
 $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./public-key.pem
 `
 
+	// CmdPackageImportExample import example
+	CmdPackageImportExample = `# Import a Skopeo oci-archive into the current directory
+$ cargoship import ./my-package.tar
+
+# Import a docker-archive
+$ cargoship import ./my-package.tar --format=docker-archive
+
+# Import an oci-archive into a specific output directory
+$ cargoship import ./my-package.tar --output ./build/
+
+# Import an extracted OCI directory layout
+$ cargoship import ./oci-layout-dir -o ./build/
+`
+
 	// CmdDistroSignExample sign example
 	CmdDistroSignExample = `# Sign an unsigned package
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
