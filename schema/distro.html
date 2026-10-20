@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-52f39780.js";
+            window.path_to_searchindex_js = "../searchindex-ef006fc5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2f8c3bd5.js"></script>
@@ -291,7 +291,7 @@
 </thead>
 <tbody>
 <tr><td><code>data</code></td><td><code>string</code></td><td>no</td><td></td><td>holds the inline file content.</td></tr>
-<tr><td><code>executable</code></td><td><code>boolean</code></td><td>no</td><td></td><td>sets executable permissions on the file when true.</td></tr>
+<tr><td><code>executable</code></td><td><code>boolean</code></td><td>no</td><td></td><td>sets executable permissions on the file when true. On a host running fapolicyd, the prepare phase also writes an allow rule for the file’s target path, so a package’s own executables are not denied by policy.</td></tr>
 <tr><td><code>extractPath</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path cargoship extracts from a tarball.</td></tr>
 <tr><td><code>group</code></td><td><code>string</code></td><td>no</td><td></td><td>is the group that owns the file.</td></tr>
 <tr><td><code>isDirectory</code></td><td><code>boolean</code></td><td>no</td><td></td><td>indicates that Target is a directory. Cargoship uses this mainly for image uploads.</td></tr>

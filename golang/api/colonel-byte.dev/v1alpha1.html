@@ -37,7 +37,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-52f39780.js";
+            window.path_to_searchindex_js = "../../../searchindex-ef006fc5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-2f8c3bd5.js"></script>
@@ -252,7 +252,7 @@
 <pre><code class="language-go">type File struct {
     // Data holds the inline file content.
     Data string `json:"data,omitempty"`
-    // Executable sets executable permissions on the file when true.
+    // Executable sets executable permissions on the file when true. On a host running fapolicyd, the prepare phase also writes an allow rule for the file's target path, so a package's own executables are not denied by policy.
     Executable bool `json:"executable,omitempty"`
     // ExtractPath is the path cargoship extracts from a tarball.
     ExtractPath string `json:"extractPath,omitempty"`
