@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/stretchr/testify/require"
@@ -103,4 +104,23 @@ func TestPrepareFapolicyWarnSurvivesAMissingDistro(t *testing.T) {
 
 	require.NotPanics(t, func() { p.warnOnMissingRules(ctx) })
 	require.Empty(t, buf.String())
+}
+
+func TestPrepareFapolicyExecutableRules(t *testing.T) {
+	d := &distro.Distro{}
+	d.Spec.Config.Files = v1alpha1.Files{
+		&v1alpha1.File{Target: "/usr/local/bin/etcdctl", Executable: true},
+		&v1alpha1.File{Target: "/usr/local/bin/not-exec", Executable: false},
+	}
+	d.Spec.Config.OS.Files = v1alpha1.Files{
+		&v1alpha1.File{Target: "/usr/local/bin/rke2", Executable: true},
+		&v1alpha1.File{Target: "/usr/local/bin/rke2-killall.sh", Executable: true},
+		&v1alpha1.File{Target: "/usr/local/bin/rke2", Executable: true}, // duplicate to test deduplication
+	}
+
+	p := &PrepareFapolicy{}
+	p.SetManager(&Manager{Distro: d})
+
+	rules := p.executableRules()
+	require.Equal(t, "allow perm=any all : path=/usr/local/bin/etcdctl\nallow perm=any all : path=/usr/local/bin/rke2\nallow perm=any all : path=/usr/local/bin/rke2-killall.sh\n", rules)
 }

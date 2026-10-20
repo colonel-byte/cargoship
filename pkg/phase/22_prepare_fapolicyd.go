@@ -16,6 +16,10 @@ package phase
 
 import (
 	"context"
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
@@ -25,6 +29,8 @@ import (
 const (
 	// FAPolicydRuleFile path on the host
 	FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
+	// FAPolicydExecutableRuleFile path for automatically generated executable rules on the host
+	FAPolicydExecutableRuleFile = "/etc/fapolicyd/rules.d/32-cargoship-executable.rules"
 	// FAPOLICYD name of the service for fapolicyd
 	FAPOLICYD = "fapolicyd"
 )
@@ -65,8 +71,10 @@ func (p *PrepareFapolicy) warnOnMissingRules(ctx context.Context) {
 		return
 	}
 
-	logger.From(ctx).Warn("hosts run fapolicyd and this package declares no rules for it, so none are "+
-		"written: fapolicyd may deny the container runtime's own executions, which surfaces later as a "+
+	// The rules cargoship generates for the package's own executables do not cover the container
+	// runtime, so this stays a warning even when executableRules writes a file.
+	logger.From(ctx).Warn("hosts run fapolicyd and this package declares no rules for it: "+
+		"fapolicyd may deny the container runtime's own executions, which surfaces later as a "+
 		"container that cannot start rather than as a policy refusal. Add an `os.fapolicyd` block to the "+
 		"package, or stop fapolicyd on these hosts",
 		"hosts", len(p.fapolicydhosts),
@@ -81,7 +89,7 @@ func (p *PrepareFapolicy) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *PrepareFapolicy) Explanation() string {
-	return "Writes the distro-supplied FAPolicy rules to " + FAPolicydRuleFile
+	return "Writes the distro-supplied FAPolicy rules to " + FAPolicydRuleFile + " and executable rules to " + FAPolicydExecutableRuleFile
 }
 
 // Run the phase
@@ -91,15 +99,56 @@ func (p *PrepareFapolicy) Run(ctx context.Context) error {
 
 // ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
 func (p *PrepareFapolicy) ShouldRun() bool {
-	return len(p.fapolicydhosts) > 0 && p.manager.Distro.Spec.Config.OS.FAPolicyd != ""
+	if len(p.fapolicydhosts) == 0 || p.manager.Distro == nil {
+		return false
+	}
+	return p.manager.Distro.Spec.Config.OS.FAPolicyd != "" || len(p.executableRules()) > 0
+}
+
+// executableRules allows every file the package marks executable to run. perm=any rather
+// than perm=execute because a script is read by its interpreter, which fapolicyd sees as an
+// open rather than an exec, and the package's executables include shell scripts.
+func (p *PrepareFapolicy) executableRules() string {
+	if p.manager.Distro == nil {
+		return ""
+	}
+
+	targets := map[string]struct{}{}
+	for _, f := range slices.Concat(p.manager.Distro.Spec.Config.Files, p.manager.Distro.Spec.Config.OS.Files) {
+		if f.Executable && f.Target != "" {
+			targets[f.Target] = struct{}{}
+		}
+	}
+
+	var b strings.Builder
+	for _, target := range slices.Sorted(maps.Keys(targets)) {
+		fmt.Fprintf(&b, "allow perm=any all : path=%s\n", target)
+	}
+	return b.String()
 }
 
 func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.Host) error {
-	err := h.WriteFile(FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
-	if err != nil {
-		return err
+	wroteAny := false
+	if p.manager.Distro.Spec.Config.OS.FAPolicyd != "" {
+		if err := h.WriteFile(FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644"); err != nil {
+			return err
+		}
+		p.changedFile(h, FAPolicydRuleFile, reasonOutOfSync, "")
+		wroteAny = true
 	}
-	p.changedFile(h, FAPolicydRuleFile, reasonOutOfSync, "")
-	logger.From(ctx).Info("wrote fapolicyd file, restarting serivce", "host", h)
-	return h.RestartService(ctx, FAPOLICYD)
+
+	execRules := p.executableRules()
+	if execRules != "" {
+		if err := h.WriteFile(FAPolicydExecutableRuleFile, execRules, "0644"); err != nil {
+			return err
+		}
+		p.changedFile(h, FAPolicydExecutableRuleFile, reasonOutOfSync, "")
+		wroteAny = true
+	}
+
+	if wroteAny {
+		logger.From(ctx).Info("wrote fapolicyd files, restarting service", "host", h)
+		return h.RestartService(ctx, FAPOLICYD)
+	}
+	return nil
 }
