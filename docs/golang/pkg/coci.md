@@ -13,20 +13,16 @@ Package coci contains functions for interacting with Cargoship packages stored i
 - [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func AssembleLayers\(ctx context.Context, root \*oci.Manifest, fetcher content.Fetcher, include ...layers.LayerType\) \(\[\]ocispec.Descriptor, error\)](<#AssembleLayers>)
-- [func CopyPackage\(ctx context.Context, src \*Remote, dst \*Remote, opts PublishOptions\) \(err error\)](<#CopyPackage>)
 - [func FetchDistroYAML\(ctx context.Context, root \*oci.Manifest, fetcher content.Fetcher\) \(distro.Distro, error\)](<#FetchDistroYAML>)
 - [func GetOCICacheModifier\(ctx context.Context, cachePath string\) \(oci.Modifier, error\)](<#GetOCICacheModifier>)
 - [func LayersFromFiles\(ctx context.Context, root \*oci.Manifest, files v1alpha1.Files, folder string\) \(\[\]ocispec.Descriptor, error\)](<#LayersFromFiles>)
 - [func LayersFromImages\(ctx context.Context, root \*oci.Manifest, fetcher content.Fetcher, imageList \[\]string\) \(\[\]ocispec.Descriptor, error\)](<#LayersFromImages>)
-- [func ReferenceFromMetadata\(registryLocation string, pkg distro.Distro\) \(registry.Reference, error\)](<#ReferenceFromMetadata>)
 - [func ReferenceFromMetadataWithOptions\(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions\) \(registry.Reference, error\)](<#ReferenceFromMetadataWithOptions>)
 - [type PublishOptions](<#PublishOptions>)
 - [type ReferenceFromMetadataOptions](<#ReferenceFromMetadataOptions>)
 - [type Remote](<#Remote>)
   - [func NewRemote\(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier\) \(\*Remote, error\)](<#NewRemote>)
   - [func \(r \*Remote\) AssembleLayers\(ctx context.Context, include ...layers.LayerType\) \(\[\]ocispec.Descriptor, error\)](<#Remote.AssembleLayers>)
-  - [func \(r \*Remote\) FetchDistroYAML\(ctx context.Context\) \(distro.Distro, error\)](<#Remote.FetchDistroYAML>)
-  - [func \(r \*Remote\) FetchImagesIndex\(ctx context.Context\) \(\*ocispec.Index, error\)](<#Remote.FetchImagesIndex>)
   - [func \(r \*Remote\) PullDistro\(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor\) \(\_ \[\]ocispec.Descriptor, err error\)](<#Remote.PullDistro>)
   - [func \(r \*Remote\) PushPackage\(ctx context.Context, disLayout \*layout.DistroLayout, opts PublishOptions\) \(\_ ocispec.Descriptor, err error\)](<#Remote.PushPackage>)
   - [func \(r \*Remote\) SoleManifestDigest\(ctx context.Context\) \(digest.Digest, error\)](<#Remote.SoleManifestDigest>)
@@ -79,15 +75,6 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 
 AssembleLayers returns the OCI layer descriptors for the requested components. The include parameter specifies which layer types to return. All layers are included if include is empty and Metadata layers are always included
 
-<a name="CopyPackage"></a>
-## func [CopyPackage](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/copier.go#L34>)
-
-```go
-func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOptions) (err error)
-```
-
-CopyPackage copies a zarf package from one OCI registry to another using ORAS with retry.
-
 <a name="FetchDistroYAML"></a>
 ## func [FetchDistroYAML](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L38>)
 
@@ -124,17 +111,8 @@ func LayersFromImages(ctx context.Context, root *oci.Manifest, fetcher content.F
 
 LayersFromImages returns the image blob layers referenced by imageList, selecting from root. fetcher reads image manifests/indexes to walk multi\-arch children.
 
-<a name="ReferenceFromMetadata"></a>
-## func [ReferenceFromMetadata](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L34>)
-
-```go
-func ReferenceFromMetadata(registryLocation string, pkg distro.Distro) (registry.Reference, error)
-```
-
-ReferenceFromMetadata returns a reference for the given metadata.
-
 <a name="ReferenceFromMetadataWithOptions"></a>
-## func [ReferenceFromMetadataWithOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L45>)
+## func [ReferenceFromMetadataWithOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L40>)
 
 ```go
 func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions) (registry.Reference, error)
@@ -159,7 +137,7 @@ type PublishOptions struct {
 ```
 
 <a name="ReferenceFromMetadataOptions"></a>
-## type [ReferenceFromMetadataOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L39-L42>)
+## type [ReferenceFromMetadataOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L34-L37>)
 
 ReferenceFromMetadataOptions provides extensible options
 
@@ -199,24 +177,6 @@ func (r *Remote) AssembleLayers(ctx context.Context, include ...layers.LayerType
 
 AssembleLayers returns the OCI layer descriptors for the requested components. The include parameter specifies which layer types to return. All layers are included if include is empty and Metadata layers are always included
 
-<a name="Remote.FetchDistroYAML"></a>
-### func \(\*Remote\) [FetchDistroYAML](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L51>)
-
-```go
-func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.Distro, error)
-```
-
-FetchDistroYAML fetches the distro.yaml file from the remote repository.
-
-<a name="Remote.FetchImagesIndex"></a>
-### func \(\*Remote\) [FetchImagesIndex](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L60>)
-
-```go
-func (r *Remote) FetchImagesIndex(ctx context.Context) (*ocispec.Index, error)
-```
-
-FetchImagesIndex fetches the images/index.json file from the remote repository.
-
 <a name="Remote.PullDistro"></a>
 ### func \(\*Remote\) [PullDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/pull.go#L55>)
 
@@ -236,7 +196,7 @@ func (r *Remote) PushPackage(ctx context.Context, disLayout *layout.DistroLayout
 PushPackage publishes the zarf package to the remote repository.
 
 <a name="Remote.SoleManifestDigest"></a>
-### func \(\*Remote\) [SoleManifestDigest](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L77>)
+### func \(\*Remote\) [SoleManifestDigest](<https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L55>)
 
 ```go
 func (r *Remote) SoleManifestDigest(ctx context.Context) (digest.Digest, error)

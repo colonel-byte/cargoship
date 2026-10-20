@@ -47,28 +47,6 @@ func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fe
 	return cfg.ParseMultiDoc(ctx, b)
 }
 
-// FetchDistroYAML fetches the distro.yaml file from the remote repository.
-func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.Distro, error) {
-	root, err := r.FetchRoot(ctx)
-	if err != nil {
-		return distro.Distro{}, err
-	}
-	return FetchDistroYAML(ctx, root, r)
-}
-
-// FetchImagesIndex fetches the images/index.json file from the remote repository.
-func (r *Remote) FetchImagesIndex(ctx context.Context) (*ocispec.Index, error) {
-	manifest, err := r.FetchRoot(ctx)
-	if err != nil {
-		return nil, err
-	}
-	result, err := oci.FetchJSONFile[*ocispec.Index](ctx, r, manifest, config.IndexPath)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
 // SoleManifestDigest returns the digest of the only package manifest the index at the remote's
 // reference lists. A package published for one architecture holds a single manifest, so there is
 // nothing to choose between and the caller can pull it whatever platform the index records it

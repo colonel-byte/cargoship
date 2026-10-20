@@ -30,11 +30,6 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-// ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, pkg distro.Distro) (registry.Reference, error) {
-	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
-}
-
 // ReferenceFromMetadataOptions provides extensible options
 type ReferenceFromMetadataOptions struct {
 	// Tag specifies the OCI reference to use instead of package.metadata.version

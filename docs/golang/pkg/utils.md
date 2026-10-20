@@ -13,7 +13,6 @@ Package utils is for commonly used functions
 ## Index
 
 - [Constants](<#constants>)
-- [func CreateDirectory\(path string, mode os.FileMode\) error](<#CreateDirectory>)
 - [func DownloadToCache\(ctx context.Context, url, relPath string, expectedSha256 ...string\) \(string, error\)](<#DownloadToCache>)
 - [func DownloadToFile\(ctx context.Context, src, dst string\) \(err error\)](<#DownloadToFile>)
 - [func DownloadToFileWithChecksum\(ctx context.Context, src, dst, checksum, cacheBaseName string\) \(err error\)](<#DownloadToFileWithChecksum>)
@@ -21,7 +20,6 @@ Package utils is for commonly used functions
 - [func FilterEngineAlreadyPopulated\(h \*cluster.Host\) bool](<#FilterEngineAlreadyPopulated>)
 - [func FilterEnterpriseLinux\(h \*cluster.Host\) bool](<#FilterEnterpriseLinux>)
 - [func IdentifySource\(src string\) \(string, error\)](<#IdentifySource>)
-- [func InvalidPath\(path string\) bool](<#InvalidPath>)
 - [func IsDebianLinux\(con os.Configurer\) bool](<#IsDebianLinux>)
 - [func IsEnterpriseLinux\(con os.Configurer\) bool](<#IsEnterpriseLinux>)
 - [func MakeTempDir\(basePath string\) \(string, error\)](<#MakeTempDir>)
@@ -51,15 +49,6 @@ const (
 ```go
 const CacheDir = "cargoship"
 ```
-
-<a name="CreateDirectory"></a>
-## func [CreateDirectory](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L48>)
-
-```go
-func CreateDirectory(path string, mode os.FileMode) error
-```
-
-CreateDirectory creates a directory for the given path and file mode.
 
 <a name="DownloadToCache"></a>
 ## func [DownloadToCache](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/cache.go#L62>)
@@ -124,15 +113,6 @@ func IdentifySource(src string) (string, error)
 
 IdentifySource returns the source type for the given source string.
 
-<a name="InvalidPath"></a>
-## func [InvalidPath](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L56>)
-
-```go
-func InvalidPath(path string) bool
-```
-
-InvalidPath checks if the given path is valid \(if it is a permissions error it is there we just don't have access\)
-
 <a name="IsDebianLinux"></a>
 ## func [IsDebianLinux](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L30>)
 
@@ -152,7 +132,7 @@ func IsEnterpriseLinux(con os.Configurer) bool
 IsEnterpriseLinux is true if the os.Configurer is of a type of Enterprise Linux
 
 <a name="MakeTempDir"></a>
-## func [MakeTempDir](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L34>)
+## func [MakeTempDir](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L38>)
 
 ```go
 func MakeTempDir(basePath string) (string, error)

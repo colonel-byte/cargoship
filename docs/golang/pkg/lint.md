@@ -13,7 +13,6 @@ Package lint contains functions for verifying yaml files are valid
 - [Constants](<#constants>)
 - [type LintError](<#LintError>)
   - [func \(e \*LintError\) Error\(\) string](<#LintError.Error>)
-  - [func \(e \*LintError\) OnlyWarnings\(\) bool](<#LintError.OnlyWarnings>)
 - [type PackageFinding](<#PackageFinding>)
   - [func \(f PackageFinding\) ItemizedDescription\(\) string](<#PackageFinding.ItemizedDescription>)
 - [type Severity](<#Severity>)
@@ -51,17 +50,8 @@ func (e *LintError) Error() string
 
 
 
-<a name="LintError.OnlyWarnings"></a>
-### func \(\*LintError\) [OnlyWarnings](<https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L39>)
-
-```go
-func (e *LintError) OnlyWarnings() bool
-```
-
-OnlyWarnings returns true if all findings have severity warning.
-
 <a name="PackageFinding"></a>
-## type [PackageFinding](<https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L58-L66>)
+## type [PackageFinding](<https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L48-L56>)
 
 PackageFinding is a struct that contains a finding about something wrong with a package
 
@@ -78,7 +68,7 @@ type PackageFinding struct {
 ```
 
 <a name="PackageFinding.ItemizedDescription"></a>
-### func \(PackageFinding\) [ItemizedDescription](<https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L69>)
+### func \(PackageFinding\) [ItemizedDescription](<https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L59>)
 
 ```go
 func (f PackageFinding) ItemizedDescription() string
@@ -87,7 +77,7 @@ func (f PackageFinding) ItemizedDescription() string
 ItemizedDescription returns a string with the description and item if finding contains one.
 
 <a name="Severity"></a>
-## type [Severity](<https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L49>)
+## type [Severity](<https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L39>)
 
 Severity is the type of finding.
 
