@@ -41,7 +41,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
       --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --retries int                Number of retries to perform for Cargoship's operations, such as package publishes.
-      --signing-key string         Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key string         Private key for signing or re-signing packages with a new key. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
       --signing-key-pass string    Password to the private key used for publishing packages
       --tag string                 The tag to be used in the OCI reference for the package in the registry
       --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")

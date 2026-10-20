@@ -164,8 +164,8 @@ type DistroCreateOptions struct {
 
 // DistroPublishOptions holds the values for the `.distro.publish` section of the config file
 type DistroPublishOptions struct {
-	// SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package
-	SigningKey string `json:"signing_key,omitempty" mapstructure:"signing_key" jsonschema:"example=/home/runner/.cosign/sign.key,example=env://[ENV_VAR],example=awskms://[ENDPOINT]/[ID/ALIAS/ARN],example=openbao://[KEY]"`
+	// SigningKey is the private key used to sign, or re-sign, the package: a local file path, or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported -- they cannot be reached from an air-gapped management node.
+	SigningKey string `json:"signing_key,omitempty" mapstructure:"signing_key" jsonschema:"example=/home/runner/.cosign/sign.key,example=env://COSIGN_PRIVATE_KEY"`
 	// SigningKeyPassword the password for the private key used for signing
 	SigningKeyPassword string `json:"signing_key_password,omitempty" mapstructure:"signing_key_password" jsonschema_extras:"x-sensitive=true"`
 }

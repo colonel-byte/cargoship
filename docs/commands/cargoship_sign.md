@@ -27,8 +27,8 @@ $ cargoship sign oci://ghcr.io/my-org/my-package:1.0.0 --signing-key ./private-k
 # Sign a package and publish directly to an OCI registry
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem --output oci://ghcr.io/my-org/signed-packages
 
-# Sign with a cloud KMS key
-$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
+# Sign with a key held in an environment variable rather than on disk
+$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key env://COSIGN_PRIVATE_KEY
 ```
 
 ### Options
@@ -44,7 +44,7 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
       --overwrite                  Overwrite an existing signature if the package is already signed
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --retries int                Number of retries to perform for Cargoship's operations, such as package publishes.
-      --signing-key string         Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
+      --signing-key string         Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
       --signing-key-pass string    Password for encrypted private key
       --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode          Verify the Cargoship package signature. (default if-possible)

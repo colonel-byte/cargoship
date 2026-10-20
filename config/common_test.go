@@ -63,8 +63,8 @@ func TestGetAbsHomePath(t *testing.T) {
 		{
 			// A cosign key provider, which `signing_key` accepts in place of a file path.
 			name: "key provider URI untouched",
-			path: "awskms:///alias/cargoship",
-			want: "awskms:///alias/cargoship",
+			path: "env://COSIGN_PRIVATE_KEY",
+			want: "env://COSIGN_PRIVATE_KEY",
 		},
 		{
 			name: "tilde inside the path untouched",

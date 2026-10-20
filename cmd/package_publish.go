@@ -67,7 +67,7 @@ func newPackagePublishCommand() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().IntVar(&o.retries, "retries", resolvedConfig.DistroOpts.Retry, lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackagePublishFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackagePublishFlagSigningKeyPassword)
 	cmd.Flags().StringVar(&o.tag, PackageTag, "", zlang.CmdPackagePublishFlagTag)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)

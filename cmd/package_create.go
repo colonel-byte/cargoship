@@ -96,7 +96,7 @@ func newPackageCreateCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackageCreateFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackageFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageCreateFlagSigningKeyPassword)
 	cmd.Flags().StringVar(&o.tag, PackageTag, "", lang.CmdPackageCreateFlagTag)
 

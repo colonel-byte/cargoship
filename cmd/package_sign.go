@@ -69,7 +69,7 @@ func newPackageSignCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackageSignFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackageFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageSignFlagSigningKeyPass)
 	cmd.Flags().StringVarP(&o.output, "output", "o", "", zlang.CmdPackageSignFlagOutput)
 	cmd.Flags().BoolVar(&o.overwrite, "overwrite", false, zlang.CmdPackageSignFlagOverwrite)

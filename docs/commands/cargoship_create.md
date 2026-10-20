@@ -56,7 +56,7 @@ $ cargoship create ./distro-defs --reproducible
       --plain-http                  Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
       --reproducible                Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
-      --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key string          Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
       --signing-key-pass string     Password to the private key used for signing packages
       --tag string                  The tag or version to override the package metadata version with.
       --tmpdir string               Specify the temporary directory to use for intermediate files (default "/tmp")

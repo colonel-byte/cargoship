@@ -145,8 +145,7 @@ func initViper() error {
 //
 // Every field listed here is one cargoship opens itself. AgeOpts.Recipients is deliberately absent:
 // it holds public keys, not paths. SigningKey is present even though it may name a Cosign key
-// provider rather than a file (env://, awskms://, openbao://) -- none of those begin with ~, so
-// they pass through untouched.
+// provider rather than a file (env://) -- that does not begin with ~, so it passes through untouched.
 //
 // The `parsePath` calls that seed the tmpdir and cache flags in flag.go cover two of these fields
 // already; they are left in place and are a no-op once this has run.
