@@ -23,7 +23,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -142,19 +141,6 @@ func (u *File) UnmarshalYAML(unmarshal func(any) error) error {
 	u.PermString = fp
 
 	return nil
-}
-
-// HasData reports whether Data holds non-blank content.
-func (u *File) HasData() bool {
-	return strings.TrimSpace(u.Data) != ""
-}
-
-// TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.
-func (u *File) TargetDirectory() string {
-	if u.TargetIsDir {
-		return u.Target
-	}
-	return filepath.Base(u.Target)
 }
 
 // permToString converts an int, float64, or string permission value to an octal string for chmod.

@@ -14,11 +14,9 @@ Package v1alpha1 defines file types shared by the cluster and distro APIs.
 - [type BinarySelector](<#BinarySelector>)
   - [func \(s BinarySelector\) MatchesArch\(arch api.Arch\) bool](<#BinarySelector.MatchesArch>)
 - [type File](<#File>)
-  - [func \(u \*File\) HasData\(\) bool](<#File.HasData>)
   - [func \(u \*File\) IsTemplate\(\) bool](<#File.IsTemplate>)
   - [func \(u \*File\) Owner\(\) string](<#File.Owner>)
   - [func \(u \*File\) String\(\) string](<#File.String>)
-  - [func \(u \*File\) TargetDirectory\(\) string](<#File.TargetDirectory>)
   - [func \(u \*File\) UnmarshalYAML\(unmarshal func\(any\) error\) error](<#File.UnmarshalYAML>)
 - [type Files](<#Files>)
   - [func \(files Files\) Filter\(filter func\(f \*File\) bool\) Files](<#Files.Filter>)
@@ -43,7 +41,7 @@ const (
 ```
 
 <a name="BinarySelector"></a>
-## type [BinarySelector](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L98>)
+## type [BinarySelector](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L86-L97>)
 
 BinarySelector selects which files to upload to a host, based on host role and install method.
 
@@ -63,7 +61,7 @@ type BinarySelector struct {
 ```
 
 <a name="BinarySelector.MatchesArch"></a>
-### func \(BinarySelector\) [MatchesArch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L102>)
+### func \(BinarySelector\) [MatchesArch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L101>)
 
 ```go
 func (s BinarySelector) MatchesArch(arch api.Arch) bool
@@ -72,7 +70,7 @@ func (s BinarySelector) MatchesArch(arch api.Arch) bool
 MatchesArch reports whether this selector applies to arch. An empty Arch list matches every architecture, mirroring how an empty Profile matches every profile.
 
 <a name="File"></a>
-## type [File](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L35-L76>)
+## type [File](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L34-L75>)
 
 File defines a file shared by the distro and cluster APIs.
 
@@ -121,17 +119,8 @@ type File struct {
 }
 ```
 
-<a name="File.HasData"></a>
-### func \(\*File\) [HasData](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L148>)
-
-```go
-func (u *File) HasData() bool
-```
-
-HasData reports whether Data holds non\-blank content.
-
 <a name="File.IsTemplate"></a>
-### func \(\*File\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L112>)
+### func \(\*File\) [IsTemplate](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L111>)
 
 ```go
 func (u *File) IsTemplate() bool
@@ -140,7 +129,7 @@ func (u *File) IsTemplate() bool
 IsTemplate reports whether this file's contents are rendered against the package's values before upload. Unset means no, so a package that says nothing about templating ships the bytes it was built with.
 
 <a name="File.Owner"></a>
-### func \(\*File\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L125>)
+### func \(\*File\) [Owner](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L124>)
 
 ```go
 func (u *File) Owner() string
@@ -149,7 +138,7 @@ func (u *File) Owner() string
 Owner returns a chown\-compatible "user:group" string built from User and Group. It returns an empty string when both are empty.
 
 <a name="File.String"></a>
-### func \(\*File\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L117>)
+### func \(\*File\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L116>)
 
 ```go
 func (u *File) String() string
@@ -157,17 +146,8 @@ func (u *File) String() string
 
 String returns Name. If Name is empty, it returns Source instead.
 
-<a name="File.TargetDirectory"></a>
-### func \(\*File\) [TargetDirectory](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L153>)
-
-```go
-func (u *File) TargetDirectory() string
-```
-
-TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.
-
 <a name="File.UnmarshalYAML"></a>
-### func \(\*File\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L130>)
+### func \(\*File\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L129>)
 
 ```go
 func (u *File) UnmarshalYAML(unmarshal func(any) error) error
@@ -203,7 +183,7 @@ type Kind string
 ```
 
 <a name="LocalFile"></a>
-## type [LocalFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L79-L84>)
+## type [LocalFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L78-L83>)
 
 LocalFile holds the local path and permission cargoship resolves for uploading a file.
 

@@ -22,23 +22,6 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 )
 
-const (
-	// Binary id string
-	Binary = "Binary"
-	// BinaryDir id string
-	BinaryDir = "BinDir"
-	// Config id string
-	Config = "Config"
-	// Token id string
-	Token = "Token"
-	// Data id string
-	Data = "DataDir"
-	// WorkerService id string
-	WorkerService = "Worker"
-	// ControllerService id string
-	ControllerService = "Control"
-)
-
 // DesiredFile is one engine config file a distro wants on a host: its content, and the mode it
 // is written with. The mode travels with the content because it varies per file -- a file the
 // engine reads as a group member is not written like one holding credentials.
@@ -108,8 +91,6 @@ type Distro interface {
 	KubectlCmdf(*cluster.Host, string, string, ...any) string
 	// RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
 	RunningVersion(*cluster.Host) (string, error)
-	// SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
-	SetPath(key string, value string) error
 	// StopControllerService stops the controller service on the host
 	StopControllerService(*cluster.Host) error
 	// StopWorkerService stops the controller service on the host

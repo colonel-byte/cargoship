@@ -54,8 +54,6 @@ const (
 	RoleSingle = "single"
 	// RoleWorker marks a host as a worker node.
 	RoleWorker = "worker"
-	// RoleError is a sentinel value returned when a role or service lookup fails.
-	RoleError = "error"
 )
 
 // ErrCommandFailed is returned when a command fails
@@ -522,16 +520,6 @@ func (h *Host) EnableService(ctx context.Context, name string) error {
 	return svc.Enable(ctx)
 }
 
-// KubeRole returns the Kubernetes role for this host. It maps controller+worker and single to controller.
-func (h *Host) KubeRole() string {
-	switch h.Role {
-	case RoleControllerWorker, RoleSingle:
-		return RoleController
-	default:
-		return h.Role
-	}
-}
-
 // IsController returns true for the controller, controller+worker, and single roles.
 func (h *Host) IsController() bool {
 	return h.Role == RoleController || h.Role == RoleControllerWorker || h.Role == RoleSingle
@@ -574,24 +562,6 @@ func (h *Host) ConfiguredAddress() string {
 		return cfg.Address
 	}
 	return net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port))
-}
-
-// ServiceName returns the name of the distro service that runs on this host.
-func (h *Host) ServiceName() string {
-	switch h.Role {
-	case RoleController, RoleControllerWorker, RoleSingle:
-		val, err := h.Configurer.GetDistroService(RoleController)
-		if err != nil {
-			return RoleError
-		}
-		return val
-	default:
-		val, err := h.Configurer.GetDistroService(RoleWorker)
-		if err != nil {
-			return RoleError
-		}
-		return val
-	}
 }
 
 // ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.
