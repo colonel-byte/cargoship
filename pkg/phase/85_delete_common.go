@@ -282,9 +282,7 @@ func filterTargetHosts(hosts cluster.Hosts, targets []string) cluster.Hosts {
 
 func (p *DeleteCommon) drainNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("draining", "node", h)
-	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, nodeNameFor(p.nodeNames, h)))
-	})
+	return p.drainClusterNode(ctx, p.leader, p.Distro, nodeNameFor(p.nodeNames, h))
 }
 
 func (p *DeleteCommon) deleteNode(ctx context.Context, h *cluster.Host) error {
