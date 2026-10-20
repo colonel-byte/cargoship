@@ -18,8 +18,6 @@ Package layout is used to defining the distro package files
 - [func LoadValues\(ctx context.Context, dirPath string, vals distro.Values, overrides ...map\[string\]any\) \(map\[string\]any, error\)](<#LoadValues>)
 - [type ClusterPath](<#ClusterPath>)
   - [func ResolveClusterPath\(path string\) \(ClusterPath, error\)](<#ResolveClusterPath>)
-- [type Distro](<#Distro>)
-  - [func New\(cfg \*types.DistroConfig\) \(\*Distro, error\)](<#New>)
 - [type DistroLayout](<#DistroLayout>)
   - [func LoadFromDir\(ctx context.Context, dirPath string, opts DistroLayoutOptions\) \(\*DistroLayout, error\)](<#LoadFromDir>)
   - [func LoadFromTar\(ctx context.Context, tarPath string, opts DistroLayoutOptions\) \(\*DistroLayout, error\)](<#LoadFromTar>)
@@ -133,28 +131,8 @@ func ResolveClusterPath(path string) (ClusterPath, error)
 
 ResolveClusterPath returns an object of ClusterPath from a given path
 
-<a name="Distro"></a>
-## type [Distro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L33-L37>)
-
-Distro struct
-
-```go
-type Distro struct {
-    // contains filtered or unexported fields
-}
-```
-
-<a name="New"></a>
-### func [New](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L73>)
-
-```go
-func New(cfg *types.DistroConfig) (*Distro, error)
-```
-
-New creates a new Distro object
-
 <a name="DistroLayout"></a>
-## type [DistroLayout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L40-L45>)
+## type [DistroLayout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L32-L37>)
 
 DistroLayout struct
 
@@ -372,7 +350,7 @@ func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.
 VerifyPackageSignature verifies the package signature
 
 <a name="DistroLayoutOptions"></a>
-## type [DistroLayoutOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L48-L52>)
+## type [DistroLayoutOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L40-L44>)
 
 DistroLayoutOptions struct
 
@@ -426,7 +404,7 @@ func (opts SignOptions) ShouldSign() bool
 ShouldSign returns true if a signing key is configured. A cosign keypair is the only signing method; KeyRef is included for backward compatibility and is synced to Key in signing.CosignSignBlobWithOptions.
 
 <a name="VerificationStrategy"></a>
-## type [VerificationStrategy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L55>)
+## type [VerificationStrategy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L47>)
 
 VerificationStrategy describes a strategy for determining whether to verify a package.
 

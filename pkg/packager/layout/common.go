@@ -26,15 +26,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/pkg/signing"
-	"github.com/colonel-byte/cargoship/types"
 )
-
-// Distro struct
-type Distro struct {
-	cfg    *types.DistroConfig
-	distro distro.Distro
-	tmp    string
-}
 
 // DistroLayout struct
 type DistroLayout struct {
@@ -68,14 +60,3 @@ const (
 // ErrNoVerificationMaterial is returned when there is nothing to verify against.
 // VerifyIfPossible tolerates this; all other verification errors are always fatal.
 var ErrNoVerificationMaterial = errors.New("no verification material available")
-
-// New creates a new Distro object
-func New(cfg *types.DistroConfig) (*Distro, error) {
-	dis := Distro{
-		cfg:    cfg,
-		distro: distro.Distro{},
-		tmp:    "/tmp",
-	}
-
-	return &dis, nil
-}
