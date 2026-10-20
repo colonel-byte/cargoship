@@ -159,8 +159,8 @@ $ cargoship sign oci://ghcr.io/my-org/my-package:1.0.0 --signing-key ./private-k
 # Sign a package and publish directly to an OCI registry
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem --output oci://ghcr.io/my-org/signed-packages
 
-# Sign with a cloud KMS key
-$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key`
+# Sign with a key held in an environment variable rather than on disk
+$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key env://COSIGN_PRIVATE_KEY`
 
 	// CmdDistroVerifyExample verify example
 	CmdDistroVerifyExample = `# Verify a signed package against a public key

@@ -235,6 +235,10 @@ const (
 	RootGroupPackageTitle = "Package Commands:"
 	// CmdPackageFlagVerify flag
 	CmdPackageFlagVerify = "Verify the Cargoship package signature."
+	// CmdPackageFlagSigningKey signing key flag
+	CmdPackageFlagSigningKey = "Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported."
+	// CmdPackagePublishFlagSigningKey publish signing key flag
+	CmdPackagePublishFlagSigningKey = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported."
 	// CmdPackageCreateFlagReproducible create flag reproducible
 	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package."
 	// CmdSchemaShort schema short

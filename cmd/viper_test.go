@@ -115,7 +115,7 @@ func TestExpandHomePaths(t *testing.T) {
 			PublishOpts: types.DistroPublishOptions{
 				// A cosign key provider rather than a file: it has no leading ~, so it
 				// must survive untouched.
-				SigningKey: "awskms:///alias/cargoship",
+				SigningKey: "env://COSIGN_PRIVATE_KEY",
 			},
 		},
 	}
@@ -138,7 +138,7 @@ func TestExpandHomePaths(t *testing.T) {
 			Output:      filepath.Join(home, "packages"),
 			PublicKey:   filepath.Join(home, ".cosign", "cosign.pub"),
 			PublishOpts: types.DistroPublishOptions{
-				SigningKey: "awskms:///alias/cargoship",
+				SigningKey: "env://COSIGN_PRIVATE_KEY",
 			},
 		},
 	}

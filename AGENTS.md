@@ -137,6 +137,17 @@ Treat it as part of the change, not a follow-up:
 
 The generated command and phase reference under `docs/` comes from the code, so it corrects itself on `go run ./magefiles/core generate:document`. `README.md` does not - it is hand-written, and nothing fails if it drifts. After editing it, run that target so `docs/index.md` matches.
 
+## Say so when you notice user-facing drift, even out of scope
+
+Documentation and user-facing strings drift silently. Nothing fails, no test goes red, and the generated pages under `docs/` regenerate the stale text faithfully - so a string that describes a capability the code removed can survive several releases, looking authoritative the whole time. The `--signing-key` flag help advertised `awskms://`, `gcpkms://`, `azurekms://` and `hashivault://` for months after `pkg/signing` had been rewritten to reject all four by name, because the wording lived in a cobra flag string and a `jsonschema` tag rather than in prose anybody reread.
+
+So drift noticed is drift reported. When work in one corner of the tree turns up a stale user-facing surface somewhere else - a flag description, a `Long` or example string in `config/lang/`, a `jsonschema` example in `types/config.go`, an Ansible module doc block, a README snippet, a key missing from `cargoship-config.yaml` - name it in the change description, with the file and what is wrong. Do not quietly widen the change to fix it, and do not stay silent because it is out of scope: the operator deciding whether it is worth a follow-up is the point, and an unfixed drift they know about is a fine state to leave the tree in.
+
+Two things make this worth a rule rather than a habit:
+
+- **the stale copy is usually upstream of several generated files**, so what looks like one wrong line in `docs/` is one wrong line in a Go string plus four regenerated pages, and a reader who corrects the page by hand loses the fix on the next `generate:document`. Chase the wording back to the string that produced it before reporting where it lives.
+- **a vendored string can be the source.** Several flag descriptions come from `vendor/github.com/zarf-dev/zarf/src/config/lang`, which describes zarf's capabilities rather than cargoship's. Where cargoship's behaviour has diverged, the fix is a constant in `config/lang/` and nothing else - see the `--signing-key` strings for the pattern.
+
 ## A new flag belongs in the config file too
 
 A flag on a cobra command is one half of how cargoship is configured. The other half is [`types/config.go`](types/config.go), the struct `v.Unmarshal(&resolvedConfig)` decodes the config file, the environment and the viper defaults into - and `resolvedConfig` is what a flag registration reads for its default value. A flag wired only into cobra works, which is why it is easy to stop there, and it leaves an operator restating on every invocation something their whole fleet has one answer to.
