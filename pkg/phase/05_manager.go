@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"time"
 
@@ -33,7 +32,6 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/internal/heartbeat"
 	"github.com/colonel-byte/cargoship/pkg/retry"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/creasty/defaults"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -566,18 +564,6 @@ type ManagerDistroConfig struct {
 	Token     string
 	Data      string
 	Version   string
-}
-
-// NewManager creates a new Manager
-func NewManager(config *cluster.Cluster, distro distrocfg.Distro) (*Manager, error) {
-	if config == nil {
-		return nil, fmt.Errorf("config is nil")
-	}
-	if distro == nil {
-		return nil, fmt.Errorf("distro is nil")
-	}
-
-	return &Manager{Config: config, Writer: os.Stdout}, nil
 }
 
 // AddPhase adds a Phase to Manager
