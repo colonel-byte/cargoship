@@ -5,6 +5,13 @@ log_format: console
 tmp_dir: /tmp
 zarf_cache: ~/.cache/cargoship
 timeout: 60m
+# Uncomment to always write a full-verbosity debug log to a file, whatever log_level says.
+# log_file: true
+# Uncomment to drop terminal colour codes from logs and stdout, for a CI job or a pipe.
+# no_color: true
+# The CPU architecture OCI operations run against. Defaults to the architecture cargoship
+# is running on, so set it only when building for the other one.
+# architecture: amd64
 distro:
   type: rke2
   oci_concurrency: 10
@@ -17,3 +24,63 @@ distro:
   # Uncomment to record every run. {command} and {timestamp} expand per run, so each
   # receipt lands in its own file; a leading ~ is expanded the way a shell would.
   # receipt_path: ~/.cache/cargoship/logs/{command}-{timestamp}.json
+  # Whether apply checks and adds the node-role.kubernetes.io/PROFILE label on nodes.
+  # On by default; set false where those labels are managed elsewhere.
+  # label_nodes: true
+  # Whether apply merges the cluster's admin credentials into a kubeconfig, and which
+  # file. On by default, into KUBECONFIG, else ~/.kube/config, when kubeconfig is empty.
+  # update_kubeconfig: true
+  # kubeconfig: ~/.kube/cargoship.config
+  # Uncomment to continue when a host already runs an engine newer than the one the
+  # package carries. Left off, that host fails the run rather than being rolled back.
+  # allow_downgrade: true
+  # Uncomment to continue when the cluster holds a node no host in this config accounts
+  # for. Left off, an apply stops rather than acting on a cluster it does not describe.
+  # allow_unmanaged_nodes: true
+  # How many times an operation is retried before the run fails.
+  # retry: 3
+  # How a package's signature is treated as it loads: never, if-possible, or always.
+  # if-possible when unset -- a signed package is verified, an unsigned one still loads.
+  # Set always on a management node that should refuse unsigned packages, and name the
+  # key they are signed with.
+  # verify: always
+  # public_key: ~/.cosign/cosign.pub
+  # create:
+  #   Redirect image pulls to a mirror, as source: replacement pairs. Needed where the
+  #   upstream registries are unreachable; keys are matched exactly, not as prefixes.
+  #   registry_override:
+  #     docker.io: mirror.example.com
+  #     ghcr.io: mirror.example.com/ghcr
+  #   Redirect file downloads, as URL-prefix: replacement pairs. The replacement is
+  #   either another URL prefix or a local directory of pre-staged files, and the
+  #   declared shasum is enforced either way. Longest matching prefix wins.
+  #   file_override:
+  #     https://get.k3s.io: /srv/staged/k3s
+  #     https://rpm.rancher.io: https://mirror.example.com/rpm-rancher
+  # publish:
+  #   The private key create, publish and sign use. A file path, or env://ENV_VAR to
+  #   read the key from an environment variable rather than leave it on disk.
+  #   signing_key: ~/.cosign/cosign.key
+  #   The password for that key. Prefer COSIGN_PASSWORD in the environment: a password
+  #   written here is a credential sitting in a file somebody will commit.
+  #   signing_key_password: ""
+# The age keys that encrypt and decrypt the registry credentials held in a cluster
+# configuration, the alternative to an Ansible Vault password file. Both halves of the
+# workflow read this section, so a recipient set committed here is one no `cargoship
+# vault` or apply command line has to restate. Each is a list: a configuration is
+# normally encrypted to every operator who has to apply it, plus whatever CI holds.
+# age:
+#   Identity files, each holding age private keys or an SSH private key. A leading ~ is
+#   expanded. Equivalent to repeating --age-identity-file.
+#   identity_files:
+#     - ~/.age/cargoship.key
+#     - ~/.ssh/id_ed25519
+#   Public keys credentials are encrypted to, each an age recipient or an SSH public
+#   key. Equivalent to repeating --age-recipient.
+#   recipients:
+#     - age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+#     - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample operator@example.com
+#   Files holding those public keys, one per line, # comments allowed. An
+#   authorized_keys file works as it is. Equivalent to repeating --age-recipients-file.
+#   recipients_files:
+#     - /etc/cargoship/recipients.txt
