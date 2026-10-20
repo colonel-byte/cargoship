@@ -36,8 +36,6 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/colonel-byte/cargoship/pkg/utils"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
@@ -77,17 +75,6 @@ type InstallCommon struct {
 var plainHTTP bool
 var insecureSkipTLSVerify bool
 var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
-
-// Distro returns the distro config for a given string
-func Distro(s string) (distrocfg.Distro, error) {
-	ds, err := registry.GetDistroModuleBuilder(s)
-	if err != nil {
-		return nil, err
-	}
-	d := ds().(distrocfg.Distro) //nolint:errcheck
-
-	return d, nil
-}
 
 func defaultRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{
