@@ -687,17 +687,3 @@ func (h *Host) Stat(path string) (fs.FileInfo, error) {
 func (h *Host) FileExist(path string) bool {
 	return h.sudoFS().FileExist(path)
 }
-
-// CheckHTTPStatus requests url and returns an error if the response status is not one of expected.
-func (h *Host) CheckHTTPStatus(ctx context.Context, url string, expected ...int) error {
-	status, err := remotefs.HTTPStatusInsecure(ctx, h.FS(), url)
-	if err != nil {
-		return err
-	}
-
-	if slices.Contains(expected, status) {
-		return nil
-	}
-
-	return fmt.Errorf("expected response code %d but received %d", expected, status)
-}

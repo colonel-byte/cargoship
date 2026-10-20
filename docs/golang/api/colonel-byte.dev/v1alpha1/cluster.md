@@ -37,7 +37,6 @@ Package cluster defines the API types for a cluster configuration.
 - [type Host](<#Host>)
   - [func \(h \*Host\) Address\(\) string](<#Host.Address>)
   - [func \(h \*Host\) Arch\(\) \(string, error\)](<#Host.Arch>)
-  - [func \(h \*Host\) CheckHTTPStatus\(ctx context.Context, url string, expected ...int\) error](<#Host.CheckHTTPStatus>)
   - [func \(h \*Host\) ConfiguredAddress\(\) string](<#Host.ConfiguredAddress>)
   - [func \(h \*Host\) Connect\(ctx context.Context\) error](<#Host.Connect>)
   - [func \(h \*Host\) DeleteFile\(path string\) error](<#Host.DeleteFile>)
@@ -532,15 +531,6 @@ func (h *Host) Arch() (string, error)
 ```
 
 Arch returns the host architecture, caching the result in metadata
-
-<a name="Host.CheckHTTPStatus"></a>
-### func \(\*Host\) [CheckHTTPStatus](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L692>)
-
-```go
-func (h *Host) CheckHTTPStatus(ctx context.Context, url string, expected ...int) error
-```
-
-CheckHTTPStatus requests url and returns an error if the response status is not one of expected.
 
 <a name="Host.ConfiguredAddress"></a>
 ### func \(\*Host\) [ConfiguredAddress](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568>)
