@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-ef006fc5.js";
+            window.path_to_searchindex_js = "../../searchindex-01336913.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-2f8c3bd5.js"></script>
+        <script src="../../toc-8dc70692.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,10 +190,13 @@
 <h2 id="index"><a class="header" href="#index">Index</a></h2>
 <ul>
 <li><a href="#Create">func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (string, error)</a></li>
+<li><a href="#Import">func Import(ctx context.Context, source string, opts ImportOptions) (string, error)</a></li>
+<li><a href="#ImportLayout">func ImportLayout(ctx context.Context, source string, opts ImportOptions) (*layout.DistroLayout, error)</a></li>
 <li><a href="#Load">func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroLayout, error)</a></li>
 <li><a href="#Publish">func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.Reference, opts PublishOptions) (registry.Reference, error)</a></li>
 <li><a href="#Pull">func Pull(ctx context.Context, source, destination string, opts PullOptions) (string, error)</a></li>
 <li><a href="#CreateOptions">type CreateOptions</a></li>
+<li><a href="#ImportOptions">type ImportOptions</a></li>
 <li><a href="#LoadOptions">type LoadOptions</a></li>
 <li><a href="#PublishOptions">type PublishOptions</a></li>
 <li><a href="#PullOptions">type PullOptions</a></li>
@@ -203,6 +206,16 @@
 <pre><code class="language-go">func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (string, error)
 </code></pre>
 <p>Create used to create a distro package</p>
+<p><a name="Import"></a></p>
+<h2 id="func-import"><a class="header" href="#func-import">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L50">Import</a></a></h2>
+<pre><code class="language-go">func Import(ctx context.Context, source string, opts ImportOptions) (string, error)
+</code></pre>
+<p>Import converts an OCI Image Layout archive or directory, such as one written by `skopeo copy … oci-archive:`, into a native Cargoship package.</p>
+<p><a name="ImportLayout"></a></p>
+<h2 id="func-importlayout"><a class="header" href="#func-importlayout">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L68">ImportLayout</a></a></h2>
+<pre><code class="language-go">func ImportLayout(ctx context.Context, source string, opts ImportOptions) (*layout.DistroLayout, error)
+</code></pre>
+<p>ImportLayout reads an OCI Image Layout archive or directory and unpacks it into a DistroLayout.</p>
 <p><a name="Load"></a></p>
 <h2 id="func-load"><a class="header" href="#func-load">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/load.go#L56">Load</a></a></h2>
 <pre><code class="language-go">func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroLayout, error)
@@ -243,6 +256,16 @@
     // Tag overrides the package metadata version.
     Tag string
     types.RemoteOptions
+}
+</code></pre>
+<p><a name="ImportOptions"></a></p>
+<h2 id="type-importoptions"><a class="header" href="#type-importoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L41-L46">ImportOptions</a></a></h2>
+<p>ImportOptions declares optional parameters for an Import operation.</p>
+<pre><code class="language-go">type ImportOptions struct {
+    Architecture         string
+    Output               string
+    VerifyBlobOptions    *signing.VerifyBlobOptions
+    VerificationStrategy layout.VerificationStrategy
 }
 </code></pre>
 <p><a name="LoadOptions"></a></p>
