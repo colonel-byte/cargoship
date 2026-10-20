@@ -27,10 +27,8 @@ Package utils is for commonly used functions
 - [func MakeTempDir\(basePath string\) \(string, error\)](<#MakeTempDir>)
 - [func ParseChecksum\(src string\) \(string, string, error\)](<#ParseChecksum>)
 - [func ParseRetryAfter\(value string\) time.Duration](<#ParseRetryAfter>)
-- [func PrintJSON\(obj any\) string](<#PrintJSON>)
 - [func RandomString\(length int\) \(string, error\)](<#RandomString>)
 - [func ReadByteStrict\(data \[\]byte, destConfig any\) error](<#ReadByteStrict>)
-- [func ReadYAMLStrict\(path string, destConfig any\) error](<#ReadYAMLStrict>)
 - [func ResolveCachePath\(cachePath string\) \(string, error\)](<#ResolveCachePath>)
 
 
@@ -118,7 +116,7 @@ func FilterEnterpriseLinux(h *cluster.Host) bool
 FilterEnterpriseLinux is a function used to filter whether a host is an Enterprise Linux OS
 
 <a name="IdentifySource"></a>
-## func [IdentifySource](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L89>)
+## func [IdentifySource](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L58>)
 
 ```go
 func IdentifySource(src string) (string, error)
@@ -180,17 +178,8 @@ func ParseRetryAfter(value string) time.Duration
 
 ParseRetryAfter parses the Retry\-After header value into a duration. It supports both delay\-seconds \(integer\) and HTTP\-date formats.
 
-<a name="PrintJSON"></a>
-## func [PrintJSON](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L107>)
-
-```go
-func PrintJSON(obj any) string
-```
-
-PrintJSON returns a string representation of a given object
-
 <a name="RandomString"></a>
-## func [RandomString](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L116>)
+## func [RandomString](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L76>)
 
 ```go
 func RandomString(length int) (string, error)
@@ -199,22 +188,13 @@ func RandomString(length int) (string, error)
 RandomString returns a string of hexadecimal characters of a given length that is cryptographically secure, or an error
 
 <a name="ReadByteStrict"></a>
-## func [ReadByteStrict](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L68>)
+## func [ReadByteStrict](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L37>)
 
 ```go
 func ReadByteStrict(data []byte, destConfig any) error
 ```
 
 ReadByteStrict reads a byte array and tries to place it in the provided "destConfig" object
-
-<a name="ReadYAMLStrict"></a>
-## func [ReadYAMLStrict](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/common.go#L40>)
-
-```go
-func ReadYAMLStrict(path string, destConfig any) error
-```
-
-ReadYAMLStrict reads a YAML file into a struct, with strict parsing
 
 <a name="ResolveCachePath"></a>
 ## func [ResolveCachePath](<https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/cache.go#L190>)

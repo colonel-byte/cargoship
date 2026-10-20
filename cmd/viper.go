@@ -272,17 +272,6 @@ func setDefaults() {
 	v.SetDefault(configPath("AgeOpts", "RecipientsFiles"), []string{})
 }
 
-// GetStringSlice returns a string slice from viper
-// it consistently returns expected results across flags and environment variables
-// https://github.com/spf13/viper/issues/380
-func GetStringSlice(v *viper.Viper, key string) []string {
-	var result []string
-	if err := v.UnmarshalKey(key, &result); err != nil {
-		return nil
-	}
-	return result
-}
-
 type outputFormat string
 
 const (
