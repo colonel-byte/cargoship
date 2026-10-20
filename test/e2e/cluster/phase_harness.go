@@ -155,7 +155,11 @@ func newManager(
 		TempDirectory:     layout.DirPath(),
 		Concurrency:       concurrency,
 		ConcurrentUploads: concurrency,
-		Writer:            os.Stdout,
+		// The resolved values, as cmd/common.go hands them over. Without this every
+		// `when`-gated file is skipped for the whole walk, whatever the inventory sets:
+		// the gate reads manager.Values, and a nil map has no path set.
+		Values: values,
+		Writer: os.Stdout,
 	}
 	if timeout > 0 {
 		manager.SetTimeout(timeout)
