@@ -139,9 +139,6 @@ $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./p
 	CmdPackageImportExample = `# Import a Skopeo oci-archive into the current directory
 $ cargoship import ./my-package.tar
 
-# Import a docker-archive
-$ cargoship import ./my-package.tar --format=docker-archive
-
 # Import an oci-archive into a specific output directory
 $ cargoship import ./my-package.tar --output ./build/
 

@@ -17,7 +17,6 @@ Package distro is used for creating/deploying distro package
 - [func Publish\(ctx context.Context, disLayout \*layout.DistroLayout, dst registry.Reference, opts PublishOptions\) \(registry.Reference, error\)](<#Publish>)
 - [func Pull\(ctx context.Context, source, destination string, opts PullOptions\) \(string, error\)](<#Pull>)
 - [type CreateOptions](<#CreateOptions>)
-- [type ImportFormat](<#ImportFormat>)
 - [type ImportOptions](<#ImportOptions>)
 - [type LoadOptions](<#LoadOptions>)
 - [type PublishOptions](<#PublishOptions>)
@@ -34,22 +33,22 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 Create used to create a distro package
 
 <a name="Import"></a>
-## func [Import](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L66>)
+## func [Import](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L50>)
 
 ```go
 func Import(ctx context.Context, source string, opts ImportOptions) (string, error)
 ```
 
-Import converts an image archive \(Skopeo oci\-archive or docker\-archive\) into a native Cargoship package.
+Import converts an OCI Image Layout archive or directory, such as one written by \`skopeo copy ... oci\-archive:\`, into a native Cargoship package.
 
 <a name="ImportLayout"></a>
-## func [ImportLayout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L90>)
+## func [ImportLayout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L68>)
 
 ```go
 func ImportLayout(ctx context.Context, source string, opts ImportOptions) (*layout.DistroLayout, error)
 ```
 
-ImportLayout reads an OCI or Docker archive/directory and unpacks it into a DistroLayout.
+ImportLayout reads an OCI Image Layout archive or directory and unpacks it into a DistroLayout.
 
 <a name="Load"></a>
 ## func [Load](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/load.go#L56>)
@@ -109,36 +108,13 @@ type CreateOptions struct {
 }
 ```
 
-<a name="ImportFormat"></a>
-## type [ImportFormat](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L45>)
-
-ImportFormat describes the archive format being imported.
-
-```go
-type ImportFormat string
-```
-
-<a name="ImportFormatAuto"></a>
-
-```go
-const (
-    // ImportFormatAuto automatically detects between oci-archive and docker-archive.
-    ImportFormatAuto ImportFormat = "auto"
-    // ImportFormatOCIArchive indicates a standard OCI Image Layout archive or directory.
-    ImportFormatOCIArchive ImportFormat = "oci-archive"
-    // ImportFormatDockerArchive indicates a Docker image archive (docker save format).
-    ImportFormatDockerArchive ImportFormat = "docker-archive"
-)
-```
-
 <a name="ImportOptions"></a>
-## type [ImportOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L57-L63>)
+## type [ImportOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/import.go#L41-L46>)
 
 ImportOptions declares optional parameters for an Import operation.
 
 ```go
 type ImportOptions struct {
-    Format               ImportFormat
     Architecture         string
     Output               string
     VerifyBlobOptions    *signing.VerifyBlobOptions

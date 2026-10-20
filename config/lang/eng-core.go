@@ -42,11 +42,9 @@ const (
 	// CmdPackagePullFlagShasum pull shasum flag
 	CmdPackagePullFlagShasum = "Shasum of the package to pull."
 	// CmdPackageImportShort import short
-	CmdPackageImportShort = "Converts an OCI or Docker image archive into a native Cargoship package"
+	CmdPackageImportShort = "Converts an OCI Image Layout archive into a native Cargoship package"
 	// CmdPackageImportLong import long
-	CmdPackageImportLong = "Converts an image archive (such as one created by Skopeo oci-archive or docker-archive) or an OCI layout directory into a native Cargoship package archive, extracting all package layers and verifying package integrity."
-	// CmdPackageImportFlagFormat import format flag
-	CmdPackageImportFlagFormat = "Archive format: auto, oci-archive, or docker-archive."
+	CmdPackageImportLong = "Converts an OCI Image Layout archive (such as one written by skopeo copy ... oci-archive:) or an OCI layout directory into a native Cargoship package archive, extracting all package layers and verifying package integrity."
 	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
 	// CmdDistroApplyLong apply long

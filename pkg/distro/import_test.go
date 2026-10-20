@@ -18,10 +18,8 @@ import (
 	"archive/tar"
 	"context"
 	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/config"
@@ -178,70 +176,21 @@ spec:
 		defer disLayout.Cleanup() //nolint:errcheck
 		require.Equal(t, "test-distro", disLayout.Distro.Metadata.Name)
 	})
+}
 
-	t.Run("imports from docker archive", func(t *testing.T) {
-		dockerTarPath := filepath.Join(t.TempDir(), "docker-archive.tar")
-		tarFile, err := os.Create(dockerTarPath)
-		require.NoError(t, err)
-		tw := tar.NewWriter(tarFile)
+func TestImportRejectsBadInput(t *testing.T) {
+	ctx := context.Background()
 
-		writeFile := func(name string, data []byte) {
-			hdr := &tar.Header{
-				Name: name,
-				Mode: 0644,
-				Size: int64(len(data)),
-			}
-			require.NoError(t, tw.WriteHeader(hdr))
-			_, err := tw.Write(data)
-			require.NoError(t, err)
-		}
+	_, err := Import(ctx, "", ImportOptions{Output: t.TempDir()})
+	require.ErrorContains(t, err, "must provide an archive source path")
 
-		dockerManifestJSON, err := json.Marshal([]dockerManifestItem{
-			{
-				Config:   "config.json",
-				RepoTags: []string{"test-package:latest"},
-				Layers:   []string{"distro.tar", "checksums.tar"},
-			},
-		})
-		require.NoError(t, err)
+	_, err = Import(ctx, "some-package.tar", ImportOptions{})
+	require.ErrorContains(t, err, "no output directory specified")
 
-		makeSingleFileTar := func(innerName string, innerData []byte) []byte {
-			buf := &strings.Builder{}
-			twInner := tar.NewWriter(io.Writer(buf))
-			require.NoError(t, twInner.WriteHeader(&tar.Header{
-				Name: innerName,
-				Mode: 0644,
-				Size: int64(len(innerData)),
-			}))
-			_, err := twInner.Write(innerData)
-			require.NoError(t, err)
-			require.NoError(t, twInner.Close())
-			return []byte(buf.String())
-		}
+	_, err = Import(ctx, filepath.Join(t.TempDir(), "missing.tar"), ImportOptions{Output: t.TempDir()})
+	require.ErrorContains(t, err, "unable to read source")
 
-		writeFile("manifest.json", dockerManifestJSON)
-		writeFile("config.json", []byte("{}"))
-		writeFile("distro.tar", makeSingleFileTar(config.DistroYAML, distroYAMLContent))
-		writeFile("checksums.tar", makeSingleFileTar(config.Checksums, checksumsContent))
-
-		require.NoError(t, tw.Close())
-		require.NoError(t, tarFile.Close())
-
-		outDir := t.TempDir()
-		pkgPath, err := Import(ctx, dockerTarPath, ImportOptions{
-			Format:               ImportFormatDockerArchive,
-			Architecture:         "amd64",
-			Output:               outDir,
-			VerificationStrategy: layout.VerifyNever,
-		})
-		require.NoError(t, err)
-		require.FileExists(t, pkgPath)
-
-		disLayout, err := layout.LoadFromTar(ctx, pkgPath, layout.DistroLayoutOptions{
-			VerificationStrategy: layout.VerifyNever,
-		})
-		require.NoError(t, err)
-		defer disLayout.Cleanup() //nolint:errcheck
-		require.Equal(t, "test-distro", disLayout.Distro.Metadata.Name)
-	})
+	// A directory that is not an OCI layout names the file it is missing.
+	_, err = Import(ctx, t.TempDir(), ImportOptions{Output: t.TempDir()})
+	require.ErrorContains(t, err, "is not an OCI Image Layout")
 }

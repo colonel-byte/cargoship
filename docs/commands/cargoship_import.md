@@ -2,11 +2,11 @@
 
 ## cargoship import
 
-Converts an OCI or Docker image archive into a native Cargoship package
+Converts an OCI Image Layout archive into a native Cargoship package
 
 ### Synopsis
 
-Converts an image archive (such as one created by Skopeo oci-archive or docker-archive) or an OCI layout directory into a native Cargoship package archive, extracting all package layers and verifying package integrity.
+Converts an OCI Image Layout archive (such as one written by skopeo copy ... oci-archive:) or an OCI layout directory into a native Cargoship package archive, extracting all package layers and verifying package integrity.
 
 ```
 cargoship import [ARCHIVE] [flags]
@@ -17,9 +17,6 @@ cargoship import [ARCHIVE] [flags]
 ```
 # Import a Skopeo oci-archive into the current directory
 $ cargoship import ./my-package.tar
-
-# Import a docker-archive
-$ cargoship import ./my-package.tar --format=docker-archive
 
 # Import an oci-archive into a specific output directory
 $ cargoship import ./my-package.tar --output ./build/
@@ -33,7 +30,6 @@ $ cargoship import ./oci-layout-dir -o ./build/
 
 ```
   -a, --architecture string   Architecture for OCI images and Zarf packages
-      --format string         Archive format: auto, oci-archive, or docker-archive. (default "auto")
   -h, --help                  help for import
   -k, --key string            Path to public key file for validating signed packages
   -o, --output string         Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package. (default ".")

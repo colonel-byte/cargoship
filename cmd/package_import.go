@@ -18,7 +18,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/colonel-byte/cargoship/cmd/flags"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/pkg/distro"
@@ -29,7 +28,6 @@ import (
 
 type packageImportOptions struct {
 	outputDirectory string
-	format          string
 	packageVerifyFlags
 }
 
@@ -56,10 +54,6 @@ func newPackageImportCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.outputDirectory, "output", "o", output, lang.CmdPackageCreateFlagOutput)
-	cmd.Flags().StringVar(&o.format, "format", "auto", lang.CmdPackageImportFlagFormat)
-	if err := cmd.RegisterFlagCompletionFunc("format", flags.RegisterImportFormat); err != nil {
-		logger.From(cmd.Context()).Debug("error registering format flag completion", "error", err)
-	}
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	addBuildFlags(cmd)
 
@@ -78,7 +72,6 @@ func (o *packageImportOptions) run(ctx context.Context, cmd *cobra.Command, args
 	}
 
 	pkgPath, err := distro.Import(ctx, srcArchive, distro.ImportOptions{
-		Format:               distro.ImportFormat(o.format),
 		Architecture:         config.CLIArch,
 		Output:               outputDir,
 		VerificationStrategy: o.verify.toStrategy(),

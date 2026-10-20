@@ -1,6 +1,6 @@
 # Importing Archives Guide
 
-This guide explains how to convert external image archives—specifically Skopeo `oci-archive`, `docker-archive`, or OCI layout directories—into native Cargoship packages (`.tar.zst`).
+This guide explains how to convert an OCI Image Layout - a Skopeo `oci-archive` file, or an unpacked layout directory - into a native Cargoship package (`.tar.zst`) with `cargoship import`.
 
 ## The Air-Gap Workflow
 
@@ -9,13 +9,11 @@ In an air-gapped workflow, packages are often published to an OCI registry on an
 Because Cargoship packages are multi-platform artifacts whose OCI manifest lists record the platform OS as `"multi"` (inherited from the OCI packaging specification), pass `--override-os multi` when pulling with Skopeo so its platform filter matches:
 
 ```sh
-# Export package from OCI registry as an oci-archive
+# Export the package from an OCI registry as an oci-archive
 skopeo copy --override-os multi \
   docker://registry.example.com/cargoship/my-package:1.0.0 \
   oci-archive:my-package.tar:1.0.0
 ```
-
-> **Note on `docker-archive`**: Cargoship packages contain custom artifact configs (`application/vnd.cargoship.config.v1+json`). Docker daemon archives only support standard container image config formats; attempting `skopeo copy ... docker-archive:` against a published Cargoship package will fail with `unsupported image-specific operation on artifact with type "application/vnd.cargoship.config.v1+json"`. Always use `oci-archive:` when exporting Cargoship packages with Skopeo. `cargoship import --format=docker-archive` remains available for standard container image tarballs exported via `docker save`.
 
 Once transferred across the airlock into the disconnected environment, `cargoship import` converts the archive into a native Cargoship package archive that `cargoship apply` can install.
 
@@ -27,30 +25,18 @@ Run `cargoship import` on the archive:
 cargoship import my-package.tar
 ```
 
-By default, the command:
-1. Detects whether the input is an `oci-archive` (OCI Image Layout) or `docker-archive` (Docker save layout).
-2. Extracts and verifies all package layers (binaries, engine configurations, container images, and checksums).
-3. Writes the native compressed archive (`cargoship-<name>-<arch>-<version>.tar.zst`) into the current directory.
+The command:
+
+1. Unpacks the archive, if it is not already a directory, and reads its `index.json`.
+2. Selects the manifest matching the target architecture, descending into a nested index for a multi-arch package.
+3. Extracts and verifies all package layers (binaries, engine configurations, container images, and checksums).
+4. Writes the native compressed archive (`cargoship-<name>-<arch>-<version>.tar.zst`) into the current directory.
 
 To write the native package to a specific directory, pass `-o, --output`:
 
 ```sh
 cargoship import my-package.tar --output /srv/cargoship/packages/
 ```
-
-## Explicit Format Selection
-
-While format detection is automatic, you can enforce the format with `--format`:
-
-```sh
-# Import an OCI archive or OCI layout directory
-cargoship import my-package.tar --format=oci-archive
-
-# Import a Docker image archive (docker save format)
-cargoship import docker-export.tar --format=docker-archive
-```
-
-The `--format` flag supports tab completion in bash/zsh with values `auto`, `oci-archive`, and `docker-archive`.
 
 ## Importing Unpacked Directories
 
@@ -59,6 +45,28 @@ If the archive has already been extracted on disk as an OCI layout directory (co
 ```sh
 cargoship import ./extracted-oci-dir/ -o ./build/
 ```
+
+## Other Tools That Write an OCI Layout
+
+Any tool that writes an OCI Image Layout can feed `cargoship import`. Two common ones:
+
+```sh
+# oras: copy a package out of a registry into a layout directory, or into a layout tar
+oras cp --to-oci-layout registry.example.com/cargoship/my-package:1.0.0 ./my-package:1.0.0
+oras backup --output my-package.tar registry.example.com/cargoship/my-package:1.0.0
+
+# crane: --format=oci writes a layout directory (its default, tarball, does not work - see below)
+crane pull --format=oci registry.example.com/cargoship/my-package:1.0.0 ./my-package
+```
+
+## Why There Is No `docker-archive` Support
+
+`cargoship import` reads an OCI Image Layout only. A Docker image archive, the format `docker save` and `crane pull --format=tarball` write, cannot carry a Cargoship package, for two independent reasons:
+
+- **No tool can produce one.** A Cargoship package is an OCI artifact with a custom config media type (`application/vnd.cargoship.config.v1+json`). Skopeo refuses to write it as a `docker-archive`, failing with `unsupported image-specific operation on artifact with type "application/vnd.cargoship.config.v1+json"`; `oras` has no `docker-archive` output at all; and the Docker daemon cannot pull an artifact with a non-image config, so `docker save` never sees one.
+- **The format cannot carry what the import needs.** A `docker-archive`'s `manifest.json` records only `Config`, `RepoTags`, and `Layers`. There is no field for OCI annotations, so `org.opencontainers.image.title` - which is how a package layer declares whether it is `distro.yaml`, `checksums.txt`, or an image blob - is dropped. Even a hand-built `docker-archive` would arrive with its layers unidentifiable.
+
+Use `oci-archive` or an OCI layout directory instead. Every tool above can write one.
 
 ## Verifying Signatures
 

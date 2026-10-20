@@ -17,7 +17,6 @@ package cmd
 import (
 	"testing"
 
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,17 +24,8 @@ func TestPackageImportCommand(t *testing.T) {
 	cmd := newPackageImportCommand()
 	require.Equal(t, "import [ARCHIVE]", cmd.Use)
 	require.NotNil(t, cmd.Flags().Lookup("output"))
-	require.NotNil(t, cmd.Flags().Lookup("format"))
 	require.NotNil(t, cmd.Flags().Lookup("key"))
 	require.NotNil(t, cmd.Flags().Lookup("verify"))
-
-	// Verify completion function is registered for format
-	fn, found := cmd.GetFlagCompletionFunc("format")
-	require.True(t, found)
-	require.NotNil(t, fn)
-	completions, directive := fn(cmd, nil, "")
-	require.NotEmpty(t, completions)
-	require.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
 
 	// ExactArgs(1)
 	require.Error(t, cmd.Args(cmd, []string{}))

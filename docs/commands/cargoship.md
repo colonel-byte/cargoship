@@ -23,7 +23,7 @@ cargoship COMMAND [flags]
 * [cargoship apply](./cargoship_apply.md)	 - Apply a config file to bootstrap and upgrade a cluster
 * [cargoship create](./cargoship_create.md)	 - Creates a Cargoship Package from a given directory or the current directory
 * [cargoship engine-config-sync](./cargoship_engine-config-sync.md)	 - Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted
-* [cargoship import](./cargoship_import.md)	 - Converts an OCI or Docker image archive into a native Cargoship package
+* [cargoship import](./cargoship_import.md)	 - Converts an OCI Image Layout archive into a native Cargoship package
 * [cargoship inventory](./cargoship_inventory.md)	 - Generates a cluster inventory from another source of truth
 * [cargoship kube-config](./cargoship_kube-config.md)	 - Get the admin kube-config for a control-plane node
 * [cargoship prepare](./cargoship_prepare.md)	 - Prepares the nodes, including restarting the node if new kernel modules are enabled
