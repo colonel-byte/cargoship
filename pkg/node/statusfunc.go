@@ -40,20 +40,3 @@ func ServiceRunningFunc(h *cluster.Host, service string) RetryFunc {
 		return nil
 	}
 }
-
-// HTTPStatusFunc returns a function that returns an error unless the expected status code is returned for a HTTP get to the url
-func HTTPStatusFunc(h *cluster.Host, url string, expected ...int) RetryFunc {
-	return func(ctx context.Context) error {
-		return h.CheckHTTPStatus(ctx, url, expected...)
-	}
-}
-
-// ServiceStoppedFunc returns a function that returns an error if the service is not running on the host
-func ServiceStoppedFunc(h *cluster.Host, service string) RetryFunc {
-	return func(ctx context.Context) error {
-		if h.ServiceIsRunning(ctx, service) {
-			return fmt.Errorf("service %s is still running", service)
-		}
-		return nil
-	}
-}
