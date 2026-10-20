@@ -12,17 +12,14 @@ Package types is a little bit of a hacky way to generate the cargo\-ship\-config
 
 - [Variables](<#variables>)
 - [type AgeOptions](<#AgeOptions>)
-- [type ApplyOptions](<#ApplyOptions>)
 - [type DistroConfig](<#DistroConfig>)
 - [type DistroCreateOptions](<#DistroCreateOptions>)
-- [type DistroDeployOptions](<#DistroDeployOptions>)
 - [type DistroOptions](<#DistroOptions>)
 - [type DistroPublishOptions](<#DistroPublishOptions>)
 - [type FileOverrideMap](<#FileOverrideMap>)
   - [func \(FileOverrideMap\) JSONSchemaExtend\(s \*jsonschema.Schema\)](<#FileOverrideMap.JSONSchemaExtend>)
 - [type RegistryOverrideMap](<#RegistryOverrideMap>)
   - [func \(RegistryOverrideMap\) JSONSchemaExtend\(s \*jsonschema.Schema\)](<#RegistryOverrideMap.JSONSchemaExtend>)
-- [type ResetOptions](<#ResetOptions>)
 
 
 ## Variables
@@ -78,15 +75,6 @@ type AgeOptions struct {
 }
 ```
 
-<a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L180>)
-
-ApplyOptions holds the values for the \`.distro.apply\` section of the config file
-
-```go
-type ApplyOptions struct{}
-```
-
 <a name="DistroConfig"></a>
 ## type [DistroConfig](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L48-L69>)
 
@@ -118,7 +106,7 @@ type DistroConfig struct {
 ```
 
 <a name="DistroCreateOptions"></a>
-## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L155-L163>)
+## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L151-L159>)
 
 DistroCreateOptions holds the values for the \`.distro.create\` section of the config file
 
@@ -134,20 +122,8 @@ type DistroCreateOptions struct {
 }
 ```
 
-<a name="DistroDeployOptions"></a>
-## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L174-L177>)
-
-DistroDeployOptions holds the values for the \`.distro.deploy\` section of the config file
-
-```go
-type DistroDeployOptions struct {
-    // Retries how many times we will try to push a package
-    Retries int `json:"retries,omitempty" mapstructure:"retries"`
-}
-```
-
 <a name="DistroOptions"></a>
-## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L152>)
+## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L148>)
 
 DistroOptions holds the values for the \`.distro\` section of the config file
 
@@ -157,12 +133,6 @@ type DistroOptions struct {
     CreateOpts DistroCreateOptions `json:"create,omitempty" mapstructure:"create"`
     // PublishOpts are options used by the publish subcommand
     PublishOpts DistroPublishOptions `json:"publish,omitempty" mapstructure:"publish"`
-    // DeployOpts are options used by the deploy subcommand
-    DeployOpts DistroDeployOptions `json:"deploy,omitempty" mapstructure:"deploy"`
-    // ApplyOpts are options used by the apply subcommand
-    ApplyOpts ApplyOptions `json:"apply,omitempty" mapstructure:"apply"`
-    // ResetOptions are options used by the reset subcommand
-    ResetOpts ResetOptions `json:"reset,omitempty" mapstructure:"reset"`
     // OCIConcurrency is how many concurrent oci artifacts that will be pushed at a time
     OCIConcurrency int `json:"oci_concurrency,omitempty" mapstructure:"oci_concurrency"`
     // Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
@@ -195,7 +165,9 @@ type DistroOptions struct {
     // WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
     // ("5") or a percentage of the batch ("25%")
     WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
-    // Retry number of retries we will try
+    // Retry how many times an operation is retried before the run fails, including a
+    // package push to an OCI registry -- it is what --retries defaults to on publish
+    // and sign
     Retry int `json:"retry,omitempty" mapstructure:"retry" jsonschema:"minimum=0"`
     // Type of distro we are interacting with
     Type string `json:"type,omitempty" mapstructure:"type" jsonschema:"enum=rke2,enum=k3s"`
@@ -209,7 +181,7 @@ type DistroOptions struct {
 ```
 
 <a name="DistroPublishOptions"></a>
-## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L166-L171>)
+## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L162-L167>)
 
 DistroPublishOptions holds the values for the \`.distro.publish\` section of the config file
 
@@ -223,7 +195,7 @@ type DistroPublishOptions struct {
 ```
 
 <a name="FileOverrideMap"></a>
-## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L205>)
+## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L189>)
 
 FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.
 
@@ -232,7 +204,7 @@ type FileOverrideMap map[string]string
 ```
 
 <a name="FileOverrideMap.JSONSchemaExtend"></a>
-### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L210>)
+### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194>)
 
 ```go
 func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -241,7 +213,7 @@ func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonFileSources to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="RegistryOverrideMap"></a>
-## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L189>)
+## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L173>)
 
 RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It's a named type \(rather than a bare map\[string\]string\) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.
 
@@ -250,21 +222,12 @@ type RegistryOverrideMap map[string]string
 ```
 
 <a name="RegistryOverrideMap.JSONSchemaExtend"></a>
-### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194>)
+### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L178>)
 
 ```go
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 ```
 
 JSONSchemaExtend adds CommonRegistries to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
-
-<a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L183>)
-
-ResetOptions holds the values for the \`.distro.reset\` section of the config file
-
-```go
-type ResetOptions struct{}
-```
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

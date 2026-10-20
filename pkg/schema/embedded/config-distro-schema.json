@@ -44,15 +44,6 @@
       },
       "type": "object"
     },
-    "ApplyOptions": {
-      "additionalProperties": false,
-      "description": "holds the values for the `.distro.apply` section of the config file",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {},
-      "type": "object"
-    },
     "DistroCreateOptions": {
       "additionalProperties": false,
       "description": "holds the values for the `.distro.create` section of the config file",
@@ -67,20 +58,6 @@
         "registry_override": {
           "$ref": "#/$defs/RegistryOverrideMap",
           "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"
-        }
-      },
-      "type": "object"
-    },
-    "DistroDeployOptions": {
-      "additionalProperties": false,
-      "description": "holds the values for the `.distro.deploy` section of the config file",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "retries": {
-          "description": "how many times we will try to push a package",
-          "type": "integer"
         }
       },
       "type": "object"
@@ -100,10 +77,6 @@
           "description": "whether an apply continues when the cluster holds a node that no host\nin the config accounts for",
           "type": "boolean"
         },
-        "apply": {
-          "$ref": "#/$defs/ApplyOptions",
-          "description": "are options used by the apply subcommand"
-        },
         "concurrency": {
           "description": "how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once",
           "minimum": 0,
@@ -112,10 +85,6 @@
         "create": {
           "$ref": "#/$defs/DistroCreateOptions",
           "description": "are options used by the create subcommand"
-        },
-        "deploy": {
-          "$ref": "#/$defs/DistroDeployOptions",
-          "description": "are options used by the deploy subcommand"
         },
         "fapolicyd": {
           "default": true,
@@ -164,12 +133,8 @@
           ],
           "type": "string"
         },
-        "reset": {
-          "$ref": "#/$defs/ResetOptions",
-          "description": "ResetOptions are options used by the reset subcommand"
-        },
         "retry": {
-          "description": "number of retries we will try",
+          "description": "how many times an operation is retried before the run fails, including a\npackage push to an OCI registry -- it is what --retries defaults to on publish\nand sign",
           "minimum": 0,
           "type": "integer"
         },
@@ -293,15 +258,6 @@
           "type": "string"
         }
       },
-      "type": "object"
-    },
-    "ResetOptions": {
-      "additionalProperties": false,
-      "description": "holds the values for the `.distro.reset` section of the config file",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {},
       "type": "object"
     }
   },

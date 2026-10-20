@@ -101,12 +101,6 @@ type DistroOptions struct {
 	CreateOpts DistroCreateOptions `json:"create,omitempty" mapstructure:"create"`
 	// PublishOpts are options used by the publish subcommand
 	PublishOpts DistroPublishOptions `json:"publish,omitempty" mapstructure:"publish"`
-	// DeployOpts are options used by the deploy subcommand
-	DeployOpts DistroDeployOptions `json:"deploy,omitempty" mapstructure:"deploy"`
-	// ApplyOpts are options used by the apply subcommand
-	ApplyOpts ApplyOptions `json:"apply,omitempty" mapstructure:"apply"`
-	// ResetOptions are options used by the reset subcommand
-	ResetOpts ResetOptions `json:"reset,omitempty" mapstructure:"reset"`
 	// OCIConcurrency is how many concurrent oci artifacts that will be pushed at a time
 	OCIConcurrency int `json:"oci_concurrency,omitempty" mapstructure:"oci_concurrency"`
 	// Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
@@ -139,7 +133,9 @@ type DistroOptions struct {
 	// WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
 	// ("5") or a percentage of the batch ("25%")
 	WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
-	// Retry number of retries we will try
+	// Retry how many times an operation is retried before the run fails, including a
+	// package push to an OCI registry -- it is what --retries defaults to on publish
+	// and sign
 	Retry int `json:"retry,omitempty" mapstructure:"retry" jsonschema:"minimum=0"`
 	// Type of distro we are interacting with
 	Type string `json:"type,omitempty" mapstructure:"type" jsonschema:"enum=rke2,enum=k3s"`
@@ -169,18 +165,6 @@ type DistroPublishOptions struct {
 	// SigningKeyPassword the password for the private key used for signing
 	SigningKeyPassword string `json:"signing_key_password,omitempty" mapstructure:"signing_key_password" jsonschema_extras:"x-sensitive=true"`
 }
-
-// DistroDeployOptions holds the values for the `.distro.deploy` section of the config file
-type DistroDeployOptions struct {
-	// Retries how many times we will try to push a package
-	Retries int `json:"retries,omitempty" mapstructure:"retries"`
-}
-
-// ApplyOptions holds the values for the `.distro.apply` section of the config file
-type ApplyOptions struct{}
-
-// ResetOptions holds the values for the `.distro.reset` section of the config file
-type ResetOptions struct{}
 
 // RegistryOverrideMap maps a source registry to the registry cargoship uses instead.
 // It's a named type (rather than a bare map[string]string) solely so it can implement
