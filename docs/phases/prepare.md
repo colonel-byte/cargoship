@@ -21,7 +21,7 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - Installs container-selinux on systems that have SELinux enabled on them
     - Dry run: reported, not run
 1. Prepare hosts - Enterprise Linux support - Fapolicyd
-    - Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
+    - Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules and executable rules to /etc/fapolicyd/rules.d/32-cargoship-executable.rules
     - Dry run: reported, not run
 1. Prepare hosts - Enterprise Linux support - SELinux policy
     - Installs the policy modules, booleans and file contexts from spec.config.os.selinux on hosts running SELinux in enforcing mode, using semodule, setsebool and semanage fcontext

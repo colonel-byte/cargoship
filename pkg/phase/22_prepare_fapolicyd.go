@@ -16,7 +16,11 @@ package phase
 
 import (
 	"context"
+	"fmt"
+	"slices"
+	"strings"
 
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -25,6 +29,8 @@ import (
 const (
 	// FAPolicydRuleFile path on the host
 	FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
+	// FAPolicydExecutableRuleFile path for automatically generated executable rules on the host
+	FAPolicydExecutableRuleFile = "/etc/fapolicyd/rules.d/32-cargoship-executable.rules"
 	// FAPOLICYD name of the service for fapolicyd
 	FAPOLICYD = "fapolicyd"
 )
@@ -81,7 +87,7 @@ func (p *PrepareFapolicy) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *PrepareFapolicy) Explanation() string {
-	return "Writes the distro-supplied FAPolicy rules to " + FAPolicydRuleFile
+	return "Writes the distro-supplied FAPolicy rules to " + FAPolicydRuleFile + " and executable rules to " + FAPolicydExecutableRuleFile
 }
 
 // Run the phase
@@ -91,15 +97,60 @@ func (p *PrepareFapolicy) Run(ctx context.Context) error {
 
 // ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
 func (p *PrepareFapolicy) ShouldRun() bool {
-	return len(p.fapolicydhosts) > 0 && p.manager.Distro.Spec.Config.OS.FAPolicyd != ""
+	if len(p.fapolicydhosts) == 0 || p.manager.Distro == nil {
+		return false
+	}
+	return p.manager.Distro.Spec.Config.OS.FAPolicyd != "" || len(p.executableRules()) > 0
+}
+
+func (p *PrepareFapolicy) executableRules() string {
+	if p.manager.Distro == nil {
+		return ""
+	}
+	var targets []string
+	addFiles := func(files v1alpha1.Files) {
+		for _, f := range files {
+			if f.Executable && f.Target != "" && !slices.Contains(targets, f.Target) {
+				targets = append(targets, f.Target)
+			}
+		}
+	}
+	addFiles(p.manager.Distro.Spec.Config.Files)
+	addFiles(p.manager.Distro.Spec.Config.OS.Files)
+
+	if len(targets) == 0 {
+		return ""
+	}
+	slices.Sort(targets)
+	var b strings.Builder
+	for _, target := range targets {
+		fmt.Fprintf(&b, "allow perm=any all : path=%s\n", target)
+	}
+	return b.String()
 }
 
 func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.Host) error {
-	err := h.WriteFile(FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
-	if err != nil {
-		return err
+	wroteAny := false
+	if p.manager.Distro.Spec.Config.OS.FAPolicyd != "" {
+		if err := h.WriteFile(FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644"); err != nil {
+			return err
+		}
+		p.changedFile(h, FAPolicydRuleFile, reasonOutOfSync, "")
+		wroteAny = true
 	}
-	p.changedFile(h, FAPolicydRuleFile, reasonOutOfSync, "")
-	logger.From(ctx).Info("wrote fapolicyd file, restarting serivce", "host", h)
-	return h.RestartService(ctx, FAPOLICYD)
+
+	execRules := p.executableRules()
+	if execRules != "" {
+		if err := h.WriteFile(FAPolicydExecutableRuleFile, execRules, "0644"); err != nil {
+			return err
+		}
+		p.changedFile(h, FAPolicydExecutableRuleFile, reasonOutOfSync, "")
+		wroteAny = true
+	}
+
+	if wroteAny {
+		logger.From(ctx).Info("wrote fapolicyd files, restarting service", "host", h)
+		return h.RestartService(ctx, FAPOLICYD)
+	}
+	return nil
 }
