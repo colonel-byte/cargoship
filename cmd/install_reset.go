@@ -125,7 +125,6 @@ func (o *installResetOptions) run(ctx context.Context, cmd *cobra.Command, _ []s
 		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
 		TargetHosts:      o.targetHosts,
-		NoWait:           true,
 		NoDrain:          true,
 	}
 

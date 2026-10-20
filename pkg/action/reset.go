@@ -32,8 +32,6 @@ import (
 type ResetOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
-	// NoWait skips waiting for the cluster to be ready
-	NoWait bool
 	// NoDrain skips draining worker nodes
 	NoDrain bool
 	// DistroID is the type of Kubernetes engine that will be removed
@@ -135,7 +133,6 @@ func NewReset(opts ResetOptions) (*Reset, error) {
 func (r Reset) Run(ctx context.Context) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	phase.NoWait = r.NoWait
 	r.Manager.SetPhases(r.Phases)
 
 	if result := r.Manager.Run(ctx); result != nil {

@@ -188,7 +188,6 @@ func (s *DryRunSuite) Test_4_ResetDryRunWithNoRunningController() {
 	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
-		NoWait:           true,
 		NoDrain:          true,
 	})
 	s.Require().NoError(err)
