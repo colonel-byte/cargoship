@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8dc70692.js"></script>
@@ -1786,7 +1786,7 @@ spec:
 <p>The flag carries the ones that change between runs:</p>
 <pre><code class="language-sh">cargoship apply ./package.tar.zst --config inventory.yaml --values ./encryption-off.yaml
 </code></pre>
-<p><code>--values</code> may be given more than once, with a later file winning over an earlier one, and it is accepted by <code>cargoship apply</code>, <code>cargoship prepare</code>, and <code>cargoship engine-config-sync</code>. There is no <code>-f</code> shorthand: <code>apply</code> already binds <code>-f</code> to <code>--fapolicyd</code>.</p>
+<p><code>--values</code> may be given more than once, with a later file winning over an earlier one, and it is accepted by <code>cargoship apply</code>, <code>cargoship prepare</code>, and <code>cargoship engine-config-sync</code>. There is no <code>-f</code> shorthand.</p>
 <p>Merging is per key, not per document. An override that sets <code>cilium.encryption.enabled</code> leaves every other key under <code>cilium</code> as the package defined it.</p>
 <p>The merged values are checked against the package’s schema again at install time, so an inventory that sets a key the package does not accept fails before anything is written to a host.</p>
 <p>That check happens when the package is installed, which is late to learn that a key is misspelled. <code>cargoship schema inventory --package &lt;package&gt;</code> composes the package’s values schema into the inventory schema, so an editor completes and checks <code>spec.config.values</code> while the inventory is being written:</p>
@@ -2726,7 +2726,6 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --config string                     Config file used to bootstrap a cluster.
       --confirm                           Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                           Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -f, --fapolicyd                         Whether to update every host node's fapolicyd configuration.
   -F, --firewall                          Whether to update every host node's firewall configuration.
   -h, --help                              help for apply
   -H, --hosts                             Whether to update every host node's /etc/hosts file.
@@ -3025,7 +3024,7 @@ $ cargoship kube-config --config ./cargoship-config.yaml
 <h3 id="synopsis-7"><a class="header" href="#synopsis-7">Synopsis</a></h3>
 <p>Brings every host the cluster configuration names up to the prerequisites the package declares, without installing the engine: environment variables and sysctl settings, container-selinux on hosts with SELinux enabled, the fapolicyd rules the distro supplies, and the kernel modules the package asks for. A host that gained a module is rebooted, because the module has to be loaded before an apply can use it.</p>
 <p>Running this is optional. An apply runs the same preparation phases itself, and this command exists so that the disruptive half can be done on its own schedule – ahead of a maintenance window rather than inside it.</p>
-<p>–hosts, –firewall and –fapolicyd each opt into rewriting a part of the host that cargoship otherwise leaves alone.</p>
+<p>–hosts and –firewall each opt into rewriting a part of the host that cargoship otherwise leaves alone. The fapolicyd rules are not one of them: they are written wherever a host runs fapolicyd and the package carries rules for it.</p>
 <p>This changes every host it is pointed at, so it needs –confirm. Pass –dry-run to report what it would change instead.</p>
 <pre><code>cargoship prepare [Distro Package] [flags]
 </code></pre>
@@ -3043,23 +3042,21 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
 $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
 </code></pre>
 <h3 id="options-8"><a class="header" href="#options-8">Options</a></h3>
-<pre><code>  -a, --architecture string       Architecture for OCI images and Zarf packages
-  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string             Config file used to bootstrap a cluster.
-      --confirm                   Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
-      --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -f, --fapolicyd                 Whether to update every host node's fapolicyd configuration.
-  -F, --firewall                  Whether to update every host node's firewall configuration.
-  -h, --help                      help for prepare
-  -H, --hosts                     Whether to update every host node's /etc/hosts file.
-  -k, --key string                Path to public key file for validating signed packages
-      --receipt-path string       Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
-      --timeout string            Set the timeout for how long functions will last. (default "60m")
-      --tmpdir string             Specify the temporary directory to use for intermediate files (default "/tmp")
-      --values stringArray        Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
-      --verify verifyMode         Verify the Cargoship package signature. (default if-possible)
-  -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
-      --zarf-cache string         Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+<pre><code>  -a, --architecture string   Architecture for OCI images and Zarf packages
+  -c, --concurrency int       Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string         Config file used to bootstrap a cluster.
+      --confirm               Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
+      --dry-run               Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
+  -F, --firewall              Whether to update every host node's firewall configuration.
+  -h, --help                  help for prepare
+  -H, --hosts                 Whether to update every host node's /etc/hosts file.
+  -k, --key string            Path to public key file for validating signed packages
+      --receipt-path string   Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --timeout string        Set the timeout for how long functions will last. (default "60m")
+      --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
+      --values stringArray    Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
+      --verify verifyMode     Verify the Cargoship package signature. (default if-possible)
+      --zarf-cache string     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-7"><a class="header" href="#options-inherited-from-parent-commands-7">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
@@ -4391,7 +4388,6 @@ $ cargoship version -o json
 <tr><td><code>allow_unmanaged_nodes</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether an apply continues when the cluster holds a node that no host<br>in the config accounts for</td></tr>
 <tr><td><code>concurrency</code></td><td><code>integer</code></td><td>no</td><td></td><td>how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once</td></tr>
 <tr><td><code>create</code></td><td><a href="#distrocreateoptions">DistroCreateOptions</a></td><td>no</td><td></td><td>are options used by the create subcommand</td></tr>
-<tr><td><code>fapolicyd</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update hosts with fapolicyd</td></tr>
 <tr><td><code>firewall</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update the host firewall</td></tr>
 <tr><td><code>hosts</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td><td>whether we will update the etc host file</td></tr>
 <tr><td><code>kubeconfig</code></td><td><code>string</code></td><td>no</td><td></td><td>path of the kubeconfig file the admin creds are merged into, the standard<br>location – KUBECONFIG, else ~/.kube/config – when empty</td></tr>
@@ -5018,7 +5014,6 @@ $ cargoship version -o json
 <tr><td><code>work_concurrency</code></td><td><code>str</code></td><td>no</td><td><code>--work-concurrency</code></td><td>How much work to run concurrently on each host. A count or a percentage, as a string.</td></tr>
 <tr><td><code>hosts</code></td><td><code>bool</code></td><td>no</td><td><code>--hosts</code></td><td>Whether to manage <code>/etc/hosts</code> entries on the fleet.</td></tr>
 <tr><td><code>firewall</code></td><td><code>bool</code></td><td>no</td><td><code>--firewall</code></td><td>Whether to manage the host firewall on the fleet.</td></tr>
-<tr><td><code>fapolicyd</code></td><td><code>bool</code></td><td>no</td><td><code>--fapolicyd</code></td><td>Whether to manage fapolicyd rules on the fleet.</td></tr>
 <tr><td><code>label_nodes</code></td><td><code>bool</code></td><td>no</td><td><code>--label-nodes</code></td><td>Whether to apply cargoship’s role labels to the cluster nodes.</td></tr>
 <tr><td><code>allow_unmanaged_nodes</code></td><td><code>bool</code></td><td>no</td><td><code>--allow-unmanaged-nodes</code></td><td>Whether to tolerate nodes in the cluster that the inventory does not describe.</td></tr>
 <tr><td><code>update_kubeconfig</code></td><td><code>bool</code></td><td>no</td><td><code>--update-kubeconfig</code></td><td>Whether to merge the cluster into the local kubeconfig after the run.</td></tr>
@@ -5186,10 +5181,8 @@ $ cargoship version -o json
 <tr><td><code>parameters</code></td><td><code>dict</code></td><td>no</td><td>None</td><td>Further module parameters, merged into the ones given directly. It is how the <code>cluster</code> role passes a caller-supplied set without templating a whole task’s arguments. A parameter given both directly and inside <code>parameters</code> is an error naming it. The action plugin consumes this key; the module never sees it.</td></tr>
 <tr><td><code>package</code></td><td><code>str</code></td><td>yes</td><td>None</td><td>The distro package to stage. The positional argument of the command, so it renders no flag.</td></tr>
 <tr><td><code>concurrency</code></td><td><code>int</code></td><td>no</td><td><code>--concurrency</code></td><td>How many hosts to work on at once.</td></tr>
-<tr><td><code>work_concurrency</code></td><td><code>str</code></td><td>no</td><td><code>--work-concurrency</code></td><td>How much work to run concurrently on each host. A count or a percentage, as a string.</td></tr>
 <tr><td><code>hosts</code></td><td><code>bool</code></td><td>no</td><td><code>--hosts</code></td><td>Whether to manage <code>/etc/hosts</code> entries on the fleet.</td></tr>
 <tr><td><code>firewall</code></td><td><code>bool</code></td><td>no</td><td><code>--firewall</code></td><td>Whether to manage the host firewall on the fleet.</td></tr>
-<tr><td><code>fapolicyd</code></td><td><code>bool</code></td><td>no</td><td><code>--fapolicyd</code></td><td>Whether to manage fapolicyd rules on the fleet.</td></tr>
 <tr><td><code>values</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td><code>--values</code></td><td>Package values files to apply, one flag per entry.</td></tr>
 <tr><td><code>timeout</code></td><td><code>str</code></td><td>no</td><td><code>--timeout</code></td><td>How long the run may take before it is abandoned, as a Go duration such as <code>45m</code>.</td></tr>
 <tr><td><code>public_key</code></td><td><code>str</code></td><td>no</td><td><code>--key</code></td><td>The public key the package signature is verified against.</td></tr>
@@ -6139,11 +6132,9 @@ output "installed_versions" {
 </li>
 <li><a href="#File">type File</a>
 <ul>
-<li><a href="#File.HasData">func (u *File) HasData() bool</a></li>
 <li><a href="#File.IsTemplate">func (u *File) IsTemplate() bool</a></li>
 <li><a href="#File.Owner">func (u *File) Owner() string</a></li>
 <li><a href="#File.String">func (u *File) String() string</a></li>
-<li><a href="#File.TargetDirectory">func (u *File) TargetDirectory() string</a></li>
 <li><a href="#File.UnmarshalYAML">func (u *File) UnmarshalYAML(unmarshal func(any) error) error</a></li>
 </ul>
 </li>
@@ -6168,7 +6159,7 @@ output "installed_versions" {
 )
 </code></pre>
 <p><a name="BinarySelector"></a></p>
-<h2 id="type-binaryselector"><a class="header" href="#type-binaryselector">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L87-L98">BinarySelector</a></a></h2>
+<h2 id="type-binaryselector"><a class="header" href="#type-binaryselector">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L86-L97">BinarySelector</a></a></h2>
 <p>BinarySelector selects which files to upload to a host, based on host role and install method.</p>
 <pre><code class="language-go">type BinarySelector struct {
     // Roles lists the host roles this file applies to.
@@ -6184,12 +6175,12 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="BinarySelector.MatchesArch"></a></p>
-<h3 id="func-binaryselector-matchesarch"><a class="header" href="#func-binaryselector-matchesarch">func (BinarySelector) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L102">MatchesArch</a></a></h3>
+<h3 id="func-binaryselector-matchesarch"><a class="header" href="#func-binaryselector-matchesarch">func (BinarySelector) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L101">MatchesArch</a></a></h3>
 <pre><code class="language-go">func (s BinarySelector) MatchesArch(arch api.Arch) bool
 </code></pre>
 <p>MatchesArch reports whether this selector applies to arch. An empty Arch list matches every architecture, mirroring how an empty Profile matches every profile.</p>
 <p><a name="File"></a></p>
-<h2 id="type-file"><a class="header" href="#type-file">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L35-L76">File</a></a></h2>
+<h2 id="type-file"><a class="header" href="#type-file">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L34-L75">File</a></a></h2>
 <p>File defines a file shared by the distro and cluster APIs.</p>
 <pre><code class="language-go">type File struct {
     // Data holds the inline file content.
@@ -6234,33 +6225,23 @@ output "installed_versions" {
     LocalSource LocalFile `json:"-"`
 }
 </code></pre>
-<p><a name="File.HasData"></a></p>
-<h3 id="func-file-hasdata"><a class="header" href="#func-file-hasdata">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L148">HasData</a></a></h3>
-<pre><code class="language-go">func (u *File) HasData() bool
-</code></pre>
-<p>HasData reports whether Data holds non-blank content.</p>
 <p><a name="File.IsTemplate"></a></p>
-<h3 id="func-file-istemplate"><a class="header" href="#func-file-istemplate">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L112">IsTemplate</a></a></h3>
+<h3 id="func-file-istemplate"><a class="header" href="#func-file-istemplate">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L111">IsTemplate</a></a></h3>
 <pre><code class="language-go">func (u *File) IsTemplate() bool
 </code></pre>
 <p>IsTemplate reports whether this file’s contents are rendered against the package’s values before upload. Unset means no, so a package that says nothing about templating ships the bytes it was built with.</p>
 <p><a name="File.Owner"></a></p>
-<h3 id="func-file-owner"><a class="header" href="#func-file-owner">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L125">Owner</a></a></h3>
+<h3 id="func-file-owner"><a class="header" href="#func-file-owner">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L124">Owner</a></a></h3>
 <pre><code class="language-go">func (u *File) Owner() string
 </code></pre>
 <p>Owner returns a chown-compatible “user:group” string built from User and Group. It returns an empty string when both are empty.</p>
 <p><a name="File.String"></a></p>
-<h3 id="func-file-string"><a class="header" href="#func-file-string">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L117">String</a></a></h3>
+<h3 id="func-file-string"><a class="header" href="#func-file-string">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L116">String</a></a></h3>
 <pre><code class="language-go">func (u *File) String() string
 </code></pre>
 <p>String returns Name. If Name is empty, it returns Source instead.</p>
-<p><a name="File.TargetDirectory"></a></p>
-<h3 id="func-file-targetdirectory"><a class="header" href="#func-file-targetdirectory">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L153">TargetDirectory</a></a></h3>
-<pre><code class="language-go">func (u *File) TargetDirectory() string
-</code></pre>
-<p>TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.</p>
 <p><a name="File.UnmarshalYAML"></a></p>
-<h3 id="func-file-unmarshalyaml"><a class="header" href="#func-file-unmarshalyaml">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L130">UnmarshalYAML</a></a></h3>
+<h3 id="func-file-unmarshalyaml"><a class="header" href="#func-file-unmarshalyaml">func (*File) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L129">UnmarshalYAML</a></a></h3>
 <pre><code class="language-go">func (u *File) UnmarshalYAML(unmarshal func(any) error) error
 </code></pre>
 <p>UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.</p>
@@ -6280,7 +6261,7 @@ output "installed_versions" {
 <pre><code class="language-go">type Kind string
 </code></pre>
 <p><a name="LocalFile"></a></p>
-<h2 id="type-localfile"><a class="header" href="#type-localfile">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L79-L84">LocalFile</a></a></h2>
+<h2 id="type-localfile"><a class="header" href="#type-localfile">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/file.go#L78-L83">LocalFile</a></a></h2>
 <p>LocalFile holds the local path and permission cargoship resolves for uploading a file.</p>
 <pre><code class="language-go">type LocalFile struct {
     // Path is the local path to the file cargoship uploads.
@@ -6342,13 +6323,11 @@ output "installed_versions" {
 <li><a href="#Host.FileChanged">func (h *Host) FileChanged(lpath, rpath string) bool</a></li>
 <li><a href="#Host.FileExist">func (h *Host) FileExist(path string) bool</a></li>
 <li><a href="#Host.IsController">func (h *Host) IsController() bool</a></li>
-<li><a href="#Host.KubeRole">func (h *Host) KubeRole() string</a></li>
 <li><a href="#Host.OSKind">func (h *Host) OSKind() (string, error)</a></li>
 <li><a href="#Host.ReadFile">func (h *Host) ReadFile(path string) (string, error)</a></li>
 <li><a href="#Host.ResolveConfigurer">func (h *Host) ResolveConfigurer() error</a></li>
 <li><a href="#Host.RestartService">func (h *Host) RestartService(ctx context.Context, name string) error</a></li>
 <li><a href="#Host.ServiceIsRunning">func (h *Host) ServiceIsRunning(ctx context.Context, name string) bool</a></li>
-<li><a href="#Host.ServiceName">func (h *Host) ServiceName() string</a></li>
 <li><a href="#Host.SetFS">func (h *Host) SetFS(fs remotefs.FS)</a></li>
 <li><a href="#Host.SetServices">func (h *Host) SetServices(services HostServices)</a></li>
 <li><a href="#Host.StartService">func (h *Host) StartService(ctx context.Context, name string) error</a></li>
@@ -6457,8 +6436,6 @@ output "installed_versions" {
     RoleSingle = "single"
     // RoleWorker marks a host as a worker node.
     RoleWorker = "worker"
-    // RoleError is a sentinel value returned when a role or service lookup fails.
-    RoleError = "error"
 )
 </code></pre>
 <p><a name="AgeHeader"></a>AgeHeader marks a value in a cluster configuration as armored age ciphertext, the alternative to Ansible Vault. Cargoship decrypts such a value at apply time with an age identity rather than a password.</p>
@@ -6596,7 +6573,7 @@ output "installed_versions" {
 </code></pre>
 <p>Validate returns an error when any rule in the config is unusable.</p>
 <p><a name="FirewallPolicyConfig"></a></p>
-<h2 id="type-firewallpolicyconfig"><a class="header" href="#type-firewallpolicyconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L208-L221">FirewallPolicyConfig</a></a></h2>
+<h2 id="type-firewallpolicyconfig"><a class="header" href="#type-firewallpolicyconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L206-L219">FirewallPolicyConfig</a></a></h2>
 <p>FirewallPolicyConfig configures a firewalld policy that opens ports from one zone to another.</p>
 <pre><code class="language-go">type FirewallPolicyConfig struct {
     // XMLName sets the element name cargoship uses when it marshals this policy to firewalld XML.
@@ -6614,7 +6591,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="FirewallPort"></a></p>
-<h2 id="type-firewallport"><a class="header" href="#type-firewallport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L230-L235">FirewallPort</a></a></h2>
+<h2 id="type-firewallport"><a class="header" href="#type-firewallport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L228-L233">FirewallPort</a></a></h2>
 <p>FirewallPort defines a port allowed through the firewalld policy.</p>
 <pre><code class="language-go">type FirewallPort struct {
     // Protocol is the type of allowed traffic.
@@ -6676,7 +6653,7 @@ output "installed_versions" {
 </code></pre>
 <p>Validate returns an error when the rule cannot be applied by any backend.</p>
 <p><a name="FirewallZone"></a></p>
-<h2 id="type-firewallzone"><a class="header" href="#type-firewallzone">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L224-L227">FirewallZone</a></a></h2>
+<h2 id="type-firewallzone"><a class="header" href="#type-firewallzone">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L222-L225">FirewallZone</a></a></h2>
 <p>FirewallZone is the name of either the ingress or egress zone for a policy.</p>
 <pre><code class="language-go">type FirewallZone struct {
     // Name identifies the firewalld zone.
@@ -6684,7 +6661,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="Host"></a></p>
-<h2 id="type-host"><a class="header" href="#type-host">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L65-L97">Host</a></a></h2>
+<h2 id="type-host"><a class="header" href="#type-host">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L63-L95">Host</a></a></h2>
 <p>Host is a remote connection to a node</p>
 <pre><code class="language-go">type Host struct {
     // ClientWithConfig embeds rig's client type. It gives Host multi-protocol connectivity to a remote host.
@@ -6718,165 +6695,155 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="Host.Address"></a></p>
-<h3 id="func-host-address"><a class="header" href="#func-host-address">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L547">Address</a></a></h3>
+<h3 id="func-host-address"><a class="header" href="#func-host-address">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L535">Address</a></a></h3>
 <pre><code class="language-go">func (h *Host) Address() string
 </code></pre>
 <p>Address returns the address rig is connected to for this host, or the empty string for a host that has not gone through Setup or Connect yet.</p>
 <p>The promoted rig.Client.Address panics on a host in that state: ClientWithConfig defers creating its embedded *Client until Setup or Connect runs, so a host built directly (as tests do, or as a host removed from the config and never dialed this run) has a nil Client, and Address dereferences it unconditionally.</p>
 <p><a name="Host.Arch"></a></p>
-<h3 id="func-host-arch"><a class="header" href="#func-host-arch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L328">Arch</a></a></h3>
+<h3 id="func-host-arch"><a class="header" href="#func-host-arch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L326">Arch</a></a></h3>
 <pre><code class="language-go">func (h *Host) Arch() (string, error)
 </code></pre>
 <p>Arch returns the host architecture, caching the result in metadata</p>
 <p><a name="Host.ConfiguredAddress"></a></p>
-<h3 id="func-host-configuredaddress"><a class="header" href="#func-host-configuredaddress">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568">ConfiguredAddress</a></a></h3>
+<h3 id="func-host-configuredaddress"><a class="header" href="#func-host-configuredaddress">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L556">ConfiguredAddress</a></a></h3>
 <pre><code class="language-go">func (h *Host) ConfiguredAddress() string
 </code></pre>
 <p>ConfiguredAddress is the address the cluster configuration would recognise: what the host block said, with the port when it is not the default.</p>
 <p>It is what to identify a host by in anything written for a person to read back against their own configuration -- a run receipt, a provider attribute, a summary table. Neither of the obvious alternatives works for that. Address reads through the embedded rig client, so it is empty on a host that was never dialed and on one already disconnected, which is exactly the host a failed run most needs to name. String falls back to rig’s CompositeConfig.String, which renders a Go-ish “ssh.Config{127.0.0.1:2223}” -- right for a log line, wrong for something compared against a config file.</p>
 <p><a name="Host.Connect"></a></p>
-<h3 id="func-host-connect"><a class="header" href="#func-host-connect">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L293">Connect</a></a></h3>
+<h3 id="func-host-connect"><a class="header" href="#func-host-connect">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L291">Connect</a></a></h3>
 <pre><code class="language-go">func (h *Host) Connect(ctx context.Context) error
 </code></pre>
 <p>Connect establishes the connection to the host, injecting cargoship’s configured logger so that rig’s internal logging is routed through the same logger as the rest of the run. rig v2 has no global logger setter; the logger is injected per-client via rig.WithLogger, which is only honored at client construction (the first Connect call) or via ClientWithConfig.Connect’s own options -- see riglogger.RigLogger.</p>
 <p><a name="Host.DeleteFile"></a></p>
-<h3 id="func-host-deletefile"><a class="header" href="#func-host-deletefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L350">DeleteFile</a></a></h3>
+<h3 id="func-host-deletefile"><a class="header" href="#func-host-deletefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L348">DeleteFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) DeleteFile(path string) error
 </code></pre>
 <p>DeleteFile removes a file from the host. Always runs with privilege escalation.</p>
 <p><a name="Host.Dir"></a></p>
-<h3 id="func-host-dir"><a class="header" href="#func-host-dir">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L314">Dir</a></a></h3>
+<h3 id="func-host-dir"><a class="header" href="#func-host-dir">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L312">Dir</a></a></h3>
 <pre><code class="language-go">func (h *Host) Dir(path string) (string, error)
 </code></pre>
 <p>Dir returns the directory name for the given path using the remote filesystem.</p>
 <p><a name="Host.EnableService"></a></p>
-<h3 id="func-host-enableservice"><a class="header" href="#func-host-enableservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L514">EnableService</a></a></h3>
+<h3 id="func-host-enableservice"><a class="header" href="#func-host-enableservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L512">EnableService</a></a></h3>
 <pre><code class="language-go">func (h *Host) EnableService(ctx context.Context, name string) error
 </code></pre>
 <p>EnableService enables the named service on the host.</p>
 <p><a name="Host.Exec"></a></p>
-<h3 id="func-host-exec"><a class="header" href="#func-host-exec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L422">Exec</a></a></h3>
+<h3 id="func-host-exec"><a class="header" href="#func-host-exec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L420">Exec</a></a></h3>
 <pre><code class="language-go">func (h *Host) Exec(command string, opts ...cmd.ExecOption) error
 </code></pre>
 <p>Exec runs a command on the host. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.</p>
 <p><a name="Host.ExecOutput"></a></p>
-<h3 id="func-host-execoutput"><a class="header" href="#func-host-execoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L431">ExecOutput</a></a></h3>
+<h3 id="func-host-execoutput"><a class="header" href="#func-host-execoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L429">ExecOutput</a></a></h3>
 <pre><code class="language-go">func (h *Host) ExecOutput(command string, opts ...cmd.ExecOption) (string, error)
 </code></pre>
 <p>ExecOutput runs a command on the host and returns its output. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.</p>
 <p><a name="Host.FS"></a></p>
-<h3 id="func-host-fs"><a class="header" href="#func-host-fs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L398">FS</a></a></h3>
+<h3 id="func-host-fs"><a class="header" href="#func-host-fs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L396">FS</a></a></h3>
 <pre><code class="language-go">func (h *Host) FS() remotefs.FS
 </code></pre>
 <p>FS returns the host’s filesystem. It shadows the promoted rig client method so that a host with a substituted filesystem uses that one, and an unconnected host returns a filesystem that fails rather than one that panics.</p>
 <p><a name="Host.FileChanged"></a></p>
-<h3 id="func-host-filechanged"><a class="header" href="#func-host-filechanged">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L624">FileChanged</a></a></h3>
+<h3 id="func-host-filechanged"><a class="header" href="#func-host-filechanged">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L594">FileChanged</a></a></h3>
 <pre><code class="language-go">func (h *Host) FileChanged(lpath, rpath string) bool
 </code></pre>
 <p>FileChanged compares the local file at lpath to the remote file at rpath by sha256 checksum. It returns true if the checksums differ or if either checksum cannot be computed.</p>
 <p><a name="Host.FileExist"></a></p>
-<h3 id="func-host-fileexist"><a class="header" href="#func-host-fileexist">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L687">FileExist</a></a></h3>
+<h3 id="func-host-fileexist"><a class="header" href="#func-host-fileexist">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L657">FileExist</a></a></h3>
 <pre><code class="language-go">func (h *Host) FileExist(path string) bool
 </code></pre>
 <p>FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the behavior of the v0.x Configurer.FileExist implementation this replaces.</p>
 <p><a name="Host.IsController"></a></p>
-<h3 id="func-host-iscontroller"><a class="header" href="#func-host-iscontroller">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L536">IsController</a></a></h3>
+<h3 id="func-host-iscontroller"><a class="header" href="#func-host-iscontroller">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L524">IsController</a></a></h3>
 <pre><code class="language-go">func (h *Host) IsController() bool
 </code></pre>
 <p>IsController returns true for the controller, controller+worker, and single roles.</p>
-<p><a name="Host.KubeRole"></a></p>
-<h3 id="func-host-kuberole"><a class="header" href="#func-host-kuberole">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L526">KubeRole</a></a></h3>
-<pre><code class="language-go">func (h *Host) KubeRole() string
-</code></pre>
-<p>KubeRole returns the Kubernetes role for this host. It maps controller+worker and single to controller.</p>
 <p><a name="Host.OSKind"></a></p>
-<h3 id="func-host-oskind"><a class="header" href="#func-host-oskind">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L319">OSKind</a></a></h3>
+<h3 id="func-host-oskind"><a class="header" href="#func-host-oskind">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L317">OSKind</a></a></h3>
 <pre><code class="language-go">func (h *Host) OSKind() (string, error)
 </code></pre>
 <p>OSKind returns the host OS kind via the resolved configurer.</p>
 <p><a name="Host.ReadFile"></a></p>
-<h3 id="func-host-readfile"><a class="header" href="#func-host-readfile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L671">ReadFile</a></a></h3>
+<h3 id="func-host-readfile"><a class="header" href="#func-host-readfile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L641">ReadFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) ReadFile(path string) (string, error)
 </code></pre>
 <p>ReadFile returns the contents of path on the host, or an error if the file does not exist. Always runs with privilege escalation.</p>
 <p><a name="Host.ResolveConfigurer"></a></p>
-<h3 id="func-host-resolveconfigurer"><a class="header" href="#func-host-resolveconfigurer">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L598">ResolveConfigurer</a></a></h3>
+<h3 id="func-host-resolveconfigurer"><a class="header" href="#func-host-resolveconfigurer">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568">ResolveConfigurer</a></a></h3>
 <pre><code class="language-go">func (h *Host) ResolveConfigurer() error
 </code></pre>
 <p>ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.</p>
 <p><a name="Host.RestartService"></a></p>
-<h3 id="func-host-restartservice"><a class="header" href="#func-host-restartservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L502">RestartService</a></a></h3>
+<h3 id="func-host-restartservice"><a class="header" href="#func-host-restartservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L500">RestartService</a></a></h3>
 <pre><code class="language-go">func (h *Host) RestartService(ctx context.Context, name string) error
 </code></pre>
 <p>RestartService restarts the named service on the host.</p>
 <p><a name="Host.ServiceIsRunning"></a></p>
-<h3 id="func-host-serviceisrunning"><a class="header" href="#func-host-serviceisrunning">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L466">ServiceIsRunning</a></a></h3>
+<h3 id="func-host-serviceisrunning"><a class="header" href="#func-host-serviceisrunning">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L464">ServiceIsRunning</a></a></h3>
 <pre><code class="language-go">func (h *Host) ServiceIsRunning(ctx context.Context, name string) bool
 </code></pre>
 <p>ServiceIsRunning returns true if the named service is running on the host.</p>
-<p><a name="Host.ServiceName"></a></p>
-<h3 id="func-host-servicename"><a class="header" href="#func-host-servicename">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L580">ServiceName</a></a></h3>
-<pre><code class="language-go">func (h *Host) ServiceName() string
-</code></pre>
-<p>ServiceName returns the name of the distro service that runs on this host.</p>
 <p><a name="Host.SetFS"></a></p>
-<h3 id="func-host-setfs"><a class="header" href="#func-host-setfs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L371">SetFS</a></a></h3>
+<h3 id="func-host-setfs"><a class="header" href="#func-host-setfs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L369">SetFS</a></a></h3>
 <pre><code class="language-go">func (h *Host) SetFS(fs remotefs.FS)
 </code></pre>
 <p>SetFS substitutes the filesystem this host’s file operations act through, in place of the one its rig connection provides.</p>
 <p><a name="Host.SetServices"></a></p>
-<h3 id="func-host-setservices"><a class="header" href="#func-host-setservices">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L377">SetServices</a></a></h3>
+<h3 id="func-host-setservices"><a class="header" href="#func-host-setservices">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L375">SetServices</a></a></h3>
 <pre><code class="language-go">func (h *Host) SetServices(services HostServices)
 </code></pre>
 <p>SetServices substitutes the init system this host’s service operations act through, in place of the one its rig connection provides.</p>
 <p><a name="Host.StartService"></a></p>
-<h3 id="func-host-startservice"><a class="header" href="#func-host-startservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L478">StartService</a></a></h3>
+<h3 id="func-host-startservice"><a class="header" href="#func-host-startservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L476">StartService</a></a></h3>
 <pre><code class="language-go">func (h *Host) StartService(ctx context.Context, name string) error
 </code></pre>
 <p>StartService starts the named service on the host.</p>
 <p><a name="Host.Stat"></a></p>
-<h3 id="func-host-stat"><a class="header" href="#func-host-stat">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L681">Stat</a></a></h3>
+<h3 id="func-host-stat"><a class="header" href="#func-host-stat">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L651">Stat</a></a></h3>
 <pre><code class="language-go">func (h *Host) Stat(path string) (fs.FileInfo, error)
 </code></pre>
 <p>Stat returns file information for path on the host. Always runs with privilege escalation, matching the rest of this host’s file operations.</p>
 <p><a name="Host.StopService"></a></p>
-<h3 id="func-host-stopservice"><a class="header" href="#func-host-stopservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L490">StopService</a></a></h3>
+<h3 id="func-host-stopservice"><a class="header" href="#func-host-stopservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L488">StopService</a></a></h3>
 <pre><code class="language-go">func (h *Host) StopService(ctx context.Context, name string) error
 </code></pre>
 <p>StopService stops the named service on the host.</p>
 <p><a name="Host.String"></a></p>
-<h3 id="func-host-string"><a class="header" href="#func-host-string">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L298">String</a></a></h3>
+<h3 id="func-host-string"><a class="header" href="#func-host-string">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L296">String</a></a></h3>
 <pre><code class="language-go">func (h *Host) String() string
 </code></pre>
 <p>String returns the connection string. Safe to call before Connect.</p>
 <p><a name="Host.SudoExec"></a></p>
-<h3 id="func-host-sudoexec"><a class="header" href="#func-host-sudoexec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L440">SudoExec</a></a></h3>
+<h3 id="func-host-sudoexec"><a class="header" href="#func-host-sudoexec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L438">SudoExec</a></a></h3>
 <pre><code class="language-go">func (h *Host) SudoExec(command string, opts ...cmd.ExecOption) error
 </code></pre>
 <p>SudoExec runs a command on the host with privilege escalation. Like Exec, it returns an error rather than panicking on a host that was never connected.</p>
 <p><a name="Host.SudoExecOutput"></a></p>
-<h3 id="func-host-sudoexecoutput"><a class="header" href="#func-host-sudoexecoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L449">SudoExecOutput</a></a></h3>
+<h3 id="func-host-sudoexecoutput"><a class="header" href="#func-host-sudoexecoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L447">SudoExecOutput</a></a></h3>
 <pre><code class="language-go">func (h *Host) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, error)
 </code></pre>
 <p>SudoExecOutput runs a command on the host with privilege escalation and returns its output. Like ExecOutput, it returns an error rather than panicking on a host that was never connected.</p>
 <p><a name="Host.Touch"></a></p>
-<h3 id="func-host-touch"><a class="header" href="#func-host-touch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L345">Touch</a></a></h3>
+<h3 id="func-host-touch"><a class="header" href="#func-host-touch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L343">Touch</a></a></h3>
 <pre><code class="language-go">func (h *Host) Touch(path string, modTime time.Time) error
 </code></pre>
 <p>Touch updates file modification timestamps, creating the file if needed. Always runs with privilege escalation.</p>
 <p><a name="Host.UnmarshalYAML"></a></p>
-<h3 id="func-host-unmarshalyaml"><a class="header" href="#func-host-unmarshalyaml">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L109">UnmarshalYAML</a></a></h3>
+<h3 id="func-host-unmarshalyaml"><a class="header" href="#func-host-unmarshalyaml">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L107">UnmarshalYAML</a></a></h3>
 <pre><code class="language-go">func (h *Host) UnmarshalYAML(unmarshal func(any) error) error
 </code></pre>
 <p>UnmarshalYAML decodes a host document into both Host’s own fields and the embedded rig client’s connection configuration.</p>
 <p>rig.ClientWithConfig implements UnmarshalYAML itself, and since it is embedded anonymously that method is promoted onto *Host. Left alone, goccy/go-yaml would treat *Host as an InterfaceUnmarshaler and call the promoted method for the whole host document -- which decodes only ClientWithConfig’s own fields and silently leaves every field Host declares (Hostname, Role, Profile, …) zeroed. Decoding into a shadow type with no embedded ClientWithConfig avoids triggering that promoted method, and a second explicit decode through ClientWithConfig’s own UnmarshalYAML fills in the connection config the same way it always did.</p>
 <p><a name="Host.WriteFile"></a></p>
-<h3 id="func-host-writefile"><a class="header" href="#func-host-writefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L662">WriteFile</a></a></h3>
+<h3 id="func-host-writefile"><a class="header" href="#func-host-writefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L632">WriteFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) WriteFile(path string, data string, permissions string) error
 </code></pre>
 <p>WriteFile writes data to path on the host. Do not use this for large files. Always runs with privilege escalation.</p>
 <p><a name="HostConfig"></a></p>
-<h2 id="type-hostconfig"><a class="header" href="#type-hostconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L145-L154">HostConfig</a></a></h2>
+<h2 id="type-hostconfig"><a class="header" href="#type-hostconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L143-L152">HostConfig</a></a></h2>
 <p>HostConfig defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.</p>
 <pre><code class="language-go">type HostConfig struct {
     // Firewall holds the backend-neutral firewall rules cargoship renders onto whichever
@@ -6890,12 +6857,12 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="HostConfig.Merge"></a></p>
-<h3 id="func-hostconfig-merge"><a class="header" href="#func-hostconfig-merge">func (*HostConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L158">Merge</a></a></h3>
+<h3 id="func-hostconfig-merge"><a class="header" href="#func-hostconfig-merge">func (*HostConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L156">Merge</a></a></h3>
 <pre><code class="language-go">func (c *HostConfig) Merge(update HostConfig)
 </code></pre>
 <p>Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c, and unions update’s firewall rules into c’s.</p>
 <p><a name="HostEngine"></a></p>
-<h2 id="type-hostengine"><a class="header" href="#type-hostengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L176-L181">HostEngine</a></a></h2>
+<h2 id="type-hostengine"><a class="header" href="#type-hostengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L174-L179">HostEngine</a></a></h2>
 <p>HostEngine defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.</p>
 <pre><code class="language-go">type HostEngine struct {
     // NodeLabels maps Kubernetes node label keys to their values.
@@ -6905,7 +6872,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="HostEngine.Merge"></a></p>
-<h3 id="func-hostengine-merge"><a class="header" href="#func-hostengine-merge">func (*HostEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L184">Merge</a></a></h3>
+<h3 id="func-hostengine-merge"><a class="header" href="#func-hostengine-merge">func (*HostEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L182">Merge</a></a></h3>
 <pre><code class="language-go">func (c *HostEngine) Merge(update HostEngine)
 </code></pre>
 <p>Merge copies NodeLabels and NodeTaints from update into c, for whichever of those fields are empty in c.</p>
@@ -6920,7 +6887,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="HostMetadata"></a></p>
-<h2 id="type-hostmetadata"><a class="header" href="#type-hostmetadata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L238-L271">HostMetadata</a></a></h2>
+<h2 id="type-hostmetadata"><a class="header" href="#type-hostmetadata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L236-L269">HostMetadata</a></a></h2>
 <p>HostMetadata holds values cargoship discovers about a host at runtime.</p>
 <pre><code class="language-go">type HostMetadata struct {
     // Arch is the CPU architecture detected on the host.
@@ -6958,7 +6925,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="HostPort"></a></p>
-<h2 id="type-hostport"><a class="header" href="#type-hostport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L200-L205">HostPort</a></a></h2>
+<h2 id="type-hostport"><a class="header" href="#type-hostport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L198-L203">HostPort</a></a></h2>
 <p>HostPort is a port cargoship opens on the public side of the firewall.</p>
 <pre><code class="language-go">type HostPort struct {
     // Protocol is the type of allowed traffic.
@@ -6968,7 +6935,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="HostServices"></a></p>
-<h2 id="type-hostservices"><a class="header" href="#type-hostservices">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L361-L367">HostServices</a></a></h2>
+<h2 id="type-hostservices"><a class="header" href="#type-hostservices">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L359-L365">HostServices</a></a></h2>
 <p>HostServices is the init system surface a host exposes. A real host satisfies it through its rig connection; SetServices substitutes another implementation, which is how the distro modules and phases are exercised without a machine to run against.</p>
 <pre><code class="language-go">type HostServices interface {
     ServiceIsRunning(ctx context.Context, name string) bool
@@ -7223,7 +7190,6 @@ output "installed_versions" {
 <li><a href="#Distro">type Distro</a>
 <ul>
 <li><a href="#Distro.Arches">func (distro Distro) Arches() api.Arches</a></li>
-<li><a href="#Distro.IsSBOMAble">func (distro Distro) IsSBOMAble() bool</a></li>
 </ul>
 </li>
 <li><a href="#FileSource">type FileSource</a></li>
@@ -7358,11 +7324,6 @@ output "installed_versions" {
 <pre><code class="language-go">func (distro Distro) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.</p>
-<p><a name="Distro.IsSBOMAble"></a></p>
-<h3 id="func-distro-issbomable"><a class="header" href="#func-distro-issbomable">func (Distro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/distro/spec.go#L361">IsSBOMAble</a></a></h3>
-<pre><code class="language-go">func (distro Distro) IsSBOMAble() bool
-</code></pre>
-<p>IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.</p>
 <p><a name="FileSource"></a></p>
 <h2 id="type-filesource"><a class="header" href="#type-filesource">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/distro/spec.go#L80-L95">FileSource</a></a></h2>
 <p>FileSource records where one file in the package was actually read from, for a file whose declared source a --file-override redirected.</p>
@@ -7606,7 +7567,7 @@ output "installed_versions" {
 <pre><code class="language-go">var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
 </code></pre>
 <p><a name="Apply"></a></p>
-<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75-L81">Apply</a></a></h2>
+<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L73-L79">Apply</a></a></h2>
 <p>Apply state logic</p>
 <pre><code class="language-go">type Apply struct {
     ApplyOptions
@@ -7615,23 +7576,23 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="NewApply"></a></p>
-<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L84">NewApply</a></a></h3>
+<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L82">NewApply</a></a></h3>
 <pre><code class="language-go">func NewApply(opts ApplyOptions) (*Apply, error)
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.KubeConfigBytes"></a></p>
-<h3 id="func-apply-kubeconfigbytes"><a class="header" href="#func-apply-kubeconfigbytes">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L207">KubeConfigBytes</a></a></h3>
+<h3 id="func-apply-kubeconfigbytes"><a class="header" href="#func-apply-kubeconfigbytes">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L205">KubeConfigBytes</a></a></h3>
 <pre><code class="language-go">func (a Apply) KubeConfigBytes() ([]byte, error)
 </code></pre>
 <p>KubeConfigBytes is the cluster’s admin credentials, serialized, as the run built them.</p>
 <p>It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase is skipped otherwise and there is nothing to return. What comes back is cluster-admin, so a caller holding it is holding the cluster.</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L215">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L213">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L72">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L70">ApplyOptions</a></a></h2>
 <p>ApplyOptions struct</p>
 <pre><code class="language-go">type ApplyOptions struct {
     // Manager is the phase manager
@@ -7639,8 +7600,6 @@ output "installed_versions" {
     // AllowDowngrade continues when a host already runs a version newer than the package,
     // rather than refusing the run
     AllowDowngrade bool
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -7766,7 +7725,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="Prepare"></a></p>
-<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L48-L51">Prepare</a></a></h2>
+<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L46-L49">Prepare</a></a></h2>
 <p>Prepare state logic</p>
 <pre><code class="language-go">type Prepare struct {
     PrepareOptions
@@ -7774,23 +7733,21 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="NewPrepare"></a></p>
-<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L54">NewPrepare</a></a></h3>
+<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L52">NewPrepare</a></a></h3>
 <pre><code class="language-go">func NewPrepare(opts PrepareOptions) *Prepare
 </code></pre>
 <p>NewPrepare an prepare action object</p>
 <p><a name="Prepare.Run"></a></p>
-<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L76">Run</a></a></h3>
+<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L74">Run</a></a></h3>
 <pre><code class="language-go">func (a Prepare) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="PrepareOptions"></a></p>
-<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L45">PrepareOptions</a></a></h2>
+<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L43">PrepareOptions</a></a></h2>
 <p>PrepareOptions struct</p>
 <pre><code class="language-go">type PrepareOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -7831,7 +7788,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="Reset"></a></p>
-<h2 id="type-reset"><a class="header" href="#type-reset">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L55-L58">Reset</a></a></h2>
+<h2 id="type-reset"><a class="header" href="#type-reset">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L53-L56">Reset</a></a></h2>
 <p>Reset state logic</p>
 <pre><code class="language-go">type Reset struct {
     ResetOptions
@@ -7839,23 +7796,21 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="NewReset"></a></p>
-<h3 id="func-newreset"><a class="header" href="#func-newreset">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L61">NewReset</a></a></h3>
+<h3 id="func-newreset"><a class="header" href="#func-newreset">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L59">NewReset</a></a></h3>
 <pre><code class="language-go">func NewReset(opts ResetOptions) (*Reset, error)
 </code></pre>
 <p>NewReset an apply action object</p>
 <p><a name="Reset.Run"></a></p>
-<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L135">Run</a></a></h3>
+<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L133">Run</a></a></h3>
 <pre><code class="language-go">func (r Reset) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ResetOptions"></a></p>
-<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L52">ResetOptions</a></a></h2>
+<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L50">ResetOptions</a></a></h2>
 <p>ResetOptions struct</p>
 <pre><code class="language-go">type ResetOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // DistroID is the type of Kubernetes engine that will be removed
@@ -7884,12 +7839,10 @@ output "installed_versions" {
 <li><a href="#constants-4">Constants</a></li>
 <li><a href="#variables-4">Variables</a></li>
 <li><a href="#AssembleLayers">func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, include …layers.LayerType) ([]ocispec.Descriptor, error)</a></li>
-<li><a href="#CopyPackage">func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOptions) (err error)</a></li>
 <li><a href="#FetchDistroYAML">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.Distro, error)</a></li>
 <li><a href="#GetOCICacheModifier">func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, error)</a></li>
 <li><a href="#LayersFromFiles">func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.Files, folder string) ([]ocispec.Descriptor, error)</a></li>
 <li><a href="#LayersFromImages">func LayersFromImages(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, imageList []string) ([]ocispec.Descriptor, error)</a></li>
-<li><a href="#ReferenceFromMetadata">func ReferenceFromMetadata(registryLocation string, pkg distro.Distro) (registry.Reference, error)</a></li>
 <li><a href="#ReferenceFromMetadataWithOptions">func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions) (registry.Reference, error)</a></li>
 <li><a href="#PublishOptions">type PublishOptions</a></li>
 <li><a href="#ReferenceFromMetadataOptions">type ReferenceFromMetadataOptions</a></li>
@@ -7897,8 +7850,6 @@ output "installed_versions" {
 <ul>
 <li><a href="#NewRemote">func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods …oci.Modifier) (*Remote, error)</a></li>
 <li><a href="#Remote.AssembleLayers">func (r *Remote) AssembleLayers(ctx context.Context, include …layers.LayerType) ([]ocispec.Descriptor, error)</a></li>
-<li><a href="#Remote.FetchDistroYAML">func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.Distro, error)</a></li>
-<li><a href="#Remote.FetchImagesIndex">func (r *Remote) FetchImagesIndex(ctx context.Context) (*ocispec.Index, error)</a></li>
 <li><a href="#Remote.PullDistro">func (r *Remote) PullDistro(ctx context.Context, destinationDir string, concurrency int, layersToPull …ocispec.Descriptor) (_ []ocispec.Descriptor, err error)</a></li>
 <li><a href="#Remote.PushPackage">func (r *Remote) PushPackage(ctx context.Context, disLayout *layout.DistroLayout, opts PublishOptions) (_ ocispec.Descriptor, err error)</a></li>
 <li><a href="#Remote.SoleManifestDigest">func (r *Remote) SoleManifestDigest(ctx context.Context) (digest.Digest, error)</a></li>
@@ -7937,11 +7888,6 @@ output "installed_versions" {
 <pre><code class="language-go">func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, include ...layers.LayerType) ([]ocispec.Descriptor, error)
 </code></pre>
 <p>AssembleLayers returns the OCI layer descriptors for the requested components. The include parameter specifies which layer types to return. All layers are included if include is empty and Metadata layers are always included</p>
-<p><a name="CopyPackage"></a></p>
-<h2 id="func-copypackage"><a class="header" href="#func-copypackage">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/copier.go#L34">CopyPackage</a></a></h2>
-<pre><code class="language-go">func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOptions) (err error)
-</code></pre>
-<p>CopyPackage copies a zarf package from one OCI registry to another using ORAS with retry.</p>
 <p><a name="FetchDistroYAML"></a></p>
 <h2 id="func-fetchdistroyaml"><a class="header" href="#func-fetchdistroyaml">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L38">FetchDistroYAML</a></a></h2>
 <pre><code class="language-go">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.Distro, error)
@@ -7962,13 +7908,8 @@ output "installed_versions" {
 <pre><code class="language-go">func LayersFromImages(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, imageList []string) ([]ocispec.Descriptor, error)
 </code></pre>
 <p>LayersFromImages returns the image blob layers referenced by imageList, selecting from root. fetcher reads image manifests/indexes to walk multi-arch children.</p>
-<p><a name="ReferenceFromMetadata"></a></p>
-<h2 id="func-referencefrommetadata"><a class="header" href="#func-referencefrommetadata">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L34">ReferenceFromMetadata</a></a></h2>
-<pre><code class="language-go">func ReferenceFromMetadata(registryLocation string, pkg distro.Distro) (registry.Reference, error)
-</code></pre>
-<p>ReferenceFromMetadata returns a reference for the given metadata.</p>
 <p><a name="ReferenceFromMetadataWithOptions"></a></p>
-<h2 id="func-referencefrommetadatawithoptions"><a class="header" href="#func-referencefrommetadatawithoptions">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L45">ReferenceFromMetadataWithOptions</a></a></h2>
+<h2 id="func-referencefrommetadatawithoptions"><a class="header" href="#func-referencefrommetadatawithoptions">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L40">ReferenceFromMetadataWithOptions</a></a></h2>
 <pre><code class="language-go">func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions) (registry.Reference, error)
 </code></pre>
 <p>ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides</p>
@@ -7985,7 +7926,7 @@ output "installed_versions" {
 }
 </code></pre>
 <p><a name="ReferenceFromMetadataOptions"></a></p>
-<h2 id="type-referencefrommetadataoptions"><a class="header" href="#type-referencefrommetadataoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L39-L42">ReferenceFromMetadataOptions</a></a></h2>
+<h2 id="type-referencefrommetadataoptions"><a class="header" href="#type-referencefrommetadataoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/utils.go#L34-L37">ReferenceFromMetadataOptions</a></a></h2>
 <p>ReferenceFromMetadataOptions provides extensible options</p>
 <pre><code class="language-go">type ReferenceFromMetadataOptions struct {
     // Tag specifies the OCI reference to use instead of package.metadata.version
@@ -8009,16 +7950,6 @@ output "installed_versions" {
 <pre><code class="language-go">func (r *Remote) AssembleLayers(ctx context.Context, include ...layers.LayerType) ([]ocispec.Descriptor, error)
 </code></pre>
 <p>AssembleLayers returns the OCI layer descriptors for the requested components. The include parameter specifies which layer types to return. All layers are included if include is empty and Metadata layers are always included</p>
-<p><a name="Remote.FetchDistroYAML"></a></p>
-<h3 id="func-remote-fetchdistroyaml"><a class="header" href="#func-remote-fetchdistroyaml">func (*Remote) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L51">FetchDistroYAML</a></a></h3>
-<pre><code class="language-go">func (r *Remote) FetchDistroYAML(ctx context.Context) (distro.Distro, error)
-</code></pre>
-<p>FetchDistroYAML fetches the distro.yaml file from the remote repository.</p>
-<p><a name="Remote.FetchImagesIndex"></a></p>
-<h3 id="func-remote-fetchimagesindex"><a class="header" href="#func-remote-fetchimagesindex">func (*Remote) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L60">FetchImagesIndex</a></a></h3>
-<pre><code class="language-go">func (r *Remote) FetchImagesIndex(ctx context.Context) (*ocispec.Index, error)
-</code></pre>
-<p>FetchImagesIndex fetches the images/index.json file from the remote repository.</p>
 <p><a name="Remote.PullDistro"></a></p>
 <h3 id="func-remote-pulldistro"><a class="header" href="#func-remote-pulldistro">func (*Remote) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/pull.go#L55">PullDistro</a></a></h3>
 <pre><code class="language-go">func (r *Remote) PullDistro(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error)
@@ -8030,7 +7961,7 @@ output "installed_versions" {
 </code></pre>
 <p>PushPackage publishes the zarf package to the remote repository.</p>
 <p><a name="Remote.SoleManifestDigest"></a></p>
-<h3 id="func-remote-solemanifestdigest"><a class="header" href="#func-remote-solemanifestdigest">func (*Remote) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L77">SoleManifestDigest</a></a></h3>
+<h3 id="func-remote-solemanifestdigest"><a class="header" href="#func-remote-solemanifestdigest">func (*Remote) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/coci/fetch.go#L55">SoleManifestDigest</a></a></h3>
 <pre><code class="language-go">func (r *Remote) SoleManifestDigest(ctx context.Context) (digest.Digest, error)
 </code></pre>
 <p>SoleManifestDigest returns the digest of the only package manifest the index at the remote’s reference lists. A package published for one architecture holds a single manifest, so there is nothing to choose between and the caller can pull it whatever platform the index records it under. It errors when the index lists more than one distinct manifest, since picking between those is what platform matching is for.</p>
@@ -10881,10 +10812,8 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Unique">func Unique[T comparable](s []T) (r []T)</a></li>
 </ul>
 <h2 id="constants-6"><a class="header" href="#constants-6">Constants</a></h2>
-<p><a name="ReadUser"></a></p>
+<p><a name="ReadWriteUser"></a></p>
 <pre><code class="language-go">const (
-    // ReadUser is used for any internal file to be read only
-    ReadUser = 0400
     // ReadWriteUser is used for any internal file not normally used by the end user or containing sensitive data
     ReadWriteUser = 0600
     // ReadAllWriteUser is used for any non sensitive file intended to be consumed by the end user
@@ -11136,7 +11065,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#LintError">type LintError</a>
 <ul>
 <li><a href="#LintError.Error">func (e *LintError) Error() string</a></li>
-<li><a href="#LintError.OnlyWarnings">func (e *LintError) OnlyWarnings() bool</a></li>
 </ul>
 </li>
 <li><a href="#PackageFinding">type PackageFinding</a>
@@ -11165,13 +11093,8 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h3 id="func-linterror-error"><a class="header" href="#func-linterror-error">func (*LintError) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L34">Error</a></a></h3>
 <pre><code class="language-go">func (e *LintError) Error() string
 </code></pre>
-<p><a name="LintError.OnlyWarnings"></a></p>
-<h3 id="func-linterror-onlywarnings"><a class="header" href="#func-linterror-onlywarnings">func (*LintError) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L39">OnlyWarnings</a></a></h3>
-<pre><code class="language-go">func (e *LintError) OnlyWarnings() bool
-</code></pre>
-<p>OnlyWarnings returns true if all findings have severity warning.</p>
 <p><a name="PackageFinding"></a></p>
-<h2 id="type-packagefinding"><a class="header" href="#type-packagefinding">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L58-L66">PackageFinding</a></a></h2>
+<h2 id="type-packagefinding"><a class="header" href="#type-packagefinding">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L48-L56">PackageFinding</a></a></h2>
 <p>PackageFinding is a struct that contains a finding about something wrong with a package</p>
 <pre><code class="language-go">type PackageFinding struct {
     // YqPath is the path to the key where the error originated from, this is sometimes empty in the case of a general error
@@ -11184,12 +11107,12 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PackageFinding.ItemizedDescription"></a></p>
-<h3 id="func-packagefinding-itemizeddescription"><a class="header" href="#func-packagefinding-itemizeddescription">func (PackageFinding) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L69">ItemizedDescription</a></a></h3>
+<h3 id="func-packagefinding-itemizeddescription"><a class="header" href="#func-packagefinding-itemizeddescription">func (PackageFinding) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L59">ItemizedDescription</a></a></h3>
 <pre><code class="language-go">func (f PackageFinding) ItemizedDescription() string
 </code></pre>
 <p>ItemizedDescription returns a string with the description and item if finding contains one.</p>
 <p><a name="Severity"></a></p>
-<h2 id="type-severity"><a class="header" href="#type-severity">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L49">Severity</a></a></h2>
+<h2 id="type-severity"><a class="header" href="#type-severity">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L39">Severity</a></a></h2>
 <p>Severity is the type of finding.</p>
 <pre><code class="language-go">type Severity string
 </code></pre>
@@ -11825,14 +11748,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#GenericPhase">type GenericPhase</a>
 <ul>
-<li><a href="#GenericPhase.GetConfig">func (p *GenericPhase) GetConfig() *cluster.Cluster</a></li>
 <li><a href="#GenericPhase.GetDistro">func (p *GenericPhase) GetDistro() *distro.Distro</a></li>
 <li><a href="#GenericPhase.Prepare">func (p *GenericPhase) Prepare(c *cluster.Cluster, d *distro.Distro) error</a></li>
 <li><a href="#GenericPhase.SetManager">func (p *GenericPhase) SetManager(m *Manager)</a></li>
 <li><a href="#GenericPhase.VersionGreater">func (p *GenericPhase) VersionGreater(host *cluster.Host, version string) bool</a></li>
 <li><a href="#GenericPhase.VersionLess">func (p *GenericPhase) VersionLess(host *cluster.Host, version string) bool</a></li>
 <li><a href="#GenericPhase.VersionSkewTooGreat">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.Host, target string) bool</a></li>
-<li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
+<li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(f errorfunc) error</a></li>
 </ul>
 </li>
 <li><a href="#HostChange">type HostChange</a></li>
@@ -11898,16 +11820,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#Manager">type Manager</a>
 <ul>
-<li><a href="#Manager.AddPhase">func (m *Manager) AddPhase(p …Phase)</a></li>
-<li><a href="#Manager.GetDistroOSFiles">func (m *Manager) GetDistroOSFiles() v1alpha1.Files</a></li>
 <li><a href="#Manager.RetryTimeout">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Manager.Run">func (m *Manager) Run(ctx context.Context) error</a></li>
 <li><a href="#Manager.SetPhases">func (m *Manager) SetPhases(p Phases)</a></li>
 <li><a href="#Manager.SetTimeout">func (m *Manager) SetTimeout(tm time.Duration)</a></li>
-<li><a href="#Manager.Wet">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs …errorfunc) error</a></li>
+<li><a href="#Manager.Wet">func (m *Manager) Wet(f errorfunc) error</a></li>
 </ul>
 </li>
-<li><a href="#ManagerDistroConfig">type ManagerDistroConfig</a></li>
 <li><a href="#ManifestEntry">type ManifestEntry</a>
 <ul>
 <li><a href="#ParseManifest">func ParseManifest(content string) []ManifestEntry</a></li>
@@ -11924,14 +11843,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#Phase">type Phase</a></li>
 <li><a href="#PhaseResult">type PhaseResult</a></li>
-<li><a href="#Phases">type Phases</a>
-<ul>
-<li><a href="#Phases.Index">func (p Phases) Index(title string) int</a></li>
-<li><a href="#Phases.InsertAfter">func (p *Phases) InsertAfter(title string, phase Phase)</a></li>
-<li><a href="#Phases.InsertBefore">func (p *Phases) InsertBefore(title string, phase Phase)</a></li>
-<li><a href="#Phases.Replace">func (p *Phases) Replace(title string, phase Phase)</a></li>
-</ul>
-</li>
+<li><a href="#Phases">type Phases</a></li>
 <li><a href="#PrepareFapolicy">type PrepareFapolicy</a>
 <ul>
 <li><a href="#PrepareFapolicy.Explanation">func (p *PrepareFapolicy) Explanation() string</a></li>
@@ -12123,14 +12035,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     DefaultSELinuxFileType = "all"
 )
 </code></pre>
-<p><a name="FIREWALLD"></a></p>
-<pre><code class="language-go">const (
-    // FIREWALLD name of the service for firewalld
-    FIREWALLD = firewall.FirewalldService
-    // UFW name of the service for ufw
-    UFW = firewall.UFWService
-)
-</code></pre>
 <p><a name="ContainerSELinux"></a></p>
 <pre><code class="language-go">const (
     // ContainerSELinux package name
@@ -12178,17 +12082,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="ErrWillNotUpgradeVersionSkewTooGreat"></a>ErrWillNotUpgradeVersionSkewTooGreat is returned when a package is trying to upgrade the cluster more then 1 minor version at a time; v1.33.x to v1.34.x is allowed, but v1.33.x to v1.35.x is not.</p>
 <pre><code class="language-go">var ErrWillNotUpgradeVersionSkewTooGreat = errors.New("will not upgrade the cluster more than one minor version at a time")
 </code></pre>
-<p><a name="Force"></a>Force is used by various phases to attempt a forced installation</p>
-<pre><code class="language-go">var Force bool
-</code></pre>
 <p><a name="Interval"></a></p>
 <pre><code class="language-go">var (
     // Interval is the time to wait between retry attempts
     Interval = 10 * time.Second
 )
-</code></pre>
-<p><a name="NoWait"></a>NoWait is used by various phases to decide if node ready state should be waited for or not</p>
-<pre><code class="language-go">var NoWait bool
 </code></pre>
 <p><a name="CheckTargetHosts"></a></p>
 <h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L245">CheckTargetHosts</a></a></h2>
@@ -12197,12 +12095,12 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>CheckTargetHosts reports a target that names no host in the configuration.</p>
 <p>A target nobody matches is the quiet failure this whole feature could have: the filter returns an empty set, every phase reports nothing to do, and the run succeeds having removed nothing. A typo in a hostname is the ordinary way to get there.</p>
 <p><a name="DryRunNote"></a></p>
-<h2 id="func-dryrunnote"><a class="header" href="#func-dryrunnote">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L172">DryRunNote</a></a></h2>
+<h2 id="func-dryrunnote"><a class="header" href="#func-dryrunnote">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L128">DryRunNote</a></a></h2>
 <pre><code class="language-go">func DryRunNote(p Phase) string
 </code></pre>
 <p>DryRunNote returns the phase’s own account of why a dry run runs it, or “” for a phase that gives none. Only read-only phases carry one: they are the phases a dry run runs against live hosts, so they are the ones a reader is entitled to an argument about.</p>
 <p><a name="Titles"></a></p>
-<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L415">Titles</a></a></h2>
+<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L371">Titles</a></a></h2>
 <pre><code class="language-go">func Titles(results []PhaseResult) []string
 </code></pre>
 <p>Titles names the phases in a slice, for a caller that reports a list of names rather than the detail behind them.</p>
@@ -12328,7 +12226,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title returns the phase title</p>
 <p><a name="ConfigureFirewall"></a></p>
-<h2 id="type-configurefirewall"><a class="header" href="#type-configurefirewall">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L38-L45">ConfigureFirewall</a></a></h2>
+<h2 id="type-configurefirewall"><a class="header" href="#type-configurefirewall">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L31-L38">ConfigureFirewall</a></a></h2>
 <p>ConfigureFirewall state</p>
 <pre><code class="language-go">type ConfigureFirewall struct {
     GenericPhase
@@ -12338,27 +12236,27 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ConfigureFirewall.Explanation"></a></p>
-<h3 id="func-configurefirewall-explanation"><a class="header" href="#func-configurefirewall-explanation">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L53">Explanation</a></a></h3>
+<h3 id="func-configurefirewall-explanation"><a class="header" href="#func-configurefirewall-explanation">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L46">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *ConfigureFirewall) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="ConfigureFirewall.Prepare"></a></p>
-<h3 id="func-configurefirewall-prepare"><a class="header" href="#func-configurefirewall-prepare">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L61">Prepare</a></a></h3>
+<h3 id="func-configurefirewall-prepare"><a class="header" href="#func-configurefirewall-prepare">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L54">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="ConfigureFirewall.Run"></a></p>
-<h3 id="func-configurefirewall-run"><a class="header" href="#func-configurefirewall-run">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L101">Run</a></a></h3>
+<h3 id="func-configurefirewall-run"><a class="header" href="#func-configurefirewall-run">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L94">Run</a></a></h3>
 <pre><code class="language-go">func (p *ConfigureFirewall) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="ConfigureFirewall.ShouldRun"></a></p>
-<h3 id="func-configurefirewall-shouldrun"><a class="header" href="#func-configurefirewall-shouldrun">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L96">ShouldRun</a></a></h3>
+<h3 id="func-configurefirewall-shouldrun"><a class="header" href="#func-configurefirewall-shouldrun">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L89">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *ConfigureFirewall) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when the firewall is being managed and at least one node runs one</p>
 <p><a name="ConfigureFirewall.Title"></a></p>
-<h3 id="func-configurefirewall-title"><a class="header" href="#func-configurefirewall-title">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L48">Title</a></a></h3>
+<h3 id="func-configurefirewall-title"><a class="header" href="#func-configurefirewall-title">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L41">Title</a></a></h3>
 <pre><code class="language-go">func (p *ConfigureFirewall) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -12604,7 +12502,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="DryRunBehavior"></a></p>
-<h2 id="type-dryrunbehavior"><a class="header" href="#type-dryrunbehavior">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L132">DryRunBehavior</a></a></h2>
+<h2 id="type-dryrunbehavior"><a class="header" href="#type-dryrunbehavior">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L88">DryRunBehavior</a></a></h2>
 <p>DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the phase implements, and it is exported so magefiles/pkg/gen/docs/phase.go can label each phase in docs/phases/&lt;name&gt;.md with the same classification Run() gates on. The docs and the gate cannot disagree, because there is only one classifier.</p>
 <pre><code class="language-go">type DryRunBehavior int
 </code></pre>
@@ -12622,12 +12520,12 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 )
 </code></pre>
 <p><a name="ClassifyDryRun"></a></p>
-<h3 id="func-classifydryrun"><a class="header" href="#func-classifydryrun">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L159">ClassifyDryRun</a></a></h3>
+<h3 id="func-classifydryrun"><a class="header" href="#func-classifydryrun">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L115">ClassifyDryRun</a></a></h3>
 <pre><code class="language-go">func ClassifyDryRun(p Phase) DryRunBehavior
 </code></pre>
 <p>ClassifyDryRun reports what a dry run does with p.</p>
 <p><a name="DryRunBehavior.String"></a></p>
-<h3 id="func-dryrunbehavior-string"><a class="header" href="#func-dryrunbehavior-string">func (DryRunBehavior) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L147">String</a></a></h3>
+<h3 id="func-dryrunbehavior-string"><a class="header" href="#func-dryrunbehavior-string">func (DryRunBehavior) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L103">String</a></a></h3>
 <pre><code class="language-go">func (b DryRunBehavior) String() string
 </code></pre>
 <p>String is the label written into the phase docs.</p>
@@ -12659,7 +12557,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="EngineConfigSyncHosts"></a></p>
-<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L71">EngineConfigSyncHosts</a></a></h2>
+<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L38-L67">EngineConfigSyncHosts</a></a></h2>
 <p>EngineConfigSyncHosts phase state</p>
 <pre><code class="language-go">type EngineConfigSyncHosts struct {
     GenericPhase
@@ -12670,20 +12568,20 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="EngineConfigSyncHosts.Changed"></a></p>
-<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L166">Changed</a></a></h3>
+<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L162">Changed</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) Changed() bool
 </code></pre>
 <p>Changed reports whether this phase altered any host, which is what Ansible’s changed is built from. See changedReporter in 05_manager.go.</p>
 <p>There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.</p>
 <p><a name="EngineConfigSyncHosts.HostsChanged"></a></p>
-<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L135">HostsChanged</a></a></h3>
+<h3 id="func-engineconfigsynchosts-hostschanged"><a class="header" href="#func-engineconfigsynchosts-hostschanged">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L131">HostsChanged</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
 </code></pre>
 <p>HostsChanged reports what this phase did to each host it looked at. See hostChangedReporter in 05_manager.go.</p>
 <p>Every host Prepare checked is reported, including the ones that turned out to be in sync. A host that was checked and found correct is a different answer from a host nothing looked at, and only one of them means the fleet was fully assessed.</p>
 <p>The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.</p>
 <p><a name="EngineConfigSyncHosts.ShouldRun"></a></p>
-<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L173">ShouldRun</a></a></h3>
+<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L169">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *EngineConfigSyncHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are hosts to sync</p>
@@ -12788,48 +12686,43 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // contains filtered or unexported fields
 }
 </code></pre>
-<p><a name="GenericPhase.GetConfig"></a></p>
-<h3 id="func-genericphase-getconfig"><a class="header" href="#func-genericphase-getconfig">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L59">GetConfig</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) GetConfig() *cluster.Cluster
-</code></pre>
-<p>GetConfig is an accessor to phase Config</p>
 <p><a name="GenericPhase.GetDistro"></a></p>
-<h3 id="func-genericphase-getdistro"><a class="header" href="#func-genericphase-getdistro">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L64">GetDistro</a></a></h3>
+<h3 id="func-genericphase-getdistro"><a class="header" href="#func-genericphase-getdistro">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L59">GetDistro</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) GetDistro() *distro.Distro
 </code></pre>
 <p>GetDistro is an accessor to phase Distro</p>
 <p><a name="GenericPhase.Prepare"></a></p>
-<h3 id="func-genericphase-prepare"><a class="header" href="#func-genericphase-prepare">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L69">Prepare</a></a></h3>
+<h3 id="func-genericphase-prepare"><a class="header" href="#func-genericphase-prepare">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L64">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) Prepare(c *cluster.Cluster, d *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="GenericPhase.SetManager"></a></p>
-<h3 id="func-genericphase-setmanager"><a class="header" href="#func-genericphase-setmanager">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L76">SetManager</a></a></h3>
+<h3 id="func-genericphase-setmanager"><a class="header" href="#func-genericphase-setmanager">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L71">SetManager</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) SetManager(m *Manager)
 </code></pre>
 <p>SetManager adds a reference to the phase manager</p>
 <p><a name="GenericPhase.VersionGreater"></a></p>
-<h3 id="func-genericphase-versiongreater"><a class="header" href="#func-genericphase-versiongreater">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L189">VersionGreater</a></a></h3>
+<h3 id="func-genericphase-versiongreater"><a class="header" href="#func-genericphase-versiongreater">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L184">VersionGreater</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) VersionGreater(host *cluster.Host, version string) bool
 </code></pre>
 <p>VersionGreater if host version is greater then the distro version</p>
 <p><a name="GenericPhase.VersionLess"></a></p>
-<h3 id="func-genericphase-versionless"><a class="header" href="#func-genericphase-versionless">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L176">VersionLess</a></a></h3>
+<h3 id="func-genericphase-versionless"><a class="header" href="#func-genericphase-versionless">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L171">VersionLess</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) VersionLess(host *cluster.Host, version string) bool
 </code></pre>
 <p>VersionLess if host version is less then the distro version</p>
 <p><a name="GenericPhase.VersionSkewTooGreat"></a></p>
-<h3 id="func-genericphase-versionskewtoogreat"><a class="header" href="#func-genericphase-versionskewtoogreat">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L205">VersionSkewTooGreat</a></a></h3>
+<h3 id="func-genericphase-versionskewtoogreat"><a class="header" href="#func-genericphase-versionskewtoogreat">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L200">VersionSkewTooGreat</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.Host, target string) bool
 </code></pre>
 <p>VersionSkewTooGreat reports whether host’s running version is more than one minor version behind target. kubeadm’s own upgrade path refuses to skip a minor version, and a two-minor jump fails partway through the control plane rather than up front, so this catches it before a real run starts one. UnknownVersion (no engine detected yet, a fresh install) never counts as skew.</p>
 <p><a name="GenericPhase.Wet"></a></p>
-<h3 id="func-genericphase-wet"><a class="header" href="#func-genericphase-wet">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L171">Wet</a></a></h3>
-<pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
+<h3 id="func-genericphase-wet"><a class="header" href="#func-genericphase-wet">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L166">Wet</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) Wet(f errorfunc) error
 </code></pre>
 <p>Wet is a shorthand for manager.Wet</p>
 <p><a name="HostChange"></a></p>
-<h2 id="type-hostchange"><a class="header" href="#type-hostchange">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L210-L220">HostChange</a></a></h2>
+<h2 id="type-hostchange"><a class="header" href="#type-hostchange">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L166-L176">HostChange</a></a></h2>
 <p>HostChange is what one phase did to one host.</p>
 <pre><code class="language-go">type HostChange struct {
     // Host identifies the host as the cluster configuration would: the address from its host
@@ -12844,7 +12737,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="HostChangeDetail"></a></p>
-<h2 id="type-hostchangedetail"><a class="header" href="#type-hostchangedetail">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L223-L237">HostChangeDetail</a></a></h2>
+<h2 id="type-hostchangedetail"><a class="header" href="#type-hostchangedetail">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L179-L193">HostChangeDetail</a></a></h2>
 <p>HostChangeDetail is one thing a phase did to one host.</p>
 <pre><code class="language-go">type HostChangeDetail struct {
     // Path is the file this is about, absolute as the host sees it.
@@ -12863,7 +12756,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="HostSummary"></a></p>
-<h2 id="type-hostsummary"><a class="header" href="#type-hostsummary">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L366-L375">HostSummary</a></a></h2>
+<h2 id="type-hostsummary"><a class="header" href="#type-hostsummary">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L322-L331">HostSummary</a></a></h2>
 <p>HostSummary is one host’s line in a run summary.</p>
 <pre><code class="language-go">type HostSummary struct {
     Host    string
@@ -12911,7 +12804,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="InitializeControllers"></a></p>
-<h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L40">InitializeControllers</a></a></h2>
+<h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L34-L39">InitializeControllers</a></a></h2>
 <p>InitializeControllers phase state</p>
 <pre><code class="language-go">type InitializeControllers struct {
     GenericPhase
@@ -12920,32 +12813,32 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="InitializeControllers.Explanation"></a></p>
-<h3 id="func-initializecontrollers-explanation"><a class="header" href="#func-initializecontrollers-explanation">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L82">Explanation</a></a></h3>
+<h3 id="func-initializecontrollers-explanation"><a class="header" href="#func-initializecontrollers-explanation">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L81">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeControllers.Prepare"></a></p>
-<h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L59">Prepare</a></a></h3>
+<h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L58">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeControllers.Run"></a></p>
-<h3 id="func-initializecontrollers-run"><a class="header" href="#func-initializecontrollers-run">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L87">Run</a></a></h3>
+<h3 id="func-initializecontrollers-run"><a class="header" href="#func-initializecontrollers-run">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L86">Run</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="InitializeControllers.ShouldRun"></a></p>
-<h3 id="func-initializecontrollers-shouldrun"><a class="header" href="#func-initializecontrollers-shouldrun">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L121">ShouldRun</a></a></h3>
+<h3 id="func-initializecontrollers-shouldrun"><a class="header" href="#func-initializecontrollers-shouldrun">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L120">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
 <p><a name="InitializeControllers.Title"></a></p>
-<h3 id="func-initializecontrollers-title"><a class="header" href="#func-initializecontrollers-title">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L77">Title</a></a></h3>
+<h3 id="func-initializecontrollers-title"><a class="header" href="#func-initializecontrollers-title">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L76">Title</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="InitializeWorkers"></a></p>
-<h2 id="type-initializeworkers"><a class="header" href="#type-initializeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L41">InitializeWorkers</a></a></h2>
+<h2 id="type-initializeworkers"><a class="header" href="#type-initializeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L34-L40">InitializeWorkers</a></a></h2>
 <p>InitializeWorkers phase state</p>
 <pre><code class="language-go">type InitializeWorkers struct {
     GenericPhase
@@ -12956,27 +12849,27 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="InitializeWorkers.Explanation"></a></p>
-<h3 id="func-initializeworkers-explanation"><a class="header" href="#func-initializeworkers-explanation">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L64">Explanation</a></a></h3>
+<h3 id="func-initializeworkers-explanation"><a class="header" href="#func-initializeworkers-explanation">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L63">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeWorkers.Prepare"></a></p>
-<h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L69">Prepare</a></a></h3>
+<h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L68">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeWorkers.Run"></a></p>
-<h3 id="func-initializeworkers-run"><a class="header" href="#func-initializeworkers-run">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L91">Run</a></a></h3>
+<h3 id="func-initializeworkers-run"><a class="header" href="#func-initializeworkers-run">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L90">Run</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="InitializeWorkers.ShouldRun"></a></p>
-<h3 id="func-initializeworkers-shouldrun"><a class="header" href="#func-initializeworkers-shouldrun">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L86">ShouldRun</a></a></h3>
+<h3 id="func-initializeworkers-shouldrun"><a class="header" href="#func-initializeworkers-shouldrun">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L85">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
 <p><a name="InitializeWorkers.Title"></a></p>
-<h3 id="func-initializeworkers-title"><a class="header" href="#func-initializeworkers-title">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L59">Title</a></a></h3>
+<h3 id="func-initializeworkers-title"><a class="header" href="#func-initializeworkers-title">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L58">Title</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13116,7 +13009,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>UnlockPhase returns an unlock phase for this lock phase</p>
 <p><a name="Manager"></a></p>
-<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L536-L557">Manager</a></a></h2>
+<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L492-L513">Manager</a></a></h2>
 <p>Manager executes phases to construct the cluster</p>
 <pre><code class="language-go">type Manager struct {
     Config *cluster.Cluster
@@ -13141,53 +13034,32 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // contains filtered or unexported fields
 }
 </code></pre>
-<p><a name="Manager.AddPhase"></a></p>
-<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L570">AddPhase</a></a></h3>
-<pre><code class="language-go">func (m *Manager) AddPhase(p ...Phase)
-</code></pre>
-<p>AddPhase adds a Phase to Manager</p>
-<p><a name="Manager.GetDistroOSFiles"></a></p>
-<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L593">GetDistroOSFiles</a></a></h3>
-<pre><code class="language-go">func (m *Manager) GetDistroOSFiles() v1alpha1.Files
-</code></pre>
-<p>GetDistroOSFiles returns the ZarfFiles for a distro</p>
 <p><a name="Manager.RetryTimeout"></a></p>
-<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L585">RetryTimeout</a></a></h3>
+<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L526">RetryTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error
 </code></pre>
 <p>RetryTimeout wraps retry Timeout logic</p>
 <p><a name="Manager.Run"></a></p>
-<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L618">Run</a></a></h3>
+<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L552">Run</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Run(ctx context.Context) error
 </code></pre>
 <p>Run executes all the added Phases in order</p>
 <p><a name="Manager.SetPhases"></a></p>
-<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L575">SetPhases</a></a></h3>
+<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L516">SetPhases</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetPhases(p Phases)
 </code></pre>
 <p>SetPhases sets the list of phases</p>
 <p><a name="Manager.SetTimeout"></a></p>
-<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L580">SetTimeout</a></a></h3>
+<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L521">SetTimeout</a></a></h3>
 <pre><code class="language-go">func (m *Manager) SetTimeout(tm time.Duration)
 </code></pre>
 <p>SetTimeout sets the timeout for the manager</p>
 <p><a name="Manager.Wet"></a></p>
-<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L602">Wet</a></a></h3>
-<pre><code class="language-go">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
+<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L544">Wet</a></a></h3>
+<pre><code class="language-go">func (m *Manager) Wet(f errorfunc) error
 </code></pre>
-<p>Wet runs the first given function when not in dry-run mode. The second function will be run when in dry-mode and the message will be displayed. Any error returned from the functions will be returned and will halt the operation.</p>
-<p><a name="ManagerDistroConfig"></a></p>
-<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L560-L567">ManagerDistroConfig</a></a></h2>
-<p>ManagerDistroConfig stores some values for manager distro config</p>
-<pre><code class="language-go">type ManagerDistroConfig struct {
-    BinaryDir string
-    Binary    string
-    Config    string
-    Token     string
-    Data      string
-    Version   string
-}
-</code></pre>
+<p>Wet runs f unless this is a dry run, where it does nothing and reports no error. It is how a phase that changes a host declares which part of itself is the change.</p>
+<p>It used to take a host and a message as well, and a second function to run instead during a dry run. Neither parameter was ever read -- the signature named them `_` -- and no caller ever passed the second function, so a dry run’s account of a phase came from nowhere. What reports a dry run now is the DryRunBehavior classification above: a phase says what it would do through ClassifyDryRun and DryRunNote, once per phase, rather than per operation through a message that was built with fmt.Sprintf on every uploaded file and then discarded.</p>
 <p><a name="ManifestEntry"></a></p>
 <h2 id="type-manifestentry"><a class="header" href="#type-manifestentry">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L40-L45">ManifestEntry</a></a></h2>
 <p>ManifestEntry is a single file cargoship uploaded to a host, recorded so it can be found and removed later during an upgrade or uninstall.</p>
@@ -13239,7 +13111,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="Phase"></a></p>
-<h2 id="type-phase"><a class="header" href="#type-phase">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L46-L50">Phase</a></a></h2>
+<h2 id="type-phase"><a class="header" href="#type-phase">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L39-L43">Phase</a></a></h2>
 <p>Phase represents a runnable phase which can be added to Manager.</p>
 <pre><code class="language-go">type Phase interface {
     Run(context.Context) error
@@ -13248,7 +13120,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PhaseResult"></a></p>
-<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L240-L257">PhaseResult</a></a></h2>
+<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L196-L213">PhaseResult</a></a></h2>
 <p>PhaseResult is what a single phase did during a run.</p>
 <pre><code class="language-go">type PhaseResult struct {
     Title       string
@@ -13270,30 +13142,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Phases"></a></p>
-<h2 id="type-phases"><a class="header" href="#type-phases">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L53">Phases</a></a></h2>
+<h2 id="type-phases"><a class="header" href="#type-phases">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L46">Phases</a></a></h2>
 <p>Phases is a slice of Phases</p>
 <pre><code class="language-go">type Phases []Phase
 </code></pre>
-<p><a name="Phases.Index"></a></p>
-<h3 id="func-phases-index"><a class="header" href="#func-phases-index">func (Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L56">Index</a></a></h3>
-<pre><code class="language-go">func (p Phases) Index(title string) int
-</code></pre>
-<p>Index returns the index of the first occurrence matching the given phase title or -1 if not found</p>
-<p><a name="Phases.InsertAfter"></a></p>
-<h3 id="func-phases-insertafter"><a class="header" href="#func-phases-insertafter">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L66">InsertAfter</a></a></h3>
-<pre><code class="language-go">func (p *Phases) InsertAfter(title string, phase Phase)
-</code></pre>
-<p>InsertAfter inserts a phase after the first occurrence of a phase with the given title</p>
-<p><a name="Phases.InsertBefore"></a></p>
-<h3 id="func-phases-insertbefore"><a class="header" href="#func-phases-insertbefore">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L75">InsertBefore</a></a></h3>
-<pre><code class="language-go">func (p *Phases) InsertBefore(title string, phase Phase)
-</code></pre>
-<p>InsertBefore inserts a phase before the first occurrence of a phase with the given title</p>
-<p><a name="Phases.Replace"></a></p>
-<h3 id="func-phases-replace"><a class="header" href="#func-phases-replace">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L84">Replace</a></a></h3>
-<pre><code class="language-go">func (p *Phases) Replace(title string, phase Phase)
-</code></pre>
-<p>Replace replaces the first occurrence of a phase with the given title</p>
 <p><a name="PrepareFapolicy"></a></p>
 <h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39-L46">PrepareFapolicy</a></a></h2>
 <p>PrepareFapolicy installs required packages and so on on the hosts.</p>
@@ -13561,7 +13413,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="ResultSink"></a></p>
-<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L443-L447">ResultSink</a></a></h2>
+<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L399-L403">ResultSink</a></a></h2>
 <p>ResultSink collects the RunResult of every Manager.Run that happens on a context.</p>
 <p>It exists because the Ansible module mode runs cargoship by building an argument vector and calling the ordinary command, which returns an error and nothing else -- see src/cmd.ExecuteArgs. Threading a return value back through cobra, the action and the manager would change five call sites to serve one caller. A sink on the context that nobody else installs does not, and a run with no sink on its context pays nothing for this.</p>
 <pre><code class="language-go">type ResultSink struct {
@@ -13569,22 +13421,22 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="WithResultSink"></a></p>
-<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L450">WithResultSink</a></a></h3>
+<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L406">WithResultSink</a></a></h3>
 <pre><code class="language-go">func WithResultSink(ctx context.Context) (context.Context, *ResultSink)
 </code></pre>
 <p>WithResultSink returns a context carrying a sink, and the sink itself.</p>
 <p><a name="ResultSink.Observed"></a></p>
-<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L472">Observed</a></a></h3>
+<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L428">Observed</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Observed() bool
 </code></pre>
 <p>Observed reports whether any run reached its phases at all. A command that failed before that -- an unreadable package, a configuration that does not validate -- publishes nothing, and that is a different thing from a run in which no phase changed anything.</p>
 <p><a name="ResultSink.Result"></a></p>
-<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L463">Result</a></a></h3>
+<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L419">Result</a></a></h3>
 <pre><code class="language-go">func (s *ResultSink) Result() RunResult
 </code></pre>
 <p>Result is every run that reached its phases on this context, flattened into one.</p>
 <p><a name="RunResult"></a></p>
-<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L261-L274">RunResult</a></a></h2>
+<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L217-L230">RunResult</a></a></h2>
 <p>RunResult is what a whole Manager.Run did, phase by phase. Manager.Run fills it in on the way through, so a run that returned an error still carries the phases it got through first.</p>
 <pre><code class="language-go">type RunResult struct {
     // Ran are the phases that executed, in order. That includes the read-only phases a dry run
@@ -13602,39 +13454,39 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="RunResult.Changed"></a></p>
-<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L278">Changed</a></a></h3>
+<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L234">Changed</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Changed() bool
 </code></pre>
 <p>Changed reports whether any phase said it changed something on the fleet. Phases that declared nothing do not contribute; read Complete to find out whether that leaves the answer partial.</p>
 <p><a name="RunResult.Complete"></a></p>
-<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L317">Complete</a></a></h3>
+<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L273">Complete</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Complete() bool
 </code></pre>
 <p>Complete reports whether every phase the run reached declared whether it changed anything.</p>
 <p><a name="RunResult.HostSummaries"></a></p>
-<h3 id="func-runresult-hostsummaries"><a class="header" href="#func-runresult-hostsummaries">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L383">HostSummaries</a></a></h3>
+<h3 id="func-runresult-hostsummaries"><a class="header" href="#func-runresult-hostsummaries">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L339">HostSummaries</a></a></h3>
 <pre><code class="language-go">func (r RunResult) HostSummaries() []HostSummary
 </code></pre>
 <p>HostSummaries rolls the per-host answers up across every phase of the run, in the order the hosts were first named.</p>
 <p>A host appears here only if some phase named it, so this is not a roster of the fleet: a caller wanting every host, including the ones no phase spoke for, is expected to start from the cluster configuration and look each one up.</p>
 <p><a name="RunResult.HostsUndeclared"></a></p>
-<h3 id="func-runresult-hostsundeclared"><a class="header" href="#func-runresult-hostsundeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L353">HostsUndeclared</a></a></h3>
+<h3 id="func-runresult-hostsundeclared"><a class="header" href="#func-runresult-hostsundeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L309">HostsUndeclared</a></a></h3>
 <pre><code class="language-go">func (r RunResult) HostsUndeclared() []string
 </code></pre>
 <p>HostsUndeclared names the phases that did not say which hosts they changed, in the order the run reached them. It stands to the per-host answer as Undeclared stands to the fleet-wide one: a caller rendering a per-host summary is expected to report these alongside it, because a host missing from the summary may simply never have been spoken for.</p>
 <p><a name="RunResult.Outstanding"></a></p>
-<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L293">Outstanding</a></a></h3>
+<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L249">Outstanding</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Outstanding() bool
 </code></pre>
 <p>Outstanding is the dry-run counterpart of Changed: it reports whether any phase that can report a change was reported rather than run. A phase reaches Planned only after its ShouldRun said there was work to do, so this answers “would a real run change anything” for the phases that have said how to tell.</p>
 <p><a name="RunResult.Signal"></a></p>
-<h3 id="func-runresult-signal"><a class="header" href="#func-runresult-signal">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L342">Signal</a></a></h3>
+<h3 id="func-runresult-signal"><a class="header" href="#func-runresult-signal">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L298">Signal</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Signal() string
 </code></pre>
 <p>Signal reports how much Changed is worth, as one of SignalComplete or SignalPartial.</p>
 <p>SignalUnknown is deliberately not among the answers. It means no run reached its phases at all, which is a property of the sink rather than of a result -- an empty RunResult and a run in which nothing was declared are the same value here. See ResultSink.Observed.</p>
 <p><a name="RunResult.Undeclared"></a></p>
-<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L304">Undeclared</a></a></h3>
+<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L260">Undeclared</a></a></h3>
 <pre><code class="language-go">func (r RunResult) Undeclared() []string
 </code></pre>
 <p>Undeclared names the phases that did not say whether they changed anything, in the order the run reached them. A caller reporting Changed is expected to report these alongside it.</p>
@@ -13725,7 +13577,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UpgradeHosts"></a></p>
-<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L38-L48">UpgradeHosts</a></a></h2>
+<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L33-L42">UpgradeHosts</a></a></h2>
 <p>UpgradeHosts phase state</p>
 <pre><code class="language-go">type UpgradeHosts struct {
     GenericPhase
@@ -13734,7 +13586,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="UpgradeHosts.ShouldRun"></a></p>
-<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L61">ShouldRun</a></a></h3>
+<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L50">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
@@ -14176,7 +14028,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-37"><a class="header" href="#index-37">Index</a></h2>
 <ul>
 <li><a href="#constants-13">Constants</a></li>
-<li><a href="#CreateDirectory">func CreateDirectory(path string, mode os.FileMode) error</a></li>
 <li><a href="#DownloadToCache">func DownloadToCache(ctx context.Context, url, relPath string, expectedSha256 …string) (string, error)</a></li>
 <li><a href="#DownloadToFile">func DownloadToFile(ctx context.Context, src, dst string) (err error)</a></li>
 <li><a href="#DownloadToFileWithChecksum">func DownloadToFileWithChecksum(ctx context.Context, src, dst, checksum, cacheBaseName string) (err error)</a></li>
@@ -14184,7 +14035,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#FilterEngineAlreadyPopulated">func FilterEngineAlreadyPopulated(h *cluster.Host) bool</a></li>
 <li><a href="#FilterEnterpriseLinux">func FilterEnterpriseLinux(h *cluster.Host) bool</a></li>
 <li><a href="#IdentifySource">func IdentifySource(src string) (string, error)</a></li>
-<li><a href="#InvalidPath">func InvalidPath(path string) bool</a></li>
 <li><a href="#IsDebianLinux">func IsDebianLinux(con os.Configurer) bool</a></li>
 <li><a href="#IsEnterpriseLinux">func IsEnterpriseLinux(con os.Configurer) bool</a></li>
 <li><a href="#MakeTempDir">func MakeTempDir(basePath string) (string, error)</a></li>
@@ -14207,11 +14057,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="CacheDir"></a>CacheDir is the subdirectory name used under the OS user cache directory for cargoship’s shared cache.</p>
 <pre><code class="language-go">const CacheDir = "cargoship"
 </code></pre>
-<p><a name="CreateDirectory"></a></p>
-<h2 id="func-createdirectory-1"><a class="header" href="#func-createdirectory-1">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L48">CreateDirectory</a></a></h2>
-<pre><code class="language-go">func CreateDirectory(path string, mode os.FileMode) error
-</code></pre>
-<p>CreateDirectory creates a directory for the given path and file mode.</p>
 <p><a name="DownloadToCache"></a></p>
 <h2 id="func-downloadtocache"><a class="header" href="#func-downloadtocache">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/cache.go#L62">DownloadToCache</a></a></h2>
 <pre><code class="language-go">func DownloadToCache(ctx context.Context, url, relPath string, expectedSha256 ...string) (string, error)
@@ -14247,11 +14092,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func IdentifySource(src string) (string, error)
 </code></pre>
 <p>IdentifySource returns the source type for the given source string.</p>
-<p><a name="InvalidPath"></a></p>
-<h2 id="func-invalidpath-1"><a class="header" href="#func-invalidpath-1">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L56">InvalidPath</a></a></h2>
-<pre><code class="language-go">func InvalidPath(path string) bool
-</code></pre>
-<p>InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don’t have access)</p>
 <p><a name="IsDebianLinux"></a></p>
 <h2 id="func-isdebianlinux"><a class="header" href="#func-isdebianlinux">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L30">IsDebianLinux</a></a></h2>
 <pre><code class="language-go">func IsDebianLinux(con os.Configurer) bool
@@ -14263,7 +14103,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>IsEnterpriseLinux is true if the os.Configurer is of a type of Enterprise Linux</p>
 <p><a name="MakeTempDir"></a></p>
-<h2 id="func-maketempdir"><a class="header" href="#func-maketempdir">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L34">MakeTempDir</a></a></h2>
+<h2 id="func-maketempdir"><a class="header" href="#func-maketempdir">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L38">MakeTempDir</a></a></h2>
 <pre><code class="language-go">func MakeTempDir(basePath string) (string, error)
 </code></pre>
 <p>MakeTempDir creates a temp directory with the zarf- prefix.</p>
@@ -14411,7 +14251,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroCreateOptions"></a></p>
-<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L151-L159">DistroCreateOptions</a></a></h2>
+<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L149-L157">DistroCreateOptions</a></a></h2>
 <p>DistroCreateOptions holds the values for the `.distro.create` section of the config file</p>
 <pre><code class="language-go">type DistroCreateOptions struct {
     // RegistryOverride maps a source registry to the registry cargoship uses instead
@@ -14424,7 +14264,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroOptions"></a></p>
-<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L148">DistroOptions</a></a></h2>
+<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L146">DistroOptions</a></a></h2>
 <p>DistroOptions holds the values for the `.distro` section of the config file</p>
 <pre><code class="language-go">type DistroOptions struct {
     // CreateOpts are options used by the create subcommand
@@ -14435,8 +14275,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     OCIConcurrency int `json:"oci_concurrency,omitempty" mapstructure:"oci_concurrency"`
     // Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
     Concurrency int `json:"concurrency,omitempty" mapstructure:"concurrency" jsonschema:"minimum=0"`
-    // FAPolicyd whether we will update hosts with fapolicyd
-    FAPolicyd bool `json:"fapolicyd,omitempty" mapstructure:"fapolicyd" jsonschema:"default=true"`
     // FirewallUpdate whether we will update the host firewall
     FirewallUpdate bool `json:"firewall,omitempty" mapstructure:"firewall" jsonschema:"default=true"`
     // HostUpdate whether we will update the etc host file
@@ -14478,7 +14316,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroPublishOptions"></a></p>
-<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L162-L167">DistroPublishOptions</a></a></h2>
+<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L160-L165">DistroPublishOptions</a></a></h2>
 <p>DistroPublishOptions holds the values for the `.distro.publish` section of the config file</p>
 <pre><code class="language-go">type DistroPublishOptions struct {
     // SigningKey is the private key used to sign, or re-sign, the package: a local file path, or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported -- they cannot be reached from an air-gapped management node.
@@ -14488,22 +14326,22 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="FileOverrideMap"></a></p>
-<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L189">FileOverrideMap</a></a></h2>
+<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L187">FileOverrideMap</a></a></h2>
 <p>FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.</p>
 <pre><code class="language-go">type FileOverrideMap map[string]string
 </code></pre>
 <p><a name="FileOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194">JSONSchemaExtend</a></a></h3>
+<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L192">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonFileSources to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
 <p><a name="RegistryOverrideMap"></a></p>
-<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L173">RegistryOverrideMap</a></a></h2>
+<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L171">RegistryOverrideMap</a></a></h2>
 <p>RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It’s a named type (rather than a bare map[string]string) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.</p>
 <pre><code class="language-go">type RegistryOverrideMap map[string]string
 </code></pre>
 <p><a name="RegistryOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L178">JSONSchemaExtend</a></a></h3>
+<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L176">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonRegistries to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
@@ -14532,7 +14370,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Common.GetWorkerService">func (r *Common) GetWorkerService() string</a></li>
 <li><a href="#Common.JoinTokenPath">func (r *Common) JoinTokenPath() string</a></li>
 <li><a href="#Common.PackageStagingDir">func (r *Common) PackageStagingDir() string</a></li>
-<li><a href="#Common.SetPath">func (r *Common) SetPath(key string, value string) error</a></li>
 <li><a href="#Common.SupervisorPort">func (r *Common) SupervisorPort() int</a></li>
 <li><a href="#Common.SupervisorURL">func (r *Common) SupervisorURL(name string) string</a></li>
 </ul>
@@ -14603,24 +14440,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 </ul>
 <h2 id="constants-14"><a class="header" href="#constants-14">Constants</a></h2>
-<p><a name="Binary"></a></p>
-<pre><code class="language-go">const (
-    // Binary id string
-    Binary = "Binary"
-    // BinaryDir id string
-    BinaryDir = "BinDir"
-    // Config id string
-    Config = "Config"
-    // Token id string
-    Token = "Token"
-    // Data id string
-    Data = "DataDir"
-    // WorkerService id string
-    WorkerService = "Worker"
-    // ControllerService id string
-    ControllerService = "Control"
-)
-</code></pre>
 <p><a name="DistroK3S"></a></p>
 <pre><code class="language-go">const (
     // DistroK3S id
@@ -14650,8 +14469,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var (
     // ErrVersionNotDetected if a version is not detected
     ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
-    // ErrPathKey if a path key is not used
-    ErrPathKey = errors.New("key for set path does not exist")
     // ErrNotImplemented is returned by a distro module for capabilities its engine does not
     // support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
     ErrNotImplemented = errors.New("not implemented for this distro")
@@ -14664,7 +14481,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var ErrNoAdminCredentials = errors.New("admin kubeconfig has no admin credentials")
 </code></pre>
 <p><a name="NodeLabelsMapToList"></a></p>
-<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L92">NodeLabelsMapToList</a></a></h2>
+<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L90">NodeLabelsMapToList</a></a></h2>
 <pre><code class="language-go">func NodeLabelsMapToList(m map[string]string) []string
 </code></pre>
 <p>NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels</p>
@@ -14693,7 +14510,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Bootstrapper"></a></p>
-<h2 id="type-bootstrapper"><a class="header" href="#type-bootstrapper">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L133-L139">Bootstrapper</a></a></h2>
+<h2 id="type-bootstrapper"><a class="header" href="#type-bootstrapper">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L114-L120">Bootstrapper</a></a></h2>
 <p>Bootstrapper is implemented by a distro whose cluster formation is a one-shot command rather than a service to start -- kubeadm init/join, unlike rke2/k3s’s single config.yaml + systemd service. InitializeControllers/InitializeWorkers call Bootstrap instead of starting the service, and ask IsBootstrapped instead of checking service state, when a distro implements this, the same optional-interface pattern ImageImporter uses.</p>
 <pre><code class="language-go">type Bootstrapper interface {
     // IsBootstrapped reports whether host has already formed or joined the cluster, so a re-run
@@ -14704,7 +14521,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Common"></a></p>
-<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L101-L126">Common</a></a></h2>
+<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L99-L124">Common</a></a></h2>
 <p>Common for all the distro’s</p>
 <pre><code class="language-go">type Common struct {
     // Binary name of the engine binary
@@ -14734,62 +14551,57 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Common.BinaryName"></a></p>
-<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L144">BinaryName</a></a></h3>
+<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L142">BinaryName</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryName() string
 </code></pre>
 <p>BinaryName returns the engine binary name</p>
 <p><a name="Common.BinaryPath"></a></p>
-<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139">BinaryPath</a></a></h3>
+<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L137">BinaryPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryPath() string
 </code></pre>
 <p>BinaryPath returns the full path to the engine binary</p>
 <p><a name="Common.ConfigPath"></a></p>
-<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L152">ConfigPath</a></a></h3>
+<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L150">ConfigPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) ConfigPath() string
 </code></pre>
 <p>ConfigPath returns the full path of the engine’s own config file -- rke2 and k3s’s config.yaml, upstream’s kubeadm-config.yaml. A caller that wants the directory holding it takes filepath.Dir of this; several of the files cargoship writes beside it are found that way, and so is the tree an uninstall removes.</p>
 <p><a name="Common.DataDirPath"></a></p>
-<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L162">DataDirPath</a></a></h3>
+<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L160">DataDirPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) DataDirPath() string
 </code></pre>
 <p>DataDirPath returns the full path for the data directory used by the engine</p>
 <p><a name="Common.GetControllerService"></a></p>
-<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L182">GetControllerService</a></a></h3>
+<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L180">GetControllerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetControllerService() string
 </code></pre>
 <p>GetControllerService returns the name of the controller service</p>
 <p><a name="Common.GetWorkerService"></a></p>
-<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L177">GetWorkerService</a></a></h3>
+<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L175">GetWorkerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetWorkerService() string
 </code></pre>
 <p>GetWorkerService returns the name of the worker service</p>
 <p><a name="Common.JoinTokenPath"></a></p>
-<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L157">JoinTokenPath</a></a></h3>
+<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L155">JoinTokenPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) JoinTokenPath() string
 </code></pre>
 <p>JoinTokenPath returns the path of the token to join the cluster</p>
 <p><a name="Common.PackageStagingDir"></a></p>
-<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L169">PackageStagingDir</a></a></h3>
+<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L167">PackageStagingDir</a></a></h3>
 <pre><code class="language-go">func (r *Common) PackageStagingDir() string
 </code></pre>
 <p>PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.</p>
-<p><a name="Common.SetPath"></a></p>
-<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L187">SetPath</a></a></h3>
-<pre><code class="language-go">func (r *Common) SetPath(key string, value string) error
-</code></pre>
-<p>SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an “ErrPathKey” error</p>
 <p><a name="Common.SupervisorPort"></a></p>
-<h3 id="func-common-supervisorport"><a class="header" href="#func-common-supervisorport">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129">SupervisorPort</a></a></h3>
+<h3 id="func-common-supervisorport"><a class="header" href="#func-common-supervisorport">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L127">SupervisorPort</a></a></h3>
 <pre><code class="language-go">func (r *Common) SupervisorPort() int
 </code></pre>
 <p>SupervisorPort returns the port a joining node registers with the cluster on.</p>
 <p><a name="Common.SupervisorURL"></a></p>
-<h3 id="func-common-supervisorurl"><a class="header" href="#func-common-supervisorurl">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134">SupervisorURL</a></a></h3>
+<h3 id="func-common-supervisorurl"><a class="header" href="#func-common-supervisorurl">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L132">SupervisorURL</a></a></h3>
 <pre><code class="language-go">func (r *Common) SupervisorURL(name string) string
 </code></pre>
 <p>SupervisorURL returns the URL a node joins the cluster through, for the host that serves it.</p>
 <p><a name="DesiredFile"></a></p>
-<h2 id="type-desiredfile"><a class="header" href="#type-desiredfile">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L45-L52">DesiredFile</a></a></h2>
+<h2 id="type-desiredfile"><a class="header" href="#type-desiredfile">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L28-L35">DesiredFile</a></a></h2>
 <p>DesiredFile is one engine config file a distro wants on a host: its content, and the mode it is written with. The mode travels with the content because it varies per file -- a file the engine reads as a group member is not written like one holding credentials.</p>
 <pre><code class="language-go">type DesiredFile struct {
     // Content is the full desired content of the file.
@@ -14806,7 +14618,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.</p>
 <p><a name="Distro"></a></p>
-<h2 id="type-distro-1"><a class="header" href="#type-distro-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L55-L117">Distro</a></a></h2>
+<h2 id="type-distro-1"><a class="header" href="#type-distro-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L38-L98">Distro</a></a></h2>
 <p>Distro interface for any distro object</p>
 <pre><code class="language-go">type Distro interface {
     // AdminCredentials returns the cluster CA certificate and the admin client key pair
@@ -14864,8 +14676,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     KubectlCmdf(*cluster.Host, string, string, ...any) string
     // RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
     RunningVersion(*cluster.Host) (string, error)
-    // SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
-    SetPath(key string, value string) error
     // StopControllerService stops the controller service on the host
     StopControllerService(*cluster.Host) error
     // StopWorkerService stops the controller service on the host
@@ -14873,7 +14683,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ImageImporter"></a></p>
-<h2 id="type-imageimporter"><a class="header" href="#type-imageimporter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L123-L126">ImageImporter</a></a></h2>
+<h2 id="type-imageimporter"><a class="header" href="#type-imageimporter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L104-L107">ImageImporter</a></a></h2>
 <p>ImageImporter is implemented by a distro whose engine does not import uploaded image tarballs on its own, so cargoship must trigger the import itself. rke2 and k3s’s own agents import automatically outside cargoship’s control and do not implement this; a distro without an agent to do that -- plain kubeadm’s upstream containerd, say -- does.</p>
 <pre><code class="language-go">type ImageImporter interface {
     // ImportImages imports every image tarball staged under path into the engine's image store.
@@ -14928,7 +14738,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ManifestApplier"></a></p>
-<h2 id="type-manifestapplier"><a class="header" href="#type-manifestapplier">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L163-L167">ManifestApplier</a></a></h2>
+<h2 id="type-manifestapplier"><a class="header" href="#type-manifestapplier">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L144-L148">ManifestApplier</a></a></h2>
 <p>ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically a CNI -- that cargoship applies with kubectl once the leader is reachable, instead of rendering them into a HelmChartConfig an embedded controller reconciles (rancher_common.go’s helmChartConfigs). Same optional-interface pattern as ImageImporter/Bootstrapper.</p>
 <pre><code class="language-go">type ManifestApplier interface {
     // ManifestPaths returns the on-host paths to kubectl apply, in order. Empty when the package
@@ -14937,7 +14747,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PreStartUpgrader"></a></p>
-<h2 id="type-prestartupgrader"><a class="header" href="#type-prestartupgrader">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L145-L148">PreStartUpgrader</a></a></h2>
+<h2 id="type-prestartupgrader"><a class="header" href="#type-prestartupgrader">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L126-L129">PreStartUpgrader</a></a></h2>
 <p>PreStartUpgrader is implemented by a distro whose upgrade needs a step between the new package install and the service restart -- kubeadm upgrade, unlike rke2/k3s where a plain restart on the new binary is enough. UpgradeHosts calls it, when implemented, right after installDistro and before startService. Same optional-interface pattern as Bootstrapper.</p>
 <pre><code class="language-go">type PreStartUpgrader interface {
     // PreStartUpgrade runs after the new packages are staged but before the service restarts.
@@ -14945,7 +14755,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="PreUninstallResetter"></a></p>
-<h2 id="type-preuninstallresetter"><a class="header" href="#type-preuninstallresetter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L154-L157">PreUninstallResetter</a></a></h2>
+<h2 id="type-preuninstallresetter"><a class="header" href="#type-preuninstallresetter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L135-L138">PreUninstallResetter</a></a></h2>
 <p>PreUninstallResetter is implemented by a distro that must tear down its own cluster membership before its packages are removed -- kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. UninstallEngine calls it, when implemented, before resolving package names and removing them. Same optional-interface pattern as PreStartUpgrader.</p>
 <pre><code class="language-go">type PreUninstallResetter interface {
     // PreUninstallReset runs before packages are resolved and removed.
@@ -15204,7 +15014,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Linux.PreferredFirewall">func (l *Linux) PreferredFirewall() string</a></li>
 <li><a href="#Linux.PrivateAddress">func (l *Linux) PrivateAddress(h Host, iface, publicip string) (string, error)</a></li>
 <li><a href="#Linux.PrivateInterface">func (l *Linux) PrivateInterface(h Host) (string, error)</a></li>
-<li><a href="#Linux.SetPath">func (l *Linux) SetPath(key, value string)</a></li>
 <li><a href="#Linux.UpdateEnvironment">func (l *Linux) UpdateEnvironment(h Host, env map[string]string) error</a></li>
 </ul>
 </li>
@@ -15241,7 +15050,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>ResolveOSModule returns the builder function for the first registered module whose matcher accepts release, or false if none match.</p>
 <p><a name="Configurer"></a></p>
-<h2 id="type-configurer"><a class="header" href="#type-configurer">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L48-L84">Configurer</a></a></h2>
+<h2 id="type-configurer"><a class="header" href="#type-configurer">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L48-L82">Configurer</a></a></h2>
 <p>Configurer defines the per-host operations required for managing a host. Most filesystem, service, and OS-detection operations are handled directly via the rig v2 Host interface (FS(), Sudo(), OS()) rather than through this interface -- Configurer only carries what is genuinely distro-specific.</p>
 <pre><code class="language-go">type Configurer interface {
     // ApplySysctl loads the sysctl settings in the file at the given path into the running
@@ -15261,8 +15070,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // GetDistroService returns the name of the service for the current distro.
     // common key values are, "controller" and "agent"
     GetDistroService(string) (string, error)
-    // SetPath adds a key value to the paths string map.
-    SetPath(string, string)
     // UpdateEnvironment updates the hosts's environment variables
     UpdateEnvironment(Host, map[string]string) error
     // Hostname resolves the short hostname
@@ -15294,81 +15101,76 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="HostValidator"></a></p>
-<h2 id="type-hostvalidator"><a class="header" href="#type-hostvalidator">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L87-L89">HostValidator</a></a></h2>
+<h2 id="type-hostvalidator"><a class="header" href="#type-hostvalidator">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L85-L87">HostValidator</a></a></h2>
 <p>HostValidator allows a Configurer to implement host-specific validation logic.</p>
 <pre><code class="language-go">type HostValidator interface {
     ValidateHost(Host) error
 }
 </code></pre>
 <p><a name="Linux"></a></p>
-<h2 id="type-linux"><a class="header" href="#type-linux">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L54-L57">Linux</a></a></h2>
+<h2 id="type-linux"><a class="header" href="#type-linux">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L54-L56">Linux</a></a></h2>
 <p>Linux is a base module for various linux OS support packages</p>
 <pre><code class="language-go">type Linux struct {
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="Linux.ApplySysctl"></a></p>
-<h3 id="func-linux-applysysctl"><a class="header" href="#func-linux-applysysctl">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L86">ApplySysctl</a></a></h3>
+<h3 id="func-linux-applysysctl"><a class="header" href="#func-linux-applysysctl">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L85">ApplySysctl</a></a></h3>
 <pre><code class="language-go">func (l *Linux) ApplySysctl(h Host, _ string) error
 </code></pre>
 <p>ApplySysctl loads every sysctl file the OS reads at boot, which includes the file at path. Applying them all rather than only that file keeps a setting cargoship overrides from being re-applied at its old value by a file later in the load order, and matches what the host does on its next boot.</p>
 <p><a name="Linux.CTLLockFilePath"></a></p>
-<h3 id="func-linux-ctllockfilepath"><a class="header" href="#func-linux-ctllockfilepath">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L109">CTLLockFilePath</a></a></h3>
+<h3 id="func-linux-ctllockfilepath"><a class="header" href="#func-linux-ctllockfilepath">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L108">CTLLockFilePath</a></a></h3>
 <pre><code class="language-go">func (l *Linux) CTLLockFilePath(h Host) string
 </code></pre>
 <p>CTLLockFilePath returns a path to a lock file</p>
 <p><a name="Linux.Dir"></a></p>
-<h3 id="func-linux-dir"><a class="header" href="#func-linux-dir">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L70">Dir</a></a></h3>
+<h3 id="func-linux-dir"><a class="header" href="#func-linux-dir">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L69">Dir</a></a></h3>
 <pre><code class="language-go">func (l *Linux) Dir(p string) string
 </code></pre>
 <p>Dir returns the directory part of a path</p>
 <p><a name="Linux.GetDistroService"></a></p>
-<h3 id="func-linux-getdistroservice"><a class="header" href="#func-linux-getdistroservice">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L199">GetDistroService</a></a></h3>
+<h3 id="func-linux-getdistroservice"><a class="header" href="#func-linux-getdistroservice">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L198">GetDistroService</a></a></h3>
 <pre><code class="language-go">func (l *Linux) GetDistroService(key string) (string, error)
 </code></pre>
 <p>GetDistroService returns the name of the service for the current distro. common key values are, “controller” and “agent”</p>
 <p><a name="Linux.Hostname"></a></p>
-<h3 id="func-linux-hostname"><a class="header" href="#func-linux-hostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L91">Hostname</a></a></h3>
+<h3 id="func-linux-hostname"><a class="header" href="#func-linux-hostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L90">Hostname</a></a></h3>
 <pre><code class="language-go">func (l *Linux) Hostname(h Host) string
 </code></pre>
 <p>Hostname resolves the short hostname</p>
 <p><a name="Linux.Kind"></a></p>
-<h3 id="func-linux-kind"><a class="header" href="#func-linux-kind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L60">Kind</a></a></h3>
+<h3 id="func-linux-kind"><a class="header" href="#func-linux-kind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L59">Kind</a></a></h3>
 <pre><code class="language-go">func (l *Linux) Kind() string
 </code></pre>
 <p>Kind returns the general OS family identifier for Linux hosts</p>
 <p><a name="Linux.LongHostname"></a></p>
-<h3 id="func-linux-longhostname"><a class="header" href="#func-linux-longhostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L100">LongHostname</a></a></h3>
+<h3 id="func-linux-longhostname"><a class="header" href="#func-linux-longhostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L99">LongHostname</a></a></h3>
 <pre><code class="language-go">func (l *Linux) LongHostname(h Host) string
 </code></pre>
 <p>LongHostname resolves the FQDN (long) hostname</p>
 <p><a name="Linux.OSKind"></a></p>
-<h3 id="func-linux-oskind"><a class="header" href="#func-linux-oskind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L65">OSKind</a></a></h3>
+<h3 id="func-linux-oskind"><a class="header" href="#func-linux-oskind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L64">OSKind</a></a></h3>
 <pre><code class="language-go">func (l *Linux) OSKind() string
 </code></pre>
 <p>OSKind returns the identifier for Linux hosts</p>
 <p><a name="Linux.PreferredFirewall"></a></p>
-<h3 id="func-linux-preferredfirewall"><a class="header" href="#func-linux-preferredfirewall">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L78">PreferredFirewall</a></a></h3>
+<h3 id="func-linux-preferredfirewall"><a class="header" href="#func-linux-preferredfirewall">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L77">PreferredFirewall</a></a></h3>
 <pre><code class="language-go">func (l *Linux) PreferredFirewall() string
 </code></pre>
 <p>PreferredFirewall reports that the distribution ships no firewall front end of its own. An OS module for a distribution that ships one overrides this. The method is declared on each leaf OS module rather than on a shared base such as EnterpriseLinux, because those modules embed both their base and this one at the same depth, which would leave the promoted method ambiguous.</p>
 <p><a name="Linux.PrivateAddress"></a></p>
-<h3 id="func-linux-privateaddress"><a class="header" href="#func-linux-privateaddress">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L135">PrivateAddress</a></a></h3>
+<h3 id="func-linux-privateaddress"><a class="header" href="#func-linux-privateaddress">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L134">PrivateAddress</a></a></h3>
 <pre><code class="language-go">func (l *Linux) PrivateAddress(h Host, iface, publicip string) (string, error)
 </code></pre>
 <p>PrivateAddress resolves internal ip from private interface</p>
 <p><a name="Linux.PrivateInterface"></a></p>
-<h3 id="func-linux-privateinterface"><a class="header" href="#func-linux-privateinterface">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L120">PrivateInterface</a></a></h3>
+<h3 id="func-linux-privateinterface"><a class="header" href="#func-linux-privateinterface">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L119">PrivateInterface</a></a></h3>
 <pre><code class="language-go">func (l *Linux) PrivateInterface(h Host) (string, error)
 </code></pre>
 <p>PrivateInterface tries to find a private network interface</p>
-<p><a name="Linux.SetPath"></a></p>
-<h3 id="func-linux-setpath"><a class="header" href="#func-linux-setpath">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L211">SetPath</a></a></h3>
-<pre><code class="language-go">func (l *Linux) SetPath(key, value string)
-</code></pre>
-<p>SetPath adds a key value to the paths string map. TODO add ref to what the paths string map does….</p>
 <p><a name="Linux.UpdateEnvironment"></a></p>
-<h3 id="func-linux-updateenvironment"><a class="header" href="#func-linux-updateenvironment">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L166">UpdateEnvironment</a></a></h3>
+<h3 id="func-linux-updateenvironment"><a class="header" href="#func-linux-updateenvironment">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L165">UpdateEnvironment</a></a></h3>
 <pre><code class="language-go">func (l *Linux) UpdateEnvironment(h Host, env map[string]string) error
 </code></pre>
 <p>UpdateEnvironment upserts the given key-value pairs into /etc/environment (replacing any existing line for the same key) and exports them into the current shell environment.</p>
@@ -16641,7 +16443,6 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <p>Fuzzing pays where a wrong answer still parses, so the targets worth writing next are the places that choose an encoding, canonicalise a string, or hand a path to a parser:</p>
 <ul>
 <li><code>distrocfg.marshalRegistriesYAML</code> and <code>quoteRegistryKeys</code> (<code>types/distrocfg/distro_common.go</code>) choose a quoting style for keys the engine reparses – the same shape as the bugs above, over registry names and <code>rewrite</code> regex patterns.</li>
-<li><code>split.SplitFile</code> and <code>split.ReassembleFile</code> are a round trip over content bytes and a chunk size, and <code>ReassembleFile</code> trusts the <code>part000</code> metadata it unmarshals from disk.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="goreleaser-release-pipeline"><a class="header" href="#goreleaser-release-pipeline">GoReleaser Release Pipeline</a></h1>
@@ -18992,9 +18793,9 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>A host with no record is skipped. It has nothing cargoship applied, or it has a policy applied by something else, and neither is the removal phase’s to touch.</p>
 <h2 id="no-command-line-flag"><a class="header" href="#no-command-line-flag">No command-line flag</a></h2>
 <p>The phase gates on two things only: what the hosts can take, and what the package asks for. There is no <code>--selinux-policy</code> flag, and this is deliberate rather than unfinished.</p>
-<p><code>apply</code> and <code>prepare</code> already bind <code>-f/--fapolicyd</code>, and no phase reads it – <code>PrepareFapolicy</code> has no <code>Enabled</code> field and <code>PrepareOptions</code> has no fapolicyd member. <code>CHANGELOG.md</code> records the matching cleanup on the phase side, <code>drop the unused InstallFapolicy phase</code>. A flag is not one flag: it is <code>types/config.go</code>, <code>cmd/root.go</code>, <code>cmd/viper.go</code>, both <code>cmd/install_*.go</code> files, <code>internal/ansiblemod/params.go</code>, and the <code>DOCUMENTATION</code> block in both Ansible action plugins. Adding that surface for a toggle nothing threads through is how the dead <code>-f</code> happened. An operator who does not want the policy applied removes it from the package, which is where it is declared.</p>
+<p><code>apply</code> and <code>prepare</code> used to bind <code>-f/--fapolicyd</code>, and no phase read it – <code>PrepareFapolicy</code> has no <code>Enabled</code> field and <code>PrepareOptions</code> has no fapolicyd member. That flag has since been removed rather than wired up, along with its config key, schema entry and Ansible parameter, for the reason this paragraph gives. <code>CHANGELOG.md</code> records the matching cleanup on the phase side, <code>drop the unused InstallFapolicy phase</code>. A flag is not one flag: it is <code>types/config.go</code>, <code>cmd/root.go</code>, <code>cmd/viper.go</code>, both <code>cmd/install_*.go</code> files, <code>internal/ansiblemod/params.go</code>, and the <code>DOCUMENTATION</code> block in both Ansible action plugins. Adding that surface for a toggle nothing threads through is how the dead <code>-f</code> happened. An operator who does not want the policy applied removes it from the package, which is where it is declared.</p>
 <h2 id="dry-run"><a class="header" href="#dry-run">Dry run</a></h2>
-<p>The phase is classified <code>DryRunSkip</code>, like <code>PrepareSelinux</code> and <code>PrepareFapolicy</code> beside it: a dry run reports it and does not run it. Its mutations are still wrapped in <code>GenericPhase.Wet</code>, which under that classification never executes, and the wrapping is there so the phase does not have to be rewritten if it ever declares a dry-run path. Claiming <code>readOnly</code> would be wrong – the phase changes hosts – and a <code>DryRun()</code> that reported the commands it would run would have to re-derive the host filtering against live hosts to say anything true, which is work with no caller asking for it yet.</p>
+<p>The phase is classified <code>DryRunSkip</code>, like <code>PrepareSelinux</code> and <code>PrepareFapolicy</code> beside it: a dry run reports it and does not run it. Its mutations are still wrapped in <code>GenericPhase.Wet</code>, which under that classification never executes, and the wrapping is there so the phase does not have to be rewritten if it ever declares a dry-run path. <code>Wet</code> now takes only that function: the host and message it also used to accept were never read, and the second function it would have run during a dry run was never passed by anybody, so the per-operation account they promised did not exist. A phase that wants to say what it would do says it through <code>ClassifyDryRun</code> and <code>DryRunNote</code>, once for the phase. Claiming <code>readOnly</code> would be wrong – the phase changes hosts – and a <code>DryRun()</code> that reported the commands it would run would have to re-derive the host filtering against live hosts to say anything true, which is work with no caller asking for it yet.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-pkgsigning-stopped-being-a-wrapper-around-cosigns-cli"><a class="header" href="#why-pkgsigning-stopped-being-a-wrapper-around-cosigns-cli">Why <code>pkg/signing</code> stopped being a wrapper around cosign’s CLI</a></h1>
 <p>Cargoship signs and verifies the <code>distro.yaml</code> blob with cosign, and until this change it did so through <code>github.com/zarf-dev/zarf/src/pkg/signing</code>. That package is a thin wrapper over cosign’s CLI command structs, which is exactly what cargoship wants, so importing it rather than reimplementing it was the right call. The reason it is now a fork is not a disagreement about the wrapper. It is five blank imports’ worth of binary, and then the command structs behind them.</p>
@@ -19800,17 +19601,16 @@ nft add rule inet airgap out oifname enp0s3 drop
 <p>Do not expand this into a general push for <code>pkg/action</code> coverage. The scope is the option-gated branches the cluster suite doesn’t already vary, nothing more.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="todo-registry-backed-unit-tests-for-pkgcoci"><a class="header" href="#todo-registry-backed-unit-tests-for-pkgcoci">TODO: registry-backed unit tests for <code>pkg/coci</code></a></h1>
-<p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. A coverage pass on <code>pkg/coci</code>, <code>pkg/oci/archive</code> (since removed with the containerd exporter) and <code>pkg/oci/platform</code> split the remaining gaps into three tiers. Tier 1 (pure helpers: <code>layers.GetAllLayerTypes</code>, <code>GetOCICacheModifier</code>, <code>CopyPackage</code>’s retry validation) and Tier 2 (the layer-assembly logic in <code>pull.go</code> and <code>fetch.go</code>’s free-function <code>FetchDistroYAML</code>, all fakeable with an in-memory <code>content.Fetcher</code> and a hand-built <code>*oci.Manifest</code> – no registry involved) are both done; see <code>pkg/coci/common_test.go</code>, <code>pkg/coci/copier_test.go</code>, <code>pkg/coci/pull_test.go</code>, <code>pkg/coci/layers/common_test.go</code>. This document is the remainder: Tier 3, the functions that need a real (or in-memory) OCI registry to exercise meaningfully.</p>
+<p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. A coverage pass on <code>pkg/coci</code>, <code>pkg/oci/archive</code> (since removed with the containerd exporter) and <code>pkg/oci/platform</code> split the remaining gaps into three tiers. Tier 1 (pure helpers: <code>layers.GetAllLayerTypes</code>, <code>GetOCICacheModifier</code>) and Tier 2 (the layer-assembly logic in <code>pull.go</code> and <code>fetch.go</code>’s free-function <code>FetchDistroYAML</code>, all fakeable with an in-memory <code>content.Fetcher</code> and a hand-built <code>*oci.Manifest</code> – no registry involved) are both done; see <code>pkg/coci/common_test.go</code>, <code>pkg/coci/pull_test.go</code>, <code>pkg/coci/layers/common_test.go</code>. This document is the remainder: Tier 3, the functions that need a real (or in-memory) OCI registry to exercise meaningfully.</p>
 <h2 id="whats-left-and-why-it-needs-a-registry"><a class="header" href="#whats-left-and-why-it-needs-a-registry">What’s left, and why it needs a registry</a></h2>
 <p>These all call through <code>*Remote</code> (an <code>*oci.OrasRemote</code> wrapper) to a <code>content.Fetcher</code>/<code>oras.Target</code> backed by an actual repository – resolving tags, fetching roots, walking indexes against real registry HTTP semantics – which the Tier 2 fake fetcher does not attempt to reproduce faithfully:</p>
 <ul>
 <li><code>(*Remote).PullDistro</code> (<code>pull.go</code>) – drives <code>oras.Copy</code>/<code>CopyToTarget</code> against a real target; needs a populated registry to pull from and a <code>file.Store</code> destination on disk.</li>
-<li><code>(*Remote).AssembleLayers</code>, <code>(*Remote).FetchDistroYAML</code>, <code>(*Remote).FetchImagesIndex</code> (thin wrappers around the already-tested free functions) – the wrapper logic itself (<code>FetchRoot</code> then delegate) is what’s untested, not the delegated logic.</li>
+<li><code>(*Remote).AssembleLayers</code> (a thin wrapper around the already-tested free function) – the wrapper logic itself (<code>FetchRoot</code> then delegate) is what’s untested, not the delegated logic. Its two siblings, <code>FetchDistroYAML</code> and <code>FetchImagesIndex</code>, were deleted as unused rather than tested.</li>
 <li><code>PushPackage</code> (<code>push.go</code>) – pushes a <code>layout.DistroLayout</code> to a target and updates the index; this is the inverse of pull and needs the same setup.</li>
-<li><code>CopyPackage</code>’s happy path (<code>copier.go</code>) – only the negative-retries validation is covered today; the actual <code>oras.Copy</code> + <code>UpdateIndex</code> path needs two registries (source and destination).</li>
 </ul>
 <h2 id="how-to-approach-it"><a class="header" href="#how-to-approach-it">How to approach it</a></h2>
-<p>Follow the pattern already established in <code>pkg/coci/push_test.go</code> / <code>fetch_test.go</code>: <code>test.SetupInMemoryRegistry(t)</code> (documented in <code>docs/agent/choice-in-memory-oci-registry.md</code>) plus the local helpers <code>testRemote</code>, <code>pushManifest</code>/<code>pushManifestTagged</code>, <code>pushBlob</code>, <code>readIndex</code>. For <code>CopyPackage</code>, that means two <code>testRemote</code> instances against two registry addresses (or two repos on one in-memory registry, whichever <code>test.SetupInMemoryRegistry</code> supports without a rewrite – check before assuming you need two servers).</p>
+<p>Follow the pattern already established in <code>pkg/coci/push_test.go</code> / <code>fetch_test.go</code>: <code>test.SetupInMemoryRegistry(t)</code> (documented in <code>docs/agent/choice-in-memory-oci-registry.md</code>) plus the local helpers <code>testRemote</code>, <code>pushManifest</code>/<code>pushManifestTagged</code>, <code>pushBlob</code>, <code>readIndex</code>.</p>
 <p>For <code>PullDistro</code>/<code>PushPackage</code>, you’ll need a real <code>layout.DistroLayout</code> – reuse <code>writeChecksummedPackage</code> (<code>pkg/packager/layout/package_test.go</code>) or a similar minimal on-disk fixture rather than inventing a new one, since it already produces a package that passes <code>validateDistroIntegrity</code>.</p>
 <h2 id="scope-2"><a class="header" href="#scope-2">Scope</a></h2>
 <p>Don’t expand this into re-covering Tier 1/2 logic through a registry “for realism” – that’s duplicated effort for the same reason <code>pkg/action</code>’s punch list (<code>todo-pkg-action-unit-tests.md</code>) says not to re-prove wiring the e2e suite already proves. The value here is specifically the registry-interaction code paths (auth, tagging, index read-modify-write against a real target, oras.Copy semantics) that the Tier 2 fakes cannot exercise.</p>

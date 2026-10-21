@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "../../searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-8dc70692.js"></script>
@@ -193,7 +193,6 @@
 <li><a href="#LintError">type LintError</a>
 <ul>
 <li><a href="#LintError.Error">func (e *LintError) Error() string</a></li>
-<li><a href="#LintError.OnlyWarnings">func (e *LintError) OnlyWarnings() bool</a></li>
 </ul>
 </li>
 <li><a href="#PackageFinding">type PackageFinding</a>
@@ -222,13 +221,8 @@
 <h3 id="func-linterror-error"><a class="header" href="#func-linterror-error">func (*LintError) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L34">Error</a></a></h3>
 <pre><code class="language-go">func (e *LintError) Error() string
 </code></pre>
-<p><a name="LintError.OnlyWarnings"></a></p>
-<h3 id="func-linterror-onlywarnings"><a class="header" href="#func-linterror-onlywarnings">func (*LintError) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L39">OnlyWarnings</a></a></h3>
-<pre><code class="language-go">func (e *LintError) OnlyWarnings() bool
-</code></pre>
-<p>OnlyWarnings returns true if all findings have severity warning.</p>
 <p><a name="PackageFinding"></a></p>
-<h2 id="type-packagefinding"><a class="header" href="#type-packagefinding">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L58-L66">PackageFinding</a></a></h2>
+<h2 id="type-packagefinding"><a class="header" href="#type-packagefinding">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L48-L56">PackageFinding</a></a></h2>
 <p>PackageFinding is a struct that contains a finding about something wrong with a package</p>
 <pre><code class="language-go">type PackageFinding struct {
     // YqPath is the path to the key where the error originated from, this is sometimes empty in the case of a general error
@@ -241,12 +235,12 @@
 }
 </code></pre>
 <p><a name="PackageFinding.ItemizedDescription"></a></p>
-<h3 id="func-packagefinding-itemizeddescription"><a class="header" href="#func-packagefinding-itemizeddescription">func (PackageFinding) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L69">ItemizedDescription</a></a></h3>
+<h3 id="func-packagefinding-itemizeddescription"><a class="header" href="#func-packagefinding-itemizeddescription">func (PackageFinding) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L59">ItemizedDescription</a></a></h3>
 <pre><code class="language-go">func (f PackageFinding) ItemizedDescription() string
 </code></pre>
 <p>ItemizedDescription returns a string with the description and item if finding contains one.</p>
 <p><a name="Severity"></a></p>
-<h2 id="type-severity"><a class="header" href="#type-severity">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L49">Severity</a></a></h2>
+<h2 id="type-severity"><a class="header" href="#type-severity">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/lint/findings.go#L39">Severity</a></a></h2>
 <p>Severity is the type of finding.</p>
 <pre><code class="language-go">type Severity string
 </code></pre>

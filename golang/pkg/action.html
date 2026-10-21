@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "../../searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-8dc70692.js"></script>
@@ -241,7 +241,7 @@
 <pre><code class="language-go">var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
 </code></pre>
 <p><a name="Apply"></a></p>
-<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75-L81">Apply</a></a></h2>
+<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L73-L79">Apply</a></a></h2>
 <p>Apply state logic</p>
 <pre><code class="language-go">type Apply struct {
     ApplyOptions
@@ -250,23 +250,23 @@
 }
 </code></pre>
 <p><a name="NewApply"></a></p>
-<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L84">NewApply</a></a></h3>
+<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L82">NewApply</a></a></h3>
 <pre><code class="language-go">func NewApply(opts ApplyOptions) (*Apply, error)
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.KubeConfigBytes"></a></p>
-<h3 id="func-apply-kubeconfigbytes"><a class="header" href="#func-apply-kubeconfigbytes">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L207">KubeConfigBytes</a></a></h3>
+<h3 id="func-apply-kubeconfigbytes"><a class="header" href="#func-apply-kubeconfigbytes">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L205">KubeConfigBytes</a></a></h3>
 <pre><code class="language-go">func (a Apply) KubeConfigBytes() ([]byte, error)
 </code></pre>
 <p>KubeConfigBytes is the cluster’s admin credentials, serialized, as the run built them.</p>
 <p>It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase is skipped otherwise and there is nothing to return. What comes back is cluster-admin, so a caller holding it is holding the cluster.</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L215">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L213">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L72">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L70">ApplyOptions</a></a></h2>
 <p>ApplyOptions struct</p>
 <pre><code class="language-go">type ApplyOptions struct {
     // Manager is the phase manager
@@ -274,8 +274,6 @@
     // AllowDowngrade continues when a host already runs a version newer than the package,
     // rather than refusing the run
     AllowDowngrade bool
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -401,7 +399,7 @@
 }
 </code></pre>
 <p><a name="Prepare"></a></p>
-<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L48-L51">Prepare</a></a></h2>
+<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L46-L49">Prepare</a></a></h2>
 <p>Prepare state logic</p>
 <pre><code class="language-go">type Prepare struct {
     PrepareOptions
@@ -409,23 +407,21 @@
 }
 </code></pre>
 <p><a name="NewPrepare"></a></p>
-<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L54">NewPrepare</a></a></h3>
+<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L52">NewPrepare</a></a></h3>
 <pre><code class="language-go">func NewPrepare(opts PrepareOptions) *Prepare
 </code></pre>
 <p>NewPrepare an prepare action object</p>
 <p><a name="Prepare.Run"></a></p>
-<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L76">Run</a></a></h3>
+<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L74">Run</a></a></h3>
 <pre><code class="language-go">func (a Prepare) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="PrepareOptions"></a></p>
-<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L45">PrepareOptions</a></a></h2>
+<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L43">PrepareOptions</a></a></h2>
 <p>PrepareOptions struct</p>
 <pre><code class="language-go">type PrepareOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -466,7 +462,7 @@
 }
 </code></pre>
 <p><a name="Reset"></a></p>
-<h2 id="type-reset"><a class="header" href="#type-reset">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L55-L58">Reset</a></a></h2>
+<h2 id="type-reset"><a class="header" href="#type-reset">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L53-L56">Reset</a></a></h2>
 <p>Reset state logic</p>
 <pre><code class="language-go">type Reset struct {
     ResetOptions
@@ -474,23 +470,21 @@
 }
 </code></pre>
 <p><a name="NewReset"></a></p>
-<h3 id="func-newreset"><a class="header" href="#func-newreset">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L61">NewReset</a></a></h3>
+<h3 id="func-newreset"><a class="header" href="#func-newreset">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L59">NewReset</a></a></h3>
 <pre><code class="language-go">func NewReset(opts ResetOptions) (*Reset, error)
 </code></pre>
 <p>NewReset an apply action object</p>
 <p><a name="Reset.Run"></a></p>
-<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L135">Run</a></a></h3>
+<h3 id="func-reset-run"><a class="header" href="#func-reset-run">func (Reset) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L133">Run</a></a></h3>
 <pre><code class="language-go">func (r Reset) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ResetOptions"></a></p>
-<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L52">ResetOptions</a></a></h2>
+<h2 id="type-resetoptions"><a class="header" href="#type-resetoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L50">ResetOptions</a></a></h2>
 <p>ResetOptions struct</p>
 <pre><code class="language-go">type ResetOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // DistroID is the type of Kubernetes engine that will be removed

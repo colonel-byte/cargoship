@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "../../searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-8dc70692.js"></script>
@@ -191,7 +191,6 @@
 <h2 id="index"><a class="header" href="#index">Index</a></h2>
 <ul>
 <li><a href="#constants">Constants</a></li>
-<li><a href="#CreateDirectory">func CreateDirectory(path string, mode os.FileMode) error</a></li>
 <li><a href="#DownloadToCache">func DownloadToCache(ctx context.Context, url, relPath string, expectedSha256 …string) (string, error)</a></li>
 <li><a href="#DownloadToFile">func DownloadToFile(ctx context.Context, src, dst string) (err error)</a></li>
 <li><a href="#DownloadToFileWithChecksum">func DownloadToFileWithChecksum(ctx context.Context, src, dst, checksum, cacheBaseName string) (err error)</a></li>
@@ -199,7 +198,6 @@
 <li><a href="#FilterEngineAlreadyPopulated">func FilterEngineAlreadyPopulated(h *cluster.Host) bool</a></li>
 <li><a href="#FilterEnterpriseLinux">func FilterEnterpriseLinux(h *cluster.Host) bool</a></li>
 <li><a href="#IdentifySource">func IdentifySource(src string) (string, error)</a></li>
-<li><a href="#InvalidPath">func InvalidPath(path string) bool</a></li>
 <li><a href="#IsDebianLinux">func IsDebianLinux(con os.Configurer) bool</a></li>
 <li><a href="#IsEnterpriseLinux">func IsEnterpriseLinux(con os.Configurer) bool</a></li>
 <li><a href="#MakeTempDir">func MakeTempDir(basePath string) (string, error)</a></li>
@@ -222,11 +220,6 @@
 <p><a name="CacheDir"></a>CacheDir is the subdirectory name used under the OS user cache directory for cargoship’s shared cache.</p>
 <pre><code class="language-go">const CacheDir = "cargoship"
 </code></pre>
-<p><a name="CreateDirectory"></a></p>
-<h2 id="func-createdirectory"><a class="header" href="#func-createdirectory">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L48">CreateDirectory</a></a></h2>
-<pre><code class="language-go">func CreateDirectory(path string, mode os.FileMode) error
-</code></pre>
-<p>CreateDirectory creates a directory for the given path and file mode.</p>
 <p><a name="DownloadToCache"></a></p>
 <h2 id="func-downloadtocache"><a class="header" href="#func-downloadtocache">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/cache.go#L62">DownloadToCache</a></a></h2>
 <pre><code class="language-go">func DownloadToCache(ctx context.Context, url, relPath string, expectedSha256 ...string) (string, error)
@@ -262,11 +255,6 @@
 <pre><code class="language-go">func IdentifySource(src string) (string, error)
 </code></pre>
 <p>IdentifySource returns the source type for the given source string.</p>
-<p><a name="InvalidPath"></a></p>
-<h2 id="func-invalidpath"><a class="header" href="#func-invalidpath">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L56">InvalidPath</a></a></h2>
-<pre><code class="language-go">func InvalidPath(path string) bool
-</code></pre>
-<p>InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don’t have access)</p>
 <p><a name="IsDebianLinux"></a></p>
 <h2 id="func-isdebianlinux"><a class="header" href="#func-isdebianlinux">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/os.go#L30">IsDebianLinux</a></a></h2>
 <pre><code class="language-go">func IsDebianLinux(con os.Configurer) bool
@@ -278,7 +266,7 @@
 </code></pre>
 <p>IsEnterpriseLinux is true if the os.Configurer is of a type of Enterprise Linux</p>
 <p><a name="MakeTempDir"></a></p>
-<h2 id="func-maketempdir"><a class="header" href="#func-maketempdir">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L34">MakeTempDir</a></a></h2>
+<h2 id="func-maketempdir"><a class="header" href="#func-maketempdir">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/files.go#L38">MakeTempDir</a></a></h2>
 <pre><code class="language-go">func MakeTempDir(basePath string) (string, error)
 </code></pre>
 <p>MakeTempDir creates a temp directory with the zarf- prefix.</p>

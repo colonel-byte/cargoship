@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "../searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-8dc70692.js"></script>
@@ -313,7 +313,6 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <p>Fuzzing pays where a wrong answer still parses, so the targets worth writing next are the places that choose an encoding, canonicalise a string, or hand a path to a parser:</p>
 <ul>
 <li><code>distrocfg.marshalRegistriesYAML</code> and <code>quoteRegistryKeys</code> (<code>types/distrocfg/distro_common.go</code>) choose a quoting style for keys the engine reparses – the same shape as the bugs above, over registry names and <code>rewrite</code> regex patterns.</li>
-<li><code>split.SplitFile</code> and <code>split.ReassembleFile</code> are a round trip over content bytes and a chunk size, and <code>ReassembleFile</code> trusts the <code>part000</code> metadata it unmarshals from disk.</li>
 </ul>
 
                     </main>

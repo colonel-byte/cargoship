@@ -37,7 +37,7 @@
             const path_to_root = "../../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../../searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "../../../../searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../../toc-8dc70692.js"></script>
@@ -234,13 +234,11 @@
 <li><a href="#Host.FileChanged">func (h *Host) FileChanged(lpath, rpath string) bool</a></li>
 <li><a href="#Host.FileExist">func (h *Host) FileExist(path string) bool</a></li>
 <li><a href="#Host.IsController">func (h *Host) IsController() bool</a></li>
-<li><a href="#Host.KubeRole">func (h *Host) KubeRole() string</a></li>
 <li><a href="#Host.OSKind">func (h *Host) OSKind() (string, error)</a></li>
 <li><a href="#Host.ReadFile">func (h *Host) ReadFile(path string) (string, error)</a></li>
 <li><a href="#Host.ResolveConfigurer">func (h *Host) ResolveConfigurer() error</a></li>
 <li><a href="#Host.RestartService">func (h *Host) RestartService(ctx context.Context, name string) error</a></li>
 <li><a href="#Host.ServiceIsRunning">func (h *Host) ServiceIsRunning(ctx context.Context, name string) bool</a></li>
-<li><a href="#Host.ServiceName">func (h *Host) ServiceName() string</a></li>
 <li><a href="#Host.SetFS">func (h *Host) SetFS(fs remotefs.FS)</a></li>
 <li><a href="#Host.SetServices">func (h *Host) SetServices(services HostServices)</a></li>
 <li><a href="#Host.StartService">func (h *Host) StartService(ctx context.Context, name string) error</a></li>
@@ -349,8 +347,6 @@
     RoleSingle = "single"
     // RoleWorker marks a host as a worker node.
     RoleWorker = "worker"
-    // RoleError is a sentinel value returned when a role or service lookup fails.
-    RoleError = "error"
 )
 </code></pre>
 <p><a name="AgeHeader"></a>AgeHeader marks a value in a cluster configuration as armored age ciphertext, the alternative to Ansible Vault. Cargoship decrypts such a value at apply time with an age identity rather than a password.</p>
@@ -488,7 +484,7 @@
 </code></pre>
 <p>Validate returns an error when any rule in the config is unusable.</p>
 <p><a name="FirewallPolicyConfig"></a></p>
-<h2 id="type-firewallpolicyconfig"><a class="header" href="#type-firewallpolicyconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L208-L221">FirewallPolicyConfig</a></a></h2>
+<h2 id="type-firewallpolicyconfig"><a class="header" href="#type-firewallpolicyconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L206-L219">FirewallPolicyConfig</a></a></h2>
 <p>FirewallPolicyConfig configures a firewalld policy that opens ports from one zone to another.</p>
 <pre><code class="language-go">type FirewallPolicyConfig struct {
     // XMLName sets the element name cargoship uses when it marshals this policy to firewalld XML.
@@ -506,7 +502,7 @@
 }
 </code></pre>
 <p><a name="FirewallPort"></a></p>
-<h2 id="type-firewallport"><a class="header" href="#type-firewallport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L230-L235">FirewallPort</a></a></h2>
+<h2 id="type-firewallport"><a class="header" href="#type-firewallport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L228-L233">FirewallPort</a></a></h2>
 <p>FirewallPort defines a port allowed through the firewalld policy.</p>
 <pre><code class="language-go">type FirewallPort struct {
     // Protocol is the type of allowed traffic.
@@ -568,7 +564,7 @@
 </code></pre>
 <p>Validate returns an error when the rule cannot be applied by any backend.</p>
 <p><a name="FirewallZone"></a></p>
-<h2 id="type-firewallzone"><a class="header" href="#type-firewallzone">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L224-L227">FirewallZone</a></a></h2>
+<h2 id="type-firewallzone"><a class="header" href="#type-firewallzone">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L222-L225">FirewallZone</a></a></h2>
 <p>FirewallZone is the name of either the ingress or egress zone for a policy.</p>
 <pre><code class="language-go">type FirewallZone struct {
     // Name identifies the firewalld zone.
@@ -576,7 +572,7 @@
 }
 </code></pre>
 <p><a name="Host"></a></p>
-<h2 id="type-host"><a class="header" href="#type-host">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L65-L97">Host</a></a></h2>
+<h2 id="type-host"><a class="header" href="#type-host">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L63-L95">Host</a></a></h2>
 <p>Host is a remote connection to a node</p>
 <pre><code class="language-go">type Host struct {
     // ClientWithConfig embeds rig's client type. It gives Host multi-protocol connectivity to a remote host.
@@ -610,165 +606,155 @@
 }
 </code></pre>
 <p><a name="Host.Address"></a></p>
-<h3 id="func-host-address"><a class="header" href="#func-host-address">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L547">Address</a></a></h3>
+<h3 id="func-host-address"><a class="header" href="#func-host-address">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L535">Address</a></a></h3>
 <pre><code class="language-go">func (h *Host) Address() string
 </code></pre>
 <p>Address returns the address rig is connected to for this host, or the empty string for a host that has not gone through Setup or Connect yet.</p>
 <p>The promoted rig.Client.Address panics on a host in that state: ClientWithConfig defers creating its embedded *Client until Setup or Connect runs, so a host built directly (as tests do, or as a host removed from the config and never dialed this run) has a nil Client, and Address dereferences it unconditionally.</p>
 <p><a name="Host.Arch"></a></p>
-<h3 id="func-host-arch"><a class="header" href="#func-host-arch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L328">Arch</a></a></h3>
+<h3 id="func-host-arch"><a class="header" href="#func-host-arch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L326">Arch</a></a></h3>
 <pre><code class="language-go">func (h *Host) Arch() (string, error)
 </code></pre>
 <p>Arch returns the host architecture, caching the result in metadata</p>
 <p><a name="Host.ConfiguredAddress"></a></p>
-<h3 id="func-host-configuredaddress"><a class="header" href="#func-host-configuredaddress">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568">ConfiguredAddress</a></a></h3>
+<h3 id="func-host-configuredaddress"><a class="header" href="#func-host-configuredaddress">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L556">ConfiguredAddress</a></a></h3>
 <pre><code class="language-go">func (h *Host) ConfiguredAddress() string
 </code></pre>
 <p>ConfiguredAddress is the address the cluster configuration would recognise: what the host block said, with the port when it is not the default.</p>
 <p>It is what to identify a host by in anything written for a person to read back against their own configuration -- a run receipt, a provider attribute, a summary table. Neither of the obvious alternatives works for that. Address reads through the embedded rig client, so it is empty on a host that was never dialed and on one already disconnected, which is exactly the host a failed run most needs to name. String falls back to rig’s CompositeConfig.String, which renders a Go-ish “ssh.Config{127.0.0.1:2223}” -- right for a log line, wrong for something compared against a config file.</p>
 <p><a name="Host.Connect"></a></p>
-<h3 id="func-host-connect"><a class="header" href="#func-host-connect">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L293">Connect</a></a></h3>
+<h3 id="func-host-connect"><a class="header" href="#func-host-connect">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L291">Connect</a></a></h3>
 <pre><code class="language-go">func (h *Host) Connect(ctx context.Context) error
 </code></pre>
 <p>Connect establishes the connection to the host, injecting cargoship’s configured logger so that rig’s internal logging is routed through the same logger as the rest of the run. rig v2 has no global logger setter; the logger is injected per-client via rig.WithLogger, which is only honored at client construction (the first Connect call) or via ClientWithConfig.Connect’s own options -- see riglogger.RigLogger.</p>
 <p><a name="Host.DeleteFile"></a></p>
-<h3 id="func-host-deletefile"><a class="header" href="#func-host-deletefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L350">DeleteFile</a></a></h3>
+<h3 id="func-host-deletefile"><a class="header" href="#func-host-deletefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L348">DeleteFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) DeleteFile(path string) error
 </code></pre>
 <p>DeleteFile removes a file from the host. Always runs with privilege escalation.</p>
 <p><a name="Host.Dir"></a></p>
-<h3 id="func-host-dir"><a class="header" href="#func-host-dir">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L314">Dir</a></a></h3>
+<h3 id="func-host-dir"><a class="header" href="#func-host-dir">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L312">Dir</a></a></h3>
 <pre><code class="language-go">func (h *Host) Dir(path string) (string, error)
 </code></pre>
 <p>Dir returns the directory name for the given path using the remote filesystem.</p>
 <p><a name="Host.EnableService"></a></p>
-<h3 id="func-host-enableservice"><a class="header" href="#func-host-enableservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L514">EnableService</a></a></h3>
+<h3 id="func-host-enableservice"><a class="header" href="#func-host-enableservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L512">EnableService</a></a></h3>
 <pre><code class="language-go">func (h *Host) EnableService(ctx context.Context, name string) error
 </code></pre>
 <p>EnableService enables the named service on the host.</p>
 <p><a name="Host.Exec"></a></p>
-<h3 id="func-host-exec"><a class="header" href="#func-host-exec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L422">Exec</a></a></h3>
+<h3 id="func-host-exec"><a class="header" href="#func-host-exec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L420">Exec</a></a></h3>
 <pre><code class="language-go">func (h *Host) Exec(command string, opts ...cmd.ExecOption) error
 </code></pre>
 <p>Exec runs a command on the host. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.</p>
 <p><a name="Host.ExecOutput"></a></p>
-<h3 id="func-host-execoutput"><a class="header" href="#func-host-execoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L431">ExecOutput</a></a></h3>
+<h3 id="func-host-execoutput"><a class="header" href="#func-host-execoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L429">ExecOutput</a></a></h3>
 <pre><code class="language-go">func (h *Host) ExecOutput(command string, opts ...cmd.ExecOption) (string, error)
 </code></pre>
 <p>ExecOutput runs a command on the host and returns its output. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.</p>
 <p><a name="Host.FS"></a></p>
-<h3 id="func-host-fs"><a class="header" href="#func-host-fs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L398">FS</a></a></h3>
+<h3 id="func-host-fs"><a class="header" href="#func-host-fs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L396">FS</a></a></h3>
 <pre><code class="language-go">func (h *Host) FS() remotefs.FS
 </code></pre>
 <p>FS returns the host’s filesystem. It shadows the promoted rig client method so that a host with a substituted filesystem uses that one, and an unconnected host returns a filesystem that fails rather than one that panics.</p>
 <p><a name="Host.FileChanged"></a></p>
-<h3 id="func-host-filechanged"><a class="header" href="#func-host-filechanged">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L624">FileChanged</a></a></h3>
+<h3 id="func-host-filechanged"><a class="header" href="#func-host-filechanged">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L594">FileChanged</a></a></h3>
 <pre><code class="language-go">func (h *Host) FileChanged(lpath, rpath string) bool
 </code></pre>
 <p>FileChanged compares the local file at lpath to the remote file at rpath by sha256 checksum. It returns true if the checksums differ or if either checksum cannot be computed.</p>
 <p><a name="Host.FileExist"></a></p>
-<h3 id="func-host-fileexist"><a class="header" href="#func-host-fileexist">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L687">FileExist</a></a></h3>
+<h3 id="func-host-fileexist"><a class="header" href="#func-host-fileexist">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L657">FileExist</a></a></h3>
 <pre><code class="language-go">func (h *Host) FileExist(path string) bool
 </code></pre>
 <p>FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the behavior of the v0.x Configurer.FileExist implementation this replaces.</p>
 <p><a name="Host.IsController"></a></p>
-<h3 id="func-host-iscontroller"><a class="header" href="#func-host-iscontroller">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L536">IsController</a></a></h3>
+<h3 id="func-host-iscontroller"><a class="header" href="#func-host-iscontroller">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L524">IsController</a></a></h3>
 <pre><code class="language-go">func (h *Host) IsController() bool
 </code></pre>
 <p>IsController returns true for the controller, controller+worker, and single roles.</p>
-<p><a name="Host.KubeRole"></a></p>
-<h3 id="func-host-kuberole"><a class="header" href="#func-host-kuberole">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L526">KubeRole</a></a></h3>
-<pre><code class="language-go">func (h *Host) KubeRole() string
-</code></pre>
-<p>KubeRole returns the Kubernetes role for this host. It maps controller+worker and single to controller.</p>
 <p><a name="Host.OSKind"></a></p>
-<h3 id="func-host-oskind"><a class="header" href="#func-host-oskind">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L319">OSKind</a></a></h3>
+<h3 id="func-host-oskind"><a class="header" href="#func-host-oskind">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L317">OSKind</a></a></h3>
 <pre><code class="language-go">func (h *Host) OSKind() (string, error)
 </code></pre>
 <p>OSKind returns the host OS kind via the resolved configurer.</p>
 <p><a name="Host.ReadFile"></a></p>
-<h3 id="func-host-readfile"><a class="header" href="#func-host-readfile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L671">ReadFile</a></a></h3>
+<h3 id="func-host-readfile"><a class="header" href="#func-host-readfile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L641">ReadFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) ReadFile(path string) (string, error)
 </code></pre>
 <p>ReadFile returns the contents of path on the host, or an error if the file does not exist. Always runs with privilege escalation.</p>
 <p><a name="Host.ResolveConfigurer"></a></p>
-<h3 id="func-host-resolveconfigurer"><a class="header" href="#func-host-resolveconfigurer">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L598">ResolveConfigurer</a></a></h3>
+<h3 id="func-host-resolveconfigurer"><a class="header" href="#func-host-resolveconfigurer">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568">ResolveConfigurer</a></a></h3>
 <pre><code class="language-go">func (h *Host) ResolveConfigurer() error
 </code></pre>
 <p>ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.</p>
 <p><a name="Host.RestartService"></a></p>
-<h3 id="func-host-restartservice"><a class="header" href="#func-host-restartservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L502">RestartService</a></a></h3>
+<h3 id="func-host-restartservice"><a class="header" href="#func-host-restartservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L500">RestartService</a></a></h3>
 <pre><code class="language-go">func (h *Host) RestartService(ctx context.Context, name string) error
 </code></pre>
 <p>RestartService restarts the named service on the host.</p>
 <p><a name="Host.ServiceIsRunning"></a></p>
-<h3 id="func-host-serviceisrunning"><a class="header" href="#func-host-serviceisrunning">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L466">ServiceIsRunning</a></a></h3>
+<h3 id="func-host-serviceisrunning"><a class="header" href="#func-host-serviceisrunning">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L464">ServiceIsRunning</a></a></h3>
 <pre><code class="language-go">func (h *Host) ServiceIsRunning(ctx context.Context, name string) bool
 </code></pre>
 <p>ServiceIsRunning returns true if the named service is running on the host.</p>
-<p><a name="Host.ServiceName"></a></p>
-<h3 id="func-host-servicename"><a class="header" href="#func-host-servicename">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L580">ServiceName</a></a></h3>
-<pre><code class="language-go">func (h *Host) ServiceName() string
-</code></pre>
-<p>ServiceName returns the name of the distro service that runs on this host.</p>
 <p><a name="Host.SetFS"></a></p>
-<h3 id="func-host-setfs"><a class="header" href="#func-host-setfs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L371">SetFS</a></a></h3>
+<h3 id="func-host-setfs"><a class="header" href="#func-host-setfs">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L369">SetFS</a></a></h3>
 <pre><code class="language-go">func (h *Host) SetFS(fs remotefs.FS)
 </code></pre>
 <p>SetFS substitutes the filesystem this host’s file operations act through, in place of the one its rig connection provides.</p>
 <p><a name="Host.SetServices"></a></p>
-<h3 id="func-host-setservices"><a class="header" href="#func-host-setservices">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L377">SetServices</a></a></h3>
+<h3 id="func-host-setservices"><a class="header" href="#func-host-setservices">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L375">SetServices</a></a></h3>
 <pre><code class="language-go">func (h *Host) SetServices(services HostServices)
 </code></pre>
 <p>SetServices substitutes the init system this host’s service operations act through, in place of the one its rig connection provides.</p>
 <p><a name="Host.StartService"></a></p>
-<h3 id="func-host-startservice"><a class="header" href="#func-host-startservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L478">StartService</a></a></h3>
+<h3 id="func-host-startservice"><a class="header" href="#func-host-startservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L476">StartService</a></a></h3>
 <pre><code class="language-go">func (h *Host) StartService(ctx context.Context, name string) error
 </code></pre>
 <p>StartService starts the named service on the host.</p>
 <p><a name="Host.Stat"></a></p>
-<h3 id="func-host-stat"><a class="header" href="#func-host-stat">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L681">Stat</a></a></h3>
+<h3 id="func-host-stat"><a class="header" href="#func-host-stat">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L651">Stat</a></a></h3>
 <pre><code class="language-go">func (h *Host) Stat(path string) (fs.FileInfo, error)
 </code></pre>
 <p>Stat returns file information for path on the host. Always runs with privilege escalation, matching the rest of this host’s file operations.</p>
 <p><a name="Host.StopService"></a></p>
-<h3 id="func-host-stopservice"><a class="header" href="#func-host-stopservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L490">StopService</a></a></h3>
+<h3 id="func-host-stopservice"><a class="header" href="#func-host-stopservice">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L488">StopService</a></a></h3>
 <pre><code class="language-go">func (h *Host) StopService(ctx context.Context, name string) error
 </code></pre>
 <p>StopService stops the named service on the host.</p>
 <p><a name="Host.String"></a></p>
-<h3 id="func-host-string"><a class="header" href="#func-host-string">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L298">String</a></a></h3>
+<h3 id="func-host-string"><a class="header" href="#func-host-string">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L296">String</a></a></h3>
 <pre><code class="language-go">func (h *Host) String() string
 </code></pre>
 <p>String returns the connection string. Safe to call before Connect.</p>
 <p><a name="Host.SudoExec"></a></p>
-<h3 id="func-host-sudoexec"><a class="header" href="#func-host-sudoexec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L440">SudoExec</a></a></h3>
+<h3 id="func-host-sudoexec"><a class="header" href="#func-host-sudoexec">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L438">SudoExec</a></a></h3>
 <pre><code class="language-go">func (h *Host) SudoExec(command string, opts ...cmd.ExecOption) error
 </code></pre>
 <p>SudoExec runs a command on the host with privilege escalation. Like Exec, it returns an error rather than panicking on a host that was never connected.</p>
 <p><a name="Host.SudoExecOutput"></a></p>
-<h3 id="func-host-sudoexecoutput"><a class="header" href="#func-host-sudoexecoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L449">SudoExecOutput</a></a></h3>
+<h3 id="func-host-sudoexecoutput"><a class="header" href="#func-host-sudoexecoutput">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L447">SudoExecOutput</a></a></h3>
 <pre><code class="language-go">func (h *Host) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, error)
 </code></pre>
 <p>SudoExecOutput runs a command on the host with privilege escalation and returns its output. Like ExecOutput, it returns an error rather than panicking on a host that was never connected.</p>
 <p><a name="Host.Touch"></a></p>
-<h3 id="func-host-touch"><a class="header" href="#func-host-touch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L345">Touch</a></a></h3>
+<h3 id="func-host-touch"><a class="header" href="#func-host-touch">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L343">Touch</a></a></h3>
 <pre><code class="language-go">func (h *Host) Touch(path string, modTime time.Time) error
 </code></pre>
 <p>Touch updates file modification timestamps, creating the file if needed. Always runs with privilege escalation.</p>
 <p><a name="Host.UnmarshalYAML"></a></p>
-<h3 id="func-host-unmarshalyaml"><a class="header" href="#func-host-unmarshalyaml">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L109">UnmarshalYAML</a></a></h3>
+<h3 id="func-host-unmarshalyaml"><a class="header" href="#func-host-unmarshalyaml">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L107">UnmarshalYAML</a></a></h3>
 <pre><code class="language-go">func (h *Host) UnmarshalYAML(unmarshal func(any) error) error
 </code></pre>
 <p>UnmarshalYAML decodes a host document into both Host’s own fields and the embedded rig client’s connection configuration.</p>
 <p>rig.ClientWithConfig implements UnmarshalYAML itself, and since it is embedded anonymously that method is promoted onto *Host. Left alone, goccy/go-yaml would treat *Host as an InterfaceUnmarshaler and call the promoted method for the whole host document -- which decodes only ClientWithConfig’s own fields and silently leaves every field Host declares (Hostname, Role, Profile, …) zeroed. Decoding into a shadow type with no embedded ClientWithConfig avoids triggering that promoted method, and a second explicit decode through ClientWithConfig’s own UnmarshalYAML fills in the connection config the same way it always did.</p>
 <p><a name="Host.WriteFile"></a></p>
-<h3 id="func-host-writefile"><a class="header" href="#func-host-writefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L662">WriteFile</a></a></h3>
+<h3 id="func-host-writefile"><a class="header" href="#func-host-writefile">func (*Host) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L632">WriteFile</a></a></h3>
 <pre><code class="language-go">func (h *Host) WriteFile(path string, data string, permissions string) error
 </code></pre>
 <p>WriteFile writes data to path on the host. Do not use this for large files. Always runs with privilege escalation.</p>
 <p><a name="HostConfig"></a></p>
-<h2 id="type-hostconfig"><a class="header" href="#type-hostconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L145-L154">HostConfig</a></a></h2>
+<h2 id="type-hostconfig"><a class="header" href="#type-hostconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L143-L152">HostConfig</a></a></h2>
 <p>HostConfig defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.</p>
 <pre><code class="language-go">type HostConfig struct {
     // Firewall holds the backend-neutral firewall rules cargoship renders onto whichever
@@ -782,12 +768,12 @@
 }
 </code></pre>
 <p><a name="HostConfig.Merge"></a></p>
-<h3 id="func-hostconfig-merge"><a class="header" href="#func-hostconfig-merge">func (*HostConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L158">Merge</a></a></h3>
+<h3 id="func-hostconfig-merge"><a class="header" href="#func-hostconfig-merge">func (*HostConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L156">Merge</a></a></h3>
 <pre><code class="language-go">func (c *HostConfig) Merge(update HostConfig)
 </code></pre>
 <p>Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c, and unions update’s firewall rules into c’s.</p>
 <p><a name="HostEngine"></a></p>
-<h2 id="type-hostengine"><a class="header" href="#type-hostengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L176-L181">HostEngine</a></a></h2>
+<h2 id="type-hostengine"><a class="header" href="#type-hostengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L174-L179">HostEngine</a></a></h2>
 <p>HostEngine defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.</p>
 <pre><code class="language-go">type HostEngine struct {
     // NodeLabels maps Kubernetes node label keys to their values.
@@ -797,7 +783,7 @@
 }
 </code></pre>
 <p><a name="HostEngine.Merge"></a></p>
-<h3 id="func-hostengine-merge"><a class="header" href="#func-hostengine-merge">func (*HostEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L184">Merge</a></a></h3>
+<h3 id="func-hostengine-merge"><a class="header" href="#func-hostengine-merge">func (*HostEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L182">Merge</a></a></h3>
 <pre><code class="language-go">func (c *HostEngine) Merge(update HostEngine)
 </code></pre>
 <p>Merge copies NodeLabels and NodeTaints from update into c, for whichever of those fields are empty in c.</p>
@@ -812,7 +798,7 @@
 }
 </code></pre>
 <p><a name="HostMetadata"></a></p>
-<h2 id="type-hostmetadata"><a class="header" href="#type-hostmetadata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L238-L271">HostMetadata</a></a></h2>
+<h2 id="type-hostmetadata"><a class="header" href="#type-hostmetadata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L236-L269">HostMetadata</a></a></h2>
 <p>HostMetadata holds values cargoship discovers about a host at runtime.</p>
 <pre><code class="language-go">type HostMetadata struct {
     // Arch is the CPU architecture detected on the host.
@@ -850,7 +836,7 @@
 }
 </code></pre>
 <p><a name="HostPort"></a></p>
-<h2 id="type-hostport"><a class="header" href="#type-hostport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L200-L205">HostPort</a></a></h2>
+<h2 id="type-hostport"><a class="header" href="#type-hostport">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L198-L203">HostPort</a></a></h2>
 <p>HostPort is a port cargoship opens on the public side of the firewall.</p>
 <pre><code class="language-go">type HostPort struct {
     // Protocol is the type of allowed traffic.
@@ -860,7 +846,7 @@
 }
 </code></pre>
 <p><a name="HostServices"></a></p>
-<h2 id="type-hostservices"><a class="header" href="#type-hostservices">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L361-L367">HostServices</a></a></h2>
+<h2 id="type-hostservices"><a class="header" href="#type-hostservices">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L359-L365">HostServices</a></a></h2>
 <p>HostServices is the init system surface a host exposes. A real host satisfies it through its rig connection; SetServices substitutes another implementation, which is how the distro modules and phases are exercised without a machine to run against.</p>
 <pre><code class="language-go">type HostServices interface {
     ServiceIsRunning(ctx context.Context, name string) bool

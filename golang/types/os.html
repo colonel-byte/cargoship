@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "../../searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-8dc70692.js"></script>
@@ -208,7 +208,6 @@
 <li><a href="#Linux.PreferredFirewall">func (l *Linux) PreferredFirewall() string</a></li>
 <li><a href="#Linux.PrivateAddress">func (l *Linux) PrivateAddress(h Host, iface, publicip string) (string, error)</a></li>
 <li><a href="#Linux.PrivateInterface">func (l *Linux) PrivateInterface(h Host) (string, error)</a></li>
-<li><a href="#Linux.SetPath">func (l *Linux) SetPath(key, value string)</a></li>
 <li><a href="#Linux.UpdateEnvironment">func (l *Linux) UpdateEnvironment(h Host, env map[string]string) error</a></li>
 </ul>
 </li>
@@ -245,7 +244,7 @@
 </code></pre>
 <p>ResolveOSModule returns the builder function for the first registered module whose matcher accepts release, or false if none match.</p>
 <p><a name="Configurer"></a></p>
-<h2 id="type-configurer"><a class="header" href="#type-configurer">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L48-L84">Configurer</a></a></h2>
+<h2 id="type-configurer"><a class="header" href="#type-configurer">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L48-L82">Configurer</a></a></h2>
 <p>Configurer defines the per-host operations required for managing a host. Most filesystem, service, and OS-detection operations are handled directly via the rig v2 Host interface (FS(), Sudo(), OS()) rather than through this interface -- Configurer only carries what is genuinely distro-specific.</p>
 <pre><code class="language-go">type Configurer interface {
     // ApplySysctl loads the sysctl settings in the file at the given path into the running
@@ -265,8 +264,6 @@
     // GetDistroService returns the name of the service for the current distro.
     // common key values are, "controller" and "agent"
     GetDistroService(string) (string, error)
-    // SetPath adds a key value to the paths string map.
-    SetPath(string, string)
     // UpdateEnvironment updates the hosts's environment variables
     UpdateEnvironment(Host, map[string]string) error
     // Hostname resolves the short hostname
@@ -298,81 +295,76 @@
 }
 </code></pre>
 <p><a name="HostValidator"></a></p>
-<h2 id="type-hostvalidator"><a class="header" href="#type-hostvalidator">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L87-L89">HostValidator</a></a></h2>
+<h2 id="type-hostvalidator"><a class="header" href="#type-hostvalidator">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L85-L87">HostValidator</a></a></h2>
 <p>HostValidator allows a Configurer to implement host-specific validation logic.</p>
 <pre><code class="language-go">type HostValidator interface {
     ValidateHost(Host) error
 }
 </code></pre>
 <p><a name="Linux"></a></p>
-<h2 id="type-linux"><a class="header" href="#type-linux">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L54-L57">Linux</a></a></h2>
+<h2 id="type-linux"><a class="header" href="#type-linux">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L54-L56">Linux</a></a></h2>
 <p>Linux is a base module for various linux OS support packages</p>
 <pre><code class="language-go">type Linux struct {
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="Linux.ApplySysctl"></a></p>
-<h3 id="func-linux-applysysctl"><a class="header" href="#func-linux-applysysctl">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L86">ApplySysctl</a></a></h3>
+<h3 id="func-linux-applysysctl"><a class="header" href="#func-linux-applysysctl">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L85">ApplySysctl</a></a></h3>
 <pre><code class="language-go">func (l *Linux) ApplySysctl(h Host, _ string) error
 </code></pre>
 <p>ApplySysctl loads every sysctl file the OS reads at boot, which includes the file at path. Applying them all rather than only that file keeps a setting cargoship overrides from being re-applied at its old value by a file later in the load order, and matches what the host does on its next boot.</p>
 <p><a name="Linux.CTLLockFilePath"></a></p>
-<h3 id="func-linux-ctllockfilepath"><a class="header" href="#func-linux-ctllockfilepath">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L109">CTLLockFilePath</a></a></h3>
+<h3 id="func-linux-ctllockfilepath"><a class="header" href="#func-linux-ctllockfilepath">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L108">CTLLockFilePath</a></a></h3>
 <pre><code class="language-go">func (l *Linux) CTLLockFilePath(h Host) string
 </code></pre>
 <p>CTLLockFilePath returns a path to a lock file</p>
 <p><a name="Linux.Dir"></a></p>
-<h3 id="func-linux-dir"><a class="header" href="#func-linux-dir">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L70">Dir</a></a></h3>
+<h3 id="func-linux-dir"><a class="header" href="#func-linux-dir">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L69">Dir</a></a></h3>
 <pre><code class="language-go">func (l *Linux) Dir(p string) string
 </code></pre>
 <p>Dir returns the directory part of a path</p>
 <p><a name="Linux.GetDistroService"></a></p>
-<h3 id="func-linux-getdistroservice"><a class="header" href="#func-linux-getdistroservice">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L199">GetDistroService</a></a></h3>
+<h3 id="func-linux-getdistroservice"><a class="header" href="#func-linux-getdistroservice">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L198">GetDistroService</a></a></h3>
 <pre><code class="language-go">func (l *Linux) GetDistroService(key string) (string, error)
 </code></pre>
 <p>GetDistroService returns the name of the service for the current distro. common key values are, “controller” and “agent”</p>
 <p><a name="Linux.Hostname"></a></p>
-<h3 id="func-linux-hostname"><a class="header" href="#func-linux-hostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L91">Hostname</a></a></h3>
+<h3 id="func-linux-hostname"><a class="header" href="#func-linux-hostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L90">Hostname</a></a></h3>
 <pre><code class="language-go">func (l *Linux) Hostname(h Host) string
 </code></pre>
 <p>Hostname resolves the short hostname</p>
 <p><a name="Linux.Kind"></a></p>
-<h3 id="func-linux-kind"><a class="header" href="#func-linux-kind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L60">Kind</a></a></h3>
+<h3 id="func-linux-kind"><a class="header" href="#func-linux-kind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L59">Kind</a></a></h3>
 <pre><code class="language-go">func (l *Linux) Kind() string
 </code></pre>
 <p>Kind returns the general OS family identifier for Linux hosts</p>
 <p><a name="Linux.LongHostname"></a></p>
-<h3 id="func-linux-longhostname"><a class="header" href="#func-linux-longhostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L100">LongHostname</a></a></h3>
+<h3 id="func-linux-longhostname"><a class="header" href="#func-linux-longhostname">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L99">LongHostname</a></a></h3>
 <pre><code class="language-go">func (l *Linux) LongHostname(h Host) string
 </code></pre>
 <p>LongHostname resolves the FQDN (long) hostname</p>
 <p><a name="Linux.OSKind"></a></p>
-<h3 id="func-linux-oskind"><a class="header" href="#func-linux-oskind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L65">OSKind</a></a></h3>
+<h3 id="func-linux-oskind"><a class="header" href="#func-linux-oskind">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L64">OSKind</a></a></h3>
 <pre><code class="language-go">func (l *Linux) OSKind() string
 </code></pre>
 <p>OSKind returns the identifier for Linux hosts</p>
 <p><a name="Linux.PreferredFirewall"></a></p>
-<h3 id="func-linux-preferredfirewall"><a class="header" href="#func-linux-preferredfirewall">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L78">PreferredFirewall</a></a></h3>
+<h3 id="func-linux-preferredfirewall"><a class="header" href="#func-linux-preferredfirewall">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L77">PreferredFirewall</a></a></h3>
 <pre><code class="language-go">func (l *Linux) PreferredFirewall() string
 </code></pre>
 <p>PreferredFirewall reports that the distribution ships no firewall front end of its own. An OS module for a distribution that ships one overrides this. The method is declared on each leaf OS module rather than on a shared base such as EnterpriseLinux, because those modules embed both their base and this one at the same depth, which would leave the promoted method ambiguous.</p>
 <p><a name="Linux.PrivateAddress"></a></p>
-<h3 id="func-linux-privateaddress"><a class="header" href="#func-linux-privateaddress">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L135">PrivateAddress</a></a></h3>
+<h3 id="func-linux-privateaddress"><a class="header" href="#func-linux-privateaddress">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L134">PrivateAddress</a></a></h3>
 <pre><code class="language-go">func (l *Linux) PrivateAddress(h Host, iface, publicip string) (string, error)
 </code></pre>
 <p>PrivateAddress resolves internal ip from private interface</p>
 <p><a name="Linux.PrivateInterface"></a></p>
-<h3 id="func-linux-privateinterface"><a class="header" href="#func-linux-privateinterface">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L120">PrivateInterface</a></a></h3>
+<h3 id="func-linux-privateinterface"><a class="header" href="#func-linux-privateinterface">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L119">PrivateInterface</a></a></h3>
 <pre><code class="language-go">func (l *Linux) PrivateInterface(h Host) (string, error)
 </code></pre>
 <p>PrivateInterface tries to find a private network interface</p>
-<p><a name="Linux.SetPath"></a></p>
-<h3 id="func-linux-setpath"><a class="header" href="#func-linux-setpath">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L211">SetPath</a></a></h3>
-<pre><code class="language-go">func (l *Linux) SetPath(key, value string)
-</code></pre>
-<p>SetPath adds a key value to the paths string map. TODO add ref to what the paths string map does….</p>
 <p><a name="Linux.UpdateEnvironment"></a></p>
-<h3 id="func-linux-updateenvironment"><a class="header" href="#func-linux-updateenvironment">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L166">UpdateEnvironment</a></a></h3>
+<h3 id="func-linux-updateenvironment"><a class="header" href="#func-linux-updateenvironment">func (*Linux) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L165">UpdateEnvironment</a></a></h3>
 <pre><code class="language-go">func (l *Linux) UpdateEnvironment(h Host, env map[string]string) error
 </code></pre>
 <p>UpdateEnvironment upserts the given key-value pairs into /etc/environment (replacing any existing line for the same key) and exports them into the current shell environment.</p>

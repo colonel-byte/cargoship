@@ -37,7 +37,7 @@
             const path_to_root = "../../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../../searchindex-40b8dc17.js";
+            window.path_to_searchindex_js = "../../../../searchindex-184d6281.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../../toc-8dc70692.js"></script>
@@ -204,7 +204,6 @@
 <li><a href="#Distro">type Distro</a>
 <ul>
 <li><a href="#Distro.Arches">func (distro Distro) Arches() api.Arches</a></li>
-<li><a href="#Distro.IsSBOMAble">func (distro Distro) IsSBOMAble() bool</a></li>
 </ul>
 </li>
 <li><a href="#FileSource">type FileSource</a></li>
@@ -339,11 +338,6 @@
 <pre><code class="language-go">func (distro Distro) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.</p>
-<p><a name="Distro.IsSBOMAble"></a></p>
-<h3 id="func-distro-issbomable"><a class="header" href="#func-distro-issbomable">func (Distro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/distro/spec.go#L361">IsSBOMAble</a></a></h3>
-<pre><code class="language-go">func (distro Distro) IsSBOMAble() bool
-</code></pre>
-<p>IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.</p>
 <p><a name="FileSource"></a></p>
 <h2 id="type-filesource"><a class="header" href="#type-filesource">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/distro/spec.go#L80-L95">FileSource</a></a></h2>
 <p>FileSource records where one file in the package was actually read from, for a file whose declared source a --file-override redirected.</p>
