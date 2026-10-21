@@ -28,7 +28,6 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 )
 
@@ -109,7 +108,7 @@ func (m verifyMode) toStrategy() layout.VerificationStrategy {
 }
 
 // newVerifyFlagSet creates a pflag.FlagSet containing the package verification flags.
-func newVerifyFlagSet(_ *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
+func newVerifyFlagSet(f *packageVerifyFlags) *pflag.FlagSet {
 	fs := pflag.NewFlagSet("verify", pflag.ContinueOnError)
 
 	fs.StringVarP(&f.publicKeyPath, "key", "k", resolvedConfig.DistroOpts.PublicKey, zlang.CmdPackageFlagFlagPublicKey)
@@ -123,12 +122,12 @@ func newVerifyFlagSet(_ *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 // addVerifyFlags registers the verification flag set on cmd. Use this for all
 // commands that load packages. The sign and verify commands are exceptions - they
 // register --key manually with a command-specific usage string.
-func addVerifyFlags(cmd *cobra.Command, v *viper.Viper, f *packageVerifyFlags) {
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, f))
+func addVerifyFlags(cmd *cobra.Command, f *packageVerifyFlags) {
+	cmd.Flags().AddFlagSet(newVerifyFlagSet(f))
 }
 
 // buildVerifyBlobOptions builds signing.VerifyBlobOptions from the verification flags.
-func (f *packageVerifyFlags) buildVerifyBlobOptions(_ *cobra.Command, _ *viper.Viper) *signing.VerifyBlobOptions {
+func (f *packageVerifyFlags) buildVerifyBlobOptions() *signing.VerifyBlobOptions {
 	opts := signing.DefaultVerifyBlobOptions()
 	opts.Key = f.publicKeyPath
 	return &opts

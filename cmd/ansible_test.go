@@ -73,7 +73,6 @@ var moduleArgs = map[string]string{
 		"package": "./package.tar.zst",
 		"inventory": ` + moduleInventory + `,
 		"concurrency": 4,
-		"work_concurrency": "25%",
 		"hosts": true,
 		"firewall": false,
 		"values": ["/tmp/values.yaml"],

@@ -47,7 +47,7 @@ func newVaultEncryptFileCommand() *cobra.Command {
 	// ResolveVaultPassword falls back to are unreachable if cobra rejects the command first.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
 	addAgeFlags(cmd, &o.keyFlags)
-	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultEncryptFileFlagDryRun)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultFlagDryRun)
 	cmd.Flags().BoolVar(&o.force, MiscVaultForce, false, lang.CmdVaultEncryptFileFlagForce)
 
 	return cmd

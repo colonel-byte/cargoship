@@ -70,7 +70,7 @@ func newPackagePublishCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackagePublishFlagSigningKeyPassword)
 	cmd.Flags().StringVar(&o.tag, PackageTag, "", zlang.CmdPackagePublishFlagTag)
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
@@ -82,7 +82,7 @@ func newPackagePublishCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *packagePublishOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
+func (o *packagePublishOptions) run(ctx context.Context, _ *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	distroSource := args[0]
 
@@ -111,7 +111,7 @@ func (o *packagePublishOptions) run(ctx context.Context, cmd *cobra.Command, arg
 		Architecture:         config.CLIArch,
 		Output:               config.CommonOptions.TempDirectory,
 		VerificationStrategy: o.verify.toStrategy(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(),
 	}
 
 	distroLayout, err := distro.Load(ctx, distroSource, loadOpts)

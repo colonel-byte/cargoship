@@ -63,7 +63,7 @@ func newSchemaCommand() *cobra.Command {
 	// source directory. They are registered unconditionally because cobra has no way to add a
 	// flag once an argument has been parsed, and a package that has to be pulled and verified
 	// needs the same transport and trust settings every other command takes.
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 	addBuildFlags(cmd)
 	addRegistryFlags(cmd)
 

@@ -54,13 +54,13 @@ func newPackageImportCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.outputDirectory, "output", "o", output, lang.CmdPackageCreateFlagOutput)
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 	addBuildFlags(cmd)
 
 	return cmd
 }
 
-func (o *packageImportOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
+func (o *packageImportOptions) run(ctx context.Context, _ *cobra.Command, args []string) error {
 	srcArchive := args[0]
 	outputDir := o.outputDirectory
 	if outputDir == "" {
@@ -75,7 +75,7 @@ func (o *packageImportOptions) run(ctx context.Context, cmd *cobra.Command, args
 		Architecture:         config.CLIArch,
 		Output:               outputDir,
 		VerificationStrategy: o.verify.toStrategy(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(),
 	})
 	if err != nil {
 		return err

@@ -29,7 +29,6 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type installResetOptions struct {
@@ -62,20 +61,6 @@ func newInstallResetCommand() *cobra.Command {
 	registerFlagReceiptPath(cmd, &o.receiptPath)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringSliceVar(&o.targetHosts, InstallTargetHosts, nil, lang.CmdInstallFlagResetTargetHosts)
-
-	val, err := cmd.Flags().GetString(RootLoggingLevel)
-	if err != nil {
-		val = loggingLevelDefault
-	}
-
-	o.logLevel = val
-
-	val, err = cmd.Flags().GetString(RootLoggingFormat)
-	if err != nil {
-		val = string(logger.FormatConsole)
-	}
-
-	o.LogFormat = val
 
 	markRequired(cmd, InstallConfig)
 

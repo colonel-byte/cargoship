@@ -24,7 +24,6 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type installEngineConfigSyncOptions struct {
@@ -66,21 +65,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 	addAgeFlags(cmd, &o.keyFlags)
 
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
-
-	val, err := cmd.Flags().GetString(RootLoggingLevel)
-	if err != nil {
-		val = loggingLevelDefault
-	}
-
-	o.logLevel = val
-
-	val, err = cmd.Flags().GetString(RootLoggingFormat)
-	if err != nil {
-		val = string(logger.FormatConsole)
-	}
-
-	o.LogFormat = val
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 
 	markRequired(cmd, InstallConfig)
 
@@ -114,7 +99,7 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		return runErr
 	}
 
-	manager, distroLayout, runErr = initManager(ctx, cmd, args[0], o.InstallCommon)
+	manager, distroLayout, runErr = initManager(ctx, args[0], o.InstallCommon)
 	if runErr != nil {
 		return runErr
 	}

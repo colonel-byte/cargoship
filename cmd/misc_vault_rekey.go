@@ -53,7 +53,7 @@ func newVaultRekeyCommand() *cobra.Command {
 	// what makes moving a file from Ansible Vault to age one command rather than a new one.
 	addAgeFlags(cmd, &o.keyFlags)
 	cmd.Flags().StringVar(&o.newVaultPasswordFile, MiscVaultNewPasswordFile, "", lang.CmdVaultRekeyFlagNewPasswordFile)
-	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultRekeyFlagDryRun)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultFlagDryRun)
 
 	return cmd
 }
