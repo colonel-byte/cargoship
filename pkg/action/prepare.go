@@ -32,8 +32,6 @@ import (
 type PrepareOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
-	// NoWait skips waiting for the cluster to be ready
-	NoWait bool
 	// NoDrain skips draining worker nodes
 	NoDrain bool
 	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -76,7 +74,6 @@ func NewPrepare(opts PrepareOptions) *Prepare {
 func (a Prepare) Run(ctx context.Context) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	phase.NoWait = a.NoWait
 	a.Manager.SetPhases(a.Phases)
 
 	if result := a.Manager.Run(ctx); result != nil {

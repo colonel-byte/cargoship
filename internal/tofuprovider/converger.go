@@ -403,7 +403,6 @@ func (c cargoshipConverger) Teardown(ctx context.Context, cfg *cluster.Cluster, 
 		WorkerConcurrent: opts.WorkerConcurrent,
 		TargetHosts:      opts.TargetHosts,
 		NoDrain:          opts.NoDrain,
-		NoWait:           true,
 	})
 	if err != nil {
 		return err

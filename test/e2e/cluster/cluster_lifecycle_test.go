@@ -253,7 +253,6 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
-		NoWait:           true,
 		NoDrain:          true,
 	})
 	s.Require().NoError(err)
@@ -295,7 +294,6 @@ func (s *ResetSuite) Test_1_Reset() {
 	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
-		NoWait:           true,
 		NoDrain:          true,
 	})
 	s.Require().NoError(err)

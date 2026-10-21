@@ -49,7 +49,7 @@ var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set 
 ```
 
 <a name="Apply"></a>
-## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75-L81>)
+## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L73-L79>)
 
 Apply state logic
 
@@ -62,7 +62,7 @@ type Apply struct {
 ```
 
 <a name="NewApply"></a>
-### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L84>)
+### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L82>)
 
 ```go
 func NewApply(opts ApplyOptions) (*Apply, error)
@@ -71,7 +71,7 @@ func NewApply(opts ApplyOptions) (*Apply, error)
 NewApply an apply action object
 
 <a name="Apply.KubeConfigBytes"></a>
-### func \(Apply\) [KubeConfigBytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L207>)
+### func \(Apply\) [KubeConfigBytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L205>)
 
 ```go
 func (a Apply) KubeConfigBytes() ([]byte, error)
@@ -82,7 +82,7 @@ KubeConfigBytes is the cluster's admin credentials, serialized, as the run built
 It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase is skipped otherwise and there is nothing to return. What comes back is cluster\-admin, so a caller holding it is holding the cluster.
 
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L215>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L213>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error
@@ -91,7 +91,7 @@ func (a Apply) Run(ctx context.Context) error
 Run the actions
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L72>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L34-L70>)
 
 ApplyOptions struct
 
@@ -102,8 +102,6 @@ type ApplyOptions struct {
     // AllowDowngrade continues when a host already runs a version newer than the package,
     // rather than refusing the run
     AllowDowngrade bool
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -272,7 +270,7 @@ type KubeConfigOptions struct {
 ```
 
 <a name="Prepare"></a>
-## type [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L48-L51>)
+## type [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L46-L49>)
 
 Prepare state logic
 
@@ -284,7 +282,7 @@ type Prepare struct {
 ```
 
 <a name="NewPrepare"></a>
-### func [NewPrepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L54>)
+### func [NewPrepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L52>)
 
 ```go
 func NewPrepare(opts PrepareOptions) *Prepare
@@ -293,7 +291,7 @@ func NewPrepare(opts PrepareOptions) *Prepare
 NewPrepare an prepare action object
 
 <a name="Prepare.Run"></a>
-### func \(Prepare\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L76>)
+### func \(Prepare\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L74>)
 
 ```go
 func (a Prepare) Run(ctx context.Context) error
@@ -302,7 +300,7 @@ func (a Prepare) Run(ctx context.Context) error
 Run the actions
 
 <a name="PrepareOptions"></a>
-## type [PrepareOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L45>)
+## type [PrepareOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L43>)
 
 PrepareOptions struct
 
@@ -310,8 +308,6 @@ PrepareOptions struct
 type PrepareOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -372,7 +368,7 @@ type RefreshOptions struct {
 ```
 
 <a name="Reset"></a>
-## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L55-L58>)
+## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L53-L56>)
 
 Reset state logic
 
@@ -384,7 +380,7 @@ type Reset struct {
 ```
 
 <a name="NewReset"></a>
-### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L61>)
+### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L59>)
 
 ```go
 func NewReset(opts ResetOptions) (*Reset, error)
@@ -393,7 +389,7 @@ func NewReset(opts ResetOptions) (*Reset, error)
 NewReset an apply action object
 
 <a name="Reset.Run"></a>
-### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L135>)
+### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L133>)
 
 ```go
 func (r Reset) Run(ctx context.Context) error
@@ -402,7 +398,7 @@ func (r Reset) Run(ctx context.Context) error
 Run the actions
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L52>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L32-L50>)
 
 ResetOptions struct
 
@@ -410,8 +406,6 @@ ResetOptions struct
 type ResetOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // NoWait skips waiting for the cluster to be ready
-    NoWait bool
     // NoDrain skips draining worker nodes
     NoDrain bool
     // DistroID is the type of Kubernetes engine that will be removed

@@ -36,12 +36,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// NoWait is used by various phases to decide if node ready state should be waited for or not
-var NoWait bool
-
-// Force is used by various phases to attempt a forced installation
-var Force bool
-
 // Phase represents a runnable phase which can be added to Manager.
 type Phase interface {
 	Run(context.Context) error
