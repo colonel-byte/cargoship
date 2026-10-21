@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/internal/heartbeat"
@@ -45,43 +44,6 @@ type Phase interface {
 
 // Phases is a slice of Phases
 type Phases []Phase
-
-// Index returns the index of the first occurrence matching the given phase title or -1 if not found
-func (p Phases) Index(title string) int {
-	for i, phase := range p {
-		if phase.Title() == title {
-			return i
-		}
-	}
-	return -1
-}
-
-// InsertAfter inserts a phase after the first occurrence of a phase with the given title
-func (p *Phases) InsertAfter(title string, phase Phase) {
-	i := p.Index(title)
-	if i == -1 {
-		return
-	}
-	*p = append((*p)[:i+1], append(Phases{phase}, (*p)[i+1:]...)...)
-}
-
-// InsertBefore inserts a phase before the first occurrence of a phase with the given title
-func (p *Phases) InsertBefore(title string, phase Phase) {
-	i := p.Index(title)
-	if i == -1 {
-		return
-	}
-	*p = append((*p)[:i], append(Phases{phase}, (*p)[i:]...)...)
-}
-
-// Replace replaces the first occurrence of a phase with the given title
-func (p *Phases) Replace(title string, phase Phase) {
-	i := p.Index(title)
-	if i == -1 {
-		return
-	}
-	(*p)[i] = phase
-}
 
 type withconfig interface {
 	Title() string
@@ -550,16 +512,6 @@ type Manager struct {
 	Result RunResult
 }
 
-// ManagerDistroConfig stores some values for manager distro config
-type ManagerDistroConfig struct {
-	BinaryDir string
-	Binary    string
-	Config    string
-	Token     string
-	Data      string
-	Version   string
-}
-
 // AddPhase adds a Phase to Manager
 func (m *Manager) AddPhase(p ...Phase) {
 	m.phases = append(m.phases, p...)
@@ -581,11 +533,6 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 		return retry.Timeout(ctx, m.Timeout, f)
 	}
 	return retry.WithDefaultTimeout(ctx, f)
-}
-
-// GetDistroOSFiles returns the ZarfFiles for a distro
-func (m *Manager) GetDistroOSFiles() v1alpha1.Files {
-	return m.Distro.Spec.Config.OS.Files
 }
 
 type errorfunc func() error

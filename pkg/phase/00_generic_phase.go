@@ -55,11 +55,6 @@ type GenericPhase struct {
 	wg      sync.WaitGroup
 }
 
-// GetConfig is an accessor to phase Config
-func (p *GenericPhase) GetConfig() *cluster.Cluster {
-	return p.manager.Config
-}
-
 // GetDistro is an accessor to phase Distro
 func (p *GenericPhase) GetDistro() *distro.Distro {
 	return p.manager.Distro

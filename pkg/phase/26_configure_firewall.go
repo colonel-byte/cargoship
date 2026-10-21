@@ -27,13 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-const (
-	// FIREWALLD name of the service for firewalld
-	FIREWALLD = firewall.FirewalldService
-	// UFW name of the service for ufw
-	UFW = firewall.UFWService
-)
-
 // ConfigureFirewall state
 type ConfigureFirewall struct {
 	GenericPhase
