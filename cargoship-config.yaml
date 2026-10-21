@@ -19,7 +19,6 @@ distro:
   worker_concurrency: 5
   hosts: true
   firewall: true
-  fapolicyd: true
   output: ~/zarf
   # Uncomment to record every run. {command} and {timestamp} expand per run, so each
   # receipt lands in its own file; a leading ~ is expanded the way a shell would.

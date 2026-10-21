@@ -552,7 +552,7 @@ func TestBuildApplyArgsFull(t *testing.T) {
 		Package:             "./package.tar.zst",
 		Concurrency:         &concurrency,
 		WorkConcurrency:     "25%",
-		hostUpdates:         hostUpdates{Hosts: &yes, Firewall: &no, FAPolicyd: &yes},
+		hostUpdates:         hostUpdates{Hosts: &yes, Firewall: &no},
 		LabelNodes:          &yes,
 		AllowUnmanagedNodes: &yes,
 		UpdateKubeconfig:    &yes,
@@ -572,7 +572,6 @@ func TestBuildApplyArgsFull(t *testing.T) {
 	require.Contains(t, joined, "--confirm")
 	require.Contains(t, joined, "--hosts=true")
 	require.Contains(t, joined, "--firewall=false")
-	require.Contains(t, joined, "--fapolicyd=true")
 	require.Contains(t, joined, "--allow-unmanaged-nodes=true")
 	require.Contains(t, joined, "--key /tmp/cosign.pub")
 	require.Contains(t, joined, "--verify always")
@@ -612,7 +611,7 @@ func TestBuildResetArgs(t *testing.T) {
 	// Reset renders none of the host preparation switches. It shares no parameter with prepare
 	// here, because reset runs no preparation phase and `cargoship reset` has no such flag to
 	// accept -- rendering one would fail the run on an unknown flag.
-	for _, flag := range []string{"--hosts", "--firewall", "--fapolicyd"} {
+	for _, flag := range []string{"--hosts", "--firewall"} {
 		require.NotContains(t, joined, flag)
 	}
 }

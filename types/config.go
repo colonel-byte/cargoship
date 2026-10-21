@@ -105,8 +105,6 @@ type DistroOptions struct {
 	OCIConcurrency int `json:"oci_concurrency,omitempty" mapstructure:"oci_concurrency"`
 	// Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
 	Concurrency int `json:"concurrency,omitempty" mapstructure:"concurrency" jsonschema:"minimum=0"`
-	// FAPolicyd whether we will update hosts with fapolicyd
-	FAPolicyd bool `json:"fapolicyd,omitempty" mapstructure:"fapolicyd" jsonschema:"default=true"`
 	// FirewallUpdate whether we will update the host firewall
 	FirewallUpdate bool `json:"firewall,omitempty" mapstructure:"firewall" jsonschema:"default=true"`
 	// HostUpdate whether we will update the etc host file

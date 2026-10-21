@@ -10,7 +10,7 @@ Brings every host the cluster configuration names up to the prerequisites the pa
 
 Running this is optional. An apply runs the same preparation phases itself, and this command exists so that the disruptive half can be done on its own schedule -- ahead of a maintenance window rather than inside it.
 
---hosts, --firewall and --fapolicyd each opt into rewriting a part of the host that cargoship otherwise leaves alone.
+--hosts and --firewall each opt into rewriting a part of the host that cargoship otherwise leaves alone. The fapolicyd rules are not one of them: they are written wherever a host runs fapolicyd and the package carries rules for it.
 
 This changes every host it is pointed at, so it needs --confirm. Pass --dry-run to report what it would change instead.
 
@@ -42,7 +42,6 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
       --config string             Config file used to bootstrap a cluster.
       --confirm                   Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -f, --fapolicyd                 Whether to update every host node's fapolicyd configuration.
   -F, --firewall                  Whether to update every host node's firewall configuration.
   -h, --help                      help for prepare
   -H, --hosts                     Whether to update every host node's /etc/hosts file.

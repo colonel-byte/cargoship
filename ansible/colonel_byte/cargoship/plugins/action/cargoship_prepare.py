@@ -89,12 +89,6 @@ options:
     type: bool
     required: false
     cli_flag: "--firewall"
-  fapolicyd:
-    description:
-      - "Whether to manage fapolicyd rules on the fleet."
-    type: bool
-    required: false
-    cli_flag: "--fapolicyd"
   values:
     description:
       - "Package values files to apply, one flag per entry."

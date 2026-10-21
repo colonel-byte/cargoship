@@ -50,7 +50,6 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --config string                     Config file used to bootstrap a cluster.
       --confirm                           Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                           Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -f, --fapolicyd                         Whether to update every host node's fapolicyd configuration.
   -F, --firewall                          Whether to update every host node's firewall configuration.
   -h, --help                              help for apply
   -H, --hosts                             Whether to update every host node's /etc/hosts file.

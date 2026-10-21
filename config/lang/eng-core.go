@@ -57,7 +57,7 @@ const (
 	// CmdDistroPrepareLong prepare long
 	CmdDistroPrepareLong = "Brings every host the cluster configuration names up to the prerequisites the package declares, without installing the engine: environment variables and sysctl settings, container-selinux on hosts with SELinux enabled, the fapolicyd rules the distro supplies, and the kernel modules the package asks for. A host that gained a module is rebooted, because the module has to be loaded before an apply can use it.\n\n" +
 		"Running this is optional. An apply runs the same preparation phases itself, and this command exists so that the disruptive half can be done on its own schedule -- ahead of a maintenance window rather than inside it.\n\n" +
-		"--hosts, --firewall and --fapolicyd each opt into rewriting a part of the host that cargoship otherwise leaves alone.\n\n" +
+		"--hosts and --firewall each opt into rewriting a part of the host that cargoship otherwise leaves alone. The fapolicyd rules are not one of them: they are written wherever a host runs fapolicyd and the package carries rules for it.\n\n" +
 		"This changes every host it is pointed at, so it needs --confirm. Pass --dry-run to report what it would change instead."
 	// CmdDistroResetShort reset short
 	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for an engine"
@@ -79,8 +79,6 @@ const (
 		"This exists because those three settings are the ones that change without the engine version changing, and a full apply is a heavier way to deliver them. Where a restart is needed the node is drained first, and the nodes are worked through at the rate --work-concurrency allows, so a cluster stays serving while its configuration moves.\n\n" +
 		"Registry credentials encrypted with Ansible Vault or age are decrypted here, and the keys for every one of them are checked before the first host is connected to.\n\n" +
 		"This changes every host whose configuration has drifted, so it needs --confirm. Pass --dry-run to report which nodes would be restarted without restarting one."
-	// CmdInstallFapolicydUpdate install flag fapolicyd
-	CmdInstallFapolicydUpdate = "Whether to update every host node's fapolicyd configuration."
 	// CmdInstallFirewallUpdate install flag firewall
 	CmdInstallFirewallUpdate = "Whether to update every host node's firewall configuration."
 	// CmdInstallFlagConcurrency install flag concurrency
