@@ -26,7 +26,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
-	"github.com/colonel-byte/cargoship/pkg/node"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -122,27 +121,11 @@ func (p *InitializeWorkers) Run(ctx context.Context) error {
 }
 
 func (p *InitializeWorkers) installDistro(ctx context.Context, h *cluster.Host) error {
-	if h.Metadata.Install != nil {
-		return h.Metadata.Install(ctx, h)
-	}
-	return nil
+	return p.installPackages(ctx, h)
 }
 
 func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.Host) error {
 	service := p.Distro.GetWorkerService()
 	logger.From(ctx).Info("waiting for the worker service to start", "service", service, "host", h)
-
-	startedAt := time.Now()
-	go func() {
-		err := h.StartService(ctx, service)
-		if err != nil {
-			logger.From(ctx).Warn("failed to start", "service", service, "host", h)
-		}
-	}()
-
-	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, service)); err != nil {
-		return p.captureServiceLogsOnFailure(ctx, h, service, startedAt, err)
-	}
-
-	return h.EnableService(ctx, service)
+	return p.startAndEnableService(ctx, h, service)
 }

@@ -1215,7 +1215,7 @@ func (p *EngineConfigSyncController) Title() string
 Title for the phase
 
 <a name="EngineConfigSyncHosts"></a>
-## type [EngineConfigSyncHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L71>)
+## type [EngineConfigSyncHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L38-L67>)
 
 EngineConfigSyncHosts phase state
 
@@ -1230,7 +1230,7 @@ type EngineConfigSyncHosts struct {
 ```
 
 <a name="EngineConfigSyncHosts.Changed"></a>
-### func \(\*EngineConfigSyncHosts\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L166>)
+### func \(\*EngineConfigSyncHosts\) [Changed](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L162>)
 
 ```go
 func (p *EngineConfigSyncHosts) Changed() bool
@@ -1241,7 +1241,7 @@ Changed reports whether this phase altered any host, which is what Ansible's cha
 There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re\-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.
 
 <a name="EngineConfigSyncHosts.HostsChanged"></a>
-### func \(\*EngineConfigSyncHosts\) [HostsChanged](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L135>)
+### func \(\*EngineConfigSyncHosts\) [HostsChanged](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L131>)
 
 ```go
 func (p *EngineConfigSyncHosts) HostsChanged() []HostChange
@@ -1254,7 +1254,7 @@ Every host Prepare checked is reported, including the ones that turned out to be
 The order is by address rather than by the order the hosts were reached, which is whatever the parallel sweep happened to finish in and would differ between two identical runs.
 
 <a name="EngineConfigSyncHosts.ShouldRun"></a>
-### func \(\*EngineConfigSyncHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L173>)
+### func \(\*EngineConfigSyncHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L169>)
 
 ```go
 func (p *EngineConfigSyncHosts) ShouldRun() bool
@@ -1613,7 +1613,7 @@ func (p *ImportImages) Title() string
 Title for the phase
 
 <a name="InitializeControllers"></a>
-## type [InitializeControllers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L40>)
+## type [InitializeControllers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L34-L39>)
 
 InitializeControllers phase state
 
@@ -1626,7 +1626,7 @@ type InitializeControllers struct {
 ```
 
 <a name="InitializeControllers.Explanation"></a>
-### func \(\*InitializeControllers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L82>)
+### func \(\*InitializeControllers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L81>)
 
 ```go
 func (p *InitializeControllers) Explanation() string
@@ -1635,7 +1635,7 @@ func (p *InitializeControllers) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="InitializeControllers.Prepare"></a>
-### func \(\*InitializeControllers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L59>)
+### func \(\*InitializeControllers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L58>)
 
 ```go
 func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
@@ -1644,7 +1644,7 @@ func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.Cluster,
 Prepare the phase
 
 <a name="InitializeControllers.Run"></a>
-### func \(\*InitializeControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L87>)
+### func \(\*InitializeControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L86>)
 
 ```go
 func (p *InitializeControllers) Run(ctx context.Context) error
@@ -1653,7 +1653,7 @@ func (p *InitializeControllers) Run(ctx context.Context) error
 Run the phase
 
 <a name="InitializeControllers.ShouldRun"></a>
-### func \(\*InitializeControllers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L121>)
+### func \(\*InitializeControllers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L120>)
 
 ```go
 func (p *InitializeControllers) ShouldRun() bool
@@ -1662,7 +1662,7 @@ func (p *InitializeControllers) ShouldRun() bool
 ShouldRun is true when there are workers
 
 <a name="InitializeControllers.Title"></a>
-### func \(\*InitializeControllers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L77>)
+### func \(\*InitializeControllers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L76>)
 
 ```go
 func (p *InitializeControllers) Title() string
@@ -1671,7 +1671,7 @@ func (p *InitializeControllers) Title() string
 Title for the phase
 
 <a name="InitializeWorkers"></a>
-## type [InitializeWorkers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L41>)
+## type [InitializeWorkers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L34-L40>)
 
 InitializeWorkers phase state
 
@@ -1686,7 +1686,7 @@ type InitializeWorkers struct {
 ```
 
 <a name="InitializeWorkers.Explanation"></a>
-### func \(\*InitializeWorkers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L64>)
+### func \(\*InitializeWorkers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L63>)
 
 ```go
 func (p *InitializeWorkers) Explanation() string
@@ -1695,7 +1695,7 @@ func (p *InitializeWorkers) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="InitializeWorkers.Prepare"></a>
-### func \(\*InitializeWorkers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L69>)
+### func \(\*InitializeWorkers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L68>)
 
 ```go
 func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.Cluster, _ *distro.Distro) error
@@ -1704,7 +1704,7 @@ func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.Cluster, _ *
 Prepare the phase
 
 <a name="InitializeWorkers.Run"></a>
-### func \(\*InitializeWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L91>)
+### func \(\*InitializeWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L90>)
 
 ```go
 func (p *InitializeWorkers) Run(ctx context.Context) error
@@ -1713,7 +1713,7 @@ func (p *InitializeWorkers) Run(ctx context.Context) error
 Run the phase
 
 <a name="InitializeWorkers.ShouldRun"></a>
-### func \(\*InitializeWorkers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L86>)
+### func \(\*InitializeWorkers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L85>)
 
 ```go
 func (p *InitializeWorkers) ShouldRun() bool
@@ -1722,7 +1722,7 @@ func (p *InitializeWorkers) ShouldRun() bool
 ShouldRun is true when there are workers
 
 <a name="InitializeWorkers.Title"></a>
-### func \(\*InitializeWorkers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L59>)
+### func \(\*InitializeWorkers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L58>)
 
 ```go
 func (p *InitializeWorkers) Title() string
@@ -2897,7 +2897,7 @@ func (p *UpgradeController) Title() string
 Title for the phase
 
 <a name="UpgradeHosts"></a>
-## type [UpgradeHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L38-L48>)
+## type [UpgradeHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L33-L42>)
 
 UpgradeHosts phase state
 
@@ -2910,7 +2910,7 @@ type UpgradeHosts struct {
 ```
 
 <a name="UpgradeHosts.ShouldRun"></a>
-### func \(\*UpgradeHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L61>)
+### func \(\*UpgradeHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L50>)
 
 ```go
 func (p *UpgradeHosts) ShouldRun() bool
