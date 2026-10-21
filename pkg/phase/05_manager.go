@@ -512,11 +512,6 @@ type Manager struct {
 	Result RunResult
 }
 
-// AddPhase adds a Phase to Manager
-func (m *Manager) AddPhase(p ...Phase) {
-	m.phases = append(m.phases, p...)
-}
-
 // SetPhases sets the list of phases
 func (m *Manager) SetPhases(p Phases) {
 	m.phases = p
@@ -537,22 +532,20 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 
 type errorfunc func() error
 
-// Wet runs the first given function when not in dry-run mode. The second function will be
-// run when in dry-mode and the message will be displayed. Any error returned from the
-// functions will be returned and will halt the operation.
-func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error {
-	if !m.DryRun {
-		if len(funcs) > 0 && funcs[0] != nil {
-			return funcs[0]()
-		}
+// Wet runs f unless this is a dry run, where it does nothing and reports no error. It is how a
+// phase that changes a host declares which part of itself is the change.
+//
+// It used to take a host and a message as well, and a second function to run instead during a
+// dry run. Neither parameter was ever read -- the signature named them `_` -- and no caller ever
+// passed the second function, so a dry run's account of a phase came from nowhere. What reports
+// a dry run now is the DryRunBehavior classification above: a phase says what it would do
+// through ClassifyDryRun and DryRunNote, once per phase, rather than per operation through a
+// message that was built with fmt.Sprintf on every uploaded file and then discarded.
+func (m *Manager) Wet(f errorfunc) error {
+	if m.DryRun {
 		return nil
 	}
-
-	if m.DryRun && len(funcs) == 2 && funcs[1] != nil {
-		return funcs[1]()
-	}
-
-	return nil
+	return f()
 }
 
 // Run executes all the added Phases in order

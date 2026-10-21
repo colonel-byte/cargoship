@@ -57,7 +57,7 @@ func (p *conditionalPhase) Run(_ context.Context) error {
 func TestConditionalPhase(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &conditionalPhase{}
-	m.AddPhase(p)
+	m.SetPhases(Phases{p})
 	require.NoError(t, m.Run(context.Background()))
 	require.False(t, p.runCalled, "run was not called")
 	require.True(t, p.shouldrunCalled, "shouldrun was not called")
@@ -87,7 +87,7 @@ func (p *configPhase) Run(_ context.Context) error {
 func TestConfigPhase(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &configPhase{}
-	m.AddPhase(p)
+	m.SetPhases(Phases{p})
 	require.NoError(t, m.Run(context.Background()))
 	require.True(t, p.receivedConfig, "config was not received")
 }
@@ -133,7 +133,7 @@ func (p *hookedPhase) Run(_ context.Context) error {
 func TestHookedPhase(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &hookedPhase{}
-	m.AddPhase(p)
+	m.SetPhases(Phases{p})
 	require.Error(t, m.Run(context.Background()))
 	require.True(t, p.beforeCalled, "before hook was not called")
 	require.False(t, p.afterCalled, "after hook should not run on failure")
@@ -147,7 +147,7 @@ func TestContextCancel(t *testing.T) {
 		return nil
 	}}
 	p2 := &hookedPhase{}
-	m.AddPhase(p1, p2)
+	m.SetPhases(Phases{p1, p2})
 	require.Error(t, m.Run(ctx))
 	require.Contains(t, ctx.Err().Error(), "cancel")
 
@@ -237,7 +237,7 @@ func TestDryRunSkipsUndeclaredPhases(t *testing.T) {
 	ro := &readOnlyPhase{}
 	dry := &dryRunPhase{}
 	mut := &mutatingPhase{}
-	m.AddPhase(ro, dry, mut)
+	m.SetPhases(Phases{ro, dry, mut})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.True(t, ro.runCalled, "the read-only phase should run as itself under a dry run")
@@ -253,7 +253,7 @@ func TestWetRunRunsEveryPhase(t *testing.T) {
 	ro := &readOnlyPhase{}
 	dry := &dryRunPhase{}
 	mut := &mutatingPhase{}
-	m.AddPhase(ro, dry, mut)
+	m.SetPhases(Phases{ro, dry, mut})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.True(t, ro.runCalled, "read-only run was not called")
@@ -269,7 +269,7 @@ func TestDryRunSkipsHooksAndCleanUp(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	skipped := &hookedPhase{}
 	failing := &readOnlyPhase{err: fmt.Errorf("preflight failed")}
-	m.AddPhase(skipped, failing)
+	m.SetPhases(Phases{skipped, failing})
 
 	require.Error(t, m.Run(context.Background()))
 	require.True(t, failing.runCalled, "the read-only phase did not run")
@@ -358,7 +358,7 @@ func TestDryRunToleratesPrepareFailureOnSkippedPhase(t *testing.T) {
 	// A read-only phase after it, not a mutating one: a mutating phase is skipped under a dry
 	// run whether the run continued or not, so it could not tell the two apart.
 	after := &readOnlyPhase{}
-	m.AddPhase(unprepared, after)
+	m.SetPhases(Phases{unprepared, after})
 
 	require.NoError(t, m.Run(context.Background()), "a skipped phase's Prepare must not fail a dry run")
 	require.Equal(t, 1, unprepared.prepareCalls, "Prepare still runs: it is what filters the list")
@@ -372,7 +372,7 @@ func TestDryRunFailsOnPrepareFailureOfReadOnlyPhase(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	unprepared := &readOnlyUnpreparable{unpreparablePhase{prepareErr: fmt.Errorf("host unreachable")}}
 	after := &readOnlyPhase{}
-	m.AddPhase(unprepared, after)
+	m.SetPhases(Phases{unprepared, after})
 
 	require.Error(t, m.Run(context.Background()), "a read-only phase failing to prepare is a failed preflight")
 	require.False(t, after.runCalled, "the run should have stopped at the failure")
@@ -383,7 +383,7 @@ func TestWetRunFailsOnPrepareFailure(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	unprepared := &unpreparablePhase{prepareErr: fmt.Errorf("no controllers are running")}
 	after := &readOnlyPhase{}
-	m.AddPhase(unprepared, after)
+	m.SetPhases(Phases{unprepared, after})
 
 	require.Error(t, m.Run(context.Background()))
 	require.False(t, after.runCalled)
@@ -444,11 +444,11 @@ func (p *changingPhase) Run(_ context.Context) error {
 // finished its work in Prepare, so leaving it out of the result would lose a real change.
 func TestRunResultRecordsEveryDisposition(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
-	m.AddPhase(
+	m.SetPhases(Phases{
 		&changingPhase{title: "ran", shouldRun: true},
 		&conditionalPhase{},
 		&mutatingPhase{},
-	)
+	})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Equal(t, []string{"ran", "mutating phase"}, Titles(m.Result.Ran))
@@ -514,11 +514,11 @@ func TestRunResultChangedComesOnlyFromDeclaredPhases(t *testing.T) {
 // the result even though Run returned an error.
 func TestRunResultSurvivesAFailure(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
-	m.AddPhase(
+	m.SetPhases(Phases{
 		&changingPhase{title: "first", shouldRun: true, changed: true},
 		&changingPhase{title: "second", shouldRun: true, err: fmt.Errorf("phase failed")},
 		&changingPhase{title: "third", shouldRun: true},
-	)
+	})
 
 	require.Error(t, m.Run(context.Background()))
 	require.Equal(t, []string{"first", "second"}, Titles(m.Result.Ran))
@@ -530,7 +530,7 @@ func TestRunResultSurvivesAFailure(t *testing.T) {
 // Outstanding, and a phase only reaches Planned after its ShouldRun said there was work to do.
 func TestDryRunResultReportsOutstandingWork(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
-	m.AddPhase(&changingPhase{title: "would sync", shouldRun: true})
+	m.SetPhases(Phases{&changingPhase{title: "would sync", shouldRun: true}})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Empty(t, Titles(m.Result.Ran))
@@ -543,7 +543,7 @@ func TestDryRunResultReportsOutstandingWork(t *testing.T) {
 // found nothing to do is skipped before the dry-run gate, so it is never reported as pending.
 func TestDryRunReportsNoOutstandingWorkWhenThereIsNone(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
-	m.AddPhase(&changingPhase{title: "nothing drifted", shouldRun: false})
+	m.SetPhases(Phases{&changingPhase{title: "nothing drifted", shouldRun: false}})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Empty(t, Titles(m.Result.Planned))
@@ -557,7 +557,7 @@ func TestResultSinkCollectsTheRun(t *testing.T) {
 	require.False(t, sink.Observed(), "nothing has run yet")
 
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
-	m.AddPhase(&changingPhase{title: "ran", shouldRun: true, changed: true})
+	m.SetPhases(Phases{&changingPhase{title: "ran", shouldRun: true, changed: true}})
 	require.NoError(t, m.Run(ctx))
 
 	require.True(t, sink.Observed())
@@ -572,7 +572,7 @@ func TestResultSinkObservesNothingBeforeThePhases(t *testing.T) {
 	ctx, sink := WithResultSink(context.Background())
 
 	m := Manager{}
-	m.AddPhase(&changingPhase{shouldRun: true, changed: true})
+	m.SetPhases(Phases{&changingPhase{shouldRun: true, changed: true}})
 	require.Error(t, m.Run(ctx))
 
 	require.False(t, sink.Observed())
@@ -685,11 +685,11 @@ func TestPhaseResultRecordsHostChanges(t *testing.T) {
 // this may simply never have been spoken for.
 func TestHostsUndeclaredNamesEveryPhaseThatStayedSilent(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
-	m.AddPhase(
+	m.SetPhases(Phases{
 		&hostChangingPhase{title: "speaks per host", shouldRun: true},
 		&changingPhase{title: "speaks fleet wide", shouldRun: true},
 		&mutatingPhase{},
-	)
+	})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Equal(t, []string{"speaks fleet wide", "mutating phase"}, m.Result.HostsUndeclared())
@@ -880,10 +880,10 @@ func TestSignalReportsHowMuchChangedIsWorth(t *testing.T) {
 // never ran, and a reader comparing durations should see that rather than a missing field.
 func TestRunRecordsPhaseDuration(t *testing.T) {
 	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
-	m.AddPhase(
+	m.SetPhases(Phases{
 		&hostChangingPhase{title: "ran", shouldRun: true, runFor: 10 * time.Millisecond},
 		&conditionalPhase{},
-	)
+	})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Len(t, m.Result.Ran, 1)
