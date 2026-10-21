@@ -182,7 +182,7 @@ require (
 	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.1 // indirect
-	github.com/klauspost/pgzip v1.2.7 // indirect
+	github.com/klauspost/pgzip v1.3.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/logrusorgru/aurora/v4 v4.0.0 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
