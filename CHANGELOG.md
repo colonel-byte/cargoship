@@ -1,5 +1,74 @@
 # Changelog
 
+## [0.35.0](https://github.com/colonel-byte/cargoship/compare/v0.34.0...v0.35.0) (2026-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **phase:** trim the Manager surface nothing uses ([#892](https://github.com/colonel-byte/cargoship/issues/892))
+* **api:** drop unreferenced methods and the two SetPath cul-de-sacs ([#889](https://github.com/colonel-byte/cargoship/issues/889))
+* **pkg:** drop dead symbols across phase, coci, lint and utils ([#888](https://github.com/colonel-byte/cargoship/issues/888))
+* **phase:** remove the NoWait and Force globals nothing read ([#886](https://github.com/colonel-byte/cargoship/issues/886))
+* **cmd:** remove the --fapolicyd flag and config key nothing read ([#885](https://github.com/colonel-byte/cargoship/issues/885))
+* **release:** assemble the provider artifact with oras-go ([#645](https://github.com/colonel-byte/cargoship/issues/645))
+* **tofu:** converge a cluster through the cargoship_cluster resource ([#618](https://github.com/colonel-byte/cargoship/issues/618))
+
+### Features
+
+* **docs:** generate a provider reference from the tofu schemas ([#644](https://github.com/colonel-byte/cargoship/issues/644)) ([a7da3dd](https://github.com/colonel-byte/cargoship/commit/a7da3dd3847bcd318bf4df34495f403aa2c32fbb))
+* **package:** import an OCI Image Layout as a native package ([#876](https://github.com/colonel-byte/cargoship/issues/876)) ([c5b99d3](https://github.com/colonel-byte/cargoship/commit/c5b99d32b4cd5c888a73bba2684bb35ddeb96ce1))
+* **phase:** write fapolicyd allow rules for a package's executables ([#875](https://github.com/colonel-byte/cargoship/issues/875)) ([935faf6](https://github.com/colonel-byte/cargoship/commit/935faf645ffa0c8d07399f650d93de9bd895fbd4))
+* **tofu:** converge a cluster through the cargoship_cluster resource ([#618](https://github.com/colonel-byte/cargoship/issues/618)) ([60f7ae1](https://github.com/colonel-byte/cargoship/commit/60f7ae1a30499bfc412ba23b9f61becf615a964b))
+* **tofu:** define profiles and per-host overrides in the configuration ([#622](https://github.com/colonel-byte/cargoship/issues/622)) ([cd058b4](https://github.com/colonel-byte/cargoship/commit/cd058b48b9f7ee35f4982d24751a794c50c929d3))
+* **tofu:** override package values and route phase logs to tofu ([#643](https://github.com/colonel-byte/cargoship/issues/643)) ([e922ae2](https://github.com/colonel-byte/cargoship/commit/e922ae248310b362b70b349e82e572eb25b01b24))
+* **tofu:** remove a single host from a cluster ([#646](https://github.com/colonel-byte/cargoship/issues/646)) ([364af84](https://github.com/colonel-byte/cargoship/commit/364af842b921920375fc7b5b8a1f5fa2d4fcc230))
+
+
+### Bug Fixes
+
+* **cmd:** remove the --fapolicyd flag and config key nothing read ([#885](https://github.com/colonel-byte/cargoship/issues/885)) ([dc0ea26](https://github.com/colonel-byte/cargoship/commit/dc0ea261f8780c933a9b4abc165caacf22418fdb))
+* **config:** drop the config sections nothing reads ([#879](https://github.com/colonel-byte/cargoship/issues/879)) ([54143c4](https://github.com/colonel-byte/cargoship/commit/54143c4557e5eb570db67cab28dcca48e0856ca2))
+* **distro:** release the etcd membership before deleting an upstream controller ([#864](https://github.com/colonel-byte/cargoship/issues/864)) ([82f6ef6](https://github.com/colonel-byte/cargoship/commit/82f6ef6cf47438a477dc0cebab32d7610e6fbf28))
+* **phase:** drain a node by the name the cluster calls it ([#868](https://github.com/colonel-byte/cargoship/issues/868)) ([8bb9c8c](https://github.com/colonel-byte/cargoship/commit/8bb9c8c1473a75a22b26d47674acd56e87f510ba))
+* **phase:** prune the upload manifest when a stale upload is removed ([#863](https://github.com/colonel-byte/cargoship/issues/863)) ([079af70](https://github.com/colonel-byte/cargoship/commit/079af70183c059a32f2b8bb861f16dd0f809f0f6))
+* **phase:** remove the NoWait and Force globals nothing read ([#886](https://github.com/colonel-byte/cargoship/issues/886)) ([d97e7e6](https://github.com/colonel-byte/cargoship/commit/d97e7e670a00be8b50b5f464c4a98d16bdc3846d))
+
+
+### Refactoring
+
+* **action:** report what a constructor cannot build, and name the read-only run ([#617](https://github.com/colonel-byte/cargoship/issues/617)) ([7cbd141](https://github.com/colonel-byte/cargoship/commit/7cbd141f790ada49f4085e8fa43fdeb8695cfe3a))
+* **api:** drop unreferenced methods and the two SetPath cul-de-sacs ([#889](https://github.com/colonel-byte/cargoship/issues/889)) ([08afc79](https://github.com/colonel-byte/cargoship/commit/08afc79f950aac6629a715dcaa7c0791ee4c50b7))
+* **cmd:** drop unreachable logging plumbing and two inert flags ([#887](https://github.com/colonel-byte/cargoship/issues/887)) ([a0139a8](https://github.com/colonel-byte/cargoship/commit/a0139a8f624042fd6542abd93c7dec647f0e3a20))
+* drop four unused helpers from cmd and pkg/utils ([#883](https://github.com/colonel-byte/cargoship/issues/883)) ([6bc7f33](https://github.com/colonel-byte/cargoship/commit/6bc7f33e0108fd9353556b27fbfc7d04fff7e13c))
+* **internal:** drop the unused split package ([#884](https://github.com/colonel-byte/cargoship/issues/884)) ([a1d7ef9](https://github.com/colonel-byte/cargoship/commit/a1d7ef92890352e33ec7793f89dee8beb17275f2))
+* **node:** drop the status helpers nothing calls ([#882](https://github.com/colonel-byte/cargoship/issues/882)) ([15170f2](https://github.com/colonel-byte/cargoship/commit/15170f29f28b1580eca73a4ec5d092e5dc60a866))
+* **phase:** share the node restart steps four phases each carried ([#890](https://github.com/colonel-byte/cargoship/issues/890)) ([5c6a535](https://github.com/colonel-byte/cargoship/commit/5c6a53549572195646cdf88bc9a010ddf17c43d2))
+* **phase:** trim the Manager surface nothing uses ([#892](https://github.com/colonel-byte/cargoship/issues/892)) ([921daa1](https://github.com/colonel-byte/cargoship/commit/921daa1a436834c41b1cb53edfb10b0ca425addd))
+* **pkg:** drop dead symbols across phase, coci, lint and utils ([#888](https://github.com/colonel-byte/cargoship/issues/888)) ([36f48af](https://github.com/colonel-byte/cargoship/commit/36f48af7b88f3c27529fe11c0f4f888d0e9d7d1f))
+* **pkg:** drop two constructors nothing calls ([#881](https://github.com/colonel-byte/cargoship/issues/881)) ([9d03ced](https://github.com/colonel-byte/cargoship/commit/9d03ced2305e6068c53651927ace2af1a47ed19a))
+* **release:** assemble the provider artifact with oras-go ([#645](https://github.com/colonel-byte/cargoship/issues/645)) ([2270546](https://github.com/colonel-byte/cargoship/commit/227054656360371bc8df38a64e80893aa4189ac3))
+
+
+### Documentation
+
+* **config:** name every setting in the sample config ([#878](https://github.com/colonel-byte/cargoship/issues/878)) ([3a1ef1e](https://github.com/colonel-byte/cargoship/commit/3a1ef1e9f836f8dffcca2d395dc7c79c1c14aef9))
+* **example:** add a terragrunt layout and guide for the provider ([#621](https://github.com/colonel-byte/cargoship/issues/621)) ([f0ff407](https://github.com/colonel-byte/cargoship/commit/f0ff407719e08aa53f4679d8b253dd3c94fe700c))
+* stop advertising cloud KMS key references on sign ([#877](https://github.com/colonel-byte/cargoship/issues/877)) ([ab5c211](https://github.com/colonel-byte/cargoship/commit/ab5c21164d80ab4bdfafa3300e947e99449f10bf))
+
+
+### CI/CD
+
+* **go:** update from 1.27.2 to 1.27.3 ([#893](https://github.com/colonel-byte/cargoship/issues/893)) ([f1698f7](https://github.com/colonel-byte/cargoship/commit/f1698f788f3b1674d96145a6b78bd2acaaace576))
+
+
+### Build
+
+* **deps:** bump github.com/gabriel-vasile/mimetype from 1.4.15 to 1.4.16 ([#874](https://github.com/colonel-byte/cargoship/issues/874)) ([122b4e2](https://github.com/colonel-byte/cargoship/commit/122b4e2d922f4b93999d3f1ccfe4bcf535743143))
+* **deps:** bump github.com/zarf-dev/zarf from 0.87.0 to 0.88.0 ([#872](https://github.com/colonel-byte/cargoship/issues/872)) ([237c3d8](https://github.com/colonel-byte/cargoship/commit/237c3d8f0d717f7a2124d4feaee33d44e66f0b42))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit from v0.17.0 to 0.17.1 ([#869](https://github.com/colonel-byte/cargoship/issues/869)) ([f7d2ea5](https://github.com/colonel-byte/cargoship/commit/f7d2ea557c785b6f36384bdf4b4681e1f51cc432))
+* **deps:** bump https://github.com/golangci/golangci-lint from v2.14.0 to 2.15.0 ([#870](https://github.com/colonel-byte/cargoship/issues/870)) ([466581a](https://github.com/colonel-byte/cargoship/commit/466581ae73277e5d35d911f59241163215ff7afe))
+* **deps:** bump oras.land/oras-go/v2 from 2.6.3 to 2.6.4 ([#871](https://github.com/colonel-byte/cargoship/issues/871)) ([dc1c159](https://github.com/colonel-byte/cargoship/commit/dc1c159ae41dcf6b0ac2a45768c327bce87c5336))
+
 ## [0.34.0](https://github.com/colonel-byte/cargoship/compare/v0.33.0...v0.34.0) (2026-10-18)
 
 
