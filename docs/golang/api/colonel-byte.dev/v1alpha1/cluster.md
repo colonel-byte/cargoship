@@ -48,13 +48,11 @@ Package cluster defines the API types for a cluster configuration.
   - [func \(h \*Host\) FileChanged\(lpath, rpath string\) bool](<#Host.FileChanged>)
   - [func \(h \*Host\) FileExist\(path string\) bool](<#Host.FileExist>)
   - [func \(h \*Host\) IsController\(\) bool](<#Host.IsController>)
-  - [func \(h \*Host\) KubeRole\(\) string](<#Host.KubeRole>)
   - [func \(h \*Host\) OSKind\(\) \(string, error\)](<#Host.OSKind>)
   - [func \(h \*Host\) ReadFile\(path string\) \(string, error\)](<#Host.ReadFile>)
   - [func \(h \*Host\) ResolveConfigurer\(\) error](<#Host.ResolveConfigurer>)
   - [func \(h \*Host\) RestartService\(ctx context.Context, name string\) error](<#Host.RestartService>)
   - [func \(h \*Host\) ServiceIsRunning\(ctx context.Context, name string\) bool](<#Host.ServiceIsRunning>)
-  - [func \(h \*Host\) ServiceName\(\) string](<#Host.ServiceName>)
   - [func \(h \*Host\) SetFS\(fs remotefs.FS\)](<#Host.SetFS>)
   - [func \(h \*Host\) SetServices\(services HostServices\)](<#Host.SetServices>)
   - [func \(h \*Host\) StartService\(ctx context.Context, name string\) error](<#Host.StartService>)
@@ -141,8 +139,6 @@ const (
     RoleSingle = "single"
     // RoleWorker marks a host as a worker node.
     RoleWorker = "worker"
-    // RoleError is a sentinel value returned when a role or service lookup fails.
-    RoleError = "error"
 )
 ```
 
@@ -351,7 +347,7 @@ func (c FirewallConfig) Validate() error
 Validate returns an error when any rule in the config is unusable.
 
 <a name="FirewallPolicyConfig"></a>
-## type [FirewallPolicyConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L208-L221>)
+## type [FirewallPolicyConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L206-L219>)
 
 FirewallPolicyConfig configures a firewalld policy that opens ports from one zone to another.
 
@@ -373,7 +369,7 @@ type FirewallPolicyConfig struct {
 ```
 
 <a name="FirewallPort"></a>
-## type [FirewallPort](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L230-L235>)
+## type [FirewallPort](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L228-L233>)
 
 FirewallPort defines a port allowed through the firewalld policy.
 
@@ -463,7 +459,7 @@ func (r FirewallRule) Validate() error
 Validate returns an error when the rule cannot be applied by any backend.
 
 <a name="FirewallZone"></a>
-## type [FirewallZone](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L224-L227>)
+## type [FirewallZone](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L222-L225>)
 
 FirewallZone is the name of either the ingress or egress zone for a policy.
 
@@ -475,7 +471,7 @@ type FirewallZone struct {
 ```
 
 <a name="Host"></a>
-## type [Host](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L65-L97>)
+## type [Host](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L63-L95>)
 
 Host is a remote connection to a node
 
@@ -513,7 +509,7 @@ type Host struct {
 ```
 
 <a name="Host.Address"></a>
-### func \(\*Host\) [Address](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L547>)
+### func \(\*Host\) [Address](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L535>)
 
 ```go
 func (h *Host) Address() string
@@ -524,7 +520,7 @@ Address returns the address rig is connected to for this host, or the empty stri
 The promoted rig.Client.Address panics on a host in that state: ClientWithConfig defers creating its embedded \*Client until Setup or Connect runs, so a host built directly \(as tests do, or as a host removed from the config and never dialed this run\) has a nil Client, and Address dereferences it unconditionally.
 
 <a name="Host.Arch"></a>
-### func \(\*Host\) [Arch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L328>)
+### func \(\*Host\) [Arch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L326>)
 
 ```go
 func (h *Host) Arch() (string, error)
@@ -533,7 +529,7 @@ func (h *Host) Arch() (string, error)
 Arch returns the host architecture, caching the result in metadata
 
 <a name="Host.ConfiguredAddress"></a>
-### func \(\*Host\) [ConfiguredAddress](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568>)
+### func \(\*Host\) [ConfiguredAddress](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L556>)
 
 ```go
 func (h *Host) ConfiguredAddress() string
@@ -544,7 +540,7 @@ ConfiguredAddress is the address the cluster configuration would recognise: what
 It is what to identify a host by in anything written for a person to read back against their own configuration \-\- a run receipt, a provider attribute, a summary table. Neither of the obvious alternatives works for that. Address reads through the embedded rig client, so it is empty on a host that was never dialed and on one already disconnected, which is exactly the host a failed run most needs to name. String falls back to rig's CompositeConfig.String, which renders a Go\-ish "ssh.Config\{127.0.0.1:2223\}" \-\- right for a log line, wrong for something compared against a config file.
 
 <a name="Host.Connect"></a>
-### func \(\*Host\) [Connect](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L293>)
+### func \(\*Host\) [Connect](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L291>)
 
 ```go
 func (h *Host) Connect(ctx context.Context) error
@@ -553,7 +549,7 @@ func (h *Host) Connect(ctx context.Context) error
 Connect establishes the connection to the host, injecting cargoship's configured logger so that rig's internal logging is routed through the same logger as the rest of the run. rig v2 has no global logger setter; the logger is injected per\-client via rig.WithLogger, which is only honored at client construction \(the first Connect call\) or via ClientWithConfig.Connect's own options \-\- see riglogger.RigLogger.
 
 <a name="Host.DeleteFile"></a>
-### func \(\*Host\) [DeleteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L350>)
+### func \(\*Host\) [DeleteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L348>)
 
 ```go
 func (h *Host) DeleteFile(path string) error
@@ -562,7 +558,7 @@ func (h *Host) DeleteFile(path string) error
 DeleteFile removes a file from the host. Always runs with privilege escalation.
 
 <a name="Host.Dir"></a>
-### func \(\*Host\) [Dir](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L314>)
+### func \(\*Host\) [Dir](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L312>)
 
 ```go
 func (h *Host) Dir(path string) (string, error)
@@ -571,7 +567,7 @@ func (h *Host) Dir(path string) (string, error)
 Dir returns the directory name for the given path using the remote filesystem.
 
 <a name="Host.EnableService"></a>
-### func \(\*Host\) [EnableService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L514>)
+### func \(\*Host\) [EnableService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L512>)
 
 ```go
 func (h *Host) EnableService(ctx context.Context, name string) error
@@ -580,7 +576,7 @@ func (h *Host) EnableService(ctx context.Context, name string) error
 EnableService enables the named service on the host.
 
 <a name="Host.Exec"></a>
-### func \(\*Host\) [Exec](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L422>)
+### func \(\*Host\) [Exec](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L420>)
 
 ```go
 func (h *Host) Exec(command string, opts ...cmd.ExecOption) error
@@ -589,7 +585,7 @@ func (h *Host) Exec(command string, opts ...cmd.ExecOption) error
 Exec runs a command on the host. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.
 
 <a name="Host.ExecOutput"></a>
-### func \(\*Host\) [ExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L431>)
+### func \(\*Host\) [ExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L429>)
 
 ```go
 func (h *Host) ExecOutput(command string, opts ...cmd.ExecOption) (string, error)
@@ -598,7 +594,7 @@ func (h *Host) ExecOutput(command string, opts ...cmd.ExecOption) (string, error
 ExecOutput runs a command on the host and returns its output. It shadows the promoted rig client method so that an unconnected host returns an error rather than panicking.
 
 <a name="Host.FS"></a>
-### func \(\*Host\) [FS](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L398>)
+### func \(\*Host\) [FS](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L396>)
 
 ```go
 func (h *Host) FS() remotefs.FS
@@ -607,7 +603,7 @@ func (h *Host) FS() remotefs.FS
 FS returns the host's filesystem. It shadows the promoted rig client method so that a host with a substituted filesystem uses that one, and an unconnected host returns a filesystem that fails rather than one that panics.
 
 <a name="Host.FileChanged"></a>
-### func \(\*Host\) [FileChanged](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L624>)
+### func \(\*Host\) [FileChanged](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L594>)
 
 ```go
 func (h *Host) FileChanged(lpath, rpath string) bool
@@ -616,7 +612,7 @@ func (h *Host) FileChanged(lpath, rpath string) bool
 FileChanged compares the local file at lpath to the remote file at rpath by sha256 checksum. It returns true if the checksums differ or if either checksum cannot be computed.
 
 <a name="Host.FileExist"></a>
-### func \(\*Host\) [FileExist](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L687>)
+### func \(\*Host\) [FileExist](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L657>)
 
 ```go
 func (h *Host) FileExist(path string) bool
@@ -625,7 +621,7 @@ func (h *Host) FileExist(path string) bool
 FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the behavior of the v0.x Configurer.FileExist implementation this replaces.
 
 <a name="Host.IsController"></a>
-### func \(\*Host\) [IsController](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L536>)
+### func \(\*Host\) [IsController](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L524>)
 
 ```go
 func (h *Host) IsController() bool
@@ -633,17 +629,8 @@ func (h *Host) IsController() bool
 
 IsController returns true for the controller, controller\+worker, and single roles.
 
-<a name="Host.KubeRole"></a>
-### func \(\*Host\) [KubeRole](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L526>)
-
-```go
-func (h *Host) KubeRole() string
-```
-
-KubeRole returns the Kubernetes role for this host. It maps controller\+worker and single to controller.
-
 <a name="Host.OSKind"></a>
-### func \(\*Host\) [OSKind](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L319>)
+### func \(\*Host\) [OSKind](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L317>)
 
 ```go
 func (h *Host) OSKind() (string, error)
@@ -652,7 +639,7 @@ func (h *Host) OSKind() (string, error)
 OSKind returns the host OS kind via the resolved configurer.
 
 <a name="Host.ReadFile"></a>
-### func \(\*Host\) [ReadFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L671>)
+### func \(\*Host\) [ReadFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L641>)
 
 ```go
 func (h *Host) ReadFile(path string) (string, error)
@@ -661,7 +648,7 @@ func (h *Host) ReadFile(path string) (string, error)
 ReadFile returns the contents of path on the host, or an error if the file does not exist. Always runs with privilege escalation.
 
 <a name="Host.ResolveConfigurer"></a>
-### func \(\*Host\) [ResolveConfigurer](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L598>)
+### func \(\*Host\) [ResolveConfigurer](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L568>)
 
 ```go
 func (h *Host) ResolveConfigurer() error
@@ -670,7 +657,7 @@ func (h *Host) ResolveConfigurer() error
 ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.
 
 <a name="Host.RestartService"></a>
-### func \(\*Host\) [RestartService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L502>)
+### func \(\*Host\) [RestartService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L500>)
 
 ```go
 func (h *Host) RestartService(ctx context.Context, name string) error
@@ -679,7 +666,7 @@ func (h *Host) RestartService(ctx context.Context, name string) error
 RestartService restarts the named service on the host.
 
 <a name="Host.ServiceIsRunning"></a>
-### func \(\*Host\) [ServiceIsRunning](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L466>)
+### func \(\*Host\) [ServiceIsRunning](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L464>)
 
 ```go
 func (h *Host) ServiceIsRunning(ctx context.Context, name string) bool
@@ -687,17 +674,8 @@ func (h *Host) ServiceIsRunning(ctx context.Context, name string) bool
 
 ServiceIsRunning returns true if the named service is running on the host.
 
-<a name="Host.ServiceName"></a>
-### func \(\*Host\) [ServiceName](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L580>)
-
-```go
-func (h *Host) ServiceName() string
-```
-
-ServiceName returns the name of the distro service that runs on this host.
-
 <a name="Host.SetFS"></a>
-### func \(\*Host\) [SetFS](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L371>)
+### func \(\*Host\) [SetFS](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L369>)
 
 ```go
 func (h *Host) SetFS(fs remotefs.FS)
@@ -706,7 +684,7 @@ func (h *Host) SetFS(fs remotefs.FS)
 SetFS substitutes the filesystem this host's file operations act through, in place of the one its rig connection provides.
 
 <a name="Host.SetServices"></a>
-### func \(\*Host\) [SetServices](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L377>)
+### func \(\*Host\) [SetServices](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L375>)
 
 ```go
 func (h *Host) SetServices(services HostServices)
@@ -715,7 +693,7 @@ func (h *Host) SetServices(services HostServices)
 SetServices substitutes the init system this host's service operations act through, in place of the one its rig connection provides.
 
 <a name="Host.StartService"></a>
-### func \(\*Host\) [StartService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L478>)
+### func \(\*Host\) [StartService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L476>)
 
 ```go
 func (h *Host) StartService(ctx context.Context, name string) error
@@ -724,7 +702,7 @@ func (h *Host) StartService(ctx context.Context, name string) error
 StartService starts the named service on the host.
 
 <a name="Host.Stat"></a>
-### func \(\*Host\) [Stat](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L681>)
+### func \(\*Host\) [Stat](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L651>)
 
 ```go
 func (h *Host) Stat(path string) (fs.FileInfo, error)
@@ -733,7 +711,7 @@ func (h *Host) Stat(path string) (fs.FileInfo, error)
 Stat returns file information for path on the host. Always runs with privilege escalation, matching the rest of this host's file operations.
 
 <a name="Host.StopService"></a>
-### func \(\*Host\) [StopService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L490>)
+### func \(\*Host\) [StopService](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L488>)
 
 ```go
 func (h *Host) StopService(ctx context.Context, name string) error
@@ -742,7 +720,7 @@ func (h *Host) StopService(ctx context.Context, name string) error
 StopService stops the named service on the host.
 
 <a name="Host.String"></a>
-### func \(\*Host\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L298>)
+### func \(\*Host\) [String](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L296>)
 
 ```go
 func (h *Host) String() string
@@ -751,7 +729,7 @@ func (h *Host) String() string
 String returns the connection string. Safe to call before Connect.
 
 <a name="Host.SudoExec"></a>
-### func \(\*Host\) [SudoExec](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L440>)
+### func \(\*Host\) [SudoExec](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L438>)
 
 ```go
 func (h *Host) SudoExec(command string, opts ...cmd.ExecOption) error
@@ -760,7 +738,7 @@ func (h *Host) SudoExec(command string, opts ...cmd.ExecOption) error
 SudoExec runs a command on the host with privilege escalation. Like Exec, it returns an error rather than panicking on a host that was never connected.
 
 <a name="Host.SudoExecOutput"></a>
-### func \(\*Host\) [SudoExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L449>)
+### func \(\*Host\) [SudoExecOutput](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L447>)
 
 ```go
 func (h *Host) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, error)
@@ -769,7 +747,7 @@ func (h *Host) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, e
 SudoExecOutput runs a command on the host with privilege escalation and returns its output. Like ExecOutput, it returns an error rather than panicking on a host that was never connected.
 
 <a name="Host.Touch"></a>
-### func \(\*Host\) [Touch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L345>)
+### func \(\*Host\) [Touch](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L343>)
 
 ```go
 func (h *Host) Touch(path string, modTime time.Time) error
@@ -778,7 +756,7 @@ func (h *Host) Touch(path string, modTime time.Time) error
 Touch updates file modification timestamps, creating the file if needed. Always runs with privilege escalation.
 
 <a name="Host.UnmarshalYAML"></a>
-### func \(\*Host\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L109>)
+### func \(\*Host\) [UnmarshalYAML](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L107>)
 
 ```go
 func (h *Host) UnmarshalYAML(unmarshal func(any) error) error
@@ -789,7 +767,7 @@ UnmarshalYAML decodes a host document into both Host's own fields and the embedd
 rig.ClientWithConfig implements UnmarshalYAML itself, and since it is embedded anonymously that method is promoted onto \*Host. Left alone, goccy/go\-yaml would treat \*Host as an InterfaceUnmarshaler and call the promoted method for the whole host document \-\- which decodes only ClientWithConfig's own fields and silently leaves every field Host declares \(Hostname, Role, Profile, ...\) zeroed. Decoding into a shadow type with no embedded ClientWithConfig avoids triggering that promoted method, and a second explicit decode through ClientWithConfig's own UnmarshalYAML fills in the connection config the same way it always did.
 
 <a name="Host.WriteFile"></a>
-### func \(\*Host\) [WriteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L662>)
+### func \(\*Host\) [WriteFile](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L632>)
 
 ```go
 func (h *Host) WriteFile(path string, data string, permissions string) error
@@ -798,7 +776,7 @@ func (h *Host) WriteFile(path string, data string, permissions string) error
 WriteFile writes data to path on the host. Do not use this for large files. Always runs with privilege escalation.
 
 <a name="HostConfig"></a>
-## type [HostConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L145-L154>)
+## type [HostConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L143-L152>)
 
 HostConfig defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.
 
@@ -816,7 +794,7 @@ type HostConfig struct {
 ```
 
 <a name="HostConfig.Merge"></a>
-### func \(\*HostConfig\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L158>)
+### func \(\*HostConfig\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L156>)
 
 ```go
 func (c *HostConfig) Merge(update HostConfig)
@@ -825,7 +803,7 @@ func (c *HostConfig) Merge(update HostConfig)
 Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c, and unions update's firewall rules into c's.
 
 <a name="HostEngine"></a>
-## type [HostEngine](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L176-L181>)
+## type [HostEngine](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L174-L179>)
 
 HostEngine defines configuration options for node\-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.
 
@@ -839,7 +817,7 @@ type HostEngine struct {
 ```
 
 <a name="HostEngine.Merge"></a>
-### func \(\*HostEngine\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L184>)
+### func \(\*HostEngine\) [Merge](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L182>)
 
 ```go
 func (c *HostEngine) Merge(update HostEngine)
@@ -862,7 +840,7 @@ type HostGroup struct {
 ```
 
 <a name="HostMetadata"></a>
-## type [HostMetadata](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L238-L271>)
+## type [HostMetadata](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L236-L269>)
 
 HostMetadata holds values cargoship discovers about a host at runtime.
 
@@ -904,7 +882,7 @@ type HostMetadata struct {
 ```
 
 <a name="HostPort"></a>
-## type [HostPort](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L200-L205>)
+## type [HostPort](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L198-L203>)
 
 HostPort is a port cargoship opens on the public side of the firewall.
 
@@ -918,7 +896,7 @@ type HostPort struct {
 ```
 
 <a name="HostServices"></a>
-## type [HostServices](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L361-L367>)
+## type [HostServices](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/host.go#L359-L365>)
 
 HostServices is the init system surface a host exposes. A real host satisfies it through its rig connection; SetServices substitutes another implementation, which is how the distro modules and phases are exercised without a machine to run against.
 

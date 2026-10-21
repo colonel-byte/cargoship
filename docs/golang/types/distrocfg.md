@@ -26,7 +26,6 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(r \*Common\) GetWorkerService\(\) string](<#Common.GetWorkerService>)
   - [func \(r \*Common\) JoinTokenPath\(\) string](<#Common.JoinTokenPath>)
   - [func \(r \*Common\) PackageStagingDir\(\) string](<#Common.PackageStagingDir>)
-  - [func \(r \*Common\) SetPath\(key string, value string\) error](<#Common.SetPath>)
   - [func \(r \*Common\) SupervisorPort\(\) int](<#Common.SupervisorPort>)
   - [func \(r \*Common\) SupervisorURL\(name string\) string](<#Common.SupervisorURL>)
 - [type DesiredFile](<#DesiredFile>)
@@ -82,27 +81,6 @@ Package distrocfg defines the standard interface that all distro config settings
 
 ## Constants
 
-<a name="Binary"></a>
-
-```go
-const (
-    // Binary id string
-    Binary = "Binary"
-    // BinaryDir id string
-    BinaryDir = "BinDir"
-    // Config id string
-    Config = "Config"
-    // Token id string
-    Token = "Token"
-    // Data id string
-    Data = "DataDir"
-    // WorkerService id string
-    WorkerService = "Worker"
-    // ControllerService id string
-    ControllerService = "Control"
-)
-```
-
 <a name="DistroK3S"></a>
 
 ```go
@@ -150,8 +128,6 @@ const StateDir = "/etc/cargoship"
 var (
     // ErrVersionNotDetected if a version is not detected
     ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
-    // ErrPathKey if a path key is not used
-    ErrPathKey = errors.New("key for set path does not exist")
     // ErrNotImplemented is returned by a distro module for capabilities its engine does not
     // support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
     ErrNotImplemented = errors.New("not implemented for this distro")
@@ -168,7 +144,7 @@ var ErrNoAdminCredentials = errors.New("admin kubeconfig has no admin credential
 ```
 
 <a name="NodeLabelsMapToList"></a>
-## func [NodeLabelsMapToList](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L92>)
+## func [NodeLabelsMapToList](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L90>)
 
 ```go
 func NodeLabelsMapToList(m map[string]string) []string
@@ -215,7 +191,7 @@ type AdminCredentials struct {
 ```
 
 <a name="Bootstrapper"></a>
-## type [Bootstrapper](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L133-L139>)
+## type [Bootstrapper](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L114-L120>)
 
 Bootstrapper is implemented by a distro whose cluster formation is a one\-shot command rather than a service to start \-\- kubeadm init/join, unlike rke2/k3s's single config.yaml \+ systemd service. InitializeControllers/InitializeWorkers call Bootstrap instead of starting the service, and ask IsBootstrapped instead of checking service state, when a distro implements this, the same optional\-interface pattern ImageImporter uses.
 
@@ -230,7 +206,7 @@ type Bootstrapper interface {
 ```
 
 <a name="Common"></a>
-## type [Common](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L101-L126>)
+## type [Common](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L99-L124>)
 
 Common for all the distro's
 
@@ -264,7 +240,7 @@ type Common struct {
 ```
 
 <a name="Common.BinaryName"></a>
-### func \(\*Common\) [BinaryName](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L144>)
+### func \(\*Common\) [BinaryName](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L142>)
 
 ```go
 func (r *Common) BinaryName() string
@@ -273,7 +249,7 @@ func (r *Common) BinaryName() string
 BinaryName returns the engine binary name
 
 <a name="Common.BinaryPath"></a>
-### func \(\*Common\) [BinaryPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139>)
+### func \(\*Common\) [BinaryPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L137>)
 
 ```go
 func (r *Common) BinaryPath() string
@@ -282,7 +258,7 @@ func (r *Common) BinaryPath() string
 BinaryPath returns the full path to the engine binary
 
 <a name="Common.ConfigPath"></a>
-### func \(\*Common\) [ConfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L152>)
+### func \(\*Common\) [ConfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L150>)
 
 ```go
 func (r *Common) ConfigPath() string
@@ -291,7 +267,7 @@ func (r *Common) ConfigPath() string
 ConfigPath returns the full path of the engine's own config file \-\- rke2 and k3s's config.yaml, upstream's kubeadm\-config.yaml. A caller that wants the directory holding it takes filepath.Dir of this; several of the files cargoship writes beside it are found that way, and so is the tree an uninstall removes.
 
 <a name="Common.DataDirPath"></a>
-### func \(\*Common\) [DataDirPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L162>)
+### func \(\*Common\) [DataDirPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L160>)
 
 ```go
 func (r *Common) DataDirPath() string
@@ -300,7 +276,7 @@ func (r *Common) DataDirPath() string
 DataDirPath returns the full path for the data directory used by the engine
 
 <a name="Common.GetControllerService"></a>
-### func \(\*Common\) [GetControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L182>)
+### func \(\*Common\) [GetControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L180>)
 
 ```go
 func (r *Common) GetControllerService() string
@@ -309,7 +285,7 @@ func (r *Common) GetControllerService() string
 GetControllerService returns the name of the controller service
 
 <a name="Common.GetWorkerService"></a>
-### func \(\*Common\) [GetWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L177>)
+### func \(\*Common\) [GetWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L175>)
 
 ```go
 func (r *Common) GetWorkerService() string
@@ -318,7 +294,7 @@ func (r *Common) GetWorkerService() string
 GetWorkerService returns the name of the worker service
 
 <a name="Common.JoinTokenPath"></a>
-### func \(\*Common\) [JoinTokenPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L157>)
+### func \(\*Common\) [JoinTokenPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L155>)
 
 ```go
 func (r *Common) JoinTokenPath() string
@@ -327,7 +303,7 @@ func (r *Common) JoinTokenPath() string
 JoinTokenPath returns the path of the token to join the cluster
 
 <a name="Common.PackageStagingDir"></a>
-### func \(\*Common\) [PackageStagingDir](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L169>)
+### func \(\*Common\) [PackageStagingDir](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L167>)
 
 ```go
 func (r *Common) PackageStagingDir() string
@@ -335,17 +311,8 @@ func (r *Common) PackageStagingDir() string
 
 PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.
 
-<a name="Common.SetPath"></a>
-### func \(\*Common\) [SetPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L187>)
-
-```go
-func (r *Common) SetPath(key string, value string) error
-```
-
-SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
-
 <a name="Common.SupervisorPort"></a>
-### func \(\*Common\) [SupervisorPort](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129>)
+### func \(\*Common\) [SupervisorPort](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L127>)
 
 ```go
 func (r *Common) SupervisorPort() int
@@ -354,7 +321,7 @@ func (r *Common) SupervisorPort() int
 SupervisorPort returns the port a joining node registers with the cluster on.
 
 <a name="Common.SupervisorURL"></a>
-### func \(\*Common\) [SupervisorURL](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134>)
+### func \(\*Common\) [SupervisorURL](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L132>)
 
 ```go
 func (r *Common) SupervisorURL(name string) string
@@ -363,7 +330,7 @@ func (r *Common) SupervisorURL(name string) string
 SupervisorURL returns the URL a node joins the cluster through, for the host that serves it.
 
 <a name="DesiredFile"></a>
-## type [DesiredFile](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L45-L52>)
+## type [DesiredFile](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L28-L35>)
 
 DesiredFile is one engine config file a distro wants on a host: its content, and the mode it is written with. The mode travels with the content because it varies per file \-\- a file the engine reads as a group member is not written like one holding credentials.
 
@@ -388,7 +355,7 @@ func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]Desired
 DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.
 
 <a name="Distro"></a>
-## type [Distro](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L55-L117>)
+## type [Distro](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L38-L98>)
 
 Distro interface for any distro object
 
@@ -449,8 +416,6 @@ type Distro interface {
     KubectlCmdf(*cluster.Host, string, string, ...any) string
     // RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
     RunningVersion(*cluster.Host) (string, error)
-    // SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
-    SetPath(key string, value string) error
     // StopControllerService stops the controller service on the host
     StopControllerService(*cluster.Host) error
     // StopWorkerService stops the controller service on the host
@@ -459,7 +424,7 @@ type Distro interface {
 ```
 
 <a name="ImageImporter"></a>
-## type [ImageImporter](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L123-L126>)
+## type [ImageImporter](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L104-L107>)
 
 ImageImporter is implemented by a distro whose engine does not import uploaded image tarballs on its own, so cargoship must trigger the import itself. rke2 and k3s's own agents import automatically outside cargoship's control and do not implement this; a distro without an agent to do that \-\- plain kubeadm's upstream containerd, say \-\- does.
 
@@ -546,7 +511,7 @@ type ManagedDir struct {
 ```
 
 <a name="ManifestApplier"></a>
-## type [ManifestApplier](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L163-L167>)
+## type [ManifestApplier](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L144-L148>)
 
 ManifestApplier is implemented by a distro whose package can declare raw manifests \-\- typically a CNI \-\- that cargoship applies with kubectl once the leader is reachable, instead of rendering them into a HelmChartConfig an embedded controller reconciles \(rancher\_common.go's helmChartConfigs\). Same optional\-interface pattern as ImageImporter/Bootstrapper.
 
@@ -559,7 +524,7 @@ type ManifestApplier interface {
 ```
 
 <a name="PreStartUpgrader"></a>
-## type [PreStartUpgrader](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L145-L148>)
+## type [PreStartUpgrader](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L126-L129>)
 
 PreStartUpgrader is implemented by a distro whose upgrade needs a step between the new package install and the service restart \-\- kubeadm upgrade, unlike rke2/k3s where a plain restart on the new binary is enough. UpgradeHosts calls it, when implemented, right after installDistro and before startService. Same optional\-interface pattern as Bootstrapper.
 
@@ -571,7 +536,7 @@ type PreStartUpgrader interface {
 ```
 
 <a name="PreUninstallResetter"></a>
-## type [PreUninstallResetter](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L154-L157>)
+## type [PreUninstallResetter](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L135-L138>)
 
 PreUninstallResetter is implemented by a distro that must tear down its own cluster membership before its packages are removed \-\- kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. UninstallEngine calls it, when implemented, before resolving package names and removing them. Same optional\-interface pattern as PreStartUpgrader.
 

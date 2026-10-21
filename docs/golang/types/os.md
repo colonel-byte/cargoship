@@ -28,7 +28,6 @@ Package os is for running commands on a remote host
   - [func \(l \*Linux\) PreferredFirewall\(\) string](<#Linux.PreferredFirewall>)
   - [func \(l \*Linux\) PrivateAddress\(h Host, iface, publicip string\) \(string, error\)](<#Linux.PrivateAddress>)
   - [func \(l \*Linux\) PrivateInterface\(h Host\) \(string, error\)](<#Linux.PrivateInterface>)
-  - [func \(l \*Linux\) SetPath\(key, value string\)](<#Linux.SetPath>)
   - [func \(l \*Linux\) UpdateEnvironment\(h Host, env map\[string\]string\) error](<#Linux.UpdateEnvironment>)
 
 
@@ -79,7 +78,7 @@ func ResolveOSModule(release *rigos.Release) (func() any, bool)
 ResolveOSModule returns the builder function for the first registered module whose matcher accepts release, or false if none match.
 
 <a name="Configurer"></a>
-## type [Configurer](<https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L48-L84>)
+## type [Configurer](<https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L48-L82>)
 
 Configurer defines the per\-host operations required for managing a host. Most filesystem, service, and OS\-detection operations are handled directly via the rig v2 Host interface \(FS\(\), Sudo\(\), OS\(\)\) rather than through this interface \-\- Configurer only carries what is genuinely distro\-specific.
 
@@ -102,8 +101,6 @@ type Configurer interface {
     // GetDistroService returns the name of the service for the current distro.
     // common key values are, "controller" and "agent"
     GetDistroService(string) (string, error)
-    // SetPath adds a key value to the paths string map.
-    SetPath(string, string)
     // UpdateEnvironment updates the hosts's environment variables
     UpdateEnvironment(Host, map[string]string) error
     // Hostname resolves the short hostname
@@ -140,7 +137,7 @@ type Host interface {
 ```
 
 <a name="HostValidator"></a>
-## type [HostValidator](<https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L87-L89>)
+## type [HostValidator](<https://github.com/colonel-byte/cargoship/blob/main/types/os/interface.go#L85-L87>)
 
 HostValidator allows a Configurer to implement host\-specific validation logic.
 
@@ -151,7 +148,7 @@ type HostValidator interface {
 ```
 
 <a name="Linux"></a>
-## type [Linux](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L54-L57>)
+## type [Linux](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L54-L56>)
 
 Linux is a base module for various linux OS support packages
 
@@ -162,7 +159,7 @@ type Linux struct {
 ```
 
 <a name="Linux.ApplySysctl"></a>
-### func \(\*Linux\) [ApplySysctl](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L86>)
+### func \(\*Linux\) [ApplySysctl](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L85>)
 
 ```go
 func (l *Linux) ApplySysctl(h Host, _ string) error
@@ -171,7 +168,7 @@ func (l *Linux) ApplySysctl(h Host, _ string) error
 ApplySysctl loads every sysctl file the OS reads at boot, which includes the file at path. Applying them all rather than only that file keeps a setting cargoship overrides from being re\-applied at its old value by a file later in the load order, and matches what the host does on its next boot.
 
 <a name="Linux.CTLLockFilePath"></a>
-### func \(\*Linux\) [CTLLockFilePath](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L109>)
+### func \(\*Linux\) [CTLLockFilePath](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L108>)
 
 ```go
 func (l *Linux) CTLLockFilePath(h Host) string
@@ -180,7 +177,7 @@ func (l *Linux) CTLLockFilePath(h Host) string
 CTLLockFilePath returns a path to a lock file
 
 <a name="Linux.Dir"></a>
-### func \(\*Linux\) [Dir](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L70>)
+### func \(\*Linux\) [Dir](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L69>)
 
 ```go
 func (l *Linux) Dir(p string) string
@@ -189,7 +186,7 @@ func (l *Linux) Dir(p string) string
 Dir returns the directory part of a path
 
 <a name="Linux.GetDistroService"></a>
-### func \(\*Linux\) [GetDistroService](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L199>)
+### func \(\*Linux\) [GetDistroService](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L198>)
 
 ```go
 func (l *Linux) GetDistroService(key string) (string, error)
@@ -198,7 +195,7 @@ func (l *Linux) GetDistroService(key string) (string, error)
 GetDistroService returns the name of the service for the current distro. common key values are, "controller" and "agent"
 
 <a name="Linux.Hostname"></a>
-### func \(\*Linux\) [Hostname](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L91>)
+### func \(\*Linux\) [Hostname](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L90>)
 
 ```go
 func (l *Linux) Hostname(h Host) string
@@ -207,7 +204,7 @@ func (l *Linux) Hostname(h Host) string
 Hostname resolves the short hostname
 
 <a name="Linux.Kind"></a>
-### func \(\*Linux\) [Kind](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L60>)
+### func \(\*Linux\) [Kind](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L59>)
 
 ```go
 func (l *Linux) Kind() string
@@ -216,7 +213,7 @@ func (l *Linux) Kind() string
 Kind returns the general OS family identifier for Linux hosts
 
 <a name="Linux.LongHostname"></a>
-### func \(\*Linux\) [LongHostname](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L100>)
+### func \(\*Linux\) [LongHostname](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L99>)
 
 ```go
 func (l *Linux) LongHostname(h Host) string
@@ -225,7 +222,7 @@ func (l *Linux) LongHostname(h Host) string
 LongHostname resolves the FQDN \(long\) hostname
 
 <a name="Linux.OSKind"></a>
-### func \(\*Linux\) [OSKind](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L65>)
+### func \(\*Linux\) [OSKind](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L64>)
 
 ```go
 func (l *Linux) OSKind() string
@@ -234,7 +231,7 @@ func (l *Linux) OSKind() string
 OSKind returns the identifier for Linux hosts
 
 <a name="Linux.PreferredFirewall"></a>
-### func \(\*Linux\) [PreferredFirewall](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L78>)
+### func \(\*Linux\) [PreferredFirewall](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L77>)
 
 ```go
 func (l *Linux) PreferredFirewall() string
@@ -243,7 +240,7 @@ func (l *Linux) PreferredFirewall() string
 PreferredFirewall reports that the distribution ships no firewall front end of its own. An OS module for a distribution that ships one overrides this. The method is declared on each leaf OS module rather than on a shared base such as EnterpriseLinux, because those modules embed both their base and this one at the same depth, which would leave the promoted method ambiguous.
 
 <a name="Linux.PrivateAddress"></a>
-### func \(\*Linux\) [PrivateAddress](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L135>)
+### func \(\*Linux\) [PrivateAddress](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L134>)
 
 ```go
 func (l *Linux) PrivateAddress(h Host, iface, publicip string) (string, error)
@@ -252,7 +249,7 @@ func (l *Linux) PrivateAddress(h Host, iface, publicip string) (string, error)
 PrivateAddress resolves internal ip from private interface
 
 <a name="Linux.PrivateInterface"></a>
-### func \(\*Linux\) [PrivateInterface](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L120>)
+### func \(\*Linux\) [PrivateInterface](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L119>)
 
 ```go
 func (l *Linux) PrivateInterface(h Host) (string, error)
@@ -260,17 +257,8 @@ func (l *Linux) PrivateInterface(h Host) (string, error)
 
 PrivateInterface tries to find a private network interface
 
-<a name="Linux.SetPath"></a>
-### func \(\*Linux\) [SetPath](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L211>)
-
-```go
-func (l *Linux) SetPath(key, value string)
-```
-
-SetPath adds a key value to the paths string map. TODO add ref to what the paths string map does....
-
 <a name="Linux.UpdateEnvironment"></a>
-### func \(\*Linux\) [UpdateEnvironment](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L166>)
+### func \(\*Linux\) [UpdateEnvironment](<https://github.com/colonel-byte/cargoship/blob/main/types/os/linux.go#L165>)
 
 ```go
 func (l *Linux) UpdateEnvironment(h Host, env map[string]string) error

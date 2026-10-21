@@ -18,7 +18,6 @@ Package distro defines the API types for a distro package.
   - [func \(Config\) JSONSchemaExtend\(s \*jsonschema.Schema\)](<#Config.JSONSchemaExtend>)
 - [type Distro](<#Distro>)
   - [func \(distro Distro\) Arches\(\) api.Arches](<#Distro.Arches>)
-  - [func \(distro Distro\) IsSBOMAble\(\) bool](<#Distro.IsSBOMAble>)
 - [type FileSource](<#FileSource>)
 - [type ImageConfig](<#ImageConfig>)
   - [func \(c ImageConfig\) TarballSuffix\(\) \(string, error\)](<#ImageConfig.TarballSuffix>)
@@ -171,15 +170,6 @@ func (distro Distro) Arches() api.Arches
 ```
 
 Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.
-
-<a name="Distro.IsSBOMAble"></a>
-### func \(Distro\) [IsSBOMAble](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/distro/spec.go#L361>)
-
-```go
-func (distro Distro) IsSBOMAble() bool
-```
-
-IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.
 
 <a name="FileSource"></a>
 ## type [FileSource](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/distro/spec.go#L80-L95>)

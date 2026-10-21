@@ -52,7 +52,6 @@ const (
 
 // Linux is a base module for various linux OS support packages
 type Linux struct {
-	paths    map[string]string
 	services map[string]string
 }
 
@@ -204,10 +203,4 @@ func (l *Linux) GetDistroService(key string) (string, error) {
 		return val, nil
 	}
 	return "", fmt.Errorf("the service %s does not exist in the service map", key)
-}
-
-// SetPath adds a key value to the paths string map.
-// TODO add ref to what the paths string map does....
-func (l *Linux) SetPath(key, value string) {
-	l.paths[key] = value
 }

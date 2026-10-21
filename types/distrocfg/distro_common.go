@@ -78,8 +78,6 @@ func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]Desired
 var (
 	// ErrVersionNotDetected if a version is not detected
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
-	// ErrPathKey if a path key is not used
-	ErrPathKey = errors.New("key for set path does not exist")
 	// ErrNotImplemented is returned by a distro module for capabilities its engine does not
 	// support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
 	ErrNotImplemented = errors.New("not implemented for this distro")
@@ -181,25 +179,6 @@ func (r *Common) GetWorkerService() string {
 // GetControllerService returns the name of the controller service
 func (r *Common) GetControllerService() string {
 	return r.ServiceController
-}
-
-// SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
-func (r *Common) SetPath(key string, value string) error {
-	switch key {
-	case Binary:
-		r.Binary = value
-	case BinaryDir:
-		r.BinaryDir = value
-	case Config:
-		r.Config = value
-	case Token:
-		r.Token = value
-	case Data:
-		r.Data = value
-	default:
-		return ErrPathKey
-	}
-	return nil
 }
 
 // removablePaths cleans paths and drops the ones that are unset or so broad that handing

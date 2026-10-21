@@ -356,11 +356,3 @@ func (distro Distro) Arches() api.Arches {
 	}
 	return distro.Metadata.Arches()
 }
-
-// IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.
-func (distro Distro) IsSBOMAble() bool {
-	if len(distro.Spec.Config.ImagesConfig.Images) > 0 || len(distro.Spec.Config.Files) > 0 {
-		return true
-	}
-	return false
-}
