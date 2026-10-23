@@ -247,13 +247,6 @@ github.com/davecgh/go-spew/spew
 # github.com/davidmz/go-pageant v1.0.2
 ## explicit; go 1.16
 github.com/davidmz/go-pageant
-# github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
-## explicit; go 1.24.0
-github.com/defenseunicorns/pkg/helpers/v2
-# github.com/defenseunicorns/pkg/oci v1.3.2
-## explicit; go 1.24.0
-github.com/defenseunicorns/pkg/oci
-github.com/defenseunicorns/pkg/oci/cache
 # github.com/digitorus/pkcs7 v0.0.0-20250730155240-ffadbf3f398c
 ## explicit; go 1.19
 github.com/digitorus/pkcs7
@@ -1328,6 +1321,8 @@ github.com/zarf-dev/zarf/src/pkg/archive
 github.com/zarf-dev/zarf/src/pkg/helpers
 github.com/zarf-dev/zarf/src/pkg/logger
 github.com/zarf-dev/zarf/src/pkg/message
+github.com/zarf-dev/zarf/src/pkg/oci
+github.com/zarf-dev/zarf/src/pkg/oci/cache
 github.com/zarf-dev/zarf/src/pkg/ocischeme
 github.com/zarf-dev/zarf/src/pkg/pki
 github.com/zarf-dev/zarf/src/pkg/state

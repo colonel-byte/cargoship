@@ -47,10 +47,10 @@ import (
 
 	"github.com/colonel-byte/cargoship/internal/dns"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
-	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	orasCache "github.com/zarf-dev/zarf/src/pkg/oci/cache"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
