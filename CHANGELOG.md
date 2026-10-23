@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.36.0](https://github.com/colonel-byte/cargoship/compare/v0.35.0...v0.36.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* drop mdbook golang docs ([#914](https://github.com/colonel-byte/cargoship/issues/914))
+
+### Refactoring
+
+* **coci:** import zarf's src/pkg/oci instead of defenseunicorns/pkg/oci ([#897](https://github.com/colonel-byte/cargoship/issues/897)) ([cb6e117](https://github.com/colonel-byte/cargoship/commit/cb6e11791b02f6f0db6a3de1acf6ee2509e13998))
+* **provider:** export the two symbols the OpenTofu provider needs across a module boundary ([#913](https://github.com/colonel-byte/cargoship/issues/913)) ([d72b98e](https://github.com/colonel-byte/cargoship/commit/d72b98e1d47a521287142da8a50bc5d58107140f))
+
+
+### Documentation
+
+* drop mdbook golang docs ([#914](https://github.com/colonel-byte/cargoship/issues/914)) ([b525b38](https://github.com/colonel-byte/cargoship/commit/b525b3805c44489248ae24891a0fceb998204e76))
+* remove hooks comment ([#911](https://github.com/colonel-byte/cargoship/issues/911)) ([eecb084](https://github.com/colonel-byte/cargoship/commit/eecb084a4da9563c572a4804e00bf842df02cba2))
+
+
+### Build
+
+* **deps:** bump github.com/docker/cli from 29.9.1+incompatible to 29.9.2+incompatible in the docker group ([#903](https://github.com/colonel-byte/cargoship/issues/903)) ([f4fe458](https://github.com/colonel-byte/cargoship/commit/f4fe458abbdbf6d85af3d244edf73e5de1b82f81))
+* **deps:** bump github.com/go-openapi/strfmt from 0.27.3 to 0.27.4 in the openapi group ([#898](https://github.com/colonel-byte/cargoship/issues/898)) ([6cf315a](https://github.com/colonel-byte/cargoship/commit/6cf315aa0deb0007d87eae033d1bf7324c76badc))
+* **deps:** bump github.com/google/certificate-transparency-go from 1.3.3 to 1.4.0 ([#905](https://github.com/colonel-byte/cargoship/issues/905)) ([669ef4c](https://github.com/colonel-byte/cargoship/commit/669ef4c11463c92b712cf47566a51797c5fa2279))
+* **deps:** bump github.com/huandu/xstrings from 1.6.2 to 1.6.3 ([#906](https://github.com/colonel-byte/cargoship/issues/906)) ([fedcf2b](https://github.com/colonel-byte/cargoship/commit/fedcf2b7c7bd1d629aff32984ca9b5c1af5f2eb5))
+* **deps:** bump github.com/klauspost/pgzip from 1.2.7 to 1.3.0 ([#894](https://github.com/colonel-byte/cargoship/issues/894)) ([1f3f7e3](https://github.com/colonel-byte/cargoship/commit/1f3f7e393a06f9646c1c1f664933a386fe8d1959))
+* **deps:** bump github.com/minio/minlz from 1.2.2 to 1.2.3 ([#900](https://github.com/colonel-byte/cargoship/issues/900)) ([89738f9](https://github.com/colonel-byte/cargoship/commit/89738f9ed7dac6b33e9dc0c44ed5e1a9f4a47292))
+* **deps:** bump github.com/shopspring/decimal from 1.5.0 to 1.6.0 ([#895](https://github.com/colonel-byte/cargoship/issues/895)) ([99e974b](https://github.com/colonel-byte/cargoship/commit/99e974b3b54912eb28c4e77b75bbb914fa302dac))
+* **deps:** bump github.com/sigstore/timestamp-authority/v2 from 2.1.4 to 2.1.5 in the sigstore group ([#902](https://github.com/colonel-byte/cargoship/issues/902)) ([888b887](https://github.com/colonel-byte/cargoship/commit/888b8870ef22cc16fca706c6372e0f18a33da659))
+* **deps:** bump google.golang.org/api from 0.304.0 to 0.305.0 ([#899](https://github.com/colonel-byte/cargoship/issues/899)) ([e448fb5](https://github.com/colonel-byte/cargoship/commit/e448fb51416f63df97f75adbd8a9e848114bbc9e))
+* **deps:** bump j178/prek-action from 3.0.1 to 3.0.2 in the core group ([#901](https://github.com/colonel-byte/cargoship/issues/901)) ([970de60](https://github.com/colonel-byte/cargoship/commit/970de606a7724855e68edc3cae7d42407560a5cc))
+* **deps:** bump j178/prek-action from 3.0.2 to 3.1.0 in the core group ([#907](https://github.com/colonel-byte/cargoship/issues/907)) ([0a2dbf3](https://github.com/colonel-byte/cargoship/commit/0a2dbf3a889ae095b08ac0f03b98599ee4e8789d))
+
 ## [0.35.0](https://github.com/colonel-byte/cargoship/compare/v0.34.0...v0.35.0) (2026-10-21)
 
 
