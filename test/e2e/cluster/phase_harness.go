@@ -22,10 +22,10 @@ import (
 
 	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
-	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/riglogger"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"

@@ -28,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
 	rig "github.com/k0sproject/rig/v2"
 	"github.com/k0sproject/rig/v2/protocol/ssh"
@@ -170,7 +169,7 @@ type bastionModel struct {
 
 // translate builds a Cluster from a resource or data source model.
 //
-// It renders the document and reads it back through clustercfg.Parse rather than returning the
+// It renders the document and reads it back through cluster.Parse rather than returning the
 // struct it just built. That costs a marshal and a parse, and buys the thing a provider most needs:
 // the configuration an operator wrote in HCL is held to exactly the contract a hand-written
 // inventory file is held to, by the same code, so a translation mistake is reported as the field it
@@ -251,7 +250,7 @@ func translate(ctx context.Context, model clusterModel) (*cluster.Cluster, error
 	if err != nil {
 		return nil, fmt.Errorf("unable to encode the generated inventory: %w", err)
 	}
-	parsed, err := clustercfg.Parse(ctx, encoded)
+	parsed, err := cluster.Parse(ctx, encoded)
 	if err != nil {
 		return nil, fmt.Errorf("the configuration does not describe a valid cluster: %w", err)
 	}

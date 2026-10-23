@@ -1877,7 +1877,7 @@ func TestEncryptConfigRewritesFlowStyle(t *testing.T) {
 	}
 
 	// The encrypted document still loads, which is the whole of what went wrong before.
-	if _, err := Parse(t.Context(), got); err != nil {
+	if _, err := cluster.Parse(t.Context(), got); err != nil {
 		t.Fatalf("the encrypted document does not decode: %v\n%s", err, got)
 	}
 
@@ -1885,7 +1885,7 @@ func TestEncryptConfigRewritesFlowStyle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
-	dis, err := Parse(t.Context(), back)
+	dis, err := cluster.Parse(t.Context(), back)
 	if err != nil {
 		t.Fatalf("the decrypted document does not decode: %v\n%s", err, back)
 	}

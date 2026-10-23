@@ -28,7 +28,6 @@ import (
 	"time"
 
 	v1alpha1 "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -51,7 +50,7 @@ func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions)
 	if err != nil {
 		return v1alpha1.Cluster{}, err
 	}
-	cluster, err := clustercfg.Parse(ctx, b)
+	cluster, err := v1alpha1.Parse(ctx, b)
 	if err != nil {
 		return v1alpha1.Cluster{}, err
 	}

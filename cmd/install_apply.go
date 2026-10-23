@@ -26,10 +26,10 @@ import (
 
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
-	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/riglogger"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
