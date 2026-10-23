@@ -479,8 +479,8 @@ func collectResult(ran []timedPhase, planned, skipped []Phase) RunResult {
 }
 
 // In-phase hooks for phases to run logic immediately before/after Run().
-// These are strictly internal hooks for phases themselves and are separate
-// from user-configured lifecycle hooks handled by the RunHooks phase.
+// These are strictly internal hooks for phases themselves, not a user-configurable
+// lifecycle hook: running scripts around a cargoship run is the Ansible collection's job.
 type withBefore interface {
 	Before(context.Context) error
 }
