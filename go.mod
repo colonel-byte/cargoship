@@ -75,7 +75,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.4 // indirect
 	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
-	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/andybalholm/brotli v1.2.6 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -86,7 +85,6 @@ require (
 	github.com/buger/jsonparser v1.6.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cheggaaa/pb/v3 v3.2.1 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.5 // indirect
@@ -178,13 +176,11 @@ require (
 	github.com/klauspost/cpuid/v2 v2.4.1 // indirect
 	github.com/klauspost/pgzip v1.3.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
-	github.com/logrusorgru/aurora/v4 v4.0.0 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
 	github.com/masterzen/winrm v0.0.0-20260407182533-5570be7f80cf // indirect
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
-	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mholt/archives v0.1.5 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
 	github.com/minio/minlz v1.2.3 // indirect
@@ -211,9 +207,6 @@ require (
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/princjef/gomarkdoc v1.1.0 // indirect
-	github.com/princjef/mageutil v1.0.0 // indirect
-	github.com/princjef/termdiff v0.1.0 // indirect
 	github.com/prometheus/common v0.72.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
@@ -241,7 +234,6 @@ require (
 	github.com/ulikunitz/xz v0.5.17 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
@@ -288,14 +280,10 @@ require (
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
-	mvdan.cc/xurls/v2 v2.6.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-tool (
-	github.com/princjef/gomarkdoc/cmd/gomarkdoc
-	golang.org/x/vuln/cmd/govulncheck
-)
+tool golang.org/x/vuln/cmd/govulncheck

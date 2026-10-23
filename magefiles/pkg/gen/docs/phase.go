@@ -182,10 +182,6 @@ func generateSummary() error {
 			folder: "phases",
 		},
 		{
-			title: "Golang",
-			lines: golangSummary,
-		},
-		{
 			title:  "Development",
 			folder: "dev",
 			regex:  `(.+)\.md`,
