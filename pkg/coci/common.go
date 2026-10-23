@@ -27,10 +27,10 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/pkg/coci/layers"
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
 )
 

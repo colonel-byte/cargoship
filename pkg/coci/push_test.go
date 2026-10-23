@@ -23,10 +23,10 @@ import (
 
 	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/test"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	orascontent "oras.land/oras-go/v2/content"
 )
 
