@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b8d8b63a.js";
+            window.path_to_searchindex_js = "../searchindex-ebe1e22a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-14b1a677.js"></script>
+        <script src="../toc-6d06c6aa.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -266,7 +266,7 @@ mage release:tofuProvider 0.1.0           # build it and push it to the default 
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
 <ul>
 <li>
-<p><code>Document</code> - Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, renders godoc comments in <code>pkg/</code>, <code>api/</code>, and <code>types/</code> into <code>docs/golang/</code> with <code>gomarkdoc</code>, renders <code>docs/schema/</code> from the same struct reflection <code>Schema</code> feeds to <code>schema/*.json</code>, renders the Ansible collection’s module and role reference pages from the action plugins’ <code>DOCUMENTATION</code> blocks and the roles’ <code>meta/argument_specs.yml</code>, rebases <code>README.md</code> into <code>docs/index.md</code> and <code>.github/SECURITY.md</code> into <code>docs/security.md</code> for the book, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</p>
+<p><code>Document</code> - Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, renders <code>docs/schema/</code> from the same struct reflection <code>Schema</code> feeds to <code>schema/*.json</code>, renders the Ansible collection’s module and role reference pages from the action plugins’ <code>DOCUMENTATION</code> blocks and the roles’ <code>meta/argument_specs.yml</code>, rebases <code>README.md</code> into <code>docs/index.md</code> and <code>.github/SECURITY.md</code> into <code>docs/security.md</code> for the book, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</p>
 </li>
 <li>
 <p><code>Schema</code> - Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</p>
@@ -305,7 +305,7 @@ mage release:tofuProvider 0.1.0           # build it and push it to the default 
 <p><code>EngineConfig</code> - Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="thirdparty-src.html">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>pkg/engineconfig/gen/</code>, plus each version’s packaged-component vocabulary (the valid <code>disable:</code>, <code>cni:</code>, and <code>ingress-controller:</code> values) in a <code>zz_addons.go</code> alongside them.</p>
 </li>
 </ul>
-<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/index.md, docs/security.md, and docs/SUMMARY.md
+<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, docs/schema, docs/ansible, docs/index.md, docs/security.md, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
 mage generate:completion                # regenerate hack/completion/ shell completion scripts (bash, zsh, fish, powershell)
 mage generate:zarfFlags                 # re-read the zarf flag lists the Ansible module tests hold
@@ -354,7 +354,6 @@ mage generate:examples
 <tr><td style="text-align: left"><code>build/cargoship_*</code></td><td style="text-align: left">Compiled release binaries</td><td style="text-align: left"><code>Build.All</code></td></tr>
 <tr><td style="text-align: left"><code>docs/commands/*</code></td><td style="text-align: left">Auto-generated CLI documentation</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
-<tr><td style="text-align: left"><code>docs/golang/*</code></td><td style="text-align: left">Auto-generated Go package reference, from godoc comments in <code>pkg/</code>, <code>api/</code>, <code>types/</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/schema/*</code></td><td style="text-align: left">Auto-generated schema field reference, from the same struct reflection as <code>schema/*.json</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/ansible/&lt;collection&gt;/module_*.md</code></td><td style="text-align: left">Auto-generated Ansible module reference, from the action plugins</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/ansible/&lt;collection&gt;/role_*.md</code></td><td style="text-align: left">Auto-generated Ansible role reference, from each role’s <code>meta/argument_specs.yml</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
