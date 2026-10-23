@@ -19,6 +19,7 @@ Package cluster defines the API types for a cluster configuration.
 - [func ValidateRegistries\(registries \[\]Registries\) error](<#ValidateRegistries>)
 - [type AgeEncryption](<#AgeEncryption>)
 - [type Cluster](<#Cluster>)
+  - [func Parse\(\_ context.Context, b \[\]byte\) \(\_ Cluster, err error\)](<#Parse>)
 - [type Config](<#Config>)
 - [type Encryption](<#Encryption>)
 - [type Files](<#Files>)
@@ -254,6 +255,15 @@ type Cluster struct {
     RuntimeMetadata RuntimeMeta `json:"-"`
 }
 ```
+
+<a name="Parse"></a>
+### func [Parse](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/parse.go#L25>)
+
+```go
+func Parse(_ context.Context, b []byte) (_ Cluster, err error)
+```
+
+Parse parses the yaml passed as a byte slice and applies schema migrations.
 
 <a name="Config"></a>
 ## type [Config](<https://github.com/colonel-byte/cargoship/blob/main/api/colonel-byte.dev/v1alpha1/cluster/spec.go#L109-L121>)

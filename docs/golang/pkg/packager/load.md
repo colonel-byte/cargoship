@@ -17,7 +17,7 @@ Package load for loading a given package
 
 
 <a name="ClusterDefinition"></a>
-## func [ClusterDefinition](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/cluster.go#L40>)
+## func [ClusterDefinition](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/cluster.go#L39>)
 
 ```go
 func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.Cluster, error)
@@ -35,7 +35,7 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 DistroDefinition returns a ZarfDistro object
 
 <a name="ClusterOptions"></a>
-## type [ClusterOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/cluster.go#L37>)
+## type [ClusterOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/load/cluster.go#L36>)
 
 ClusterOptions optional args that will be passed in for loading a distro package
 

@@ -143,6 +143,7 @@
 - [load](golang/pkg/packager/load.md)
 - [phase](golang/pkg/phase.md)
 - [retry](golang/pkg/retry.md)
+- [riglogger](golang/pkg/riglogger.md)
 - [schema](golang/pkg/schema.md)
 - [signing](golang/pkg/signing.md)
 - [utils](golang/pkg/utils.md)
