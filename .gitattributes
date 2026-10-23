@@ -14,7 +14,6 @@ hack/completion/* linguist-generated
 # mage generate:document
 docs/commands/**/*.md linguist-generated
 docs/phases/**/*.md linguist-generated
-docs/golang/**/*.md linguist-generated
 docs/schema/**/*.md linguist-generated
 docs/ansible/**/module_*.md linguist-generated
 docs/ansible/**/role_*.md linguist-generated

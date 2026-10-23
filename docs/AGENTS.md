@@ -69,13 +69,12 @@ Set the version to the current release when adding the annotation, rather than l
 
 Every generated path below is also marked `linguist-generated` in [`.gitattributes`](../.gitattributes); see the "Keeping `.gitattributes` in sync with the generators" section of the root [`AGENTS.md`](../AGENTS.md) when a generator starts or stops writing one.
 
-Nine parts of the `docs/` tree are generated from the code and are overwritten wholesale on the next run. `docs/commands/`, `docs/phases/`, `docs/golang/`, `docs/schema/`, `docs/ansible/<collection>/module_*.md`, `docs/ansible/<collection>/role_*.md`, and `docs/tofu/` are deleted and recreated, so an edit made there does not survive; `docs/index.md` and `docs/security.md` are rewritten from files that live outside `docs/` because GitHub reads them there; and `docs/SUMMARY.md` is rewritten from the tree that run produced.
+Eight parts of the `docs/` tree are generated from the code and are overwritten wholesale on the next run. `docs/commands/`, `docs/phases/`, `docs/schema/`, `docs/ansible/<collection>/module_*.md`, `docs/ansible/<collection>/role_*.md`, and `docs/tofu/` are deleted and recreated, so an edit made there does not survive; `docs/index.md` and `docs/security.md` are rewritten from files that live outside `docs/` because GitHub reads them there; and `docs/SUMMARY.md` is rewritten from the tree that run produced.
 
 | Path                         | Generated from                                                                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `docs/commands/`             | The Cobra command tree, rendered by `doc.GenMarkdownTreeCustom`                                                                |
 | `docs/phases/`               | The cluster phase descriptors named in `phaseDocs()` in `magefiles/pkg/gen/docs/phase.go`                                      |
-| `docs/golang/`               | Godoc comments in `pkg/`, `api/`, and `types/`, rendered by `gomarkdoc`                                                        |
 | `docs/schema/`               | The struct reflection `schemaTargets()` feeds to `Generate.Schema`, rendered by `generateSchemaDocs()` in `gen-schema-docs.go` |
 | `docs/ansible/*/module_*.md` | The Ansible module action plugins parsed in `generateModuleDocs()`, once per entry in `ansibleCollections`                     |
 | `docs/ansible/*/role_*.md`   | The role `meta/argument_specs.yml` files, parsed in `generateRoleDocs()`                                                       |

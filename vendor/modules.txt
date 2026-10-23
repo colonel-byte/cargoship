@@ -119,9 +119,6 @@ github.com/ProtonMail/go-crypto/openpgp/x448
 # github.com/STARRY-S/zip v0.2.3
 ## explicit; go 1.23
 github.com/STARRY-S/zip
-# github.com/VividCortex/ewma v1.2.0
-## explicit; go 1.12
-github.com/VividCortex/ewma
 # github.com/andybalholm/brotli v1.2.6
 ## explicit; go 1.22
 github.com/andybalholm/brotli
@@ -171,10 +168,6 @@ github.com/cenkalti/backoff/v5
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cheggaaa/pb/v3 v3.2.1
-## explicit; go 1.25.0
-github.com/cheggaaa/pb/v3
-github.com/cheggaaa/pb/v3/termutil
 # github.com/clipperhouse/displaywidth v0.11.0
 ## explicit; go 1.18
 github.com/clipperhouse/displaywidth
@@ -861,9 +854,6 @@ github.com/klauspost/pgzip
 # github.com/lithammer/fuzzysearch v1.1.8
 ## explicit; go 1.15
 github.com/lithammer/fuzzysearch/fuzzy
-# github.com/logrusorgru/aurora/v4 v4.0.0
-## explicit; go 1.19
-github.com/logrusorgru/aurora/v4
 # github.com/magefile/mage v1.17.2
 ## explicit; go 1.18
 github.com/magefile/mage/internal
@@ -887,9 +877,6 @@ github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.31
 ## explicit; go 1.23
 github.com/mattn/go-runewidth
-# github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
-## explicit
-github.com/mgutz/ansi
 # github.com/mholt/archives v0.1.5
 ## explicit; go 1.24.0
 github.com/mholt/archives
@@ -1011,21 +998,6 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/princjef/gomarkdoc v1.1.0
-## explicit; go 1.18
-github.com/princjef/gomarkdoc
-github.com/princjef/gomarkdoc/cmd/gomarkdoc
-github.com/princjef/gomarkdoc/format
-github.com/princjef/gomarkdoc/format/formatcore
-github.com/princjef/gomarkdoc/lang
-github.com/princjef/gomarkdoc/logger
-# github.com/princjef/mageutil v1.0.0
-## explicit; go 1.13
-github.com/princjef/mageutil/bintool
-github.com/princjef/mageutil/shellcmd
-# github.com/princjef/termdiff v0.1.0
-## explicit; go 1.20
-github.com/princjef/termdiff
 # github.com/prometheus/common v0.72.1
 ## explicit; go 1.26.0
 # github.com/pterm/pterm v0.12.84
@@ -1283,9 +1255,6 @@ github.com/vmihailenco/msgpack/v5/msgpcode
 github.com/vmihailenco/tagparser/v2
 github.com/vmihailenco/tagparser/v2/internal
 github.com/vmihailenco/tagparser/v2/internal/parser
-# github.com/x-cray/logrus-prefixed-formatter v0.5.2
-## explicit
-github.com/x-cray/logrus-prefixed-formatter
 # github.com/x448/float16 v0.8.4
 ## explicit; go 1.11
 github.com/x448/float16
@@ -1438,7 +1407,6 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/knownhosts
-golang.org/x/crypto/ssh/terminal
 # golang.org/x/mod v0.42.0
 ## explicit; go 1.26.0
 golang.org/x/mod/semver
@@ -1800,9 +1768,6 @@ k8s.io/utils/dump
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 k8s.io/utils/ptr
-# mvdan.cc/xurls/v2 v2.6.0
-## explicit; go 1.22.0
-mvdan.cc/xurls/v2
 # oras.land/oras-go/v2 v2.6.4
 ## explicit; go 1.26.0
 oras.land/oras-go/v2
