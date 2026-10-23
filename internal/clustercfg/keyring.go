@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package clustercfg holds the age/vault key material and the encrypt, decrypt and rekey
+// operations over a cluster configuration document.
 package clustercfg
 
 import (

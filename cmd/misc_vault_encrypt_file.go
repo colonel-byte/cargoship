@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 
+	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/spf13/cobra"
@@ -158,7 +159,7 @@ func finishVaultFile(cmd *cobra.Command, file string, doc []byte, changed []stri
 	// decoder refuses. Getting the credentials out of the clear is still the right thing to do with
 	// such a file, but the operator should hear now that it will not apply, rather than at apply
 	// time with no clue which of the two commands to believe.
-	if _, err := clustercfg.Parse(cmd.Context(), doc); err != nil {
+	if _, err := clusterapi.Parse(cmd.Context(), doc); err != nil {
 		l.Warn("this file does not load as a cluster configuration, so an apply will refuse it; the credentials in it were still "+verb,
 			"file", file, "error", err)
 	}

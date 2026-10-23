@@ -12,19 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package clustercfg is used to parse an byte array and returns a ZarfCluster
-package clustercfg
+package cluster
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 )
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
-func Parse(_ context.Context, b []byte) (_ cluster.Cluster, err error) {
+func Parse(_ context.Context, b []byte) (_ Cluster, err error) {
 	// A bare "!" tag with no following value (e.g. "registries: ! ") makes go-yaml's decoder call
 	// ArrayRange on a TagNode whose Value isn't an array, which returns a nil *ArrayNodeIter that
 	// the decoder then dereferences -- a panic rather than a decode error. Recovering keeps a
@@ -35,9 +33,9 @@ func Parse(_ context.Context, b []byte) (_ cluster.Cluster, err error) {
 		}
 	}()
 
-	var dis cluster.Cluster
+	var dis Cluster
 	if err := goyaml.Unmarshal(b, &dis); err != nil {
-		return cluster.Cluster{}, err
+		return Cluster{}, err
 	}
 	return dis, nil
 }

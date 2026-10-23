@@ -18,10 +18,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 )
 
-// FuzzClustercfgParseNoPanic asserts that clustercfg.Parse, the entry point a cluster
+// FuzzClusterParseNoPanic asserts that cluster.Parse, the entry point a cluster
 // configuration file is read through before any vault operation ever runs, never panics on
 // arbitrary bytes.
 //
@@ -29,7 +29,7 @@ import (
 // inside them; this is the one that hands the decoder bytes with no assumed structure at all,
 // which is what the file actually is before an operator's edits or a vault operation have been
 // proven to leave it well-formed.
-func FuzzClustercfgParseNoPanic(f *testing.F) {
+func FuzzClusterParseNoPanic(f *testing.F) {
 	f.Add([]byte(docTemplate))
 	f.Add([]byte(""))
 	f.Add([]byte("not yaml: [unterminated"))
@@ -41,6 +41,6 @@ func FuzzClustercfgParseNoPanic(f *testing.F) {
 	f.Add([]byte("spec: &x\n  config: *x\n"))
 
 	f.Fuzz(func(_ *testing.T, doc []byte) {
-		_, _ = clustercfg.Parse(context.Background(), doc) //nolint:errcheck // no-panic fuzz test, malformed input is expected to error
+		_, _ = cluster.Parse(context.Background(), doc) //nolint:errcheck // no-panic fuzz test, malformed input is expected to error
 	})
 }
