@@ -47,7 +47,7 @@ Build and test targets run through mage, not a Makefile. `magefiles/` itself doe
 mage build:binary                           # build for this host's OS/arch
 mage test:endToEndNonCluster                # misc/package suites, no cluster needed
 mage test:endToEndCluster                   # install suite, needs Docker + bootloose
-go run ./magefiles/core generate:document   # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/tofu, docs/index.md, docs/security.md, docs/SUMMARY.md
+go run ./magefiles/core generate:document   # regenerate docs/commands, docs/phases, docs/schema, docs/ansible, docs/tofu, docs/index.md, docs/security.md, docs/SUMMARY.md
 ```
 
 See [`docs/dev/mage.md`](docs/dev/mage.md) for the full namespace reference (`Build`, `Dev`, `Test`, `Generate`) and what each target reads and writes.

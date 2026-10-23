@@ -106,58 +106,6 @@
 
 -----------
 
-# Golang
-
-- [api](golang/api.md)
-  - [v1alpha1](golang/api/colonel-byte.dev/v1alpha1.md)
-    - [cluster](golang/api/colonel-byte.dev/v1alpha1/cluster.md)
-    - [distro](golang/api/colonel-byte.dev/v1alpha1/distro.md)
-- [action](golang/pkg/action.md)
-- [coci](golang/pkg/coci.md)
-  - [layers](golang/pkg/coci/layers.md)
-- [distro](golang/pkg/distro.md)
-- [extract](golang/pkg/engineconfig/extract.md)
-- [gen](golang/pkg/engineconfig/gen.md)
-  - [v1_31](golang/pkg/engineconfig/gen/k3s/v1_31.md)
-  - [v1_35](golang/pkg/engineconfig/gen/k3s/v1_35.md)
-  - [v1_36](golang/pkg/engineconfig/gen/k3s/v1_36.md)
-  - [v1_37](golang/pkg/engineconfig/gen/k3s/v1_37.md)
-  - [v1_31](golang/pkg/engineconfig/gen/rke2/v1_31.md)
-  - [v1_35](golang/pkg/engineconfig/gen/rke2/v1_35.md)
-  - [v1_36](golang/pkg/engineconfig/gen/rke2/v1_36.md)
-  - [v1_37](golang/pkg/engineconfig/gen/rke2/v1_37.md)
-  - [v1_35](golang/pkg/engineconfig/gen/upstream/v1_35.md)
-  - [v1_36](golang/pkg/engineconfig/gen/upstream/v1_36.md)
-  - [v1_37](golang/pkg/engineconfig/gen/upstream/v1_37.md)
-- [fileoverride](golang/pkg/fileoverride.md)
-- [firewall](golang/pkg/firewall.md)
-- [helmvalues](golang/pkg/helmvalues.md)
-- [helpers](golang/pkg/helpers.md)
-- [images](golang/pkg/images.md)
-- [lint](golang/pkg/lint.md)
-- [node](golang/pkg/node.md)
-- [platform](golang/pkg/oci/platform.md)
-- [actions](golang/pkg/packager/actions.md)
-- [assemble](golang/pkg/packager/assemble.md)
-- [layout](golang/pkg/packager/layout.md)
-- [load](golang/pkg/packager/load.md)
-- [phase](golang/pkg/phase.md)
-- [retry](golang/pkg/retry.md)
-- [riglogger](golang/pkg/riglogger.md)
-- [schema](golang/pkg/schema.md)
-- [signing](golang/pkg/signing.md)
-- [utils](golang/pkg/utils.md)
-  - [build](golang/pkg/utils/build.md)
-- [types](golang/types.md)
-  - [distrocfg](golang/types/distrocfg.md)
-    - [registry](golang/types/distrocfg/registry.md)
-  - [os](golang/types/os.md)
-    - [linux](golang/types/os/linux.md)
-      - [enterpriselinux](golang/types/os/linux/enterpriselinux.md)
-
-
------------
-
 # Development
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
