@@ -25,7 +25,7 @@ RUN mkdir -p \
   && chmod 0700 /skeleton/home/nonroot /skeleton/home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /skeleton/home/nonroot /skeleton/workspace
 
-FROM registry1.dso.mil/chainguard/cgr.dev/chainguard/static@sha256:f2787f11adca5eadeeb15c5012b59e4b95d3bdbd792a8d243a7a931ea4e70e63
+FROM cgr.dev/chainguard/static:latest@sha256:9e2306b457ff71ce370043dc68c7b52bb1e6622c1c6c6714edbed57496f3116e
 
 COPY --from=skeleton /skeleton/ /
 
