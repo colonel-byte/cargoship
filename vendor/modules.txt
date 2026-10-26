@@ -14,9 +14,9 @@ atomicgo.dev/keyboard/keys
 atomicgo.dev/schedule
 # cloud.google.com/go/auth v0.24.1
 ## explicit; go 1.26.0
-# cloud.google.com/go/kms v1.35.0
+# cloud.google.com/go/kms v1.36.0
 ## explicit; go 1.26.0
-# cloud.google.com/go/longrunning v1.3.0
+# cloud.google.com/go/longrunning v1.4.0
 ## explicit; go 1.26.0
 # dario.cat/mergo v1.0.2
 ## explicit; go 1.13
