@@ -6,11 +6,6 @@ registries:
     url: registry.hub.docker.com
     username: ${{ secrets.DOCKER_HUB_USER }}
     password: ${{ secrets.DOCKER_HUB_TOKEN }}
-  registry1:
-    type: docker-registry
-    url: registry1.dso.mil
-    username: ${{ secrets.REGISTRY1_USER }}
-    password: ${{ secrets.REGISTRY1_TOKEN }}
 updates:
   - package-ecosystem: gomod
     directory: "/"
@@ -96,25 +91,21 @@ updates:
       interval: daily
     registries:
       - docker-hub
-      - registry1
   - package-ecosystem: docker
     directory: "/containers/base"
     schedule:
       interval: daily
     registries:
       - docker-hub
-      - registry1
   - package-ecosystem: docker
     directory: "/containers/deb"
     schedule:
       interval: daily
     registries:
       - docker-hub
-      - registry1
   - package-ecosystem: docker
     directory: "/containers/ubi"
     schedule:
       interval: daily
     registries:
       - docker-hub
-      - registry1

@@ -88,7 +88,7 @@ A `$BUILDPLATFORM` stage is not automatically cheaper, and speed is not why the 
 Every `FROM` pins its base to a digest, in `tag@sha256:...` form:
 
 ```dockerfile
-FROM cgr.dev/chainguard/static:latest@sha256:bf639cba19ba56329e6907ac26a7afcdde57a80b6aa66d5100da6883196e6b82
+FROM cgr.dev/chainguard/static:latest@sha256:<index digest>
 ```
 
 The tag stays in the reference for readability; the digest is what actually resolves. Keep the digest a **manifest-list (index) digest**, not a per-platform one, or the `linux/arm64` build will fail to find its platform:
