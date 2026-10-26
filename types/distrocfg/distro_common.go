@@ -65,7 +65,7 @@ func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]Desired
 		"architecture":      dis.Metadata.Architecture,
 		"aggregateChecksum": dis.Metadata.AggregateChecksum,
 		"build":             dis.Build,
-		"images":            dis.Spec.Config.ImagesConfig.Images,
+		"images":            dis.Spec.Config.EnabledImages(),
 		"managedFiles":      managedList,
 	}
 	b, err := json.MarshalIndent(relData, "", "  ")

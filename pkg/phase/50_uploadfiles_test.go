@@ -32,6 +32,7 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/containerd/platforms"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/k0sproject/dig"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -546,4 +547,132 @@ func assertTarballNamesImage(t *testing.T, path, ref string) {
 		return
 	}
 	t.Error("the tarball holds no manifest.json, so nothing will import it")
+}
+
+// A chart manifest the cluster disabled keeps its images in the package -- publishing needs them
+// there -- and has none of them exported or uploaded. The disabled image is pushed to the store
+// here on purpose: if the filter were missing, the export would succeed rather than error, and
+// the only thing that catches it is counting what came out.
+func TestExportImagesForArchSkipsADisabledChartsImages(t *testing.T) {
+	ctx := context.Background()
+	const (
+		kept    = "ghcr.io/colonel-byte/pause:3.10"
+		dropped = "ghcr.io/colonel-byte/hubble-ui:0.13.6"
+	)
+
+	tempDir := t.TempDir()
+	imagesPath := filepath.Join(tempDir, config.ImagesDir)
+	store, err := oci.NewWithContext(ctx, imagesPath)
+	if err != nil {
+		t.Fatalf("failed to create the store: %v", err)
+	}
+	// One index tagged under both references: the test counts what is exported, so what
+	// the two refs resolve to does not matter, and pushing two identical manifests would
+	// collide on their shared config blob.
+	desc := pushImageIndex(ctx, t, store, []ocispec.Descriptor{
+		pushImageManifest(ctx, t, store, "amd64"),
+	})
+	for _, ref := range []string{kept, dropped} {
+		if err := store.Tag(ctx, desc, ref); err != nil {
+			t.Fatalf("failed to tag %s: %v", ref, err)
+		}
+	}
+
+	p := &UploadFiles{}
+	p.SetManager(&Manager{
+		TempDirectory: tempDir,
+		Distro: &distro.Distro{
+			Spec: distro.Spec{
+				Config: distro.Config{
+					ImagesConfig: distro.ImageConfig{
+						Images: []string{kept},
+						Path:   "/var/lib/rancher/rke2/agent/images",
+					},
+					Engine: dig.Mapping{
+						config.EngineManifest: dig.Mapping{
+							"rke2-cilium": dig.Mapping{
+								"enabled": false,
+								"images":  []any{dropped},
+								"values":  "hubble:\n  enabled: false\n",
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	p.imgFiles = map[api.Arch][]v1alpha1.File{}
+
+	lp, err := layout.FromPath(imagesPath)
+	if err != nil {
+		t.Fatalf("failed to open the image layout: %v", err)
+	}
+	if err := p.exportImagesForArch(ctx, store, lp, api.ArchAMD64); err != nil {
+		t.Fatalf("exportImagesForArch unexpected error: %v", err)
+	}
+
+	files := p.imgFiles[api.ArchAMD64]
+	if len(files) != 1 {
+		t.Fatalf("imgFiles has %d entries, want 1", len(files))
+	}
+	assertTarballNamesImage(t, files[0].LocalSource.Path, kept)
+
+	if _, err := os.Stat(filepath.Join(tempDir, config.TarBallDir, string(api.ArchAMD64), "ghcr.io_colonel-byte_hubble-ui.tar")); !os.IsNotExist(err) {
+		t.Error("a disabled chart's image was exported to a tarball")
+	}
+}
+
+// Enabling the same chart is what puts its images back, so the filter is the enablement and not
+// the presence of a chart manifest.
+func TestExportImagesForArchKeepsAnEnabledChartsImages(t *testing.T) {
+	ctx := context.Background()
+	const ref = "ghcr.io/colonel-byte/hubble-ui:0.13.6"
+
+	tempDir := t.TempDir()
+	imagesPath := filepath.Join(tempDir, config.ImagesDir)
+	store, err := oci.NewWithContext(ctx, imagesPath)
+	if err != nil {
+		t.Fatalf("failed to create the store: %v", err)
+	}
+	desc := pushImageIndex(ctx, t, store, []ocispec.Descriptor{
+		pushImageManifest(ctx, t, store, "amd64"),
+	})
+	if err := store.Tag(ctx, desc, ref); err != nil {
+		t.Fatalf("failed to tag %s: %v", ref, err)
+	}
+
+	p := &UploadFiles{}
+	p.SetManager(&Manager{
+		TempDirectory: tempDir,
+		Distro: &distro.Distro{
+			Spec: distro.Spec{
+				Config: distro.Config{
+					ImagesConfig: distro.ImageConfig{Path: "/var/lib/rancher/rke2/agent/images"},
+					Engine: dig.Mapping{
+						config.EngineManifest: dig.Mapping{
+							"rke2-cilium": dig.Mapping{
+								"images": []any{ref},
+								"values": "hubble:\n  enabled: true\n",
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	p.imgFiles = map[api.Arch][]v1alpha1.File{}
+
+	lp, err := layout.FromPath(imagesPath)
+	if err != nil {
+		t.Fatalf("failed to open the image layout: %v", err)
+	}
+	if err := p.exportImagesForArch(ctx, store, lp, api.ArchAMD64); err != nil {
+		t.Fatalf("exportImagesForArch unexpected error: %v", err)
+	}
+
+	files := p.imgFiles[api.ArchAMD64]
+	if len(files) != 1 {
+		t.Fatalf("imgFiles has %d entries, want 1", len(files))
+	}
+	assertTarballNamesImage(t, files[0].LocalSource.Path, ref)
 }

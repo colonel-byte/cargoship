@@ -241,7 +241,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 	}
 
 	componentImages := []transform.Image{}
-	for _, src := range d.Spec.Config.ImagesConfig.Images {
+	for _, src := range d.Spec.Config.AllImages() {
 		refInfo, err := transform.ParseImageRef(src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)

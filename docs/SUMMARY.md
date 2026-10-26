@@ -200,6 +200,7 @@
 - [design-config-codegen](agent/design-config-codegen.md)
 - [design-tofu-provider-install](agent/design-tofu-provider-install.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
+- [todo-chart-disable-image-gating](agent/todo-chart-disable-image-gating.md)
 - [todo-extractpath-archive-cache](agent/todo-extractpath-archive-cache.md)
 - [todo-microvm-egress-blackout](agent/todo-microvm-egress-blackout.md)
 - [todo-oci-archive-direct-load](agent/todo-oci-archive-direct-load.md)

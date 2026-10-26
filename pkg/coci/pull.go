@@ -112,8 +112,10 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		return nil, err
 	}
 
-	if len(dis.Spec.Config.ImagesConfig.Images) > 0 {
-		imageLayers, err := LayersFromImages(ctx, root, fetcher, dis.Spec.Config.ImagesConfig.Images)
+	// AllImages, not imageConfig.images: a chart manifest's images are in the package
+	// too, and LayersFromImages fails on a declared image whose blobs it cannot find.
+	if images := dis.Spec.Config.AllImages(); len(images) > 0 {
+		imageLayers, err := LayersFromImages(ctx, root, fetcher, images)
 		if err != nil {
 			return nil, err
 		}

@@ -42,9 +42,14 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-// pauseImageTag is the image the minimal-image fixture references. The bytes are built in
-// process rather than pulled, so the tag names what it stands for and not a real release.
-const pauseImageTag = "pause:3.10"
+// The images the minimal-image fixture references. The bytes are built in process rather
+// than pulled, so the tags name what they stand for and not a real release. pause is
+// declared in imageConfig.images and cilium under a chart entry in engine.manifest, which
+// is what makes the round-trip cover both ways a package can name an image.
+const (
+	pauseImageTag  = "pause:3.10"
+	ciliumImageTag = "cilium:1.20.2"
+)
 
 // The coordinates publish tags the minimal-image package under, from its metadata.
 const (
@@ -63,7 +68,8 @@ const (
 // transfer, run in process so the suite needs no external binary and no network.
 func TestCargoshipImportRoundTrip(t *testing.T) {
 	addr := test.SetupInMemoryRegistry(t)
-	pushPauseImage(t, addr)
+	pushTestImage(t, addr, pauseImageTag)
+	pushTestImage(t, addr, ciliumImageTag)
 	pkgPath := imagePackage(t, addr)
 	dst := fmt.Sprintf("oci://%s/%s", addr, "e2e-import")
 
@@ -209,14 +215,16 @@ func requireImageLayer(t *testing.T, layoutDir string) {
 	require.NotEmptyf(t, images, "no %s/ layer among %v: the fixture is not bundling an image", config.ImagesDir, titles)
 }
 
-// pushPauseImage builds a single-layer image in process and pushes it to the in-memory
+// pushTestImage builds a single-layer image in process and pushes it to the in-memory
 // registry, so a package can bundle an image without the suite pulling one over the
 // network. The content is a few bytes: what matters is that it is a real manifest, config
 // and layer, which is what cargoship walks when it assembles an images layer.
-func pushPauseImage(t *testing.T, addr string) {
+func pushTestImage(t *testing.T, addr string, tag string) {
 	t.Helper()
 
-	layer := static.NewLayer([]byte("cargoship e2e pause"), ggcrtypes.DockerLayer)
+	// The payload names the tag so two images do not share a layer digest, which would
+	// make a test that counts blobs pass for the wrong reason.
+	layer := static.NewLayer([]byte("cargoship e2e "+tag), ggcrtypes.DockerLayer)
 	img, err := mutate.AppendLayers(empty.Image, layer)
 	require.NoError(t, err)
 
@@ -227,7 +235,7 @@ func pushPauseImage(t *testing.T, addr string) {
 	img, err = mutate.ConfigFile(img, cfg)
 	require.NoError(t, err)
 
-	ref, err := ggcrname.ParseReference(fmt.Sprintf("%s/%s", addr, pauseImageTag))
+	ref, err := ggcrname.ParseReference(fmt.Sprintf("%s/%s", addr, tag))
 	require.NoError(t, err)
 	require.NoError(t, ggcrremote.Write(ref, img))
 

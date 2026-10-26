@@ -12,10 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# testdata/minimal with one image, so a package carries an images/ layer: the import and
+# testdata/minimal with two images, so a package carries an images/ layer: the import and
 # publish paths assemble image layers separately from the metadata ones, and a package with
 # no images never exercises that branch. A pause image is the smallest thing that is still
 # an image.
+#
+# The two images are declared the two different ways on purpose. pause is in the flat
+# imageConfig.images list; cilium belongs to a chart entry under engine.manifest, which is
+# only found through Config.AllImages. A package's layers are collected from that same set,
+# and a declared image whose blobs are not in the layout fails the publish - so a chart's
+# images going missing from create or from the layer walk shows up here as a failed
+# round-trip rather than on a node months later.
 #
 # __REGISTRY__ is rewritten to the address of the in-memory registry the test starts, and
 # that registry is the only host contacted - the image is built and pushed in process, so
@@ -40,3 +47,9 @@ spec:
       config:
         cluster-cidr: 10.42.0.0/16
         cluster-domain: cluster.local
+      manifest:
+        rke2-cilium:
+          images:
+            - __REGISTRY__/cilium:1.20.2
+          values: |-
+            kubeProxyReplacement: true
