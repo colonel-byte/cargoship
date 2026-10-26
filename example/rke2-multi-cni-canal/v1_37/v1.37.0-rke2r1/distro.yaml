@@ -366,6 +366,8 @@ spec:
         - docker.io/rancher/rke2-security-responder:v0.1.5
         - docker.io/rancher/hardened-snapshot-controller:v8.6.0-build20260909
         - docker.io/rancher/hardened-traefik:v3.7.13-build20260910
-        # canal cni and add-on images
+        # canal cni and add-on images. A CNI configured through a chart manifest keeps
+        # its images with that chart instead, so that disabling the chart stops them being
+        # uploaded; these are the ones no chart entry claims.
         - docker.io/rancher/hardened-calico:v3.32.2-build20260909
         - docker.io/rancher/hardened-flannel:v0.28.9-build20260909

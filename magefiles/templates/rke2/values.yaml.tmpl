@@ -18,6 +18,20 @@ addons:
   # cargoship warns when it configures a node with one this build does not package.
   disabled:
     - rke2-ingress-nginx
+{{- if eq .CloudProvider "rancher-vsphere" }}
+  vsphere:
+    # Which of the bundled vSphere charts this cluster runs. Turning one off keeps
+    # its images in the package and stops them being uploaded, and writes no
+    # HelmChartConfig for it.
+    #
+    # The two are not independent: the CSI driver reads the ProviderID the CPI sets
+    # on each node, so CSI without CPI does not work. CPI without CSI is ordinary --
+    # vSphere for node metadata and load balancers, something else for storage.
+    cpi:
+      enabled: true
+    csi:
+      enabled: true
+{{- end }}
 {{- if eq .CNI "cilium" }}
 cilium:
   encryption:

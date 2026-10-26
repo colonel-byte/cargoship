@@ -84,6 +84,27 @@
             ]
           },
           "uniqueItems": true
+        },
+        "vsphere": {
+          "type": "object",
+          "description": "Which of the bundled vSphere charts this cluster runs. A chart that is not enabled keeps its images in the package, has none of them uploaded, and gets no HelmChartConfig. The CSI driver reads the ProviderID the CPI sets, so CSI without CPI does not work; CPI without CSI is ordinary.",
+          "properties": {
+            "cpi": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            },
+            "csi": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
