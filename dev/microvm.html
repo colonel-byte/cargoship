@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ebe1e22a.js";
+            window.path_to_searchindex_js = "../searchindex-574a1664.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-6d06c6aa.js"></script>
@@ -274,7 +274,7 @@ mage dev:vmUp -control=0 -ubuntuControl=1 -ubuntuWorker=1 -distro=k3s   # Ubuntu
 </li>
 </ul>
 <h2 id="updating-a-pinned-image"><a class="header" href="#updating-a-pinned-image">Updating a pinned image</a></h2>
-<p>Both guests are pinned by dated build and digest in <code>internal/microvm/image.go</code>, not by a <code>latest</code> alias. The aliases move without warning, and a release that ships a broken build – Rocky has published a GenericCloud image with no cloud-init in it – is then something this package steps over by not moving, rather than something every developer hits at once. <code>TestEveryImageIsPinnedAndVerifiable</code> fails on a URL containing <code>latest</code>, so the pin cannot quietly become a moving one.</p>
+<p>Both guests are pinned by dated build and digest in <code>test/microvm/image.go</code>, not by a <code>latest</code> alias. The aliases move without warning, and a release that ships a broken build – Rocky has published a GenericCloud image with no cloud-init in it – is then something this package steps over by not moving, rather than something every developer hits at once. <code>TestEveryImageIsPinnedAndVerifiable</code> fails on a URL containing <code>latest</code>, so the pin cannot quietly become a moving one.</p>
 <p>Bumping one is three edits and a download. For <strong>Rocky</strong>, the dated builds and their checksums are published side by side:</p>
 <pre><code class="language-sh">curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/ | grep -o 'Rocky-10-GenericCloud-Base-[0-9.]*-[0-9.]*\.x86_64\.qcow2' | sort -u | tail -3
 curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/&lt;file&gt;.CHECKSUM
@@ -402,7 +402,7 @@ kw1    Ready    &lt;none&gt;               10.73.156.13
 <p>So a k3s walk on this fleet is worth trying and is not yet known to pass. <code>mage test:endToEndClusterVM</code> still defaults to rke2 for that reason; <code>CARGOSHIP_E2E_DISTRO=k3s</code> is how to find out, and the node’s journal is where the answer will be.</p>
 <h2 id="limits"><a class="header" href="#limits">Limits</a></h2>
 <p>The fleet runs Rocky and, when asked, Ubuntu. That covers the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and – with <code>-ubuntuWorker</code> – the Debian branch beside it, which is the pair apply routes between in most of the places it routes at all.</p>
-<p>It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer <code>selinux-policy</code>, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in <code>internal/microvm/image.go</code> plus its cloud-init packages, so neither is hard – they are simply not done. Run both suites.</p>
+<p>It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer <code>selinux-policy</code>, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in <code>test/microvm/image.go</code> plus its cloud-init packages, so neither is hard – they are simply not done. Run both suites.</p>
 
                     </main>
 

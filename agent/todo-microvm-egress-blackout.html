@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ebe1e22a.js";
+            window.path_to_searchindex_js = "../searchindex-574a1664.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-6d06c6aa.js"></script>
@@ -185,7 +185,7 @@
                         <h1 id="todo-cut-the-microvm-fleets-internet-access-once-its-nodes-are-up"><a class="header" href="#todo-cut-the-microvm-fleets-internet-access-once-its-nodes-are-up">TODO: cut the microvm fleet’s internet access once its nodes are up</a></h1>
 <p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. Cargoship’s whole premise is that a target host receives everything over SSH from a staged package and reaches nothing itself, and no backend currently proves that: a phase that quietly fetched something from the internet would pass on every one of them. The microvm fleet has working egress today, measured from <code>kc0</code> mid-run - <code>github.com</code> resolves and <code>curl https://github.com</code> returns <code>200</code>. This document is what it would take to take that away, and what not to try.</p>
 <h2 id="why-it-is-not-one-command"><a class="header" href="#why-it-is-not-one-command">Why it is not one command</a></h2>
-<p>Each node gets two NICs from <code>internal/microvm/vm.go</code>:</p>
+<p>Each node gets two NICs from <code>test/microvm/vm.go</code>:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -207,7 +207,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 </code></pre>
 <p>Inbound SSH survives on established/related, anything the guest initiates is dropped, and <code>enp0s4</code> and the CNI’s interfaces are untouched. It belongs in the microvm provisioning path after the cloud-init wait, not in the suite, so that <code>mage dev:vmUp</code> can produce an air-gapped fleet to poke at by hand as well.</p>
 <h2 id="two-things-not-to-try"><a class="header" href="#two-things-not-to-try">Two things not to try</a></h2>
-<p><strong><code>-netdev user,restrict=on</code> has the right semantics and the wrong timing.</strong> It isolates the guest while leaving <code>hostfwd</code> working, which is exactly what is wanted, but it is a launch-time flag and cloud-init installs <code>firewalld</code>, <code>fapolicyd</code> and <code>python3-dnf-plugin-versionlock</code> with <code>dnf</code> (<code>internal/microvm/image.go</code>). A node that boots restricted never provisions. Hot-swapping the netdev over QMP after bringup avoids that at the cost of a QMP socket and dropping the NIC’s connections, which is more machinery than this is worth.</p>
+<p><strong><code>-netdev user,restrict=on</code> has the right semantics and the wrong timing.</strong> It isolates the guest while leaving <code>hostfwd</code> working, which is exactly what is wanted, but it is a launch-time flag and cloud-init installs <code>firewalld</code>, <code>fapolicyd</code> and <code>python3-dnf-plugin-versionlock</code> with <code>dnf</code> (<code>test/microvm/image.go</code>). A node that boots restricted never provisions. Hot-swapping the netdev over QMP after bringup avoids that at the cost of a QMP socket and dropping the NIC’s connections, which is more machinery than this is worth.</p>
 <p><strong><code>ip route del default</code> is half a blackout.</strong> <code>/etc/resolv.conf</code> points at <code>10.0.2.3</code>, which is on-link on <code>10.0.2.0/24</code>, so name resolution keeps working after the default route is gone and only routed egress dies. A test that still resolves names is not testing an air gap.</p>
 <h2 id="what-to-expect-and-what-this-does-not-cover"><a class="header" href="#what-to-expect-and-what-this-does-not-cover">What to expect, and what this does not cover</a></h2>
 <ul>
