@@ -106,9 +106,17 @@ func uncordonClusterNode(leader *cluster.Host, d distrocfg.Distro, nodeName stri
 }
 
 // installPackages runs the install closure the package staged on h, when it staged one.
+//
+// The closure is cleared once it has run, so it runs at most once per host. That is what lets
+// InstallStagedFiles tell a host whose install nothing ran from one that is already installed:
+// the initialize and upgrade phases are each gated on having a host to act on, and a converge of
+// a cluster already at the package's version runs neither -- see InstallStagedFiles for what that
+// left behind.
 func (p *GenericPhase) installPackages(ctx context.Context, h *cluster.Host) error {
-	if h.Metadata.Install != nil {
-		return h.Metadata.Install(ctx, h)
+	install := h.Metadata.Install
+	if install == nil {
+		return nil
 	}
-	return nil
+	h.Metadata.Install = nil
+	return install(ctx, h)
 }
