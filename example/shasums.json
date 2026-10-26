@@ -41,6 +41,18 @@
     ],
     "sha256": "47133d0f38737e184a245ae4269ab64d8d45ad4875b650d02480329eeca2036e"
   },
+  "containerd.io-2.4.2-3.el9.aarch64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.2-3.el9.aarch64.rpm"
+    ],
+    "sha256": "4adaf3aed0de56b4205b8a77e8cfb6b2f6c2af1a2e7a8dc169074e340a12792c"
+  },
+  "containerd.io-2.4.2-3.el9.x86_64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.2-3.el9.x86_64.rpm"
+    ],
+    "sha256": "00cc633c758248b58ef183da36f769b89f42969d61ea175bd8db2a3936424f82"
+  },
   "containerd.io_2.3.6-1~debian.13~trixie_amd64.deb": {
     "urls": [
       "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.3.6-1~debian.13~trixie_amd64.deb"
@@ -76,6 +88,18 @@
       "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.2-2~debian.13~trixie_arm64.deb"
     ],
     "sha256": "ec62600bdae178642eb3a6bc9817ff9ccd95a5891b6c3076ffbba11f3b4d1da6"
+  },
+  "containerd.io_2.4.2-3~debian.13~trixie_amd64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.2-3~debian.13~trixie_amd64.deb"
+    ],
+    "sha256": "454998e47186869c1dae0858e9f167a68e47eba7df5794b7206cc845615aeeba"
+  },
+  "containerd.io_2.4.2-3~debian.13~trixie_arm64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.2-3~debian.13~trixie_arm64.deb"
+    ],
+    "sha256": "fca3f3a279c0d2675e4a97eae4f0b192632d52c962c8f142fc4a77d3455c9e06"
   },
   "cri-tools-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
