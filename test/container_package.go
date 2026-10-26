@@ -48,10 +48,31 @@ var unsettableSysctls = []string{ //nolint:gochecknoglobals
 	"net.netfilter.nf_conntrack_buckets",
 }
 
-// exampleDir is the directory the shipped distro definitions live under. ContainerSafeDefinition
-// mirrors each definition's path below it, so a source that reaches outside its own directory
-// still resolves in the copy.
-const exampleDir = "example"
+// defaultExampleDir is the directory the shipped distro definitions live under in this
+// repository. ContainerSafeDefinition mirrors each definition's path below it, so a source that
+// reaches outside its own directory still resolves in the copy.
+const defaultExampleDir = "example"
+
+// exampleRootEnvVar overrides that directory, for a suite that is not in this repository.
+//
+// The definitions under example/ are generated here -- `mage generate:examples`, kept current by
+// the refresh-examples workflow -- so a suite in another module points at a cargoship checkout
+// rather than carrying its own copy. A second copy of a generated artifact is refreshed in one
+// place and never in the other, and the suite that reads the stale one quietly tests an older
+// engine than the one anybody ships.
+//
+// It is the example directory itself, not the checkout: CARGOSHIP_E2E_EXAMPLE_ROOT=../cargoship/example.
+const exampleRootEnvVar = "CARGOSHIP_E2E_EXAMPLE_ROOT"
+
+// ExampleDir is the directory the shipped distro definitions live under. A suite outside this
+// module joins its definition paths onto this rather than spelling "example" itself, so that one
+// setting moves both the root and every path written against it.
+func ExampleDir() string {
+	if root := os.Getenv(exampleRootEnvVar); root != "" {
+		return root
+	}
+	return defaultExampleDir
+}
 
 // OutsideSource matches a file source that climbs out of the definition's own directory. The
 // generated manifests write one source per list entry, unquoted.
@@ -71,9 +92,9 @@ var OutsideSource = regexp.MustCompile(`(?m)^\s*-?\s*source:\s*(\.\.[^\s]*)\s*$`
 // three warnings and a package quietly missing all three files; staging failures are errors
 // now, so it costs a failed build instead. See copyOutsideSources for the other half.
 func ContainerSafeDefinition(src, dst string) (string, error) {
-	rel, err := filepath.Rel(exampleDir, src)
+	rel, err := filepath.Rel(ExampleDir(), src)
 	if err != nil || strings.HasPrefix(rel, "..") {
-		return "", fmt.Errorf("distro definition %s is not under %s/, so its relative sources cannot be preserved", src, exampleDir)
+		return "", fmt.Errorf("distro definition %s is not under %s/, so its relative sources cannot be preserved", src, ExampleDir())
 	}
 
 	definition := filepath.Join(dst, rel)
@@ -137,7 +158,7 @@ func copyOutsideSources(src, dst, definition string, content []byte) error {
 		rel, err := filepath.Rel(dst, to)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			return fmt.Errorf("source %s in %s/distro.yaml resolves to %s, outside the copy at %s: the definition was not copied as deep below it as it sits below %s/",
-				source, src, to, dst, exampleDir)
+				source, src, to, dst, ExampleDir())
 		}
 		if err := copyFile(from, to); err != nil {
 			return fmt.Errorf("failed to copy %s, which %s/distro.yaml reaches outside itself for: %w", from, src, err)
