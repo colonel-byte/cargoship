@@ -14,8 +14,6 @@ atomicgo.dev/keyboard/keys
 atomicgo.dev/schedule
 # cloud.google.com/go/auth v0.24.1
 ## explicit; go 1.26.0
-# cloud.google.com/go/iam v1.14.0
-## explicit; go 1.26.0
 # cloud.google.com/go/kms v1.35.0
 ## explicit; go 1.26.0
 # cloud.google.com/go/longrunning v1.3.0
@@ -222,8 +220,6 @@ github.com/coreos/go-oidc/v3/oidc
 # github.com/cpuguy83/go-md2man/v2 v2.0.7
 ## explicit; go 1.12
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/creack/pty v1.1.24
-## explicit; go 1.18
 # github.com/creasty/defaults v1.11.0
 ## explicit; go 1.22
 github.com/creasty/defaults
@@ -240,8 +236,8 @@ github.com/davecgh/go-spew/spew
 # github.com/davidmz/go-pageant v1.0.2
 ## explicit; go 1.16
 github.com/davidmz/go-pageant
-# github.com/digitorus/pkcs7 v0.0.0-20250730155240-ffadbf3f398c
-## explicit; go 1.19
+# github.com/digitorus/pkcs7 v0.0.0-20260821105541-05f79448fa77
+## explicit; go 1.27
 github.com/digitorus/pkcs7
 # github.com/digitorus/timestamp v0.0.0-20250524132541-c45532741eea
 ## explicit; go 1.16
@@ -606,9 +602,6 @@ github.com/hashicorp/go-plugin/internal/cmdrunner
 github.com/hashicorp/go-plugin/internal/grpcmux
 github.com/hashicorp/go-plugin/internal/plugin
 github.com/hashicorp/go-plugin/runner
-# github.com/hashicorp/go-retryablehttp v0.7.8
-## explicit; go 1.23
-github.com/hashicorp/go-retryablehttp
 # github.com/hashicorp/go-uuid v1.0.4
 ## explicit; go 1.25.13
 github.com/hashicorp/go-uuid
@@ -1032,8 +1025,8 @@ github.com/shibumi/go-pathspec
 # github.com/shopspring/decimal v1.6.0
 ## explicit; go 1.10
 github.com/shopspring/decimal
-# github.com/sigstore/cosign/v3 v3.1.3
-## explicit; go 1.26.0
+# github.com/sigstore/cosign/v3 v3.1.4
+## explicit; go 1.27
 github.com/sigstore/cosign/v3/internal/pkg/cosign
 github.com/sigstore/cosign/v3/internal/pkg/cosign/payload/size
 github.com/sigstore/cosign/v3/internal/pkg/now
@@ -1060,8 +1053,12 @@ github.com/sigstore/protobuf-specs/gen/pb-go/common/v1
 github.com/sigstore/protobuf-specs/gen/pb-go/dsse
 github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1
 github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1
-# github.com/sigstore/rekor v1.5.4
-## explicit; go 1.25.11
+# github.com/sigstore/rekor v1.5.5
+## explicit; go 1.27
+github.com/sigstore/rekor/internal/pgpv3
+github.com/sigstore/rekor/internal/pgpv3/adapted
+github.com/sigstore/rekor/internal/pgpv3/upstream/algorithm
+github.com/sigstore/rekor/internal/pgpv3/upstream/encoding
 github.com/sigstore/rekor/pkg/client
 github.com/sigstore/rekor/pkg/generated/client
 github.com/sigstore/rekor/pkg/generated/client/entries
@@ -1092,6 +1089,7 @@ github.com/sigstore/rekor/pkg/types/intoto/v0.0.2
 github.com/sigstore/rekor/pkg/types/rekord
 github.com/sigstore/rekor/pkg/types/rekord/v0.0.1
 github.com/sigstore/rekor/pkg/util
+github.com/sigstore/rekor/pkg/util/jcs
 github.com/sigstore/rekor/pkg/verify
 # github.com/sigstore/rekor-tiles/v2 v2.3.0
 ## explicit; go 1.25.8
@@ -1112,6 +1110,7 @@ github.com/sigstore/rekor-tiles/v2/pkg/verify
 ## explicit; go 1.27
 github.com/sigstore/sigstore/pkg/cryptoutils
 github.com/sigstore/sigstore/pkg/cryptoutils/goodkey
+github.com/sigstore/sigstore/pkg/httpretry
 github.com/sigstore/sigstore/pkg/oauth
 github.com/sigstore/sigstore/pkg/oauthflow
 github.com/sigstore/sigstore/pkg/signature
@@ -1131,9 +1130,10 @@ github.com/sigstore/sigstore-go/pkg/tlog
 github.com/sigstore/sigstore-go/pkg/tuf
 github.com/sigstore/sigstore-go/pkg/util
 github.com/sigstore/sigstore-go/pkg/verify
-# github.com/sigstore/timestamp-authority/v2 v2.1.5
+# github.com/sigstore/timestamp-authority/v2 v2.2.0
 ## explicit; go 1.27
 github.com/sigstore/timestamp-authority/v2/pkg/verification
+github.com/sigstore/timestamp-authority/v2/pkg/x509
 # github.com/sirupsen/logrus v1.10.2
 ## explicit; go 1.23
 github.com/sirupsen/logrus
