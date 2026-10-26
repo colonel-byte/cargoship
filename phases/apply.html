@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c1c532e1.js";
+            window.path_to_searchindex_js = "../searchindex-364ca103.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-6d06c6aa.js"></script>
@@ -328,6 +328,12 @@
 <li>Upgrade Worker
 <ul>
 <li>If the remote node is a worker and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node by the set concurrency limit</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
+<li>Install staged files
+<ul>
+<li>Moves staged engine files into place on any host the initialize and upgrade phases did not install</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
