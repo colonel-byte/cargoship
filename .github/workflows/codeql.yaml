@@ -70,9 +70,16 @@ jobs:
       # main function at runtime, so `go build` cannot compile it at all -- with
       # or without -tags mage. Those targets are dev tooling and ship in no
       # binary, so they are left unanalyzed.
+      #
+      # test/microvm is named rather than ./test/..., so that this list changes by
+      # exactly the package that moved out of internal/ and no more. The e2e
+      # harness under test/ has never been analyzed and is left that way here; it
+      # is a separate decision, not a side effect of a move. Nothing heavy happens
+      # either way -- this is `go build`, which compiles no _test.go file and runs
+      # nothing, so the suites' need for Docker and QEMU does not enter into it.
       - name: Build
         if: matrix.build-mode == 'manual'
-        run: go build -mod=vendor ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./test/... ./types/... .
+        run: go build -mod=vendor ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./test/microvm/... ./types/... .
         env:
           CGO_ENABLED: 0
           # Everything the build needs is vendored, so make any accidental
