@@ -24,8 +24,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/colonel-byte/cargoship/api"
-	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
@@ -62,75 +60,59 @@ func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *dis
 }
 
 // Run the phase
-//
-// The upload runs first, then every staged binary is moved into place. Promotion used to be
-// deferred into h.Metadata.Install, which only the initialize and upgrade phases call, and both
-// of those are gated on having a host to initialize or upgrade -- so a converge of a cluster
-// already running the package's version staged a new engine binary and promoted nothing. The host
-// was left with no file at the path its unit names and an orphaned .tmp.<nonce> beside it: a
-// cluster that keeps running, because the engine was already exec'd, and cannot be restarted.
-//
-// Staging and promoting are one step here so neither can happen without the other. The upload
-// stages rather than writing over the destination so that replacing a running engine binary is an
-// atomic rename (see stageTempPath), and that property does not depend on when the rename happens
-// -- a running process keeps the inode it was started from either way.
-func (p *BINUploadFiles) Run(ctx context.Context) error {
-	if err := p.UploadFilesCommon.Run(ctx); err != nil {
-		return err
-	}
+func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
+	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.Host) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.Host) error {
+			files, err := p.filesFor(p.filesControl, zh)
+			if err != nil {
+				return err
+			}
+			if len(files) == 0 {
+				logger.From(ctx).Warn("the package carries no engine binaries for this host architecture", "host", zh)
+			}
 
-	if err := p.parallelDo(ctx, p.control, func(ctx context.Context, zh *cluster.Host) error {
-		return p.promoteStaged(ctx, p.filesControl, zh)
-	}); err != nil {
-		logger.From(ctx).Warn("got", "error", err)
-	}
-	if err := p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.Host) error {
-		return p.promoteStaged(ctx, p.filesWorkers, zh)
-	}); err != nil {
-		logger.From(ctx).Warn("got", "error", err)
-	}
-
-	return nil
-}
-
-// promoteStaged moves each of h's staged executables from its .tmp.<nonce> name to the target the
-// package named. A file the upload did not stage has OriginalTarget equal to Target and is already
-// where it belongs.
-//
-// A failed move is warned about rather than returned, matching the rest of this phase: the next
-// run stages and promotes again, and failing the whole apply over one host would leave the hosts
-// that did promote without the configuration phases that follow.
-func (p *BINUploadFiles) promoteStaged(ctx context.Context, byArch map[api.Arch][]v1alpha1.File, h *cluster.Host) error {
-	files, err := p.filesFor(byArch, h)
+			for _, f := range files {
+				logger.From(ctx).Debug("installing binary", "target", f.Target)
+				if f.OriginalTarget != f.Target {
+					err := zh.Sudo().Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget))
+					if err != nil {
+						logger.From(ctx).Warn("failed to move", "error", err)
+					}
+				}
+			}
+			return nil
+		}
+		return nil
+	})
 	if err != nil {
-		return err
+		logger.From(ctx).Warn("got", "error", err)
 	}
-	if len(files) == 0 {
-		logger.From(ctx).Warn("the package carries no engine binaries for this host architecture", "host", h)
+	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.Host) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.Host) error {
+			files, err := p.filesFor(p.filesWorkers, zh)
+			if err != nil {
+				return err
+			}
+			if len(files) == 0 {
+				logger.From(ctx).Warn("the package carries no engine binaries for this host architecture", "host", zh)
+			}
+
+			for _, f := range files {
+				logger.From(ctx).Debug("installing binary", "target", f.Target)
+				if f.OriginalTarget != f.Target {
+					err := zh.Sudo().Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget))
+					if err != nil {
+						logger.From(ctx).Warn("failed to move", "error", err)
+					}
+				}
+			}
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
+		logger.From(ctx).Warn("got", "error", err)
 	}
 
-	for _, f := range stagedFiles(files) {
-		logger.From(ctx).Debug("installing binary", "target", f.OriginalTarget)
-		if err := h.Sudo().Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget)); err != nil {
-			logger.From(ctx).Warn("failed to move", "error", err)
-		}
-	}
-	return nil
-}
-
-// stagedFiles are the files the upload wrote under a temporary name and so still have to be moved
-// to the target the package named.
-//
-// A file written straight to its target carries OriginalTarget equal to Target, and one recorded
-// with no OriginalTarget at all carries the empty string -- neither is a move, and the second
-// would be a move onto "" if it were treated as one.
-func stagedFiles(files []v1alpha1.File) []v1alpha1.File {
-	staged := []v1alpha1.File{}
-	for _, f := range files {
-		if f.OriginalTarget == "" || f.OriginalTarget == f.Target {
-			continue
-		}
-		staged = append(staged, f)
-	}
-	return staged
+	return p.UploadFilesCommon.Run(ctx)
 }

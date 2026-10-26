@@ -172,6 +172,10 @@ func NewApply(opts ApplyOptions) (*Apply, error) {
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
+			// After the upgrade phases, so a host either of them claimed has already had its
+			// install run; this is only for a host neither acts on. See InstallStagedFiles.
+			&phase.InstallStagedFiles{},
+
 			&phase.EngineConfigSyncController{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
 					Distro:  d,
