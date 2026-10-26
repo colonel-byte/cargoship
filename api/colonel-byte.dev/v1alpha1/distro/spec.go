@@ -200,12 +200,39 @@ func (Config) JSONSchemaExtend(s *jsonschema.Schema) {
 	if !ok {
 		return
 	}
+	values := &jsonschema.Schema{
+		Description: "the Helm values cargoship writes to this chart's HelmChartConfig, as a YAML string or a mapping.",
+		OneOf: []*jsonschema.Schema{
+			{Type: "string"},
+			{Type: "object"},
+		},
+	}
+	wrapper := jsonschema.NewProperties()
+	wrapper.Set("enabled", &jsonschema.Schema{
+		Type:        "boolean",
+		Default:     true,
+		Description: "whether this chart's images are carried onto hosts. A chart that is not enabled keeps its images in the package and has none of them uploaded. This is not an install switch -- the engine's disable key is what leaves a chart out.",
+	})
+	wrapper.Set("images", &jsonschema.Schema{
+		Type:        "array",
+		Items:       &jsonschema.Schema{Type: "string"},
+		UniqueItems: true,
+		Description: "the offline images this chart needs, carried in the package alongside imageConfig.images.",
+	})
+	wrapper.Set("values", values)
 	manifest := &jsonschema.Schema{
 		Type:        "object",
-		Description: "maps a chart name to the Helm values cargoship writes to that chart's HelmChartConfig. A value is either a YAML string or a mapping.",
+		Description: "maps a chart name to that chart's entry. An entry is either a wrapper naming the chart's values, images and whether it is enabled, or -- the older form, which v1beta1 drops -- the Helm values on their own, as a YAML string or a mapping.",
 		AdditionalProperties: &jsonschema.Schema{
-			OneOf: []*jsonschema.Schema{
+			// AnyOf, not OneOf: a wrapper is also a plain object, so OneOf would match
+			// two branches and reject every entry that uses the keys below.
+			AnyOf: []*jsonschema.Schema{
 				{Type: "string"},
+				{
+					Type:       "object",
+					Properties: wrapper,
+					Required:   []string{"values"},
+				},
 				{Type: "object"},
 			},
 		},
