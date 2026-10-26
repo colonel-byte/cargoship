@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-574a1664.js";
+            window.path_to_searchindex_js = "searchindex-c1c532e1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6d06c6aa.js"></script>
@@ -6879,7 +6879,7 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <p>A <code>$BUILDPLATFORM</code> stage is not automatically cheaper, and speed is not why the split exists. On the older Alpine-based version of this file, hoisting its one <code>RUN</code> into a build-platform stage measured <em>slower</em> on a <code>--no-cache</code> <code>linux/arm64</code> build (~1.9s vs ~1.3s): busybox <code>adduser</code>/<code>mkdir</code> under QEMU cost less than an extra stage and its <code>COPY</code>s. The split is here because the runtime base cannot execute anything at all.</p>
 <h3 id="base-image-pinning"><a class="header" href="#base-image-pinning">Base Image Pinning</a></h3>
 <p>Every <code>FROM</code> pins its base to a digest, in <code>tag@sha256:...</code> form:</p>
-<pre><code class="language-dockerfile">FROM cgr.dev/chainguard/static:latest@sha256:bf639cba19ba56329e6907ac26a7afcdde57a80b6aa66d5100da6883196e6b82
+<pre><code class="language-dockerfile">FROM cgr.dev/chainguard/static:latest@sha256:&lt;index digest&gt;
 </code></pre>
 <p>The tag stays in the reference for readability; the digest is what actually resolves. Keep the digest a <strong>manifest-list (index) digest</strong>, not a per-platform one, or the <code>linux/arm64</code> build will fail to find its platform:</p>
 <pre><code class="language-sh">docker buildx imagetools inspect cgr.dev/chainguard/static:latest --format '{{ .Manifest.Digest }}'
@@ -8185,7 +8185,7 @@ go test ./cmd/cargoship/                # holds that the CLI does not reach the 
 <h1 id="releaseyaml"><a class="header" href="#releaseyaml">release.yaml</a></h1>
 <p><strong>Triggers:</strong> push of any tag.</p>
 <p>The actual release pipeline (“goreleaser” job), granted <code>contents: write</code> (create release, upload archives), <code>packages: write</code> (push images), <code>id-token: write</code> (OIDC token for cosign), and <code>attestations: write</code>.</p>
-<p>Sets up Syft (SBOM), cosign, ansible-core, Go, QEMU, and Docker Buildx, then logs into three registries (GHCR, Registry1/DSO, Docker Hub) before running GoReleaser (<code>goreleaser release --clean</code>), which builds and publishes binaries, packages, and container images.</p>
+<p>Sets up Syft (SBOM), cosign, ansible-core, Go, QEMU, and Docker Buildx, then logs into two registries (GHCR, Docker Hub) before running GoReleaser (<code>goreleaser release --clean</code>), which builds and publishes binaries, packages, and container images.</p>
 <p>Package signing keys (GPG for rpm/deb, a bare RSA key for apk) are written to <code>RUNNER_TEMP</code> - outside the checkout, so no <code>.goreleaser.yaml</code> glob can accidentally pick them up - and removed at the end regardless of outcome. A missing signing secret disables signing for that artifact type with a warning rather than failing the release.</p>
 <p>After GoReleaser runs, the job attests packages, images, and a generated AI-BOM (<code>.github/ai-bom.json</code>, stamped with the release version/commit/timestamp) via <code>actions/attest</code>, and uploads the resulting provenance bundles to the GitHub release.</p>
 <p>A second job, <strong>publish-example</strong>, runs after <code>goreleaser</code> completes (only for <code>v*</code> tags) and calls <code>publish-example.yaml</code> as a reusable workflow with <code>secrets: inherit</code>, so a fresh example package gets published against the release that was just cut. Its permissions are written to exactly match what the called workflow needs, since a caller’s grant is a ceiling that can only be narrowed downstream.</p>

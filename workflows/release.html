@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-574a1664.js";
+            window.path_to_searchindex_js = "../searchindex-c1c532e1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-6d06c6aa.js"></script>
@@ -185,7 +185,7 @@
                         <h1 id="releaseyaml"><a class="header" href="#releaseyaml">release.yaml</a></h1>
 <p><strong>Triggers:</strong> push of any tag.</p>
 <p>The actual release pipeline (“goreleaser” job), granted <code>contents: write</code> (create release, upload archives), <code>packages: write</code> (push images), <code>id-token: write</code> (OIDC token for cosign), and <code>attestations: write</code>.</p>
-<p>Sets up Syft (SBOM), cosign, ansible-core, Go, QEMU, and Docker Buildx, then logs into three registries (GHCR, Registry1/DSO, Docker Hub) before running GoReleaser (<code>goreleaser release --clean</code>), which builds and publishes binaries, packages, and container images.</p>
+<p>Sets up Syft (SBOM), cosign, ansible-core, Go, QEMU, and Docker Buildx, then logs into two registries (GHCR, Docker Hub) before running GoReleaser (<code>goreleaser release --clean</code>), which builds and publishes binaries, packages, and container images.</p>
 <p>Package signing keys (GPG for rpm/deb, a bare RSA key for apk) are written to <code>RUNNER_TEMP</code> - outside the checkout, so no <code>.goreleaser.yaml</code> glob can accidentally pick them up - and removed at the end regardless of outcome. A missing signing secret disables signing for that artifact type with a warning rather than failing the release.</p>
 <p>After GoReleaser runs, the job attests packages, images, and a generated AI-BOM (<code>.github/ai-bom.json</code>, stamped with the release version/commit/timestamp) via <code>actions/attest</code>, and uploads the resulting provenance bundles to the GitHub release.</p>
 <p>A second job, <strong>publish-example</strong>, runs after <code>goreleaser</code> completes (only for <code>v*</code> tags) and calls <code>publish-example.yaml</code> as a reusable workflow with <code>secrets: inherit</code>, so a fresh example package gets published against the release that was just cut. Its permissions are written to exactly match what the called workflow needs, since a caller’s grant is a ceiling that can only be narrowed downstream.</p>
