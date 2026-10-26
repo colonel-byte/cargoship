@@ -103,7 +103,11 @@ func Unit() error {
 		return err
 	}
 
-	const e2ePrefix = "github.com/colonel-byte/cargoship/test/"
+	// test/e2e/ rather than test/: the suites under test/e2e/ have runners of their own, but
+	// test/ also holds the shared harness - the root test package and test/microvm - whose unit
+	// tests need no fleet and belong here. Excluding all of test/ dropped them silently, which
+	// reads as a green unit job rather than as missing coverage.
+	const e2ePrefix = "github.com/colonel-byte/cargoship/test/e2e/"
 	var pkgs []string
 	for _, pkg := range strings.Fields(out) {
 		if strings.HasPrefix(pkg, e2ePrefix) {
