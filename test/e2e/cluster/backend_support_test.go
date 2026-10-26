@@ -23,8 +23,8 @@ import (
 	"time"
 
 	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/internal/microvm"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
+	"github.com/colonel-byte/cargoship/test/microvm"
 )
 
 // backendEnvVar selects what provisions the suite's hosts.
@@ -108,7 +108,7 @@ func backend() (string, error) {
 // cover nothing the first does not.
 //
 // The image field is empty because the backend has exactly one, pinned in
-// internal/microvm/image.go. Giving it a name here would imply a choice that is not offered.
+// test/microvm/image.go. Giving it a name here would imply a choice that is not offered.
 var vmOS = fleetSpec{ //nolint:gochecknoglobals
 	name: "cargoship-e2e",
 	machines: []machineSpec{

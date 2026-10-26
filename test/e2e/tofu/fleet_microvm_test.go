@@ -17,7 +17,7 @@ package tofu
 import (
 	"testing"
 
-	"github.com/colonel-byte/cargoship/internal/microvm"
+	"github.com/colonel-byte/cargoship/test/microvm"
 	"github.com/stretchr/testify/require"
 )
 

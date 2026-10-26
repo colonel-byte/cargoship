@@ -133,7 +133,7 @@ var (
 
 // controllerName and workerName are the i-th machine of each role, under whichever backend is
 // running. The two fleets do not share a naming scheme -- bootloose takes the templates this
-// suite hands it, and internal/microvm uses its own -- so the walk asks rather than formats.
+// suite hands it, and test/microvm uses its own -- so the walk asks rather than formats.
 func controllerName(i int) string {
 	if onMicroVM() {
 		return fmt.Sprintf(vmKC, i)

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/colonel-byte/cargoship/internal/microvm"
+	"github.com/colonel-byte/cargoship/test/microvm"
 )
 
 // backendEnvVar selects what provisions the suite's hosts. It is the same variable the cluster
@@ -72,7 +72,7 @@ func onMicroVM() bool {
 // name and two fleets sharing one cannot be up at the same time.
 const vmFleetName = "tofu"
 
-// vmKC and vmKW are how internal/microvm names the nodes of each role. They are spelled here
+// vmKC and vmKW are how test/microvm names the nodes of each role. They are spelled here
 // because that package does not export them, and the walk has to name the controller it reads
 // the cluster through and the worker it removes.
 const (

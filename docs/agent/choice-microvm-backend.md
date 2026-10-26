@@ -1,6 +1,6 @@
 # Why the local VM fleet runs on plain qemu, and what it does not replace
 
-`internal/microvm` brings Enterprise Linux virtual machines up and down on a developer's own machine so that the phases routing on OS family can be exercised against a real kernel. It exists because a container cannot answer the question `pkg/phase/21_prepare_selinux.go` asks: that phase gates on `getenforce` reporting `Enforcing`, no container reports it, and the phase is fatal on failure -- so the one branch able to stop an apply was the one branch never run. `pkg/phase/22_prepare_fapolicyd.go`, the firewalld backend in `pkg/firewall/firewalld.go`, the `semodule` scriptlets in `k3s-selinux` and `rke2-selinux`, and the reboot in `pkg/phase/23_prepare_kernel_modules.go` are all in the same position, and `selinux: true` is set by every shipped package under `example/` without anything ever having checked that an engine configured that way starts.
+`test/microvm` brings Enterprise Linux virtual machines up and down on a developer's own machine so that the phases routing on OS family can be exercised against a real kernel. It exists because a container cannot answer the question `pkg/phase/21_prepare_selinux.go` asks: that phase gates on `getenforce` reporting `Enforcing`, no container reports it, and the phase is fatal on failure -- so the one branch able to stop an apply was the one branch never run. `pkg/phase/22_prepare_fapolicyd.go`, the firewalld backend in `pkg/firewall/firewalld.go`, the `semodule` scriptlets in `k3s-selinux` and `rke2-selinux`, and the reboot in `pkg/phase/23_prepare_kernel_modules.go` are all in the same position, and `selinux: true` is set by every shipped package under `example/` without anything ever having checked that an engine configured that way starts.
 
 ## qemu, not Firecracker, and not libvirt
 
@@ -26,7 +26,7 @@ They exist because every other host in a generated inventory has a profile that 
 
 They are named `ki*`, a prefix of its own rather than an extension of the worker prefix the way the container fleet's `kwf*` and `kwa*` are. The three prefixes then partition the names, so nothing matching on them depends on test order or on matching longest -- which the container suite's prefixes do, since `kwa` is also `kw`.
 
-The consequence is that a mapping keyed only on `kc` and `kw` claims an infra node as neither. Nothing in `internal/microvm` is such a mapping: `Inventory` reads a node's role and profile off the node, not off its name. The container suite's `renderClusterInventory` *is* one, so wiring infra nodes into that fleet means teaching it this prefix rather than relying on the name to carry the role.
+The consequence is that a mapping keyed only on `kc` and `kw` claims an infra node as neither. Nothing in `test/microvm` is such a mapping: `Inventory` reads a node's role and profile off the node, not off its name. The container suite's `renderClusterInventory` *is* one, so wiring infra nodes into that fleet means teaching it this prefix rather than relying on the name to carry the role.
 
 The group is created last, after the plain workers, so that asking for infra nodes does not renumber the hosts ahead of them -- a fleet brought up with none is addressed exactly as it was before the group existed.
 
@@ -42,7 +42,7 @@ The fleet runs one distribution. [`choice-phase-e2e-tests`](choice-phase-e2e-tes
 
 So the VM backend is additional coverage, not a replacement. It is the only way to run the Enterprise Linux branch against something that actually has SELinux, fapolicyd and firewalld; the bootloose matrix remains the only thing that covers routing between families, and the Alpine upload-only node remains the only host belonging to neither. `CARGOSHIP_E2E_BACKEND` selects between them and defaults to bootloose.
 
-Adding a second guest image is a later change and a cheap one -- the image is one pinned URL and digest in `internal/microvm/image.go`. It was left out of the first version because one distribution with SELinux enforcing closes the gap that motivated the package, and a second would double the bring-up cost of every run before anything had been learned from the first.
+Adding a second guest image is a later change and a cheap one -- the image is one pinned URL and digest in `test/microvm/image.go`. It was left out of the first version because one distribution with SELinux enforcing closes the gap that motivated the package, and a second would double the bring-up cost of every run before anything had been learned from the first.
 
 ## Two qemu details that each cost a boot to find
 
