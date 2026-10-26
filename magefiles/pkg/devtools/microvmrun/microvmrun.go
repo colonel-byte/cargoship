@@ -13,9 +13,9 @@
 // limitations under the License.
 
 // Package microvmrun is the presentation half of the Dev VM targets: it drives
-// internal/microvm and formats what that package returns for a terminal.
+// test/microvm and formats what that package returns for a terminal.
 //
-// It is separate from internal/microvm because that package has a second consumer, the e2e
+// It is separate from test/microvm because that package has a second consumer, the e2e
 // cluster suite, which wants the fleet and not a status table. Keeping the printing here
 // leaves the mage targets as thin as magefiles/AGENTS.md asks, without pushing terminal
 // formatting into a package the test suite imports.
@@ -29,7 +29,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/colonel-byte/cargoship/internal/microvm"
+	"github.com/colonel-byte/cargoship/test/microvm"
 )
 
 // Options is what dev:vmUp was asked for, after its flag defaults have been applied.
@@ -148,7 +148,7 @@ func Image(ctx context.Context, which string) error {
 }
 
 // name is a fleet name for reporting, standing in the default where none was given. The
-// default itself belongs to internal/microvm, which is what resolves an empty name.
+// default itself belongs to test/microvm, which is what resolves an empty name.
 func name(fleet string) string {
 	if fleet == "" {
 		return "dev"

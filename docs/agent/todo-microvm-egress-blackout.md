@@ -4,7 +4,7 @@ This is a punch list, not a decision record like the `choice-*.md` files beside 
 
 ## Why it is not one command
 
-Each node gets two NICs from `internal/microvm/vm.go`:
+Each node gets two NICs from `test/microvm/vm.go`:
 
 | NIC       | QEMU netdev                                 | Address          | Carries                                              |
 | --------- | ------------------------------------------- | ---------------- | ---------------------------------------------------- |
@@ -28,7 +28,7 @@ Inbound SSH survives on established/related, anything the guest initiates is dro
 
 ## Two things not to try
 
-**`-netdev user,restrict=on` has the right semantics and the wrong timing.** It isolates the guest while leaving `hostfwd` working, which is exactly what is wanted, but it is a launch-time flag and cloud-init installs `firewalld`, `fapolicyd` and `python3-dnf-plugin-versionlock` with `dnf` (`internal/microvm/image.go`). A node that boots restricted never provisions. Hot-swapping the netdev over QMP after bringup avoids that at the cost of a QMP socket and dropping the NIC's connections, which is more machinery than this is worth.
+**`-netdev user,restrict=on` has the right semantics and the wrong timing.** It isolates the guest while leaving `hostfwd` working, which is exactly what is wanted, but it is a launch-time flag and cloud-init installs `firewalld`, `fapolicyd` and `python3-dnf-plugin-versionlock` with `dnf` (`test/microvm/image.go`). A node that boots restricted never provisions. Hot-swapping the netdev over QMP after bringup avoids that at the cost of a QMP socket and dropping the NIC's connections, which is more machinery than this is worth.
 
 **`ip route del default` is half a blackout.** `/etc/resolv.conf` points at `10.0.2.3`, which is on-link on `10.0.2.0/24`, so name resolution keeps working after the default route is gone and only routed egress dies. A test that still resolves names is not testing an air gap.
 

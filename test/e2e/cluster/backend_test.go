@@ -116,7 +116,7 @@ func TestVMFleetShape(t *testing.T) {
 	t.Parallel()
 
 	require.Equal(t, map[string]struct{}{"rocky": {}}, vmOS.osIDs(),
-		"the VM backend has one image, pinned in internal/microvm")
+		"the VM backend has one image, pinned in test/microvm")
 
 	require.Equal(t, clusterCounts{
 		inventory:   3,

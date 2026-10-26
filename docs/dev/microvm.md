@@ -115,7 +115,7 @@ Two things to know before reaching for one:
 
 ## Updating a pinned image
 
-Both guests are pinned by dated build and digest in `internal/microvm/image.go`, not by a `latest` alias. The aliases move without warning, and a release that ships a broken build -- Rocky has published a GenericCloud image with no cloud-init in it -- is then something this package steps over by not moving, rather than something every developer hits at once. `TestEveryImageIsPinnedAndVerifiable` fails on a URL containing `latest`, so the pin cannot quietly become a moving one.
+Both guests are pinned by dated build and digest in `test/microvm/image.go`, not by a `latest` alias. The aliases move without warning, and a release that ships a broken build -- Rocky has published a GenericCloud image with no cloud-init in it -- is then something this package steps over by not moving, rather than something every developer hits at once. `TestEveryImageIsPinnedAndVerifiable` fails on a URL containing `latest`, so the pin cannot quietly become a moving one.
 
 Bumping one is three edits and a download. For **Rocky**, the dated builds and their checksums are published side by side:
 
@@ -294,4 +294,4 @@ So a k3s walk on this fleet is worth trying and is not yet known to pass. `mage 
 
 The fleet runs Rocky and, when asked, Ubuntu. That covers the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and -- with `-ubuntuWorker` -- the Debian branch beside it, which is the pair apply routes between in most of the places it routes at all.
 
-It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer `selinux-policy`, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in `internal/microvm/image.go` plus its cloud-init packages, so neither is hard -- they are simply not done. Run both suites.
+It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer `selinux-policy`, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in `test/microvm/image.go` plus its cloud-init packages, so neither is hard -- they are simply not done. Run both suites.
