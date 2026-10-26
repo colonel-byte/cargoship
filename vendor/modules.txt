@@ -1768,7 +1768,7 @@ k8s.io/utils/dump
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 k8s.io/utils/ptr
-# oras.land/oras-go/v2 v2.6.4
+# oras.land/oras-go/v2 v2.7.0
 ## explicit; go 1.26.0
 oras.land/oras-go/v2
 oras.land/oras-go/v2/content
