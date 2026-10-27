@@ -29,8 +29,69 @@ addons:
     # vSphere for node metadata and load balancers, something else for storage.
     cpi:
       enabled: true
+      # tolerations:
+      #   - operator: Exists
+      # nodeSelector:
+      #   node-role.kubernetes.io/control-plane: "true"
+      #
+      # The ConfigMap the CPI reads its cloud config from, mounted at /etc/cloud. Set
+      # generate: false to supply your own instead of having the chart render one -- which is
+      # the only way to give the CPI a CA certificate, since the chart exposes no value for
+      # one. Your ConfigMap then needs two kinds of entry:
+      #
+      #   vsphere.yaml  the cloud config itself, including a caFile line
+      #   <any key>     the vCenter CA, PEM-encoded
+      #
+      # The whole ConfigMap mounts as a directory, so a key named vcenter-ca.pem lands at
+      # /etc/cloud/vcenter-ca.pem, which is what caFile points at. The key name is the file
+      # name; a DER or PKCS#12 certificate will not do, the drivers read PEM.
+      #
+      # Set insecure: false alongside it. Upstream ignores caFile entirely while the insecure
+      # flag is on, so leaving it true means the certificate is loaded and never checked. The
+      # CSI driver takes a CA the same way -- see auth.secret.generate and csiName.
+      # cloudConfig:
+      #   generate: false
+      #   name: vsphere-cloud-config
     csi:
       enabled: true
+      storageClass:
+        isDefault: true
+      # node:
+      #   tolerations:
+      #     - operator: Exists
+      #   nodeSelector:
+      #     node-role.kubernetes.io/worker: "true"
+      # controller:
+      #   tolerations:
+      #     - operator: Exists
+      #   nodeSelector:
+      #     node-role.kubernetes.io/control-plane: "true"
+      #   affinity:
+      #     podAntiAffinity:
+      #       requiredDuringSchedulingIgnoredDuringExecution:
+      #         - labelSelector:
+      #             matchExpressions:
+      #               - key: app
+      #                 operator: In
+      #                 values:
+      #                   - vsphere-csi-controller
+      #           topologyKey: kubernetes.io/hostname
+    # Connection and credentials settings for vCenter:
+    # host: ""
+    # port: 443
+    # insecure: true
+    # datacenters: ""
+    # clusterId: ""
+    # auth:
+    #   user: ""
+    #   pass: ""
+    #   secret:
+    #     generate: true
+    #     # Named separately on purpose -- the two charts generate two Secrets with different
+    #     # contents, so one name collides them. Set these only to point the charts at Secrets
+    #     # you created yourself, alongside generate: false.
+    #     cpiName: vsphere-cpi-creds
+    #     csiName: vsphere-config-secret
 {{- end }}
 {{- if eq .CNI "cilium" }}
 cilium:

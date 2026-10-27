@@ -43,3 +43,16 @@ The rule holds for values pinned outside `magefiles/` too, which is most of them
 If neither fits, say so where the pin is. The microvm guest images in `test/microvm/image.go` carry a `url` and a `sha256` that nothing updates automatically - bumping them is a written procedure in [`docs/dev/microvm.md`](../docs/dev/microvm.md) instead, because the new build's date-stamped path and checksum come from a directory listing no ecosystem parses. A documented manual bump is an acceptable third answer. An undocumented one is not: a reader who finds a bare hash and no way to move it has no way to tell a deliberate pin from an abandoned one.
 
 When adding automation, keep the two halves honest with each other. A mage target that rewrites a pin must be run and its output committed in the same change, or the first person to run it gets a diff they did not write. A Dependabot entry that cannot authenticate to its registry needs the registry block as well - see the `docker-hub` entry.
+
+## Values schemas and default values templates must stay in sync
+
+`magefiles/templates/*/values.yaml.tmpl` and `magefiles/templates/*/values.schema.json.tmpl` are two sides of one contract, and a package whose values do not satisfy its schema fails to build. Add a value to one and describe it in the other, in the same change. `TestValuesTemplatesMatchTheirSchemas` renders every flavor's pair and checks them against each other with the validator cargoship itself uses, so a half-finished change fails there rather than on an air-gapped management node.
+
+A third side is easy to forget: a value only reaches the chart it configures if `magefiles/templates/<distro>-distro.yaml.tmpl` maps it. A key in both the values file and the schema with no `spec.values.mappings` entry is a setting an operator can set and nothing reads.
+
+These schemas define everything inline -- no `$ref`, `$dynamicRef` or `$recursiveRef`, including local `$defs`, which `pkg/helmvalues` rejects by name so that a package carries its whole schema. See [package values](../docs/guides/package-values.md). Nested Kubernetes types (tolerations, affinity) are therefore spelled out in place, repeated per chart.
+
+Which makes `additionalProperties` a judgement call rather than a default, and the vSphere block is the worked example:
+
+- **cargoship's own vocabulary is closed.** `addons.vsphere.auth`, `.csi.storageClass` and the rest set `"additionalProperties": false`, so `storagClass` fails the build instead of being silently ignored.
+- **a subtree the chart hands to Kubernetes verbatim is open.** The toleration items and the whole `affinity` tree list their properties for description and type checking but do not close the object. Closing them would reject every field upstream has added since whoever transcribed the type last looked -- `namespaceSelector`, `matchLabelKeys` -- and the API server validates them anyway. Transcribing a borrowed type is for documentation, not enforcement.
