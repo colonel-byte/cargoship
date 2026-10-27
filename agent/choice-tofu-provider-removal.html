@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c89dba60.js";
+            window.path_to_searchindex_js = "../searchindex-b490c58a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-61b02b60.js"></script>
+        <script src="../toc-1fd2e986.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,74 +182,33 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="removing-the-opentofu-provider-once-it-lives-in-its-own-repository"><a class="header" href="#removing-the-opentofu-provider-once-it-lives-in-its-own-repository">Removing the OpenTofu provider, once it lives in its own repository</a></h1>
-<p>This is the procedure for taking the provider out of this repository after it has moved to <code>colonel-byte/terraform-provider-cargoship</code>. It is written ahead of the move rather than after it, because the one thing a removal of this shape gets wrong is deleting a little too much: most of what carries <code>tofu</code> in its name belongs to the provider, and a handful of things that look like they do are load-bearing for the CLI.</p>
-<p><a href="choice-tofu-provider-layout.html">choice-tofu-provider-layout</a> is the companion piece and should be read first: it records why the provider is a package of this module today, and the conditions under which moving it becomes right. Nothing here argues for the move. <a href="choice-zarf-collection-removal.html">choice-zarf-collection-removal</a> is the precedent for how the last one went, and the shape this file should take afterwards - a record of where the code went, kept at this name so published links still resolve.</p>
-<h2 id="before-deleting-anything"><a class="header" href="#before-deleting-anything">Before deleting anything</a></h2>
-<p>The move itself is <code>git subtree split</code> on the paths below, into a repository named <code>{owner}/terraform-provider-{name}</code> - the registry validates that name and no tag or directory layout substitutes for it. Do that first and confirm the new repository builds and releases, because the history is much easier to carry across while it is still here.</p>
-<p>Two things to settle with a person rather than from the code:</p>
+                        <h1 id="the-opentofu-provider-was-removed-and-where-it-went"><a class="header" href="#the-opentofu-provider-was-removed-and-where-it-went">The OpenTofu provider was removed, and where it went</a></h1>
+<p><code>cmd/terraform-provider-cargoship</code>, <code>internal/tofuprovider</code>, <code>test/e2e/tofu</code>, <code>example/terragrunt</code>, <code>docs/tofu</code> and the <code>Release</code> mage namespace used to live here. <a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-provider-layout.md">choice-tofu-provider-layout</a> records why: one module rather than two, because the linker never loads a package the import graph does not reach, so the CLI paid nothing for a provider it did not import. That page also named the one trigger that would make a separate repository right – a registry listing – because the OpenTofu registry validates a repository against <code>{owner}/terraform-provider-{name}</code> and no tag or directory inside <code>colonel-byte/cargoship</code> substitutes for it.</p>
+<p>That trigger was pulled. The provider now lives in <a href="https://github.com/colonel-byte/terraform-provider-cargoship">colonel-byte/terraform-provider-cargoship</a>, which consumes this module as a library – the phases an apply runs are the same ones the CLI runs, which was always the premise – and released <a href="https://github.com/colonel-byte/terraform-provider-cargoship/releases/tag/v0.1.1">v0.1.1</a> carrying the zips, <code>SHA256SUMS</code> and per-platform manifest the registry protocol parses, signed with both the GPG key that signs cargoship’s rpm and deb and the cosign key that signs its archives.</p>
+<p>This file is kept, at the name the removal plan had, for two reasons. The page was published, so the name is a URL somebody may still hold; and a reader who finds <code>tofu</code> in <code>go.mod</code> and no provider should not have to work out whether something was lost.</p>
+<h2 id="what-stayed-and-is-not-the-providers"><a class="header" href="#what-stayed-and-is-not-the-providers">What stayed, and is not the provider’s</a></h2>
 <ul>
-<li><strong>Whether the provider keeps resolving through this repository’s OCI mirror</strong> during a transition. If it does, the release target below stays until the new repository’s registry listing works, and this removal is two changes rather than one.</li>
-<li><strong>What happens to <code>pkg/action.NewRefresh</code>.</strong> It exists for the provider: a read-only run used during a plan. After the move its only callers here are the phase-reference generator and its own tests, so it is either kept as a documented action the CLI does not expose, or it goes with the provider and <code>docs/phases/refresh.md</code> goes with it. Both are defensible; deleting it quietly is not.</li>
+<li><strong><code>zarf-dev/zarf</code></strong> in <code>go.mod</code> has nothing to do with any of this. It is a library dependency for package formats, architecture detection and OCI handling, and predates both the provider and the collection that left before it.</li>
+<li><strong><code>pkg/action.NewRefresh</code></strong> stays. It is the read-only half of an apply – connect, detect, gather facts, disconnect – and it exists so that “which phases are safe to run without changing a host” is decided once. The CLI does not expose it; the provider consumes it from here, and <a href="../phases/refresh.html">refresh</a> is still generated from it.</li>
+<li><strong><code>cluster.Host.ConfiguredAddress</code></strong> was added for the provider’s <code>address</code> attribute and is now also what a run receipt identifies a host by.</li>
+<li><strong><code>pkg/action.KubeConfigOptions.NoWrite</code>, <code>KubeConfig.Bytes</code> and <code>KubeConfig.Config</code></strong> were added so the provider could have the credentials without writing <code>~/.kube/config</code>. <code>cargoship kube-config --no-write</code> is not the same thing.</li>
+<li><strong><code>test/microvm</code></strong> and the root <code>test</code> package stay, and are importable rather than internal, because the provider’s end-to-end suite consumes both from the other repository. That export was <a href="https://github.com/colonel-byte/cargoship/pull/920">#920</a>; <code>CARGOSHIP_E2E_EXAMPLE_ROOT</code>, which lets that suite read the generated distro definitions out of a cargoship checkout rather than carrying a copy, was <a href="https://github.com/colonel-byte/cargoship/pull/941">#941</a>.</li>
+<li><strong><code>cmd/cargoship/deps_test.go</code></strong> keeps its guard on <code>hashicorp/terraform-plugin</code>. The two entries naming the provider’s own packages went with them, and what the test protects did not: a provider-shaped dependency reaching the CLI costs an air-gapped operator megabytes they carry by hand, and the only symptom is a larger binary, which no check reads.</li>
 </ul>
-<h2 id="what-is-the-providers-and-goes"><a class="header" href="#what-is-the-providers-and-goes">What is the provider’s, and goes</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th style="text-align: left">Path</th><th style="text-align: left">What it is</th></tr>
-</thead>
-<tbody>
-<tr><td style="text-align: left"><code>cmd/terraform-provider-cargoship/</code></td><td style="text-align: left">the released binary’s <code>main</code></td></tr>
-<tr><td style="text-align: left"><code>internal/tofuprovider/</code></td><td style="text-align: left">the schema, the resource, the data source, the converger</td></tr>
-<tr><td style="text-align: left"><code>test/e2e/tofu/</code></td><td style="text-align: left">the provider e2e suite, including its microvm backend</td></tr>
-<tr><td style="text-align: left"><code>example/terragrunt/</code></td><td style="text-align: left">the shipped module and the Terragrunt layout the suite consumes</td></tr>
-<tr><td style="text-align: left"><code>docs/tofu/</code></td><td style="text-align: left">the generated provider reference, one of the trees <a href="../AGENTS.html"><code>docs/AGENTS.md</code></a> lists</td></tr>
-<tr><td style="text-align: left"><code>magefiles/pkg/release/tofuprovider.go</code></td><td style="text-align: left">the OCI mirror build and push</td></tr>
-<tr><td style="text-align: left"><code>magefiles/pkg/gen/docs/tofu.go</code></td><td style="text-align: left">the generator that writes <code>docs/tofu/</code></td></tr>
-<tr><td style="text-align: left"><code>docs/agent/choice-tofu-provider-layout.md</code></td><td style="text-align: left">why it was a package of this module</td></tr>
-<tr><td style="text-align: left"><code>docs/agent/choice-tofu-secrets.md</code></td><td style="text-align: left">why the kubeconfig is withheld unless asked for</td></tr>
-<tr><td style="text-align: left"><code>docs/agent/choice-tofu-host-removal.md</code></td><td style="text-align: left">why a removal is a marker rather than a deletion</td></tr>
-<tr><td style="text-align: left"><code>docs/agent/choice-tofu-e2e.md</code></td><td style="text-align: left">why the suite drives the shipped module</td></tr>
-<tr><td style="text-align: left"><code>docs/agent/design-tofu-provider-install.md</code></td><td style="text-align: left">the install path’s design notes</td></tr>
-<tr><td style="text-align: left"><code>docs/dev/tofu-provider.md</code></td><td style="text-align: left">the development loop</td></tr>
-<tr><td style="text-align: left"><code>docs/dev/e2e-tofu-tests.md</code></td><td style="text-align: left">how to run the suite</td></tr>
-<tr><td style="text-align: left"><code>docs/guides/opentofu-terragrunt.md</code></td><td style="text-align: left">the practitioner guide</td></tr>
-</tbody>
-</table>
-</div>
-<p>The four <code>choice-tofu-*</code> records should be published in the new repository before they are deleted here, the way the zarf records were, and this file should then link to them at their new addresses. A decision record that simply disappears costs more than the page it occupied.</p>
-<h2 id="what-is-shared-and-is-edited-rather-than-deleted"><a class="header" href="#what-is-shared-and-is-edited-rather-than-deleted">What is shared, and is edited rather than deleted</a></h2>
-<ul>
-<li><strong><code>magefiles/release.go</code></strong> - drop <code>Release.TofuProvider</code>, <code>Release.TofuProviderDev</code> and <code>Release.TofuProviderLayout</code>. The <code>Release</code> namespace holds nothing else, so it goes with them; see <a href="../dev/mage.html">mage</a>, which documents the namespace as existing for the provider alone.</li>
-<li><strong><code>magefiles/test.go</code></strong> - drop <code>Test.EndToEndTofu</code> and <code>Test.EndToEndTofuVM</code>.</li>
-<li><strong><code>magefiles/pkg/testrunner/testrunner.go</code></strong> - drop <code>RunE2ETofu</code> and <code>TofuProviderVersion</code>.</li>
-<li><strong><code>magefiles/pkg/gen/docs/</code></strong> - drop the <code>docs/tofu</code> call from <code>Document()</code>, and the <code>refresh</code> entry from <code>phaseDocs()</code> if <code>NewRefresh</code> goes too.</li>
-<li><strong><code>.gitattributes</code></strong> - drop <code>docs/tofu/**/*.md linguist-generated</code>. Per <a href="../../AGENTS.html">the rule in <code>AGENTS.md</code></a>, a pattern matching nothing is not an error anybody sees, so this is easy to leave behind.</li>
-<li><strong><code>README.md</code></strong> and <strong><code>docs/SUMMARY.md</code></strong> - the README is hand-written and will not correct itself; <code>SUMMARY.md</code> and <code>docs/index.md</code> are generated, so <code>go run ./magefiles/core generate:document</code> fixes them once the README is right.</li>
-<li><strong><code>cmd/cargoship/deps_test.go</code></strong> - see below. This one is a decision, not a deletion.</li>
-<li><strong><code>go.mod</code> / <code>go.sum</code> / <code>vendor/</code></strong> - <code>go mod tidy &amp;&amp; go mod vendor</code>. <code>go mod vendor</code> deletes the four generated <code>osv-scanner.toml</code> files under <code>vendor/</code>; restore them, per the records in this directory.</li>
-</ul>
-<h2 id="what-looks-like-the-providers-and-is-not"><a class="header" href="#what-looks-like-the-providers-and-is-not">What looks like the provider’s and is not</a></h2>
-<ul>
-<li><strong><code>cmd/cargoship/deps_test.go</code></strong> asserts that <code>internal/tofuprovider</code> and <code>hashicorp/terraform-plugin</code> are <strong>not</strong> linked into the CLI binary. Today that holds: <code>go list -deps ./cmd/cargoship</code> reports zero such packages. The test becomes vacuous when the provider leaves, but what it protects does not - it is the guard that keeps a provider-shaped dependency out of an air-gapped binary, and the <a href="../../AGENTS.html">binary size budget</a> is why that matters. Keep the file and its other entries; drop only the two lines that name packages no longer in the module.</li>
-<li><strong><code>api/colonel-byte.dev/v1alpha1/cluster.Host.ConfiguredAddress</code></strong> was added for the provider’s <code>address</code> attribute and is now also what the run receipt identifies a host by. It stays.</li>
-<li><strong><code>pkg/action.KubeConfigOptions.NoWrite</code>, <code>KubeConfig.Bytes</code> and <code>KubeConfig.Config</code></strong> were added so the provider could have the credentials without writing <code>~/.kube/config</code>. <code>cargoship kube-config --no-write</code> is not the same thing, so check the CLI’s own callers before assuming these go.</li>
-<li><strong><code>zarf-dev/zarf</code></strong> in <code>go.mod</code> has nothing to do with any of this. It is a library dependency for package formats, architecture detection and OCI handling, and predates both the provider and the collection that did leave. The zarf removal record exists partly to stop exactly this mistake being made twice.</li>
-<li><strong><code>pkg/phase</code> and <code>pkg/action</code></strong> generally. The provider drives the same phases the CLI does; that is the whole premise. Nothing under <code>pkg/</code> is the provider’s except the three members named above.</li>
-</ul>
-<h2 id="afterwards"><a class="header" href="#afterwards">Afterwards</a></h2>
-<p>Rewrite this page as the record of where the provider went, following <a href="choice-zarf-collection-removal.html">choice-zarf-collection-removal</a>: keep the file at this name, because every page under <code>docs/</code> is published and a rename costs an <code>[output.html.redirect]</code> entry in <a href="../../book.toml"><code>book.toml</code></a> that has to be kept for as long as anything outside the repository might hold the old link - see <a href="../AGENTS.html"><code>docs/AGENTS.md</code></a>, say which repository and which release carries it now, link the decision records at their new addresses, and say plainly what was <em>not</em> lost - a reader who finds <code>tofu</code> in <code>go.mod</code> and no provider should not have to work that out.</p>
-<p>Then measure the binary. The provider’s dependencies are vendored for the provider and linked only into its own binary, so <code>mage build:binary</code> should not move much - but “should not” is not a measurement, and <a href="../dev/build-flags.html">build-flags</a> is the only safe way to produce a number that can be compared with the one before the removal.</p>
+<h2 id="the-decision-records-went-with-it"><a class="header" href="#the-decision-records-went-with-it">The decision records went with it</a></h2>
+<p><a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-provider-layout.md">choice-tofu-provider-layout</a>, on why it was a package of this module and what would move it; <a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-secrets.md">choice-tofu-secrets</a>, on why the kubeconfig is withheld unless asked for; <a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-host-removal.md">choice-tofu-host-removal</a>, on why a removal is a marker rather than a deletion; <a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-e2e.md">choice-tofu-e2e</a>, on why the suite drives the shipped module; and <a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/design-tofu-provider-install.md">design-tofu-provider-install</a>, the install path’s design notes.</p>
+<h2 id="what-was-given-up-on-purpose"><a class="header" href="#what-was-given-up-on-purpose">What was given up on purpose</a></h2>
+<p>The ghcr.io OCI mirror went with the <code>Release</code> namespace. <code>mage release:tofuProvider</code> assembled an image index an OpenTofu provider mirror serves and pushed it to ghcr.io, and <code>release-tofu-provider.yaml</code> ran it on the CLI’s <code>v*</code> tag. The new repository releases the same artifact shape on its own tags, so keeping the target here would have published a second copy of a provider this repository no longer builds. An operator whose <code>.tofurc</code> points an <code>oci_mirror</code> at <code>ghcr.io/colonel-byte/tofu-providers</code> needs to repoint it at the new repository’s releases; nothing here serves that path any more.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../agent/choice-tofu-provider-layout.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../agent/choice-signing-fork.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../agent/choice-tofu-secrets.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../agent/choice-unpinnable-hosts.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -259,11 +218,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../agent/choice-tofu-provider-layout.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../agent/choice-signing-fork.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../agent/choice-tofu-secrets.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../agent/choice-unpinnable-hosts.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

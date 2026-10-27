@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c89dba60.js";
+            window.path_to_searchindex_js = "../searchindex-b490c58a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-61b02b60.js"></script>
+        <script src="../toc-1fd2e986.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,7 +187,7 @@
 <h2 id="host-records-are-an-allowlist-never-a-denylist"><a class="header" href="#host-records-are-an-allowlist-never-a-denylist">Host records are an allowlist, never a denylist</a></h2>
 <p><code>internal/receipt.Host</code> copies in a fixed set of fields by name, and nothing anywhere marshals <code>cluster.ZarfHost</code> into a receipt.</p>
 <p>That looks like needless transcription – the host object already has every field, and a <code>json:"-"</code> tag on the ones that must not appear would be less code. It is deliberate. <code>ZarfHost</code> embeds a live <code>rig.ClientWithConfig</code> and a <code>Metadata</code> struct full of connection state, and a receipt built by excluding what must not appear leaks the next field somebody adds to either. An allowlist fails closed: a new fact is absent from receipts until a person adds it to <code>Host</code>, which is the safe direction to be wrong in.</p>
-<p><code>TestHostFieldsAreAnAllowlist</code> pins the field set so that adding one fails the build until it is classified. The precedent is <code>internal/tofuprovider.factsOf</code>, which does the same thing for the provider’s attributes and for the same reason.</p>
+<p><code>TestHostFieldsAreAnAllowlist</code> pins the field set so that adding one fails the build until it is classified. The precedent is the OpenTofu provider’s <code>factsOf</code>, which does the same thing for the provider’s attributes and for the same reason; it moved to <a href="https://github.com/colonel-byte/terraform-provider-cargoship">colonel-byte/terraform-provider-cargoship</a>.</p>
 <p>If you are adding a host fact to a receipt, add it to <code>Host</code> and update that test. Do not reach for reflection over <code>ZarfHost</code>.</p>
 <h2 id="diffs-exist-only-where-a-phase-already-read-the-file"><a class="header" href="#diffs-exist-only-where-a-phase-already-read-the-file">Diffs exist only where a phase already read the file</a></h2>
 <p>Four phases carry a real unified diff – <code>25_modify_hosts_file</code>, <code>24_prepare_selinux_policy</code>, <code>70_engine_config_sync_common</code> and <code>89_reconfigure_survivors</code>. Four do not: <code>20_prepare_host</code> (sysctl), <code>22_prepare_fapolicyd</code>, <code>23_prepare_kernel_modules</code>, and the engine <code>config.yaml</code> written through <code>types/distrocfg</code>.</p>

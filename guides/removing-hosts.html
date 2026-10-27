@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c89dba60.js";
+            window.path_to_searchindex_js = "../searchindex-b490c58a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-61b02b60.js"></script>
+        <script src="../toc-1fd2e986.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -232,7 +232,7 @@ apply anyway: worker3 (worker)
 <p>If the removal fails, the apply stops there and says so. The entry stays in state with <code>removed</code> still false, which is deliberate: the machine is still running and still joined, and that entry holds the only address and key path that can reach it. Fix the cause and apply again. The rest of the convergence does not run, because converging on top of a half-removed cluster would report success over a node that is still in it.</p>
 <h3 id="what-a-destroy-does-with-the-markers"><a class="header" href="#what-a-destroy-does-with-the-markers">What a destroy does with the markers</a></h3>
 <p>Nothing, beyond reading them. <code>tofu destroy</code> tears down everything the cluster still holds: a host marked absent whose removal failed is included, because the machine is still running and still joined, and one whose removal finished is left out, because reaching for a decommissioned machine would fail. The markers are not something to clean up before destroying.</p>
-<p>If the machines are OpenTofu resources too and are being destroyed in the same run, consider <code>retain_on_destroy = true</code> – draining and uninstalling a node that is about to be deleted is minutes spent on a result nobody sees. See <a href="opentofu-terragrunt.html#destroying-the-machines-as-well">opentofu-terragrunt</a>.</p>
+<p>If the machines are OpenTofu resources too and are being destroyed in the same run, consider <code>retain_on_destroy = true</code> – draining and uninstalling a node that is about to be deleted is minutes spent on a result nobody sees. See <a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/guides/opentofu-terragrunt.md#destroying-the-machines-as-well">the provider’s Terragrunt guide</a>.</p>
 <h2 id="removing-the-machine-by-hand-cli"><a class="header" href="#removing-the-machine-by-hand-cli">Removing the machine by hand (CLI)</a></h2>
 <p>With the CLI, use targeted reset with <code>--target-hosts</code>:</p>
 <pre><code class="language-console">$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts worker3 --confirm
