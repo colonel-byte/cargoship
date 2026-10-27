@@ -52,6 +52,63 @@ spec:
         target: .manifest.rancher-vsphere-cpi.enabled
       - source: .addons.vsphere.csi.enabled
         target: .manifest.rancher-vsphere-csi.enabled
+      - source: .addons.vsphere.host
+        target: .manifest.rancher-vsphere-csi.values.vCenter.host
+      - source: .addons.vsphere.host
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.host
+      - source: .addons.vsphere.port
+        target: .manifest.rancher-vsphere-csi.values.vCenter.port
+      - source: .addons.vsphere.port
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.port
+      - source: .addons.vsphere.insecure
+        target: .manifest.rancher-vsphere-csi.values.vCenter.insecureFlag
+      - source: .addons.vsphere.insecure
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.insecureFlag
+      - source: .addons.vsphere.datacenters
+        target: .manifest.rancher-vsphere-csi.values.vCenter.datacenters
+      - source: .addons.vsphere.datacenters
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.datacenters
+      - source: .addons.vsphere.clusterId
+        target: .manifest.rancher-vsphere-csi.values.vCenter.clusterId
+      - source: .addons.vsphere.auth.user
+        target: .manifest.rancher-vsphere-csi.values.vCenter.username
+      - source: .addons.vsphere.auth.user
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.username
+      - source: .addons.vsphere.auth.pass
+        target: .manifest.rancher-vsphere-csi.values.vCenter.password
+      - source: .addons.vsphere.auth.pass
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.password
+      # One name cannot serve both: the CPI's Secret holds <host>.username and
+      # <host>.password, the CSI's holds a whole csi-vsphere.conf, and both are created in the
+      # release namespace. Pointing them at one name collides two different Secrets.
+      - source: .addons.vsphere.auth.secret.csiName
+        target: .manifest.rancher-vsphere-csi.values.vCenter.configSecret.name
+      - source: .addons.vsphere.auth.secret.cpiName
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.credentialsSecret.name
+      - source: .addons.vsphere.cpi.cloudConfig.name
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.cloudConfig.name
+      - source: .addons.vsphere.cpi.cloudConfig.generate
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.cloudConfig.generate
+      - source: .addons.vsphere.auth.secret.generate
+        target: .manifest.rancher-vsphere-csi.values.vCenter.configSecret.generate
+      - source: .addons.vsphere.auth.secret.generate
+        target: .manifest.rancher-vsphere-cpi.values.vCenter.credentialsSecret.generate
+      - source: .addons.vsphere.cpi.tolerations
+        target: .manifest.rancher-vsphere-cpi.values.cloudControllerManager.tolerations
+      - source: .addons.vsphere.cpi.nodeSelector
+        target: .manifest.rancher-vsphere-cpi.values.cloudControllerManager.nodeSelector
+      - source: .addons.vsphere.csi.storageClass.isDefault
+        target: .manifest.rancher-vsphere-csi.values.storageClass.isDefault
+      - source: .addons.vsphere.csi.node.tolerations
+        target: .manifest.rancher-vsphere-csi.values.csiNode.tolerations
+      - source: .addons.vsphere.csi.node.nodeSelector
+        target: .manifest.rancher-vsphere-csi.values.csiNode.nodeSelector
+      - source: .addons.vsphere.csi.controller.tolerations
+        target: .manifest.rancher-vsphere-csi.values.csiController.tolerations
+      - source: .addons.vsphere.csi.controller.nodeSelector
+        target: .manifest.rancher-vsphere-csi.values.csiController.nodeSelector
+      - source: .addons.vsphere.csi.controller.affinity
+        target: .manifest.rancher-vsphere-csi.values.csiController.affinity
       # This flavor spends its cilium values on mappings too: each one moves a single
       # value onto a single key of the engine configuration, with no templating involved.
       # The multi-cni-cilium flavor shows the other way of spending these same values.
@@ -191,7 +248,7 @@ spec:
         rancher-vsphere-cpi:
           images:
             - docker.io/rancher/mirrored-cloud-provider-vsphere:v1.35.1
-          values: |-
+          values:
             vCenter:
               # These are placeholders: an example cannot know the vCenter it will run against,
               # and credentials do not belong in a package. Fill them in, or replace the
@@ -215,7 +272,7 @@ spec:
             - docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0
             - docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1
             - docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20260708
-          values: |-
+          values:
             vCenter:
               # Placeholders, as above. clusterId has to be unique per cluster sharing a vCenter.
               host: ""

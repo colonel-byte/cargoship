@@ -87,19 +87,382 @@
         },
         "vsphere": {
           "type": "object",
-          "description": "Which of the bundled vSphere charts this cluster runs. A chart that is not enabled keeps its images in the package, has none of them uploaded, and gets no HelmChartConfig. The CSI driver reads the ProviderID the CPI sets, so CSI without CPI does not work; CPI without CSI is ordinary.",
+          "description": "Which of the bundled vSphere charts this cluster runs, and the vCenter connection, credentials, and scheduling settings they need. A chart that is not enabled keeps its images in the package, has none of them uploaded, and gets no HelmChartConfig. The CSI driver reads the ProviderID the CPI sets, so CSI without CPI does not work; CPI without CSI is ordinary.",
           "properties": {
+            "host": {
+              "type": "string",
+              "description": "vCenter server hostname or IP address."
+            },
+            "port": {
+              "type": "integer",
+              "description": "vCenter server port."
+            },
+            "insecure": {
+              "type": "boolean",
+              "description": "Set to true to disable TLS certificate verification when communicating with vCenter."
+            },
+            "datacenters": {
+              "type": "string",
+              "description": "vSphere datacenter paths."
+            },
+            "clusterId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique identifier for this cluster among the clusters sharing the vCenter. The CSI chart marks it required and has no default, so a package whose CSI driver is enabled does not install without it; an empty string fails the build here rather than the chart render on the cluster."
+            },
+            "auth": {
+              "type": "object",
+              "description": "vCenter authentication and secret management configuration.",
+              "properties": {
+                "user": {
+                  "type": "string",
+                  "description": "vCenter username."
+                },
+                "pass": {
+                  "type": "string",
+                  "description": "vCenter password."
+                },
+                "secret": {
+                  "type": "object",
+                  "properties": {
+                    "cpiName": {
+                      "type": "string",
+                      "description": "Name of the CPI's vCenter credentials Secret. Separate from csiName because the two charts generate Secrets with different contents into the same namespace, so a shared name collides them."
+                    },
+                    "csiName": {
+                      "type": "string",
+                      "description": "Name of the CSI's vCenter configuration Secret. See cpiName."
+                    },
+                    "generate": {
+                      "type": "boolean",
+                      "description": "Whether the charts generate their Secrets. Set false to point them at Secrets you created yourself, and name those with cpiName and csiName."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
             "cpi": {
               "type": "object",
               "properties": {
-                "enabled": { "type": "boolean" }
+                "enabled": { "type": "boolean" },
+                "tolerations": {
+                  "type": "array",
+                  "description": "Tolerations for Cloud Controller Manager pods.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": { "type": "string" },
+                      "operator": { "type": "string", "enum": ["Exists", "Equal"] },
+                      "value": { "type": "string" },
+                      "effect": { "type": "string", "enum": ["NoSchedule", "PreferNoSchedule", "NoExecute"] },
+                      "tolerationSeconds": { "type": "integer" }
+                    }
+                  }
+                },
+                "nodeSelector": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" },
+                  "description": "Node selector for Cloud Controller Manager pods."
+                },
+                "cloudConfig": {
+                  "type": "object",
+                  "description": "The ConfigMap the CPI reads its cloud config from, mounted at /etc/cloud. Supplying your own is the only way to give the CPI a CA certificate, since neither chart exposes a value for one: the ConfigMap mounts as a directory, so an entry holding the PEM-encoded vCenter CA lands at /etc/cloud/<that key> for caFile to point at. PEM only. Set insecure to false alongside it, since upstream ignores caFile while the insecure flag is on.",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the cloud config ConfigMap to use or generate."
+                    },
+                    "generate": {
+                      "type": "boolean",
+                      "description": "Whether the chart renders the cloud config ConfigMap. Set false to supply your own, which must carry the config under vsphere.yaml plus any CA certificate it references."
+                    }
+                  },
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             },
             "csi": {
               "type": "object",
               "properties": {
-                "enabled": { "type": "boolean" }
+                "enabled": { "type": "boolean" },
+                "storageClass": {
+                  "type": "object",
+                  "properties": {
+                    "isDefault": {
+                      "type": "boolean",
+                      "description": "Whether the vSphere CSI StorageClass is default."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "node": {
+                  "type": "object",
+                  "properties": {
+                    "tolerations": {
+                      "type": "array",
+                      "description": "Tolerations for CSI node daemonset pods.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": { "type": "string" },
+                          "operator": { "type": "string", "enum": ["Exists", "Equal"] },
+                          "value": { "type": "string" },
+                          "effect": { "type": "string", "enum": ["NoSchedule", "PreferNoSchedule", "NoExecute"] },
+                          "tolerationSeconds": { "type": "integer" }
+                        }
+                      }
+                    },
+                    "nodeSelector": {
+                      "type": "object",
+                      "additionalProperties": { "type": "string" },
+                      "description": "Node selector for CSI node daemonset pods."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "controller": {
+                  "type": "object",
+                  "properties": {
+                    "tolerations": {
+                      "type": "array",
+                      "description": "Tolerations for CSI controller deployment pods.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": { "type": "string" },
+                          "operator": { "type": "string", "enum": ["Exists", "Equal"] },
+                          "value": { "type": "string" },
+                          "effect": { "type": "string", "enum": ["NoSchedule", "PreferNoSchedule", "NoExecute"] },
+                          "tolerationSeconds": { "type": "integer" }
+                        }
+                      }
+                    },
+                    "nodeSelector": {
+                      "type": "object",
+                      "additionalProperties": { "type": "string" },
+                      "description": "Node selector for CSI controller deployment pods."
+                    },
+                    "affinity": {
+                      "type": "object",
+                      "description": "Affinity rules for CSI controller deployment pods. The properties below are the Kubernetes affinity vocabulary, listed so an operator authoring values gets them described and type-checked. This subtree and the toleration items are deliberately open -- unlike cargoship's own keys above, which are closed to catch typos -- because the chart passes them to the pod spec verbatim: a field a newer Kubernetes adds should reach the API server rather than fail the build against a schema nobody remembered to widen.",
+                      "properties": {
+                        "nodeAffinity": {
+                          "type": "object",
+                          "description": "Node affinity scheduling rules.",
+                          "properties": {
+                            "requiredDuringSchedulingIgnoredDuringExecution": {
+                              "type": "object",
+                              "properties": {
+                                "nodeSelectorTerms": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "matchExpressions": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "key": { "type": "string" },
+                                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt"] },
+                                            "values": { "type": "array", "items": { "type": "string" } }
+                                          }
+                                        }
+                                      },
+                                      "matchFields": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "key": { "type": "string" },
+                                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt"] },
+                                            "values": { "type": "array", "items": { "type": "string" } }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "preferredDuringSchedulingIgnoredDuringExecution": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "weight": { "type": "integer" },
+                                  "preference": {
+                                    "type": "object",
+                                    "properties": {
+                                      "matchExpressions": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "key": { "type": "string" },
+                                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt"] },
+                                            "values": { "type": "array", "items": { "type": "string" } }
+                                          }
+                                        }
+                                      },
+                                      "matchFields": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "key": { "type": "string" },
+                                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt"] },
+                                            "values": { "type": "array", "items": { "type": "string" } }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "podAffinity": {
+                          "type": "object",
+                          "description": "Inter-pod affinity scheduling rules.",
+                          "properties": {
+                            "requiredDuringSchedulingIgnoredDuringExecution": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "labelSelector": {
+                                    "type": "object",
+                                    "properties": {
+                                      "matchLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+                                      "matchExpressions": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "key": { "type": "string" },
+                                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                                            "values": { "type": "array", "items": { "type": "string" } }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "namespaces": { "type": "array", "items": { "type": "string" } },
+                                  "topologyKey": { "type": "string" }
+                                }
+                              }
+                            },
+                            "preferredDuringSchedulingIgnoredDuringExecution": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "weight": { "type": "integer" },
+                                  "podAffinityTerm": {
+                                    "type": "object",
+                                    "properties": {
+                                      "labelSelector": {
+                                        "type": "object",
+                                        "properties": {
+                                          "matchLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+                                          "matchExpressions": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "key": { "type": "string" },
+                                                "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                                                "values": { "type": "array", "items": { "type": "string" } }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "namespaces": { "type": "array", "items": { "type": "string" } },
+                                      "topologyKey": { "type": "string" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "podAntiAffinity": {
+                          "type": "object",
+                          "description": "Inter-pod anti-affinity scheduling rules.",
+                          "properties": {
+                            "requiredDuringSchedulingIgnoredDuringExecution": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "labelSelector": {
+                                    "type": "object",
+                                    "properties": {
+                                      "matchLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+                                      "matchExpressions": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "key": { "type": "string" },
+                                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                                            "values": { "type": "array", "items": { "type": "string" } }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "namespaces": { "type": "array", "items": { "type": "string" } },
+                                  "topologyKey": { "type": "string" }
+                                }
+                              }
+                            },
+                            "preferredDuringSchedulingIgnoredDuringExecution": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "weight": { "type": "integer" },
+                                  "podAffinityTerm": {
+                                    "type": "object",
+                                    "properties": {
+                                      "labelSelector": {
+                                        "type": "object",
+                                        "properties": {
+                                          "matchLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+                                          "matchExpressions": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "key": { "type": "string" },
+                                                "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                                                "values": { "type": "array", "items": { "type": "string" } }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "namespaces": { "type": "array", "items": { "type": "string" } },
+                                      "topologyKey": { "type": "string" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
