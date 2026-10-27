@@ -134,6 +134,27 @@ var exampleDistros = []exampleDistroSpec{
 				replacesKubeProxy: true,
 				cloudProvider:     "rancher-vsphere",
 				values:            exampleRKE2Values,
+				// amd64 only, and deliberately: this is the one flavor that cannot be
+				// multi-architecture. rke2 publishes an arm64 twin of every image list it
+				// ships -- canal, cilium, core, flannel, multus, ingress-nginx -- except
+				// this one, because the three images that are actually the vSphere drivers
+				// are not built for arm64 by anyone:
+				//
+				//	mirrored-cloud-provider-vsphere                single-platform
+				//	mirrored-cloud-provider-vsphere-csi-release-driver   linux+windows/amd64
+				//	mirrored-cloud-provider-vsphere-csi-release-syncer   single-platform
+				//
+				// It is not a Rancher mirroring gap. registry.k8s.io serves the same three
+				// with the same platforms, so there is no other tag to point at. The six
+				// generic sig-storage sidecars in the list do have arm64, which is what
+				// makes this worth writing down: an arm64 render would resolve most of the
+				// chart and fail only on the drivers, which reads like a transient registry
+				// problem rather than a thing that cannot work.
+				//
+				// So do not add arches: exampleMultiArches here, and do not rename the
+				// directory to rke2-multi-cilium-vsphere -- the name would promise an
+				// architecture the charts have no images for. Recheck the three manifests
+				// before reversing this; nothing watches them.
 			},
 			{
 				cni:  "canal",
