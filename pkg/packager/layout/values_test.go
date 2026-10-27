@@ -621,3 +621,69 @@ func TestRenderFilesReportsAMissingValue(t *testing.T) {
 		t.Fatal("RenderFiles rendered a file whose values are missing")
 	}
 }
+
+// Whether a chart can be switched off is the package author's decision, not a cluster's.
+// A cluster reaches spec.config.engine only through a mapping or a template the package
+// itself declares -- a Cluster's own engine section carries node labels and taints and
+// nothing else -- so a manifest entry with no enabled key, and no mapping onto one, has no
+// route by which an inventory or --values could turn it off.
+//
+// This is asserted rather than left implicit because it is a property of who owns mappings
+// rather than of any check: a future field that let an inventory write engine configuration
+// directly would erode it without failing anything else.
+func TestApplyValuesCannotDisableAChartThePackageDidNotOfferUp(t *testing.T) {
+	enabled := func(t *testing.T, l *DistroLayout) (any, bool) {
+		t.Helper()
+		got, ok, err := helmvalues.GetValuePath(l.Distro.Spec.Config.Engine, ".manifest.rke2-cilium.enabled")
+		if err != nil {
+			t.Fatalf("reading .manifest.rke2-cilium.enabled: %v", err)
+		}
+		return got, ok
+	}
+
+	// A cluster asking for exactly the thing the package never offered.
+	values := map[string]any{
+		"addons":  map[string]any{"cilium": map[string]any{"enabled": false}},
+		"cilium":  map[string]any{"enabled": false},
+		"enabled": false,
+	}
+
+	t.Run("no mapping means no route", func(t *testing.T) {
+		l := ciliumLayout(nil)
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		if got, ok := enabled(t, l); ok {
+			t.Fatalf("an inventory introduced .manifest.rke2-cilium.enabled = %v", got)
+		}
+	})
+
+	t.Run("a mapping onto another key is still no route", func(t *testing.T) {
+		l := ciliumLayout([]distro.ValueMapping{
+			{Source: ".cilium.enabled", Target: ".manifest.rke2-cilium.encryption.enabled"},
+		})
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		if got, ok := enabled(t, l); ok {
+			t.Fatalf("an inventory introduced .manifest.rke2-cilium.enabled = %v", got)
+		}
+		// The mapping it did declare still works, so this is not passing by doing nothing.
+		if enc := cilium(t, l); enc["enabled"] != false {
+			t.Fatalf("encryption.enabled = %v, want the projected false", enc["enabled"])
+		}
+	})
+
+	t.Run("the author opting in is what makes it switchable", func(t *testing.T) {
+		l := ciliumLayout([]distro.ValueMapping{
+			{Source: ".addons.cilium.enabled", Target: ".manifest.rke2-cilium.enabled"},
+		})
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		got, ok := enabled(t, l)
+		if !ok || got != false {
+			t.Fatalf("enabled = %v (present %v), want the projected false", got, ok)
+		}
+	})
+}

@@ -1665,6 +1665,70 @@ func TestDesiredFilesHelmChartConfigsWithoutDisable(t *testing.T) {
 	require.Len(t, got, 2)
 }
 
+// A wrapper entry names the chart's values under a values key, and produces byte for byte what
+// the bare form produces. This is the compatibility claim: the fixtures above are all in the
+// older shape, and the two shapes have to be indistinguishable once they reach a host.
+func TestDesiredFilesHelmChartConfigsFromWrapper(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.Distro{}
+	dis.Spec.Config.Engine = dig.Mapping{
+		config.EngineManifest: dig.Mapping{
+			"rke2-cilium": dig.Mapping{
+				"images": []any{"docker.io/rancher/mirrored-cilium-cilium:v1.20.2"},
+				"values": dig.Mapping{
+					"encryption": dig.Mapping{"enabled": true},
+				},
+			},
+			"rancher-vsphere-cpi": dig.Mapping{
+				"values": "vCenter:\n  host: \"\"\n",
+			},
+		},
+	}
+
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{Role: cluster.RoleController}, cluster.RuntimeMeta{}, dis)
+	require.NoError(t, err)
+
+	bare := newTestRancher()
+	bareDis := distro.Distro{}
+	bareDis.Spec.Config.Engine = manifestEngine()
+	want, err := bare.DesiredFiles(context.Background(), &cluster.Host{Role: cluster.RoleController}, cluster.RuntimeMeta{}, bareDis)
+	require.NoError(t, err)
+
+	require.Equal(t, want, got, "a wrapper entry and a bare entry reach the host identically")
+
+	// In particular the wrapper's own keys are not handed to the chart as values.
+	manifests := filepath.Join(d.Data, "server", "manifests")
+	cilium := string(got[filepath.Join(manifests, "rke2-cilium-config.yaml")].Content)
+	require.NotContains(t, cilium, "images:")
+	require.NotContains(t, cilium, "values:")
+}
+
+// A chart that is not enabled had none of its images uploaded, so there is nothing for a
+// HelmChartConfig to configure and writing one would leave the helm controller reconciling a
+// chart whose images are not on the node. Its neighbours are unaffected.
+func TestDesiredFilesHelmChartConfigsSkipsDisabledWrapper(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.Distro{}
+	dis.Spec.Config.Engine = dig.Mapping{
+		config.EngineManifest: dig.Mapping{
+			"rke2-cilium": dig.Mapping{
+				"enabled": false,
+				"values":  dig.Mapping{"encryption": dig.Mapping{"enabled": true}},
+			},
+			"rancher-vsphere-cpi": dig.Mapping{
+				"enabled": true,
+				"values":  "vCenter:\n  host: \"\"\n",
+			},
+		},
+	}
+
+	got, err := d.DesiredFiles(context.Background(), &cluster.Host{Role: cluster.RoleController}, cluster.RuntimeMeta{}, dis)
+	require.NoError(t, err)
+
+	manifests := filepath.Join(d.Data, "server", "manifests")
+	require.Equal(t, []string{filepath.Join(manifests, "rancher-vsphere-cpi-config.yaml")}, slices.Collect(maps.Keys(got)))
+}
+
 // TestSetNodeIP covers the address a node registers under, and the etcd peer URL that follows
 // from it.
 //

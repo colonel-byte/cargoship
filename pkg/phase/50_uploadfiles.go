@@ -88,7 +88,7 @@ var (
 func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	p.manager.Config = c
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
-		return (len(h.Files) + len(d.Spec.Config.Files) + len(p.manager.Distro.Spec.Config.ImagesConfig.Images)) > 0
+		return (len(h.Files) + len(d.Spec.Config.Files) + len(p.manager.Distro.Spec.Config.EnabledImages())) > 0
 	})
 	p.disFiles = p.manager.Distro.Spec.Config.Files
 
@@ -142,7 +142,15 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, l
 		return err
 	}
 
-	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
+	// shortcut: follows the chart entries' enabled key and not the engine's disable list, so
+	// a chart disabled through addons.disabled still has its images uploaded; upgrade when
+	// enabled and disable are reconciled -- see docs/agent/todo-chart-disable-image-gating.md
+	//
+	// EnabledImages, not imageConfig.images: a chart manifest the cluster disabled keeps
+	// its images in the package and has none of them exported or uploaded. Enablement is
+	// a property of the cluster rather than of a host, so it is resolved once here and
+	// the per-arch keying below is unaffected.
+	for _, i := range p.manager.Distro.Spec.Config.EnabledImages() {
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), tarSuffix)
 		tarballPath := filepath.Join(tarBallDir, tarBallName)
 

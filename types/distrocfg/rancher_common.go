@@ -426,21 +426,22 @@ func (d *RancherCommon) manifestDir() string {
 // them. That makes them safe to rewrite under a running engine -- a changed value reaches the
 // chart without the node being drained -- which is what NoRestart says here.
 func (d *RancherCommon) helmChartConfigs(nodeConfig dig.Mapping) (map[string]DesiredFile, error) {
-	manifests := nodeConfig.DigMapping(config.EngineManifest)
+	manifests := distro.ChartManifests(nodeConfig)
 	if len(manifests) == 0 {
 		return nil, nil
 	}
 	disabled := disabledCharts(nodeConfig)
 
 	files := make(map[string]DesiredFile, len(manifests))
-	for chart, v := range manifests {
-		// A chart the engine was told not to install has nothing to configure. Leaving the
-		// file out of the desired set is also what gets one written by an earlier run removed,
-		// since the manifest directory is pruned against that set.
-		if disabled[chart] {
+	for chart, m := range manifests {
+		// A chart the engine was told not to install has nothing to configure, and neither
+		// has one whose images were never uploaded. Leaving the file out of the desired set
+		// is also what gets one written by an earlier run removed, since the manifest
+		// directory is pruned against that set.
+		if disabled[chart] || !m.Enabled {
 			continue
 		}
-		values, err := helmValuesContent(v)
+		values, err := helmValuesContent(m.Values)
 		if err != nil {
 			return nil, fmt.Errorf("rendering helm values for chart %s: %w", chart, err)
 		}
