@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4c499425.js";
+            window.path_to_searchindex_js = "../searchindex-669b5f4e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1fd2e986.js"></script>
@@ -232,6 +232,9 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 </li>
 <li>
 <p><strong><code>CARGOSHIP_E2E_BACKEND</code></strong> - what provisions the cluster suite’s hosts: <code>bootloose</code> (the default) for privileged containers, <code>microvm</code> for local Rocky 10 virtual machines, or <code>inventory</code> for hosts that already exist. The VM backend is the only way the SELinux, fapolicyd and firewalld phases run as the paths they are rather than as gates that correctly do nothing, and it needs KVM. It is additional coverage rather than a replacement, since it runs one distribution; see <a href="microvm.html">microvm</a>.</p>
+</li>
+<li>
+<p><strong><code>CARGOSHIP_E2E_VM_MEMORY</code></strong> - with <code>CARGOSHIP_E2E_BACKEND=microvm</code>, the per-node memory in MiB. The suite brings its fleet up at the size the join walk needs rather than the size the apply walk uses, so the default of 4096 asks for 16GiB at once and the bring-up refuses rather than letting the OOM killer choose which process dies. A value that is not a positive number is ignored; see <a href="microvm.html">microvm</a>.</p>
 </li>
 <li>
 <p><strong><code>CARGOSHIP_E2E_INVENTORY</code></strong> - with <code>CARGOSHIP_E2E_BACKEND=inventory</code>, the path to a <code>ZarfCluster</code> document naming hosts that already exist. The suite provisions nothing and tears nothing down, which is how the phase assertions are run against a fleet on EC2, vSphere, Proxmox or bare metal. It changes those hosts and does not change them back; see <a href="e2e-external-inventory.html">e2e-external-inventory</a>.</p>

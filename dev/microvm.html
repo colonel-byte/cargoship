@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4c499425.js";
+            window.path_to_searchindex_js = "../searchindex-669b5f4e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1fd2e986.js"></script>
@@ -242,6 +242,10 @@ waiting for 6 node(s) to finish cloud-init, up to 15m0s
 <pre><code class="language-sh">mage dev:vmUp -control=3 -worker=3 -memory=2048
 </code></pre>
 <p>2048MiB is ample for the host-preparation phases. An rke2 control-plane node wants the default: three of them at 2048 will come up and then struggle once etcd and the control plane are both running.</p>
+<p>The e2e suite has no flags, so it reads the same setting from <code>CARGOSHIP_E2E_VM_MEMORY</code>. It matters more there than for <code>dev:vmUp</code>, because the suite brings its fleet up at the size the join walk needs rather than the size the apply walk uses - four nodes, so 16GiB at the default:</p>
+<pre><code class="language-sh">CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_VM_MEMORY=3072 mage test:endToEndCluster
+</code></pre>
+<p>A value that is not a positive number is ignored and leaves the default, since a fleet that does not fit is reported clearly by the bring-up anyway.</p>
 <h2 id="a-mixed-fleet"><a class="header" href="#a-mixed-fleet">A mixed fleet</a></h2>
 <p>The fleet runs Rocky 10 unless you ask for something else. Two counts opt in to Ubuntu nodes alongside them:</p>
 <pre><code class="language-sh">mage dev:vmUp -control=1 -worker=1 -ubuntuWorker=2 -distro=k3s
