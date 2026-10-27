@@ -14,7 +14,7 @@
 
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/almalinux/10-base:10.2@sha256:ed618ca107e9fd47ee2a64d1d33119ef356cfaf65a338daaa3fad19b80ae5da4
+FROM ghcr.io/almalinux/10-base:10.2@sha256:f72ef25730edaa7bde18a0bc7f8010ec7d1d8d6cef7fa47ecdd280aef65fa785
 
 ARG TARGETPLATFORM
 ARG ANSIBLE_CORE_VERSION="2.16.16-2.el10_2.1"
