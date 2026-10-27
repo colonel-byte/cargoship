@@ -9,6 +9,7 @@ Almost everything under `example/` is generated. Regenerate it with mage; do not
 | `example/<distro>-<flavor>/<minor>/<version>/distro.yaml`                       | `Generate.Examples` / `Generate.ExampleLine`, from `magefiles/templates/<distro>-distro.yaml.tmpl` |
 | `example/<distro>-<flavor>/<minor>/<version>/values.yaml`, `values.schema.json` | the same targets, from `magefiles/templates/<distro>/*.tmpl`                                       |
 | `example/shasums.json`                                                          | the same targets - a cache of the digests of the files the examples install                        |
+| `example/assets.json`                                                           | the same targets - a cache of the image manifest each release publishes (URL -> image list)        |
 | `example/upstream-<cni>/<minor>/<version>/distro.yaml`                          | `Generate.Examples`, from `magefiles/templates/upstream-distro.yaml.tmpl`, once per CNI flavor     |
 | `example/upstream-cilium/cni/cilium-<chart>.yaml`                               | the same target, rendered with `helm template` and shared by every version of that flavor          |
 
@@ -70,9 +71,18 @@ Adding an rke2 minor line means adding the matching k3s minor line too, because 
 
 ## Network and caching
 
-Both example targets touch the network. Each release's text assets are cached under `<zarf_cache>/examples/`, and file digests are cached in `example/shasums.json`, so re-rendering a version already on disk fetches nothing. Set `CARGOSHIP_EXAMPLES_NO_CACHE=1` to refetch a run's assets - needed when Rancher re-cuts a release's assets in place, since the URL does not change when it does.
+Both example targets touch the network, for anything no cache answers. Two caches are committed, and they split by what they hold rather than by who fetched it:
 
-Commit `example/shasums.json` with the examples that produced it. Delete an entry to force that file to be hashed again.
+- **`example/assets.json`** holds the image manifest each release publishes - `k3s-images.txt`, `rke2-images-core.linux-amd64.txt` and the per-CNI lists - as a URL to image list map.
+- **`example/shasums.json`** holds every digest, however it was arrived at: downloaded and hashed for an RPM or a tarball, or read straight out of a release's own `sha256sum-<arch>.txt` for the k3s binary. The checksum assets themselves are not cached, because the one digest a run wants out of each is in this file already.
+
+A third cache under `<zarf_cache>/examples/` is not committed. It holds what neither of the above covers - the pinned CNI manifests, and the backfill `ExampleLine` does, which would grow a committed file without bound.
+
+So re-rendering a version already on disk fetches nothing, and a fresh clone renders every example offline. Set `CARGOSHIP_EXAMPLES_NO_CACHE=1` to refetch a run's assets - needed when Rancher re-cuts a release's assets in place, since the URL does not change when it does. It turns off the committed caches as well as the on-disk one, which is the point.
+
+Commit `example/shasums.json` and `example/assets.json` with the examples that produced them. Delete an entry to force that file to be fetched or hashed again.
+
+Run `mage generate:verifyAssets` to find out whether a committed image manifest still matches upstream. It reads no cache, so it costs one request per manifest; it reports and exits non-zero rather than rewriting, and `CARGOSHIP_EXAMPLES_NO_CACHE=1 mage generate:examples` is what applies the fix.
 
 ## Retired builds
 

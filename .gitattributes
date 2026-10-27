@@ -28,6 +28,7 @@ example/*/**/values.yaml linguist-generated
 example/*/**/values.schema.json linguist-generated
 example/*/cni/*.yaml linguist-generated
 example/shasums.json linguist-generated
+example/assets.json linguist-generated
 
 # mage dev:vendor
 # The whole tree, not just the osv-scanner.toml files mage writes into it: `go mod vendor`

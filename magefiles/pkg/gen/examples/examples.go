@@ -84,7 +84,7 @@ func writeExample(tmpl *template.Template, repoURL, tag string, spec exampleDist
 		return "", err
 	}
 	if spec.fetch != nil {
-		if err := spec.fetch(&v, repoURL); err != nil {
+		if err := spec.fetch(&v, repoURL, sums); err != nil {
 			return "", err
 		}
 	}

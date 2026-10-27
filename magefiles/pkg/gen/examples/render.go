@@ -37,6 +37,9 @@ func RenderAll() error {
 		if err := sums.save(); err != nil {
 			fmt.Println("warning: " + err.Error())
 		}
+		if err := committedAssets().save(); err != nil {
+			fmt.Println("warning: " + err.Error())
+		}
 	}()
 
 	for _, spec := range exampleDistros {
@@ -88,6 +91,9 @@ func RenderLine(distro, prefix string) error {
 	}
 	defer func() {
 		if err := sums.save(); err != nil {
+			fmt.Println("warning: " + err.Error())
+		}
+		if err := committedAssets().save(); err != nil {
 			fmt.Println("warning: " + err.Error())
 		}
 	}()
