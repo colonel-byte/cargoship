@@ -119,25 +119,6 @@ func (Test) EndToEndClusterDryRun() error {
 	)
 }
 
-// EndToEndTofu runs the OpenTofu provider suite: a three-machine bootloose cluster installed,
-// reduced and destroyed through the real `tofu` CLI over the module in example/terragrunt. Needs
-// Docker and a `tofu` binary; see docs/dev/e2e-tofu-tests.md.
-func (Test) EndToEndTofu() error {
-	if err := testrunner.StopBootlooseContainers(); err != nil {
-		return err
-	}
-	return testrunner.RunE2ETofu()
-}
-
-// EndToEndTofuVM runs the same OpenTofu provider suite against local virtual machines instead
-// of containers. Needs KVM and a `tofu` binary; see docs/dev/e2e-tofu-tests.md.
-func (Test) EndToEndTofuVM() error {
-	if err := os.Setenv("CARGOSHIP_E2E_BACKEND", "microvm"); err != nil {
-		return err
-	}
-	return testrunner.RunE2ETofu()
-}
-
 // CleanCluster removes containers left behind by bootloose.
 func (Test) CleanCluster() error {
 	return testrunner.StopBootlooseContainers()

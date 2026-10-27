@@ -8,7 +8,7 @@
 
 That looks like needless transcription -- the host object already has every field, and a `json:"-"` tag on the ones that must not appear would be less code. It is deliberate. `ZarfHost` embeds a live `rig.ClientWithConfig` and a `Metadata` struct full of connection state, and a receipt built by excluding what must not appear leaks the next field somebody adds to either. An allowlist fails closed: a new fact is absent from receipts until a person adds it to `Host`, which is the safe direction to be wrong in.
 
-`TestHostFieldsAreAnAllowlist` pins the field set so that adding one fails the build until it is classified. The precedent is `internal/tofuprovider.factsOf`, which does the same thing for the provider's attributes and for the same reason.
+`TestHostFieldsAreAnAllowlist` pins the field set so that adding one fails the build until it is classified. The precedent is the OpenTofu provider's `factsOf`, which does the same thing for the provider's attributes and for the same reason; it moved to [colonel-byte/terraform-provider-cargoship](https://github.com/colonel-byte/terraform-provider-cargoship).
 
 If you are adding a host fact to a receipt, add it to `Host` and update that test. Do not reach for reflection over `ZarfHost`.
 

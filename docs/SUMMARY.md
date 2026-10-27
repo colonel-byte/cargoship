@@ -15,7 +15,6 @@
 - [firewall](guides/firewall.md)
 - [importing-archives](guides/importing-archives.md)
 - [multi-architecture](guides/multi-architecture.md)
-- [opentofu-terragrunt](guides/opentofu-terragrunt.md)
 - [package-values](guides/package-values.md)
 - [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
@@ -85,15 +84,6 @@
 
 -----------
 
-# OpenTofu
-
-- [provider: cargoship](tofu/index.md)
-  - [resource: cargoship_cluster](tofu/resources/cluster.md)
-  - [data source: cargoship_cluster_facts](tofu/data-sources/cluster_facts.md)
-
-
------------
-
 # Phases
 
 - [apply](phases/apply.md)
@@ -114,7 +104,6 @@
 - [e2e-external-inventory](dev/e2e-external-inventory.md)
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
-- [e2e-tofu-tests](dev/e2e-tofu-tests.md)
 - [fuzz-tests](dev/fuzz-tests.md)
 - [goreleaser](dev/goreleaser.md)
 - [mage-test-manual](dev/mage-test-manual.md)
@@ -124,7 +113,6 @@
 - [shell-completion](dev/shell-completion.md)
 - [signing](dev/signing.md)
 - [thirdparty-src](dev/thirdparty-src.md)
-- [tofu-provider](dev/tofu-provider.md)
 
 
 -----------
@@ -147,7 +135,6 @@
 - [publish-example](workflows/publish-example.md)
 - [refresh-examples](workflows/refresh-examples.md)
 - [release-please](workflows/release-please.md)
-- [release-tofu-provider](workflows/release-tofu-provider.md)
 - [release](workflows/release.md)
 - [scan-lint](workflows/scan-lint.md)
 - [scorecard](workflows/scorecard.md)
@@ -187,18 +174,13 @@
 - [choice-run-receipts](agent/choice-run-receipts.md)
 - [choice-selinux-policy](agent/choice-selinux-policy.md)
 - [choice-signing-fork](agent/choice-signing-fork.md)
-- [choice-tofu-e2e](agent/choice-tofu-e2e.md)
-- [choice-tofu-host-removal](agent/choice-tofu-host-removal.md)
-- [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-provider-removal](agent/choice-tofu-provider-removal.md)
-- [choice-tofu-secrets](agent/choice-tofu-secrets.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)
 - [choice-upstream-cni-manifests](agent/choice-upstream-cni-manifests.md)
 - [choice-v1alpha1-action-conversion](agent/choice-v1alpha1-action-conversion.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [choice-zarf-collection-removal](agent/choice-zarf-collection-removal.md)
 - [design-config-codegen](agent/design-config-codegen.md)
-- [design-tofu-provider-install](agent/design-tofu-provider-install.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
 - [todo-chart-disable-image-gating](agent/todo-chart-disable-image-gating.md)
 - [todo-extractpath-archive-cache](agent/todo-extractpath-archive-cache.md)

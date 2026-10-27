@@ -17,7 +17,6 @@ docs/phases/**/*.md linguist-generated
 docs/schema/**/*.md linguist-generated
 docs/ansible/**/module_*.md linguist-generated
 docs/ansible/**/role_*.md linguist-generated
-docs/tofu/**/*.md linguist-generated
 docs/index.md linguist-generated
 docs/security.md linguist-generated
 docs/SUMMARY.md linguist-generated
