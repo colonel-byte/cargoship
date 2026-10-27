@@ -157,6 +157,9 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.Host) er
 		if !pathExists(h, path) {
 			continue
 		}
+		if err := h.Sudo().Exec(unmountUnderCommand(path)); err != nil {
+			logger.From(ctx).Warn("failed to unmount under an engine path", "path", path, "error", err)
+		}
 		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", path)); err != nil {
 			logger.From(ctx).Warn("failed to remove engine path", "path", path, "error", err)
 		}
@@ -165,6 +168,29 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.Host) er
 	p.cleanUploadManifest(ctx, h)
 
 	return nil
+}
+
+// unmountUnderCommand unmounts everything mounted at or below path, deepest first.
+//
+// `rm -rf` cannot unlink through a live mount, so a cleanup path with mounts under it survives
+// the removal with whatever it still holds: the kubelet keeps every pod's volumes, secrets and
+// projected service-account tokens under /var/lib/kubelet/pods/<uid>/volumes, and a reset that
+// skipped the unmount left all of it on disk while reporting success. On an air-gapped node
+// that is cluster credentials outliving the cluster.
+//
+// This does not rely on the engine's own teardown script having done it. k3s and rke2 unmount
+// in their killall scripts, but those are uploaded files that a reset may not find -- and the
+// upstream distro has no killall script at all, while its data directory is the kubelet's.
+//
+// Lazy and forced: the point is for the removal that follows to succeed, and a mount still held
+// open by a process the service stop did not reap would otherwise refuse. Reverse-sorting the
+// mount points puts children before their parents, since a child path is its parent plus a
+// suffix. Paths come from the distro's CleanupPaths, not from a host, so they are not quoted
+// against spaces.
+func unmountUnderCommand(path string) string {
+	return fmt.Sprintf(
+		`awk -v p=%s '$2 == p || index($2, p "/") == 1 {print $2}' /proc/self/mounts | sort -r | xargs -r -n1 umount -lf`,
+		path)
 }
 
 // cleanManagedDirs cleans up managed directories and files tracked by the distro,
