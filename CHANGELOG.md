@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.37.0](https://github.com/colonel-byte/cargoship/compare/v0.36.0...v0.37.0) (2026-10-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove the OpenTofu provider now that it lives in its own repository ([#953](https://github.com/colonel-byte/cargoship/issues/953))
+
+### Features
+
+* **examples:** commit release image manifests and verify them against upstream ([#955](https://github.com/colonel-byte/cargoship/issues/955)) ([9e7f295](https://github.com/colonel-byte/cargoship/commit/9e7f2950b5d050e01970d02b8ae7eb14a96e0bfd))
+* **examples:** expose the vSphere charts' vCenter, scheduling and CA settings ([#956](https://github.com/colonel-byte/cargoship/issues/956)) ([2d282ea](https://github.com/colonel-byte/cargoship/commit/2d282ea673dce885e0349e15047c0fb13a5d625c))
+
+
+### Bug Fixes
+
+* **ci:** stage publish-example packages off the runner's /tmp ([#952](https://github.com/colonel-byte/cargoship/issues/952)) ([43c72ba](https://github.com/colonel-byte/cargoship/commit/43c72bad25ac2138bc816c21b6cad11238e138e9))
+* **microvm:** check for a live fleet before sizing it against free memory ([#959](https://github.com/colonel-byte/cargoship/issues/959)) ([c840897](https://github.com/colonel-byte/cargoship/commit/c8408971f18503cc4fc47dba3548d53385f1e97c))
+* **phase:** leave a sibling install phase's engine files alone ([#960](https://github.com/colonel-byte/cargoship/issues/960)) ([59cb289](https://github.com/colonel-byte/cargoship/commit/59cb289adb578e4604043405e3f18e27b636f0ec))
+* **phase:** unmount under an engine path before removing it ([#961](https://github.com/colonel-byte/cargoship/issues/961)) ([c23db44](https://github.com/colonel-byte/cargoship/commit/c23db44416d4c602f1c890f3ff7afa4d349dffc2))
+
+
+### Refactoring
+
+* remove the OpenTofu provider now that it lives in its own repository ([#953](https://github.com/colonel-byte/cargoship/issues/953)) ([049b617](https://github.com/colonel-byte/cargoship/commit/049b617c40247b0595d85d3ec7b9f7e71b0c7ed9))
+
+
+### Miscellaneous
+
+* **deps:** update fast-uri to 3.1.9 ([#954](https://github.com/colonel-byte/cargoship/issues/954)) ([8003ab9](https://github.com/colonel-byte/cargoship/commit/8003ab9f85be57e9bb7d8c5c813e9d9b4a10a721))
+* **examples:** regenerate the vSphere examples for the new values surface ([#957](https://github.com/colonel-byte/cargoship/issues/957)) ([3a997aa](https://github.com/colonel-byte/cargoship/commit/3a997aa4704aa63a8815f0a79bb194b259ba2bbc))
+
+
+### Build
+
+* **deps:** bump almalinux/10-base from `ed618ca` to `f72ef25` in /containers/ansible ([#949](https://github.com/colonel-byte/cargoship/issues/949)) ([f93b70e](https://github.com/colonel-byte/cargoship/commit/f93b70efb9436728c03c2dcf065eaeed53e4c529))
+* **deps:** bump almalinux/10-base from `ed618ca` to `f72ef25` in /containers/ubi ([#948](https://github.com/colonel-byte/cargoship/issues/948)) ([4971bbc](https://github.com/colonel-byte/cargoship/commit/4971bbc7645fb96aa256359bff41774292ea03d2))
+
 ## [0.36.0](https://github.com/colonel-byte/cargoship/compare/v0.35.0...v0.36.0) (2026-10-27)
 
 
