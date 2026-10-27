@@ -170,7 +170,19 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 // version but didn't re-upload itself, e.g. an engine binary a version bump renamed. The diff is
 // scoped to the "engine" category: other upload phases (e.g. images) record into the same
 // per-host UploadedFiles list, and their entries may not exist yet by the time this phase runs.
+//
+// A host this phase uploaded nothing for is left alone. Scoping to "engine" separates this diff
+// from the image uploads, but not from the sibling install phases that share the category: the
+// RPM, APT and BIN phases all record there, so a phase with no files for a host would read its
+// sibling's engine entries as a version that dropped every one of them and delete the engine
+// binary the node is running. EngineUploaded is the same signal blockOtherInstallsIfUploaded
+// sets, so the host whose files these are is the host whose manifest is diffed.
 func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.Host) error {
+	if !h.Metadata.EngineUploaded {
+		logger.From(ctx).Debug("no files uploaded for this host, leaving its engine manifest alone", "host", h)
+		return nil
+	}
+
 	current := ParseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
 	old := filterManifestByCategory(p.priorManifest[h], "engine")
 	current = filterManifestByCategory(current, "engine")

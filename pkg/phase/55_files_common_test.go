@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 	hostos "github.com/colonel-byte/cargoship/types/os"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -389,4 +391,76 @@ func TestWhenEnabled(t *testing.T) {
 func TestWhenEnabledWithoutValues(t *testing.T) {
 	require.True(t, whenEnabled(context.Background(), nil, "", "always"))
 	require.False(t, whenEnabled(context.Background(), nil, ".tools.on", "gated"))
+}
+
+// manifestFS stands in for a host's filesystem during a stale-upload diff: it records what was
+// removed, reports no manifest on disk, and accepts the rewrite that follows a removal.
+type manifestFS struct {
+	remotefs.FS
+
+	removed []string
+}
+
+func (f *manifestFS) Remove(path string) error {
+	f.removed = append(f.removed, path)
+	return nil
+}
+
+func (f *manifestFS) FileExist(string) bool { return false }
+
+func (f *manifestFS) WriteFile(string, []byte, os.FileMode) error { return nil }
+
+// TestCleanStaleUploadsLeavesASiblingPhasesFilesAlone is the regression test for #942: the RPM
+// phase on a k3s package, which carries no rpm selector at all, deleted the engine binary and
+// both scripts the BIN phase had put on the host -- including the binary the node was running.
+//
+// All three install phases record into the "engine" category, so a phase with nothing to upload
+// has an empty current manifest and reads every one of its sibling's entries as stale. The host
+// it never claimed is not a host whose manifest it may prune.
+func TestCleanStaleUploadsLeavesASiblingPhasesFilesAlone(t *testing.T) {
+	fs := &manifestFS{}
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(fs)
+
+	p := &UploadFilesCommon{
+		priorManifest: map[*cluster.Host][]ManifestEntry{
+			h: {
+				{
+					Category: "engine",
+					Path:     "/usr/local/bin/k3s",
+				},
+			},
+		},
+	}
+
+	require.NoError(t, p.cleanStaleUploads(context.Background(), h))
+	require.Empty(t, fs.removed, "the phase uploaded nothing to this host, so it owns none of its engine files")
+}
+
+// TestCleanStaleUploadsRemovesWhatThisPhaseDropped is the behaviour the guard above must not
+// cost: a phase that did upload still prunes the files a previous version left behind.
+func TestCleanStaleUploadsRemovesWhatThisPhaseDropped(t *testing.T) {
+	fs := &manifestFS{}
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(fs)
+	h.Metadata.EngineUploaded = true
+	h.Metadata.UploadedFiles = []string{"engine\t/usr/local/bin/k3s"}
+
+	p := &UploadFilesCommon{
+		priorManifest: map[*cluster.Host][]ManifestEntry{
+			h: {
+				{
+					Category: "engine",
+					Path:     "/usr/local/bin/k3s",
+				},
+				{
+					Category: "engine",
+					Path:     "/usr/local/bin/k3s-old",
+				},
+			},
+		},
+	}
+
+	require.NoError(t, p.cleanStaleUploads(context.Background(), h))
+	require.Equal(t, []string{"/usr/local/bin/k3s-old"}, fs.removed)
 }
