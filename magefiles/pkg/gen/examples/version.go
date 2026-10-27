@@ -37,7 +37,11 @@ type exampleVersion struct {
 	ReplacesKubeProxy bool     // whether to set disable-kube-proxy
 	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
 	CoreImages        []string // the release's own image manifest
-	CNIImages         []string // the flavor's own manifests, concatenated, when it has any
+	CNIImages         []string // the flavor's own manifests, concatenated, for the lists no chart claims
+	// ChartImages maps a chart entry's name to the images it declares under
+	// spec.config.engine.manifest. A chart that is disabled has none of them uploaded, so an
+	// image belongs here rather than in CNIImages whenever a chart owns it.
+	ChartImages map[string][]string
 
 	// Addons is every packaged component this distro/version advertises under `disable:`,
 	// read from the vocabulary mage generate:engineConfig extracts from the engine's own
@@ -135,12 +139,23 @@ func (v *exampleVersion) fetchImages(repoURL string, spec exampleDistroSpec, f e
 	if v.CoreImages, err = fetchImageList(repoURL, v.TagURL, spec.coreImages); err != nil {
 		return err
 	}
-	for _, asset := range f.imageLists {
-		images, err := fetchImageList(repoURL, v.TagURL, asset)
+	for _, list := range f.imageLists {
+		images, err := fetchImageList(repoURL, v.TagURL, list.asset)
 		if err != nil {
 			return err
 		}
-		v.CNIImages = append(v.CNIImages, images...)
+		if len(list.charts) == 0 {
+			v.CNIImages = append(v.CNIImages, images...)
+			continue
+		}
+		if v.ChartImages == nil {
+			v.ChartImages = map[string][]string{}
+		}
+		for _, image := range images {
+			for _, chart := range list.imageCharts(image) {
+				v.ChartImages[chart] = append(v.ChartImages[chart], image)
+			}
+		}
 	}
 	return nil
 }

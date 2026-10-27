@@ -20,6 +20,7 @@ package examples
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/engineconfig"
 )
@@ -31,15 +32,61 @@ import (
 // multi-architecture flavors are the exception: they are named for what they demonstrate
 // rather than for a CNI, since the CNI is not what makes them worth having.
 type exampleFlavor struct {
-	cni               string   // cilium -- what the template configures
-	name              string   // multi -- what follows the distro in metadata.name; the CNI when empty
-	dir               string   // example/rke2-cilium -- where its examples are written
-	imageLists        []string // rke2-images-cilium.linux-amd64.txt -- the airgap manifests it adds to the core one
-	replacesKubeProxy bool     // whether the CNI takes over from kube-proxy
-	values            []string // the values templates written next to distro.yaml; none when empty
-	cloudProvider     string   // rancher-vsphere -- the bundled cloud provider it selects; none when empty
-	arches            []string // the architectures its examples target; amd64 alone when empty
-	minors            []string // v1_36 -- the minor lines it renders, all of them when empty
+	cni               string             // cilium -- what the template configures
+	name              string             // multi -- what follows the distro in metadata.name; the CNI when empty
+	dir               string             // example/rke2-cilium -- where its examples are written
+	imageLists        []exampleImageList // the airgap manifests it adds to the core one
+	replacesKubeProxy bool               // whether the CNI takes over from kube-proxy
+	values            []string           // the values templates written next to distro.yaml; none when empty
+	cloudProvider     string             // rancher-vsphere -- the bundled cloud provider it selects; none when empty
+	arches            []string           // the architectures its examples target; amd64 alone when empty
+	minors            []string           // v1_36 -- the minor lines it renders, all of them when empty
+}
+
+// exampleImageList is one of upstream's airgap image manifests, and the chart entries that
+// declare the images in it.
+//
+// Upstream does not divide these lists along chart lines: rke2's vSphere manifest holds the
+// CPI image beside the CSI driver and syncer, and hardened-cni-plugins is in both the cilium
+// and the vSphere manifests. So a list several charts draw from is declared under each of
+// them. The package carries each image once either way, and an image reaches a host while any
+// chart declaring it is enabled -- which is what keeps a cluster that turns the CSI chart off
+// from losing the CPI image it still runs. The dependency only runs one way: vSphere CSI needs
+// the ProviderID the CPI sets, so CPI without CSI is ordinary and the reverse does not work.
+type exampleImageList struct {
+	// asset is the manifest's file name, e.g. rke2-images-cilium.linux-amd64.txt.
+	asset string
+	// charts names the chart entries that declare these images, residual owner last. Empty
+	// means they belong to the flat imageConfig.images list, which is where a CNI with no
+	// chart manifest keeps them.
+	charts []string
+	// owns maps a chart to the reference substrings that identify its images. An image is
+	// declared by every chart whose pattern matches it, so one both charts need is not
+	// withheld by whichever happened to be listed first. An image no pattern matches goes
+	// to the residual owner -- the last chart in charts -- which is what keeps an image
+	// upstream adds to a list from being dropped instead of merely misfiled.
+	//
+	// A chart whose images are the bulk of a list is therefore better left unnamed. rke2's
+	// vSphere list is one CPI image and eight CSI ones, so CPI is named and CSI is residual:
+	// the next storage sidecar upstream adds lands with the driver without an edit here.
+	owns map[string][]string
+}
+
+// imageCharts returns the chart entries that declare image, out of the charts this list feeds.
+func (l exampleImageList) imageCharts(image string) []string {
+	var named []string
+	for _, chart := range l.charts {
+		for _, pattern := range l.owns[chart] {
+			if strings.Contains(image, pattern) {
+				named = append(named, chart)
+				break
+			}
+		}
+	}
+	if len(named) > 0 {
+		return named
+	}
+	return l.charts[len(l.charts)-1:]
 }
 
 // flavorName is what the example's metadata.name ends in.

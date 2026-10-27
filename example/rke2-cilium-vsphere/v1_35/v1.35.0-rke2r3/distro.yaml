@@ -45,17 +45,24 @@ spec:
         target: .podSecurity.plugins[0].configuration.defaults.audit
       - source: .podSecurity.defaults.warn
         target: .podSecurity.plugins[0].configuration.defaults.warn
+      # Chart enablement is an ordinary place for a value to land, and mappings are applied
+      # before any phase runs -- so by the time the upload phase picks images, a cluster's
+      # answer is already in hand.
+      - source: .addons.vsphere.cpi.enabled
+        target: .manifest.rancher-vsphere-cpi.enabled
+      - source: .addons.vsphere.csi.enabled
+        target: .manifest.rancher-vsphere-csi.enabled
       # This flavor spends its cilium values on mappings too: each one moves a single
       # value onto a single key of the engine configuration, with no templating involved.
       # The multi-cni-cilium flavor shows the other way of spending these same values.
       - source: .cilium.encryption.enabled
-        target: .manifest.rke2-cilium.encryption.enabled
+        target: .manifest.rke2-cilium.values.encryption.enabled
       - source: .cilium.l2announcements.enabled
-        target: .manifest.rke2-cilium.l2announcements.enabled
+        target: .manifest.rke2-cilium.values.l2announcements.enabled
       - source: .cilium.hubble.ui.enabled
-        target: .manifest.rke2-cilium.hubble.ui.enabled
+        target: .manifest.rke2-cilium.values.hubble.ui.enabled
       - source: .cilium.hubble.ui.ipv6
-        target: .manifest.rke2-cilium.hubble.ui.frontend.server.ipv6.enabled
+        target: .manifest.rke2-cilium.values.hubble.ui.frontend.server.ipv6.enabled
   config:
     engine:
       config:
@@ -127,79 +134,105 @@ spec:
                   - zarf
       manifest:
         rke2-cilium:
-          kubeProxyReplacement: true
-          k8sServiceHost: "localhost"
-          k8sServicePort: 6443
-          l2announcements:
-            enabled: true
-          encryption:
-            enabled: false
-            type: wireguard
-          tolerations:
-            - operator: Exists
-          operator:
+          images:
+            - docker.io/rancher/mirrored-cilium-certgen:v0.3.1
+            - docker.io/rancher/mirrored-cilium-cilium:v1.18.6
+            - docker.io/rancher/mirrored-cilium-cilium-envoy:v1.35.9-1767794330-db497dd19e346b39d81d7b5c0dedf6c812bcc5c9
+            - docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.18.6
+            - docker.io/rancher/mirrored-cilium-hubble-relay:v1.18.6
+            - docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.3
+            - docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.3
+            - docker.io/rancher/mirrored-cilium-operator-aws:v1.18.6
+            - docker.io/rancher/mirrored-cilium-operator-azure:v1.18.6
+            - docker.io/rancher/mirrored-cilium-operator-generic:v1.18.6
+            - docker.io/rancher/hardened-cni-plugins:v1.9.0-build20260116
+          values:
+            kubeProxyReplacement: true
+            k8sServiceHost: "localhost"
+            k8sServicePort: 6443
+            l2announcements:
+              enabled: true
+            encryption:
+              enabled: false
+              type: wireguard
             tolerations:
               - operator: Exists
-          cni:
-            exclusive: false
-          bandwidthManager:
-            enabled: false
-          bpf:
-            masquerade: true
-          socketLB:
-            hostNamespaceOnly: true
-            enabled: true
-          localRedirectPolicies:
-            enabled: true
-          hostFirewall:
-            enabled: false
-          enablePolicy: default
-          hubble:
-            enabled: true
-            relay:
-              enabled: true
+            operator:
               tolerations:
                 - operator: Exists
-            ui:
+            cni:
+              exclusive: false
+            bandwidthManager:
+              enabled: false
+            bpf:
+              masquerade: true
+            socketLB:
+              hostNamespaceOnly: true
               enabled: true
-              frontend:
-                server:
-                  ipv6:
-                    enabled: false
-              tolerations:
-                - operator: Exists
-        rancher-vsphere-cpi: |-
-          vCenter:
-            # These are placeholders: an example cannot know the vCenter it will run against,
-            # and credentials do not belong in a package. Fill them in, or replace the
-            # generated secret with your own, before building this example.
-            host: ""
-            port: 443
-            insecureFlag: true
-            datacenters: ""
-            username: ""
-            password: ""
-            credentialsSecret:
-              name: vsphere-cpi-creds
-              generate: true
-        rancher-vsphere-csi: |-
-          vCenter:
-            # Placeholders, as above. clusterId has to be unique per cluster sharing a vCenter.
-            host: ""
-            port: 443
-            insecureFlag: "1"
-            clusterId: ""
-            datacenters: ""
-            username: ""
-            password: ""
-            configSecret:
-              name: vsphere-config-secret
-              generate: true
-          storageClass:
-            enabled: true
-            name: vsphere-csi-sc
-            isDefault: true
-            datastoreURL: ""
+            localRedirectPolicies:
+              enabled: true
+            hostFirewall:
+              enabled: false
+            enablePolicy: default
+            hubble:
+              enabled: true
+              relay:
+                enabled: true
+                tolerations:
+                  - operator: Exists
+              ui:
+                enabled: true
+                frontend:
+                  server:
+                    ipv6:
+                      enabled: false
+                tolerations:
+                  - operator: Exists
+        rancher-vsphere-cpi:
+          images:
+            - docker.io/rancher/mirrored-cloud-provider-vsphere:v1.35.0
+          values: |-
+            vCenter:
+              # These are placeholders: an example cannot know the vCenter it will run against,
+              # and credentials do not belong in a package. Fill them in, or replace the
+              # generated secret with your own, before building this example.
+              host: ""
+              port: 443
+              insecureFlag: true
+              datacenters: ""
+              username: ""
+              password: ""
+              credentialsSecret:
+                name: vsphere-cpi-creds
+                generate: true
+        rancher-vsphere-csi:
+          images:
+            - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v3.6.0
+            - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v3.6.0
+            - docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.13.0
+            - docker.io/rancher/mirrored-sig-storage-csi-resizer:v1.12.0
+            - docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.15.0
+            - docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0
+            - docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1
+            - docker.io/rancher/hardened-csi-snapshotter:v8.4.0-build20260108
+          values: |-
+            vCenter:
+              # Placeholders, as above. clusterId has to be unique per cluster sharing a vCenter.
+              host: ""
+              port: 443
+              insecureFlag: "1"
+              clusterId: ""
+              datacenters: ""
+              username: ""
+              password: ""
+              configSecret:
+                name: vsphere-config-secret
+                generate: true
+            storageClass:
+              enabled: true
+              name: vsphere-csi-sc
+              isDefault: true
+              datastoreURL: ""
     # Files that are not part of an install method. Phase 50 uploads these to every host the
     # selector matches, and no later phase renames or installs them, so a tool here is in place
     # as soon as the upload finishes.
@@ -351,24 +384,3 @@ spec:
         - docker.io/rancher/nginx-ingress-controller:v1.14.3-hardened1
         - docker.io/rancher/rke2-cloud-provider:v1.35.0-rc1.0.20251218152248-a6c6cd15c0c4-build20251219
         - docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260108
-        # cilium cni and add-on images
-        - docker.io/rancher/mirrored-cilium-certgen:v0.3.1
-        - docker.io/rancher/mirrored-cilium-cilium:v1.18.6
-        - docker.io/rancher/mirrored-cilium-cilium-envoy:v1.35.9-1767794330-db497dd19e346b39d81d7b5c0dedf6c812bcc5c9
-        - docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.18.6
-        - docker.io/rancher/mirrored-cilium-hubble-relay:v1.18.6
-        - docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.3
-        - docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.3
-        - docker.io/rancher/mirrored-cilium-operator-aws:v1.18.6
-        - docker.io/rancher/mirrored-cilium-operator-azure:v1.18.6
-        - docker.io/rancher/mirrored-cilium-operator-generic:v1.18.6
-        - docker.io/rancher/hardened-cni-plugins:v1.9.0-build20260116
-        - docker.io/rancher/mirrored-cloud-provider-vsphere:v1.35.0
-        - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v3.6.0
-        - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v3.6.0
-        - docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.13.0
-        - docker.io/rancher/mirrored-sig-storage-csi-resizer:v1.12.0
-        - docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.15.0
-        - docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0
-        - docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1
-        - docker.io/rancher/hardened-csi-snapshotter:v8.4.0-build20260108

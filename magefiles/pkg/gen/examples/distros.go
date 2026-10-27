@@ -109,26 +109,38 @@ var exampleDistros = []exampleDistroSpec{
 				cni:               "cilium",
 				name:              "multi-cni-cilium",
 				dir:               "example/rke2-multi-cni-cilium",
-				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
+				imageLists:        []exampleImageList{{asset: "rke2-images-cilium.linux-amd64.txt", charts: []string{"rke2-cilium"}}},
 				arches:            exampleMultiArches,
 				minors:            exampleMultiMinors,
 				replacesKubeProxy: true,
 				values:            exampleRKE2Values,
 			},
 			{
-				cni:               "cilium",
-				name:              "cilium-vsphere",
-				dir:               "example/rke2-cilium-vsphere",
-				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt", "rke2-images-vsphere.linux-amd64.txt"},
+				cni:  "cilium",
+				name: "cilium-vsphere",
+				dir:  "example/rke2-cilium-vsphere",
+				imageLists: []exampleImageList{
+					{asset: "rke2-images-cilium.linux-amd64.txt", charts: []string{"rke2-cilium"}},
+					// This list mixes the two vSphere charts' images. The trailing colon
+					// matters: without it the pattern also claims
+					// mirrored-cloud-provider-vsphere-csi-release-driver, which is the CSI
+					// driver rather than the cloud provider.
+					{
+						asset:  "rke2-images-vsphere.linux-amd64.txt",
+						charts: []string{"rancher-vsphere-cpi", "rancher-vsphere-csi"},
+						owns:   map[string][]string{"rancher-vsphere-cpi": {"mirrored-cloud-provider-vsphere:"}},
+					},
+				},
 				replacesKubeProxy: true,
 				cloudProvider:     "rancher-vsphere",
 				values:            exampleRKE2Values,
 			},
 			{
-				cni:        "canal",
-				name:       "multi-cni-canal",
-				dir:        "example/rke2-multi-cni-canal",
-				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
+				cni:  "canal",
+				name: "multi-cni-canal",
+				dir:  "example/rke2-multi-cni-canal",
+				// canal needs no chart manifest, so its images stay in the flat list.
+				imageLists: []exampleImageList{{asset: "rke2-images-canal.linux-amd64.txt"}},
 				arches:     exampleMultiArches,
 				minors:     exampleMultiMinors,
 				values:     exampleRKE2Values,
