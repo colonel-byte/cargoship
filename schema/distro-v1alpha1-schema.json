@@ -150,16 +150,51 @@
           "properties": {
             "manifest": {
               "additionalProperties": {
-                "oneOf": [
+                "anyOf": [
                   {
                     "type": "string"
+                  },
+                  {
+                    "patternProperties": {
+                      "^x-": {}
+                    },
+                    "properties": {
+                      "enabled": {
+                        "default": true,
+                        "description": "whether this chart's images are carried onto hosts. A chart that is not enabled keeps its images in the package and has none of them uploaded. This is not an install switch -- the engine's disable key is what leaves a chart out.",
+                        "type": "boolean"
+                      },
+                      "images": {
+                        "description": "the offline images this chart needs, carried in the package alongside imageConfig.images.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": true
+                      },
+                      "values": {
+                        "description": "the Helm values cargoship writes to this chart's HelmChartConfig, as a YAML string or a mapping.",
+                        "oneOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "object"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "values"
+                    ],
+                    "type": "object"
                   },
                   {
                     "type": "object"
                   }
                 ]
               },
-              "description": "maps a chart name to the Helm values cargoship writes to that chart's HelmChartConfig. A value is either a YAML string or a mapping.",
+              "description": "maps a chart name to that chart's entry. An entry is either a wrapper naming the chart's values, images and whether it is enabled, or -- the older form, which v1beta1 drops -- the Helm values on their own, as a YAML string or a mapping.",
               "type": "object"
             }
           },
