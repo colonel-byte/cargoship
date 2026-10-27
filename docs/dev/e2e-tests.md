@@ -66,6 +66,8 @@ $ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires
 *   **`TMPDIR`** - respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.
 *   **`CARGOSHIP_E2E_BACKEND`** - what provisions the cluster suite's hosts: `bootloose` (the default) for privileged containers, `microvm` for local Rocky 10 virtual machines, or `inventory` for hosts that already exist. The VM backend is the only way the SELinux, fapolicyd and firewalld phases run as the paths they are rather than as gates that correctly do nothing, and it needs KVM. It is additional coverage rather than a replacement, since it runs one distribution; see [microvm](microvm.md).
 
+*   **`CARGOSHIP_E2E_VM_MEMORY`** - with `CARGOSHIP_E2E_BACKEND=microvm`, the per-node memory in MiB. The suite brings its fleet up at the size the join walk needs rather than the size the apply walk uses, so the default of 4096 asks for 16GiB at once and the bring-up refuses rather than letting the OOM killer choose which process dies. A value that is not a positive number is ignored; see [microvm](microvm.md).
+
 *   **`CARGOSHIP_E2E_INVENTORY`** - with `CARGOSHIP_E2E_BACKEND=inventory`, the path to a `ZarfCluster` document naming hosts that already exist. The suite provisions nothing and tears nothing down, which is how the phase assertions are run against a fleet on EC2, vSphere, Proxmox or bare metal. It changes those hosts and does not change them back; see [e2e-external-inventory](e2e-external-inventory.md).
 
 *   **`CARGOSHIP_E2E_KEEP_REGISTRY_LOG`** - set to any non-empty value to keep the in-memory registry's request log for passing tests as well as failing ones. See "Artifacts and logs" below.

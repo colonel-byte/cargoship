@@ -81,9 +81,6 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 	if err != nil {
 		return Fleet{}, err
 	}
-	if err := checkMemory(spec, len(nodes)); err != nil {
-		return Fleet{}, err
-	}
 
 	fleet := Fleet{
 		Name:   spec.Fleet,
@@ -91,10 +88,18 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 		Nodes:  nodes,
 		Distro: spec.Distro,
 	}
+	// Before the memory check, not after it. A live fleet's nodes have already been deducted
+	// from MemAvailable, so sizing the whole fleet against what is left double-counts them and
+	// refuses with a memory error a caller cannot act on -- where the actual problem is that
+	// this fleet is up, which is a thing they can fix. Up never adopts a running fleet, so past
+	// this point nothing of the fleet is running and the whole of it has to fit.
 	if running, err := anyRunning(fleet); err != nil {
 		return Fleet{}, err
 	} else if len(running) > 0 {
 		return Fleet{}, fmt.Errorf("fleet %s is already up (%s); tear it down first with `mage dev:vmDown`", fleet.Name, strings.Join(running, ", "))
+	}
+	if err := checkMemory(spec, len(nodes)); err != nil {
+		return Fleet{}, err
 	}
 
 	// One fetch per distinct image, not per node: a mixed fleet wants both base images and a

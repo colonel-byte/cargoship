@@ -19,12 +19,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"sync"
+	"testing"
 	"time"
 
 	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/test/microvm"
+	"github.com/stretchr/testify/require"
 )
 
 // backendEnvVar selects what provisions the suite's hosts.
@@ -117,6 +120,26 @@ var vmOS = fleetSpec{ //nolint:gochecknoglobals
 	},
 }
 
+// vmMemoryEnvVar overrides the per-node memory the microvm backend asks for, in MiB.
+//
+// The fleet is brought up at the size the join walk needs, so the default of 4096 asks for 16GiB
+// at once and the bring-up refuses rather than letting the OOM killer choose. That makes the
+// suite unrunnable on a smaller machine, and the refusal advises lowering the per-node memory --
+// advice the suite had no way to take, since every other knob it has is an environment variable
+// and this one was not. Unset leaves the package default.
+const vmMemoryEnvVar = "CARGOSHIP_E2E_VM_MEMORY"
+
+// vmMemoryMiB is the per-node memory this run asked for, or zero for the package default. An
+// unparseable or non-positive value is ignored rather than failing the run: the consequence of
+// getting it wrong is a fleet that does not fit, which the bring-up already reports clearly.
+func vmMemoryMiB() int {
+	mib, err := strconv.Atoi(os.Getenv(vmMemoryEnvVar))
+	if err != nil || mib <= 0 {
+		return 0
+	}
+	return mib
+}
+
 // microvmSpec is the fleet spec as the microvm backend wants it. The suite's spec is the
 // authority on how many of each role there are; everything else is the backend's default.
 func microvmSpec(f fleetSpec) microvm.Spec {
@@ -126,6 +149,7 @@ func microvmSpec(f fleetSpec) microvm.Spec {
 		Controllers: counts.controllers,
 		Workers:     counts.workers,
 		Distro:      distroID(),
+		MemoryMiB:   vmMemoryMiB(),
 	}
 }
 
@@ -398,4 +422,46 @@ func reachesClusterAPI(loadBalancer string) bool {
 	}
 	conn.Close() //nolint:errcheck // the probe is the dial; a close error says nothing about reachability
 	return true
+}
+
+// TestVMMemoryMiB covers the knob's own parsing, which is the whole of it: a bad value has to
+// read as "unset" rather than as a fleet sized zero, which qemu would refuse node by node after
+// the bring-up had already fetched an image and written a key.
+func TestVMMemoryMiB(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		set  string
+		want int
+	}{
+		{
+			name: "unset",
+			set:  "",
+			want: 0,
+		},
+		{
+			name: "a size",
+			set:  "2048",
+			want: 2048,
+		},
+		{
+			name: "not a number",
+			set:  "2G",
+			want: 0,
+		},
+		{
+			name: "zero",
+			set:  "0",
+			want: 0,
+		},
+		{
+			name: "negative",
+			set:  "-1",
+			want: 0,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(vmMemoryEnvVar, tt.set)
+			require.Equal(t, tt.want, vmMemoryMiB())
+		})
+	}
 }

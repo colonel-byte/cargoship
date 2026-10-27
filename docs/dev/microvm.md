@@ -84,6 +84,14 @@ mage dev:vmUp -control=3 -worker=3 -memory=2048
 
 2048MiB is ample for the host-preparation phases. An rke2 control-plane node wants the default: three of them at 2048 will come up and then struggle once etcd and the control plane are both running.
 
+The e2e suite has no flags, so it reads the same setting from `CARGOSHIP_E2E_VM_MEMORY`. It matters more there than for `dev:vmUp`, because the suite brings its fleet up at the size the join walk needs rather than the size the apply walk uses - four nodes, so 16GiB at the default:
+
+```sh
+CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_VM_MEMORY=3072 mage test:endToEndCluster
+```
+
+A value that is not a positive number is ignored and leaves the default, since a fleet that does not fit is reported clearly by the bring-up anyway.
+
 ## A mixed fleet
 
 The fleet runs Rocky 10 unless you ask for something else. Two counts opt in to Ubuntu nodes alongside them:
