@@ -64,7 +64,6 @@ func GenerateDocument() error {
 		"./docs/commands",
 		"./docs/phases",
 		"./" + schema.SchemaDocsDir,
-		"./" + tofuDocsDir,
 	}
 
 	for _, dir := range docsDirs {
@@ -92,9 +91,6 @@ func GenerateDocument() error {
 		return err
 	}
 	if err := generateAnsibleDocs(); err != nil {
-		return err
-	}
-	if err := generateTofuDocs(); err != nil {
 		return err
 	}
 	if err := generateBookPages(); err != nil {

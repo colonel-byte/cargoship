@@ -68,6 +68,22 @@ enable     = true
 "/guides/zarf-ansible-module.html"        = "https://colonel-byte.github.io/ansible-collection-zarf/guides/zarf-ansible-module.html"
 "/agent/choice-zarf-ansible-module.html"  = "https://colonel-byte.github.io/ansible-collection-zarf/agent/choice-zarf-ansible-module.html"
 "/agent/choice-zarf-info-modules.html"    = "https://colonel-byte.github.io/ansible-collection-zarf/agent/choice-zarf-info-modules.html"
+# The OpenTofu provider moved to colonel-byte/terraform-provider-cargoship, and its pages went
+# with it. Its generated reference is rendered by tfplugindocs there rather than published as a
+# book, so these point at the files in that repository rather than at a site.
+"/agent/choice-tofu-provider-layout.html" = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-provider-layout.md"
+"/agent/choice-tofu-secrets.html"         = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-secrets.md"
+"/agent/choice-tofu-host-removal.html"    = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-host-removal.md"
+"/agent/choice-tofu-e2e.html"             = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/choice-tofu-e2e.md"
+"/agent/design-tofu-provider-install.html" = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/agent/design-tofu-provider-install.md"
+"/dev/tofu-provider.html"                 = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/dev/tofu-provider.md"
+"/dev/e2e-tofu-tests.html"                = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/dev/e2e-tofu-tests.md"
+"/guides/opentofu-terragrunt.html"        = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/guides/opentofu-terragrunt.md"
+"/tofu/index.html"                        = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/index.md"
+"/tofu/resources/cluster.html"            = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/resources/cluster.md"
+"/tofu/data-sources/cluster_facts.html"   = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/data-sources/cluster_facts.md"
+"/workflows/release-tofu-provider.html"   = "https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/.github/workflows/release.yaml"
+
 "/ansible/collection.html"                = "cargoship/collection.html"
 "/ansible/modules.html"                   = "cargoship/modules.html"
 "/ansible/roles.html"                     = "cargoship/roles.html"

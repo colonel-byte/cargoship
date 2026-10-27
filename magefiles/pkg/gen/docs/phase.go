@@ -173,10 +173,6 @@ func generateSummary() error {
 			lines: ansibleSummary,
 		},
 		{
-			title: "OpenTofu",
-			lines: tofuSummary,
-		},
-		{
 			title:  "Phases",
 			regex:  `(.+)\.md`,
 			folder: "phases",

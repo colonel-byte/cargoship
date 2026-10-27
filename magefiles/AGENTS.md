@@ -13,7 +13,6 @@ All implementation logic belongs in modular Go packages under `magefiles/pkg/`:
 | `magefiles/build.go`        | Mage entrypoint for the `Build` namespace (`build:binary`, `build:all`, `build:examples`)             |
 | `magefiles/dev.go`          | Mage entrypoint for the `Dev` namespace (`dev:clean`, `dev:tidy`, `dev:vendor`, `dev:dnfPins`, etc.)  |
 | `magefiles/generate.go`     | Mage entrypoint for the `Generate` namespace (`generate:document`, `generate:schema`, etc.)           |
-| `magefiles/release.go`      | Mage entrypoint for the `Release` namespace (`release:tofuProvider`, `release:tofuProviderLayout`)    |
 | `magefiles/test.go`         | Mage entrypoint for the `Test` namespace (`test:endToEnd`, `test:fuzz`, etc.)                         |
 | `magefiles/core/core.go`    | Bootstrapping main package for `go run ./magefiles/core`                                              |
 | `magefiles/pkg/build/`      | Binary building, compiler/linker flag assembly, and example package compilation                       |

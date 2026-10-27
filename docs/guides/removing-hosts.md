@@ -70,7 +70,7 @@ If the removal fails, the apply stops there and says so. The entry stays in stat
 
 Nothing, beyond reading them. `tofu destroy` tears down everything the cluster still holds: a host marked absent whose removal failed is included, because the machine is still running and still joined, and one whose removal finished is left out, because reaching for a decommissioned machine would fail. The markers are not something to clean up before destroying.
 
-If the machines are OpenTofu resources too and are being destroyed in the same run, consider `retain_on_destroy = true` -- draining and uninstalling a node that is about to be deleted is minutes spent on a result nobody sees. See [opentofu-terragrunt](opentofu-terragrunt.md#destroying-the-machines-as-well).
+If the machines are OpenTofu resources too and are being destroyed in the same run, consider `retain_on_destroy = true` -- draining and uninstalling a node that is about to be deleted is minutes spent on a result nobody sees. See [the provider's Terragrunt guide](https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/guides/opentofu-terragrunt.md#destroying-the-machines-as-well).
 
 ## Removing the machine by hand (CLI)
 
