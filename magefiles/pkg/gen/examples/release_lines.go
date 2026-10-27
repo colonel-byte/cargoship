@@ -56,10 +56,12 @@ type releaseLinesEntry struct {
 }
 
 // releaseLinesCache remembers the text assets a release publishes, so that re-rendering an
-// example costs nothing upstream. Unlike example/shasums.json this cache is not committed:
-// its contents are already in every rendered distro.yaml, and the backfill ExampleLine does
-// would grow it without bound. What it borrows from that file is the part that matters --
-// entries are only trusted when the URL still matches, and there is a way to force a refetch.
+// example costs nothing upstream. It is the per-developer half of that: the assets the distro
+// examples are rendered from are committed to example/assets.json, and this cache holds
+// everything else -- the pinned CNI manifests, and the backfill ExampleLine does, which would
+// grow the committed file without bound. What it borrows from example/shasums.json is the part
+// that matters -- entries are only trusted when the URL still matches, and there is a way to
+// force a refetch.
 type releaseLinesCache struct {
 	dir      string // where entries are written; empty when caching is off
 	warnOnce sync.Once
@@ -244,6 +246,27 @@ func splitReleaseLines(body []byte) []string {
 	return lines
 }
 
+// downloadLines fetches a text asset and returns its non-empty lines, consulting no cache.
+// fetchLines uses it on a miss, and VerifyAssets uses it to get at what upstream serves right
+// now -- which is the whole point of that target, so it must not be answerable from a cache.
+func downloadLines(url string) ([]string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("fetching %s: %w", url, err)
+	}
+	defer resp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetching %s: %s", url, resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", url, err)
+	}
+	return splitReleaseLines(body), nil
+}
+
 // fetchImageList downloads one of a release's airgap image manifests and returns its
 // non-empty lines, in file order.
 func fetchImageList(repoURL, tagURL, asset string) ([]string, error) {
@@ -265,31 +288,46 @@ func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
 	return fetchLines(fmt.Sprintf("%s/releases/download/%s/%s", strings.TrimSuffix(repoURL, "/"), tagURL, asset))
 }
 
+// isCommittedCandidate reports whether url is a distro release image manifest, which is the one
+// kind of asset example/assets.json holds -- k3s-images.txt, rke2-images-core.linux-amd64.txt
+// and the per-CNI lists beside them. Nothing else fetchLines handles belongs there: the pinned
+// CNI manifests are .yaml and .yml and are tracked by content digest in example/shasums.json,
+// and so are the digests a release's sha256sum-<arch>.txt publishes (see fetchK3sBinarySHA).
+//
+// The .txt suffix is what keeps the airgap image tarballs out -- k3s-airgap-images-amd64.tar.gz
+// also carries "-images" in its name.
+func isCommittedCandidate(url string) bool {
+	return strings.Contains(url, "/releases/download/") &&
+		strings.Contains(url, "-images") && strings.HasSuffix(url, ".txt")
+}
+
 // fetchLines is fetchReleaseLines against a URL that is not a release asset -- a pinned CNI
 // manifest, which is published on its own schedule rather than with a distro release but is
 // just as immutable under its version. Same cache, same guarantee.
 func fetchLines(url string) ([]string, error) {
 	cache := releaseLines()
+
+	// The committed cache in example/assets.json answers first, so a fresh clone re-renders the
+	// examples already on disk without reaching upstream. A cache turned off by
+	// CARGOSHIP_EXAMPLES_NO_CACHE turns this one off with it -- that flag exists for a release
+	// whose assets were re-cut in place, and consulting a committed copy would defeat it.
+	if cache.dir != "" && isCommittedCandidate(url) {
+		if lines, ok := committedAssets().lookup(url); ok {
+			return lines, nil
+		}
+	}
+
 	if lines, ok := cache.lookup(url); ok {
 		return lines, nil
 	}
 
-	resp, err := http.Get(url)
+	lines, err := downloadLines(url)
 	if err != nil {
-		return nil, fmt.Errorf("fetching %s: %w", url, err)
+		return nil, err
 	}
-	defer resp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetching %s: %s", url, resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", url, err)
-	}
-
-	lines := splitReleaseLines(body)
 	cache.store(url, lines)
+	if isCommittedCandidate(url) {
+		committedAssets().store(url, lines)
+	}
 	return lines, nil
 }

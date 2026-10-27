@@ -82,3 +82,9 @@ func (Generate) Examples() error {
 func (Generate) ExampleLine(distro, prefix string) error {
 	return examples.RenderLine(distro, prefix)
 }
+
+// VerifyAssets re-fetches every image manifest cached in example/assets.json and reports the
+// ones upstream no longer serves as recorded
+func (Generate) VerifyAssets() error {
+	return examples.VerifyAssets()
+}

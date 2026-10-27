@@ -10033,6 +10033,30 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.0%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s1/k3s"
+    ],
+    "sha256": "959c9310a6ab893958d1c95bc5d7609de9d7884630c8832180f059369b6dc331"
+  },
+  "v1.35.0%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c0b1673a1f2b740cb7bb08355c885efb6a4aa5c8022e5bb306c621c8c1492883"
+  },
+  "v1.35.0%2Bk3s3/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s3/k3s"
+    ],
+    "sha256": "cf99be0b6562545f7f9d2c35ee9f3f2933a42e6598762b93f5b38e072d5bff77"
+  },
+  "v1.35.0%2Bk3s3/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s3/k3s-arm64"
+    ],
+    "sha256": "9f45d76e52eb79a28a89336a34e5324c7e729409249422b37372ebb19198a228"
+  },
   "v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10153,6 +10177,18 @@
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
   },
+  "v1.35.1%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.1%2Bk3s1/k3s"
+    ],
+    "sha256": "e406ca6e47673d747ab4665c90a9285615fe082e2593343725ed043ae163abbf"
+  },
+  "v1.35.1%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.1%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c8d08bc38ad51be20ba531b3c412855c38d534f99cdff30fde6891b6f555a846"
+  },
   "v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10213,6 +10249,18 @@
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
   },
+  "v1.35.2%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.2%2Bk3s1/k3s"
+    ],
+    "sha256": "3ae8e35a62ac83e8e197c117858a564134057a7b8703cf73e67ce60d19f4a22b"
+  },
+  "v1.35.2%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.2%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "228809a7ef47d25c1bdbe746944931ec2fd2edf842b9cf50f1dd4f9ec2505b0e"
+  },
   "v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10272,6 +10320,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.3%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.3%2Bk3s1/k3s"
+    ],
+    "sha256": "e8661b03d0004e5792da6c2aae7f05de4c54711ee4228d0cce28e02c404626a6"
+  },
+  "v1.35.3%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.3%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "7c450b3b8c6101ae904c95c00db0f8fab275be1d3fc6533e8852eabc30327e0d"
   },
   "v1.35.3%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10393,6 +10453,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.4%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.4%2Bk3s1/k3s"
+    ],
+    "sha256": "080498ece50acdaf23fe5d736f41c616e276a89a4e5605a3f274f39b0fcee85b"
+  },
+  "v1.35.4%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.4%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "53eab87ef5601265a6cbd09756840646693e71db84ee8578884d8f7749345a73"
+  },
   "v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10452,6 +10524,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.5%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.5%2Bk3s1/k3s"
+    ],
+    "sha256": "267d18da7b3c837d82283f0588fb9031a8a6ff3c0dac772c260c40852ce515f6"
+  },
+  "v1.35.5%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.5%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "aced90bea6a4e025abef4cf6db7d8cc316a7d20a2b963f809852a37f2b9dbc03"
   },
   "v1.35.5%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10573,6 +10657,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.6%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.6%2Bk3s1/k3s"
+    ],
+    "sha256": "2b52a2c1ca6eb502e2a0ffa1a4cf79eef94875926577c1e43347ed292cc92432"
+  },
+  "v1.35.6%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.6%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "64c71644eb83d48f54da43c86ee8ba0ddff69db87e11d96a48fec7a965b1bc80"
+  },
   "v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10632,6 +10728,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.7%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.7%2Bk3s1/k3s"
+    ],
+    "sha256": "5fc25309c53031e0cf03f7ee85f6f60969381ff3649039ffda19e30f5c26947a"
+  },
+  "v1.35.7%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.7%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "4875d2a7dd7be60020ddcce44aed92d46d4d8d867f038bdceeca9a20558fa613"
   },
   "v1.35.7%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10693,6 +10801,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.8%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.8%2Bk3s1/k3s"
+    ],
+    "sha256": "12f81c9bb5b71e098a4f7a2d187e350902a9339a6c3d5e56c20a03f7a417e07f"
+  },
+  "v1.35.8%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.8%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "898476e008704289382377ef19946f23b511cf2678042cb5c8aef991e64f840a"
+  },
   "v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10752,6 +10872,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.9%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.9%2Bk3s1/k3s"
+    ],
+    "sha256": "897acb21cca57d477a211102251a6591450ce767344a9faaa121a1007ca9fa9a"
+  },
+  "v1.35.9%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.9%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "6176dd12c512e177af998e6035920f6283c5fdbd5adfdff85c103a7fdf2a00b5"
   },
   "v1.35.9%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10813,6 +10945,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.0%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.0%2Bk3s1/k3s"
+    ],
+    "sha256": "efa953454c8f7bf8d9d35c2dad2a76c9bdaac6860d60361629a3a2719009876b"
+  },
+  "v1.36.0%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.0%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "5a4e4e76ddacb7997384746992439b9a75ed930d8d2b9caf1938571d416d8a0e"
+  },
   "v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10872,6 +11016,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.1%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.1%2Bk3s1/k3s"
+    ],
+    "sha256": "a443db3fe9820cd93617ae67e4386d87c1514c1e96ceb30f4c2791c39065653c"
+  },
+  "v1.36.1%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.1%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "2240e9f7fd8cf36e9998d7ef18781975780d724b59408174618ec15b410891dc"
   },
   "v1.36.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10993,6 +11149,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.2%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.2%2Bk3s1/k3s"
+    ],
+    "sha256": "65a55ec56c24eab44383086166ec620a491952b7e23941a49ddca6e8a4c4b4de"
+  },
+  "v1.36.2%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.2%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "1dc5fc17f15c28fa0a3f011cee28ad613f918c3d967a426e5a05d43ddb239817"
+  },
   "v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11052,6 +11220,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.3%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.3%2Bk3s1/k3s"
+    ],
+    "sha256": "2f98a9f8fe5782479ee2d54e70a1b10a7f6fd4cae8d38ed3098452dc6eed76b5"
+  },
+  "v1.36.3%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.3%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c9a209103f480f163b7c6a56f00862b4481927b284dc29a3716bb70d886691a8"
   },
   "v1.36.3%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -11113,6 +11293,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.4%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.4%2Bk3s1/k3s"
+    ],
+    "sha256": "835873f37245fc615f547a2fe2af9402a347875f13fa64a1f136de644955ea3f"
+  },
+  "v1.36.4%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.4%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c920706346d5ad4e5cd3c7bf1bb09ce71ebe07fec829e513e40f1caf98aed8bb"
+  },
   "v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11172,6 +11364,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.5%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.5%2Bk3s1/k3s"
+    ],
+    "sha256": "d73847bcd3c5fccef0115b372e2f9a91f3032dc84bbf71518a4617565294d313"
+  },
+  "v1.36.5%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.5%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "135e34cb9e8a1cfae3cb55577789e93501efe7edc080a8b2630458a85b07721e"
   },
   "v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -11233,6 +11437,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.37.0%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.0%2Bk3s1/k3s"
+    ],
+    "sha256": "39eed8f53f277497dfc2542f66eab0ed68a94dfc598946dbebfb50366916c7a2"
+  },
+  "v1.37.0%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.0%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "9bc2c128a597bf7c10ee45df844f2838251ba53806f7673d7fea24a6cb1b6a99"
+  },
   "v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11292,6 +11508,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.37.1%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.1%2Bk3s1/k3s"
+    ],
+    "sha256": "92b94582eb7b34a8cf532e6006842b9ed215a6783cf56a3dd6271fd35243b2c0"
+  },
+  "v1.37.1%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.1%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "a1561ca4aef8b99f5588a840d4468ac39c8c1cd92470bbcb9634823fa221741a"
   },
   "v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [

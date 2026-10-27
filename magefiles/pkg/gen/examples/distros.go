@@ -77,9 +77,10 @@ type exampleDistroSpec struct {
 	// disappears out from under a live git tag.
 	probe func(v exampleVersion) string
 
-	// fetch pulls anything else the template needs that only the release can answer. May be
-	// nil.
-	fetch func(v *exampleVersion, repoURL string) error
+	// fetch pulls anything else the template needs that only the release can answer. It is
+	// handed the shasum cache, since a digest a release publishes belongs in it rather than
+	// being refetched. May be nil.
+	fetch func(v *exampleVersion, repoURL string, sums *exampleShasums) error
 }
 
 // exampleRKE2Values and exampleK3sValues are the values files a flavor of each distro ships:
@@ -211,7 +212,7 @@ var rke2HardenedEtcd = regexp.MustCompile(`hardened-etcd:(v[0-9]+\.[0-9]+\.[0-9]
 // A release whose image list carries no hardened-etcd reference is an error rather than a
 // fallback to some version pinned here: a pin in this file is one nobody bumps, and the etcdctl
 // it named would be hashed and shipped as if it were the one this release runs.
-func fetchRKE2EtcdVersion(v *exampleVersion, _ string) error {
+func fetchRKE2EtcdVersion(v *exampleVersion, _ string, _ *exampleShasums) error {
 	var etcdVer string
 	for _, img := range v.CoreImages {
 		if m := rke2HardenedEtcd.FindStringSubmatch(img); len(m) > 1 {
@@ -242,25 +243,37 @@ func exampleK3sBinary(arch string) string {
 	return "k3s-" + arch
 }
 
-// fetchK3sBinarySHA reads each architecture's k3s binary digest out of the release's own
-// checksum file for that architecture. Every k3s release publishes one per architecture, so
-// the binaries themselves -- tens of megabytes, and named plainly enough that every version
-// would collide in the cache -- never have to be downloaded to be verified.
-func fetchK3sBinarySHA(v *exampleVersion, repoURL string) error {
+// fetchK3sBinarySHA resolves each architecture's k3s binary digest, from example/shasums.json
+// when it is already recorded there and otherwise out of the release's own checksum file for
+// that architecture. Every k3s release publishes one, so the binaries themselves -- tens of
+// megabytes each -- never have to be downloaded to be verified.
+//
+// The entry is keyed by archiveKey rather than by file name: a release publishes its binary as
+// plain "k3s" (or "k3s-arm64"), so a file-name key would be the same for every version and each
+// one would evict the last. archiveKey puts the release tag above it -- v1.35.0%2Bk3s1/k3s --
+// which is the same reason an archive member's key carries one. This is what keeps the digests
+// in the one file that tracks digests, rather than caching whole checksum assets beside the
+// image manifests in example/assets.json.
+func fetchK3sBinarySHA(v *exampleVersion, repoURL string, sums *exampleShasums) error {
 	for i := range v.Arches {
 		a := &v.Arches[i]
-		asset := fmt.Sprintf("sha256sum-%s.txt", a.Arch)
-		binary := exampleK3sBinary(a.Arch)
+		key := archiveKey(a.BinaryURL)
+		if e, ok := sums.lookupKey(key, a.BinaryURL); ok {
+			a.BinarySHA = e.SHA256
+			continue
+		}
 
+		asset := fmt.Sprintf("sha256sum-%s.txt", a.Arch)
 		lines, err := fetchReleaseLines(repoURL, v.TagURL, asset)
 		if err != nil {
 			return err
 		}
-		sum, err := k3sBinarySHA(lines, binary)
+		sum, err := k3sBinarySHA(lines, exampleK3sBinary(a.Arch))
 		if err != nil {
 			return fmt.Errorf("%s for %s: %w", asset, v.TagURL, err)
 		}
 		a.BinarySHA = sum
+		sums.storeKey(key, a.BinaryURL, sum)
 	}
 	return nil
 }
