@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-364ca103.js";
+            window.path_to_searchindex_js = "../searchindex-61729ddb.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-6d06c6aa.js"></script>
+        <script src="../toc-61b02b60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -280,6 +280,55 @@ spec:
 <p>Both shapes are in the examples: <code>example/rke2-cilium-vsphere</code> spends its values through mappings, and <code>example/rke2-multi-cni-cilium</code> spends the same values through a templated block scalar.</p>
 <h3 id="which-to-reach-for"><a class="header" href="#which-to-reach-for">Which to reach for</a></h3>
 <p>Use a mapping when a value has one destination and its type should survive untouched. Use a template when one value drives several keys, when the value needs reshaping on the way, or when the package has to emit or omit a whole block. A package may use both.</p>
+<h2 id="a-chart-entry-carries-more-than-its-values"><a class="header" href="#a-chart-entry-carries-more-than-its-values">A chart entry carries more than its values</a></h2>
+<p>Everything above writes a chart entry under <code>spec.config.engine.manifest</code> as the chart’s Helm values and nothing else. An entry may instead be a wrapper, which names the values under a <code>values</code> key and says two more things about the chart:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    engine:
+      manifest:
+        rke2-cilium:
+          enabled: true
+          images:
+            - docker.io/rancher/mirrored-cilium-cilium:v1.20.2
+            - docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.6
+          values: |-
+            kubeProxyReplacement: true
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>values</code></td><td>The chart’s Helm values, exactly as the bare form carries them - a YAML string or a mapping, templated and mapped the same way</td></tr>
+<tr><td><code>images</code></td><td>The offline images this chart needs, carried in the package beside <code>spec.config.imageConfig.images</code></td></tr>
+<tr><td><code>enabled</code></td><td>Whether those images reach a host. Defaults to true. <strong>This is not an install switch</strong> - the engine’s <code>disable</code> key, described below, is what leaves a chart out of the cluster</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-images-belong-to-a-chart"><a class="header" href="#why-images-belong-to-a-chart">Why images belong to a chart</a></h3>
+<p><code>imageConfig.images</code> is one flat list, and nothing about it records which chart an image is for. So a cluster that turns Hubble’s web interface off is still sent <code>mirrored-cilium-hubble-ui</code> and <code>-ui-backend</code>, and a cluster running no vSphere CSI is still sent its ten driver images - exported to a tarball, pushed over SSH to every node, and left on disk. On an air-gapped link that is the expensive kind of waste.</p>
+<p>Naming an image under the chart that needs it is what lets cargoship skip it. A chart with <code>enabled: false</code> has <strong>none of its images exported or uploaded</strong>, and because the upload phase removes image tarballs it did not write this run, disabling a chart on a later apply takes its images back off the hosts.</p>
+<p><strong>The package still carries every image.</strong> <code>cargoship create</code> pulls all of them and a published package holds all of their blobs, whatever any chart’s <code>enabled</code> says - a package whose contents depended on the cluster it was going to be installed on would be a different package per cluster. The saving is in what crosses the wire to the hosts, not in the size of the tarball an operator carries across the air gap.</p>
+<p>A chart that is not enabled also gets no <code>HelmChartConfig</code>, for the same reason a disabled one does not: there is nothing to configure when the images are not on the node.</p>
+<h3 id="deciding-it-from-an-inventory"><a class="header" href="#deciding-it-from-an-inventory">Deciding it from an inventory</a></h3>
+<p><code>enabled</code> is an ordinary place for a value to land, so a cluster decides it:</p>
+<pre><code class="language-yaml">spec:
+  values:
+    mappings:
+      - source: .addons.vsphere.csi.enabled
+        target: .manifest.rancher-vsphere-csi.enabled
+</code></pre>
+<p>Mappings are applied before any phase runs, so by the time the upload phase picks images the answer is in hand.</p>
+<p><strong>A chart is only switchable if the package says so.</strong> <code>enabled</code> defaults to true, and so does an entry that omits it – including every entry written in the bare form. A cluster reaches <code>spec.config.engine</code> only through a mapping or a template the package itself declares; a cluster’s own <code>engine</code> section carries node labels and taints and nothing else. So a chart whose entry has no <code>enabled</code> key, and no mapping onto one, cannot be turned off by an inventory or by <code>--values</code> at all. Exposing the switch is the package author’s decision, and not exposing it is how a package says a chart is not optional.</p>
+<p>Note that <code>enabled</code> is about the chart’s images, not about whether the engine installs it – the <code>disable</code> key below is that, and the two are not wired together. See <a href="../agent/todo-chart-disable-image-gating.html">todo-chart-disable-image-gating</a> for what that currently costs.</p>
+<h3 id="both-shapes-are-accepted-and-one-is-going-away"><a class="header" href="#both-shapes-are-accepted-and-one-is-going-away">Both shapes are accepted, and one is going away</a></h3>
+<p>An entry is read as a wrapper when it has a <code>values</code> key, and as the chart’s values themselves when it does not. That is the whole rule, and it is deliberately narrow: a chart’s own values may well have a top-level <code>enabled</code> or <code>images</code> key - cilium has <code>enablePolicy</code>, and <code>rancher-vsphere-csi</code> really does take an <code>images</code> list - so neither of those can tell the two shapes apart. The cost is that a chart whose values have a top-level <code>values</code> key cannot use the wrapper, and has to stay in the bare form.</p>
+<p>Two consequences worth knowing:</p>
+<ul>
+<li><strong>A typo in a wrapper key is silent.</strong> Because a bare entry is any mapping, <code>enabledd: false</code> is indistinguishable from a Helm value by that name. It validates, and the chart’s images ship. Nothing warns.</li>
+<li><strong>The bare form is what <code>v1beta1</code> drops.</strong> It is supported for as long as <code>v1alpha1</code> is, and a package written today needs no change; a package written now for a chart that will grow images is better off in the wrapper.</li>
+</ul>
 <h2 id="disabling-bundled-addons"><a class="header" href="#disabling-bundled-addons">Disabling bundled addons</a></h2>
 <p>RKE2 and K3s both install a set of charts of their own – ingress, a load balancer, metrics, DNS – and both are told to leave one out through a single <code>disable</code> key in <code>config.yaml</code>. Every example package exposes that key as a value, so which addons a cluster runs is a cluster’s decision rather than a packaging one:</p>
 <pre><code class="language-yaml"># values.yaml, in the package
@@ -310,7 +359,7 @@ spec:
 <p><strong>The suggestions are not the whole vocabulary.</strong> The engine’s <code>--disable</code> help text is where the list comes from, and it is not exhaustive: RKE2 bundles <code>rke2-runtimeclasses</code> and never names it there. A schema that rejected everything outside the list would reject a chart the engine would have honored, so <code>addons.disabled</code> accepts any chart name and the list only drives completion. An unknown name reaches <code>config.yaml</code> unchanged: cargoship warns that the build packages no such component and leaves the entry in place, since dropping it would quietly install the very chart the cluster asked to be without. A typo is visible in that warning rather than at validation time.</p>
 <p>Two other things follow from disabling a chart:</p>
 <ul>
-<li><strong>No <code>HelmChartConfig</code> is written for it.</strong> A package may configure a chart under <code>spec.config.engine.manifest</code> and still have it disabled by an inventory. Cargoship skips the manifest for a disabled chart rather than configuring something that will not be installed, and a file left over from an earlier run is removed the next time the node is synced.</li>
+<li><strong>No <code>HelmChartConfig</code> is written for it.</strong> A package may configure a chart under <code>spec.config.engine.manifest</code> and still have it disabled by an inventory. Cargoship skips the manifest for a disabled chart rather than configuring something that will not be installed, and a file left over from an earlier run is removed the next time the node is synced. A chart whose entry sets <code>enabled: false</code> is skipped the same way, for the same reason - its images are not on the node either.</li>
 <li><strong>Agents are unaffected.</strong> <code>disable</code> is a server-only key. It is dropped from an agent’s <code>config.yaml</code> along with every other controller-only key, and only controllers carry chart manifests in the first place.</li>
 </ul>
 <h2 id="pod-security-admission-levels"><a class="header" href="#pod-security-admission-levels">Pod Security Admission levels</a></h2>
