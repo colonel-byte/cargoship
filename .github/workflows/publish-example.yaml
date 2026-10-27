@@ -342,6 +342,12 @@ jobs:
       # Each flavor is published under two tags: the regular version tag and a more precise
       # tag shaped as <version>-<job>-<short git commit> using cargoship's --tag flag.
       #
+      # --tmpdir keeps staging off /tmp. The Ubuntu 26 runner image mounts /tmp as a
+      # quota-limited tmpfs, so a package of this size fails there with "disk quota
+      # exceeded" while the root filesystem still has a hundred gigabytes free -- which is
+      # what broke the v0.36.0 publish. RUNNER_TEMP is on that root filesystem and the
+      # runner cleans it up.
+      #
       # The key never touches the disk: --signing-key takes a Cosign provider URI, and the
       # env:// form reads the secret straight out of the environment. Same key material the
       # release pipeline signs binaries with. See docs/guides/signing-packages.md. Creating
@@ -379,7 +385,7 @@ jobs:
 
             # A flavor that fails is recorded and the loop carries on: the rest of the
             # distro's flavors are independent of it, and their images are already cached.
-            if ! cargoship create "$dir" -o build --confirm; then
+            if ! cargoship create "$dir" -o build --confirm --tmpdir "$RUNNER_TEMP"; then
               echo "$flavor: create failed" >&2
               echo "| \`$flavor\` | \`$reference\` | **create failed** |" >> "$GITHUB_STEP_SUMMARY"
               failed=1
@@ -404,6 +410,7 @@ jobs:
 
             # Publish with regular version tag
             if cargoship publish "$pkg" "$REGISTRY" \
+              --tmpdir "$RUNNER_TEMP" \
               --signing-key env://COSIGN_PRIVATE_KEY \
               --signing-key-pass "$COSIGN_PASSWORD" \
               --confirm; then
@@ -417,6 +424,7 @@ jobs:
             # Publish with precise tag (<version>-<job>-<short git commit>)
             if cargoship publish "$pkg" "$REGISTRY" \
               --tag "$precise_tag" \
+              --tmpdir "$RUNNER_TEMP" \
               --signing-key env://COSIGN_PRIVATE_KEY \
               --signing-key-pass "$COSIGN_PASSWORD" \
               --confirm; then
