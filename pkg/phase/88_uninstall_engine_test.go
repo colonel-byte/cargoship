@@ -18,6 +18,10 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
@@ -204,4 +208,39 @@ func TestPathExistsFindsDirectories(t *testing.T) {
 	require.True(t, pathExists(h, config), "and a file is still a path that exists")
 	require.False(t, pathExists(h, "/var/lib/rancher/absent"))
 	require.False(t, pathExists(h, ""), "an empty path is nothing to remove")
+}
+
+// TestUnmountUnderCommandSelectsOnlyWhatIsUnderThePath runs the command's own awk program over a
+// fixture mount table, with umount swapped for echo, because the whole of the logic is in that
+// program rather than in Go.
+//
+// Two things have to hold. Children come before their parents, or the parent unmount fails with
+// the child still on it. And the match is on a path component rather than a string prefix:
+// /var/lib/kubeletX is not under /var/lib/kubelet, and unmounting someone else's filesystem
+// during a reset is worse than leaving a directory behind.
+func TestUnmountUnderCommandSelectsOnlyWhatIsUnderThePath(t *testing.T) {
+	t.Parallel()
+
+	mounts := filepath.Join(t.TempDir(), "mounts")
+	require.NoError(t, os.WriteFile(mounts, []byte(strings.Join([]string{
+		"tmpfs /var/lib/kubelet tmpfs rw 0 0",
+		"tmpfs /var/lib/kubelet/pods/abc/volumes/kubernetes.io~projected/token tmpfs rw 0 0",
+		"tmpfs /var/lib/kubelet/pods/abc/volumes tmpfs rw 0 0",
+		"tmpfs /var/lib/kubeletX tmpfs rw 0 0",
+		"tmpfs /var/lib/rancher/k3s tmpfs rw 0 0",
+		"",
+	}, "\n")), 0o600))
+
+	cmd := unmountUnderCommand("/var/lib/kubelet")
+	cmd = strings.ReplaceAll(cmd, "/proc/self/mounts", mounts)
+	cmd = strings.ReplaceAll(cmd, "umount -lf", "echo")
+
+	out, err := exec.Command("sh", "-c", cmd).Output()
+	require.NoError(t, err)
+
+	require.Equal(t, []string{
+		"/var/lib/kubelet/pods/abc/volumes/kubernetes.io~projected/token",
+		"/var/lib/kubelet/pods/abc/volumes",
+		"/var/lib/kubelet",
+	}, strings.Fields(strings.TrimSpace(string(out))))
 }
