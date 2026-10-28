@@ -41,11 +41,11 @@ defined, err := pkgcfg.ParseMultiDoc(ctx, b)
 
 Across zarf and one downstream consumer this is the same four lines in three places, with the same error string - `unable to find %s in the manifest` - in all three.
 
-| Where                                   | Parses with            | Uses the typed helper? |
-| --------------------------------------- | ---------------------- | ---------------------- |
-| `oci.FetchJSONFile` (`fetch.go:98`)     | `json.Unmarshal`       | n/a - it is the helper |
-| `zoci.FetchZarfYAML` (`fetch.go:20`)    | `pkgcfg.ParseMultiDoc` | No - cannot            |
-| `coci.FetchDistroYAML` (cargoship)      | `cfg.ParseMultiDoc`    | No - cannot            |
+| Where                                | Parses with            | Uses the typed helper? |
+| ------------------------------------ | ---------------------- | ---------------------- |
+| `oci.FetchJSONFile` (`fetch.go:98`)  | `json.Unmarshal`       | n/a - it is the helper |
+| `zoci.FetchZarfYAML` (`fetch.go:20`) | `pkgcfg.ParseMultiDoc` | No - cannot            |
+| `coci.FetchDistroYAML` (cargoship)   | `cfg.ParseMultiDoc`    | No - cannot            |
 
 `content.FetchAll` has exactly three call sites in zarf, and two of them are the first two rows above; the third is an unrelated by-descriptor walk in `src/pkg/images/common.go`. There is no existing wrapper for this under another name.
 
