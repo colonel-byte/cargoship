@@ -2,7 +2,12 @@
   "schemaVersion": "1.0",
   "invocation": {
     "command": "apply",
-    "args": ["apply", "/srv/acme-corp/distro.tar.zst", "--config", "/srv/acme-corp/prod-cluster.yaml"],
+    "args": [
+      "apply",
+      "/srv/acme-corp/distro.tar.zst",
+      "--config",
+      "/srv/acme-corp/prod-cluster.yaml"
+    ],
     "version": "v1.2.3",
     "commit": "abc1234",
     "operator": "jrivera",
@@ -95,7 +100,19 @@
     "succeeded": true,
     "changed": true,
     "changedSignal": "partial",
-    "changedUndeclared": ["Connect"],
-    "hostsUndeclared": ["Connect"]
+    "changedUndeclared": [
+      "Connect"
+    ],
+    "hostsUndeclared": [
+      "Connect"
+    ],
+    "warnings": [
+      {
+        "phase": "Upload files",
+        "host": "10.44.3.11",
+        "path": "/var/lib/rancher/rke2/agent/images/vendor-appliance.tar",
+        "reason": "kept, unmanaged"
+      }
+    ]
   }
 }

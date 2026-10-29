@@ -192,6 +192,32 @@ type HostChangeDetail struct {
 	Diff string
 }
 
+// warningReporter is a phase that has something to tell the operator which is not an error. It
+// is opt-in on the same terms as changedReporter: a phase that does not implement it reports no
+// warnings, and nothing infers warnings on its behalf.
+//
+// A warning is for a decision the run made that an operator may want to undo, not for progress.
+// Phase 50 keeping image tarballs it does not own, because the host asks it to, is the case this
+// exists for: the run is a success, nothing failed, and an operator who left the marker in place
+// by accident has no other way to find out that files are accumulating.
+type warningReporter interface {
+	Warnings() []Warning
+}
+
+// Warning is one thing a phase decided that an operator may want to know about. Phase is filled
+// in by the run rather than by the phase, so a phase cannot disagree with its own title.
+type Warning struct {
+	Phase string
+	// Host is the configured address of the host this is about, empty for a warning about the
+	// run rather than about one host.
+	Host string
+	// Path is the file this is about, absolute as the host sees it, empty when it is not about
+	// a file.
+	Path string
+	// Reason is why, in a few words, in the vocabulary the phases log: "kept, unmanaged".
+	Reason string
+}
+
 // PhaseResult is what a single phase did during a run.
 type PhaseResult struct {
 	Title       string
@@ -227,6 +253,9 @@ type RunResult struct {
 	// files the engine re-reads without a restart while it is deciding which hosts have
 	// drifted, and then reports no hosts to sync.
 	Skipped []PhaseResult
+	// Warnings are what the phases decided that an operator may want to know about, in the
+	// order the run reached them. A run can succeed with warnings; see warningReporter.
+	Warnings []Warning
 }
 
 // Changed reports whether any phase said it changed something on the fleet. Phases that declared
@@ -464,8 +493,9 @@ func phaseResult(p Phase, duration time.Duration) PhaseResult {
 }
 
 // collectResult turns the phase lists Run kept into the result it publishes.
-func collectResult(ran []timedPhase, planned, skipped []Phase) RunResult {
+func collectResult(ran []timedPhase, planned, skipped []Phase, warnings []Warning) RunResult {
 	var out RunResult
+	out.Warnings = warnings
 	for _, t := range ran {
 		out.Ran = append(out.Ran, phaseResult(t.phase, t.duration))
 	}
@@ -556,6 +586,9 @@ func (m *Manager) Run(ctx context.Context) error {
 	// skipped collects the phases ShouldRun filtered out. They run nothing, but a phase can
 	// have finished its work in Prepare, so they are recorded for the changed signal.
 	var skipped []Phase
+	// warnings collects what the phases said an operator may want to know, for the recap below
+	// and for the run receipt. A phase contributes only once it has run.
+	var warnings []Warning
 	var result error
 
 	l := logger.From(ctx)
@@ -584,8 +617,13 @@ func (m *Manager) Run(ctx context.Context) error {
 	// changed, and a caller reading the result should not be shown the state clean-up left
 	// behind. Registered after the two returns above so a run that never reached its phases
 	// publishes nothing, which a sink reports as a missing answer rather than as no change.
+	// Registered before the result defer so it runs after it: the recap is the last thing a
+	// run says, on the way out of a failure as much as a success. An operator reading a failed
+	// apply still needs to know that files were left on a host.
+	defer func() { logWarningSummary(ctx, warnings) }()
+
 	defer func() {
-		m.Result = collectResult(ran, planned, skipped)
+		m.Result = collectResult(ran, planned, skipped, warnings)
 		if sink, ok := ctx.Value(resultSinkKey{}).(*ResultSink); ok {
 			sink.publish(m.Result)
 		}
@@ -676,6 +714,7 @@ func (m *Manager) Run(ctx context.Context) error {
 			start := time.Now()
 			err := dp.DryRun()
 			ran = append(ran, timedPhase{phase: p, duration: time.Since(start)})
+			warnings = append(warnings, phaseWarnings(p)...)
 			if err != nil {
 				result = err
 				return result
@@ -686,6 +725,9 @@ func (m *Manager) Run(ctx context.Context) error {
 		start := time.Now()
 		result = p.Run(ctx)
 		ran = append(ran, timedPhase{phase: p, duration: time.Since(start)})
+		// Collected before the error check: a phase that warned and then failed has the same
+		// thing to say about the hosts it got through first.
+		warnings = append(warnings, phaseWarnings(p)...)
 
 		// Only run in-phase After hook if Run() succeeded.
 		// If After() fails after a successful Run(), return the After() error.
@@ -712,6 +754,37 @@ func (m *Manager) Run(ctx context.Context) error {
 
 	heartbeat.Clear()
 	return nil
+}
+
+// phaseWarnings reads a phase's warnings and stamps its title on each one.
+func phaseWarnings(p Phase) []Warning {
+	wr, ok := p.(warningReporter)
+	if !ok {
+		return nil
+	}
+	out := wr.Warnings()
+	for i := range out {
+		out[i].Phase = p.Title()
+	}
+	return out
+}
+
+// logWarningSummary is the recap: everything the phases decided that an operator may want to
+// undo, repeated at the end of the run where it is still on screen.
+//
+// Each one was already logged by the phase that decided it, which is the point -- on a fleet of
+// any size those lines are thousands of lines above the prompt by the time the run finishes, and
+// a warning nobody scrolls back to is a warning nobody acts on.
+func logWarningSummary(ctx context.Context, warnings []Warning) {
+	if len(warnings) == 0 {
+		return
+	}
+
+	l := logger.From(ctx)
+	l.Warn("run finished with warnings", "count", len(warnings))
+	for _, w := range warnings {
+		l.Warn("warning", "phase", w.Phase, "host", w.Host, "path", w.Path, "reason", w.Reason)
+	}
 }
 
 // logDryRunSummary reports what a dry run did and what it left alone.

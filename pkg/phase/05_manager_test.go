@@ -891,3 +891,89 @@ func TestRunRecordsPhaseDuration(t *testing.T) {
 	require.Len(t, m.Result.Skipped, 1)
 	require.Zero(t, m.Result.Skipped[0].Duration)
 }
+
+// warningPhase is a phase with something to say that is not an error.
+type warningPhase struct {
+	title    string
+	warnings []Warning
+	err      error
+}
+
+func (p *warningPhase) Title() string {
+	if p.title == "" {
+		return "warning phase"
+	}
+	return p.title
+}
+
+func (p *warningPhase) Explanation() string {
+	return "test function"
+}
+
+func (p *warningPhase) Warnings() []Warning {
+	return p.warnings
+}
+
+func (p *warningPhase) Run(_ context.Context) error {
+	return p.err
+}
+
+// A phase's warnings reach the run's result with the phase's own title stamped on them, so a
+// phase cannot disagree with its title and a reader of a receipt can tell which phase decided
+// what. See warningReporter.
+func TestRunCollectsPhaseWarnings(t *testing.T) {
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{
+		&warningPhase{
+			title: "Upload files",
+			warnings: []Warning{
+				{
+					// Deliberately filled in with the wrong phase: the run overwrites it.
+					Phase:  "something else",
+					Host:   "10.0.0.11",
+					Path:   "/var/lib/rancher/k3s/agent/images/vendor.tar",
+					Reason: "kept, unmanaged",
+				},
+			},
+		},
+		&changingPhase{changed: true},
+	})
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Equal(t, []Warning{
+		{
+			Phase:  "Upload files",
+			Host:   "10.0.0.11",
+			Path:   "/var/lib/rancher/k3s/agent/images/vendor.tar",
+			Reason: "kept, unmanaged",
+		},
+	}, m.Result.Warnings)
+}
+
+// A phase that warned and then failed has the same thing to say about the hosts it got through
+// first, and the failed run is the one whose log an operator is least likely to still have.
+func TestRunKeepsWarningsFromAFailedPhase(t *testing.T) {
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{&warningPhase{
+		warnings: []Warning{
+			{
+				Path:   "/var/lib/rancher/k3s/agent/images/vendor.tar",
+				Reason: "kept, unmanaged",
+			},
+		},
+		err: fmt.Errorf("run failed"),
+	}})
+
+	require.Error(t, m.Run(context.Background()))
+	require.Len(t, m.Result.Warnings, 1)
+	require.Equal(t, "warning phase", m.Result.Warnings[0].Phase)
+}
+
+// A phase that says nothing contributes nothing, rather than an empty warning.
+func TestRunWithoutWarningsReportsNone(t *testing.T) {
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{&changingPhase{changed: true}})
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Empty(t, m.Result.Warnings)
+}

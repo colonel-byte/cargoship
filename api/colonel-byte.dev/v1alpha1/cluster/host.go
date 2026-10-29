@@ -652,6 +652,16 @@ func (h *Host) Stat(path string) (fs.FileInfo, error) {
 	return h.sudoFS().Stat(path)
 }
 
+// ReadDir lists a directory on the host. Always runs with privilege escalation, matching the
+// rest of this host's file operations.
+//
+// It is how a phase sees a directory it has no manifest for -- the engine's image directory
+// holds what cargoship uploaded and whatever else is in it, and the difference is only visible
+// by listing it.
+func (h *Host) ReadDir(path string) ([]fs.DirEntry, error) {
+	return h.sudoFS().ReadDir(path)
+}
+
 // FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the
 // behavior of the v0.x Configurer.FileExist implementation this replaces.
 func (h *Host) FileExist(path string) bool {
