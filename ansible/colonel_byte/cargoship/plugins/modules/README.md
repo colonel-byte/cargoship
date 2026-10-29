@@ -2,7 +2,7 @@
 
 There are no module files in this directory in the source tree, and there is no Python module behind any of them. The cargoship binary *is* the module: invoked under a name carrying the `cargoship_` prefix, it reads its parameters from the WANT_JSON arguments file and writes one JSON object back. See [choice-ansible-module](../../../../../docs/agent/choice-ansible-module.md).
 
-The cargoship `.rpm`, `.deb`, and `.apk` packages install this collection to `/usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/`, which is on Ansible's default collections path, and create the five symlinks here pointing at `/usr/bin/cargoship`. Installing the package is all that is needed.
+The `ansible-collection-colonel-byte-cargoship` `.rpm`, `.deb`, and `.apk` packages install this collection to `/usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/`, which is on Ansible's default collections path, and create the five symlinks here pointing at `/usr/bin/cargoship`. That package depends on `cargoship`, so installing it is all that is needed. The `cargoship` package itself carries only the binary and the shell completions.
 
 For a collection installed some other way -- `ansible-galaxy collection install`, or a checkout -- create the symlinks against whichever cargoship is on your path:
 

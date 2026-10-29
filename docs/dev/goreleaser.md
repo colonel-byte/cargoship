@@ -13,11 +13,23 @@ The workflow runs on any pushed tag. Tags are normally created by release-please
 A single `goreleaser release` run produces:
 
 *   **Archives** - `tar.gz` per OS/arch, named after `uname` conventions (`cargoship_Linux_x86_64.tar.gz`).
-*   **Packages** - `apk`, `deb`, and `rpm`, from the `nfpms` section. Packages can be signed when the corresponding signing keys are configured.
-*   **Container images** - four multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary), `ghcr.io/colonel-byte/cargoship-ubi:<tag>` (AlmaLinux, installs the RPM), `ghcr.io/colonel-byte/cargoship-deb:<tag>` (Debian slim, installs the DEB), and `ghcr.io/colonel-byte/cargoship-ansible:<tag>` (AlmaLinux, installs the RPM and Ansible dependencies).
+*   **Packages** - `apk`, `deb`, and `rpm`, from the `nfpms` section, in two sets. `cargoship` carries the binary and the shell completions, one package per architecture. `ansible-collection-colonel-byte-cargoship` carries the `colonel_byte.cargoship` collection and the five module symlinks, `noarch`, depending on `cargoship` and on `ansible-core` 2.15 or newer. Packages can be signed when the corresponding signing keys are configured.
+*   **Container images** - four multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary), `ghcr.io/colonel-byte/cargoship-ubi:<tag>` (AlmaLinux, installs the RPM), `ghcr.io/colonel-byte/cargoship-deb:<tag>` (Debian slim, installs the DEB), and `ghcr.io/colonel-byte/cargoship-ansible:<tag>` (AlmaLinux, installs the RPM plus `ansible-core` and the collection).
 *   **Ansible collection** - a tarball, `colonel_byte-cargoship-<version>.tar.gz`, built from `ansible/colonel_byte/cargoship` and attached to the release with its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.
 *   **SBOMs** - one per archive, via Syft.
 *   **Signatures** - cosign `sigstore.json` bundles over the checksums file and every archive, plus registry signatures over every container image. Package signatures are configured separately through nfpm.
+
+## The Collection Package
+
+The `colonel_byte.cargoship` collection ships as `ansible-collection-colonel-byte-cargoship`, apart from the `cargoship` package that carries the binary. A management node that drives the fleet from playbooks wants both; one that only runs the CLI wants neither the collection tree nor the `ansible-core` it depends on. The name follows Fedora's packaging guideline for collections, `ansible-collection-<namespace>-<name>`, rather than the repository's own `cargoship-*` convention.
+
+The entry sets `meta: true`, because the package carries no binary of its own - the five module files are symlinks to the one `cargoship` installs. Its `ids` are still needed, since they are what tells GoReleaser which platforms to build for.
+
+Three things about it are worth knowing before editing:
+
+*   **`meta: true` is also what makes it `noarch`**, which is right for a tree of YAML and symlinks. GoReleaser hardcodes a meta nfpm to goos `linux` and goarch `all`.
+*   **A `noarch` package therefore cannot reach any image build context.** The `dockers_v2` pipe selects an image's artifacts with `ByGoos` and `ByGoarch`, so goarch `all` matches no requested platform. The pipe does have an escape hatch for arch-independent artifacts, but it keys on goos rather than goarch, and `extra_files` cannot stand in because it takes literal paths - no globs, no templating - while the filename carries the version. **Adding this id to a `dockers_v2` entry will fail the build, not fix it.** `.github/workflows/test-build-containers.yaml` installs the package in a throwaway container instead, which is where the check that `dnf` resolves its dependency on `cargoship` and that the collection lands on ansible-core's default path now lives.
+*   **The dependency on `cargoship` is unversioned, and should not be.** The binary and the action plugins are one interface released together, so a version pin belongs there. GoReleaser does not run its template engine over nfpms `dependencies` - a `{{ .Version }}` reaches the package metadata as that literal string - and the alternatives are a hand-maintained `nfpm.yaml` or a generated config, neither of which is worth it for a pair of packages that only ever ship together. The `ansible-core` floor is `2.15.0`, matching `requires_ansible` in the collection's `meta/runtime.yml`. A whole `overrides` block replaces the base field it names, so each format lists both dependencies rather than adding to a shared one; the spelling of a version constraint is per-format.
 
 ## The Ansible Collections
 
@@ -135,7 +147,7 @@ reason to use an RPM-based image.
 
 Details worth knowing before editing it:
 
-*   **`ids: [packagers]`** selects the nfpms artifacts for the build context instead of the raw binary. All three formats share one nfpms id, so the `.apk` and `.deb` also land in the context; the Dockerfile selects the target-platform RPM.
+*   **`ids: [packagers]`** selects the `cargoship` nfpms artifacts for the build context instead of the raw binary. All three formats share that nfpms id, so the `.apk` and `.deb` also land in the context; the Dockerfile selects the target-platform RPM. The collection package is a separate id and reaches no build context - see [The Collection Package](#the-collection-package).
 *   **The RPM signature is verified at build time.** `crypto/software@conlon.dev.gpg` is supplied through `extra_files`, imported into the image keyring, and checked with `rpm --checksig` before installation.
 *   **The install step must run on the target platform.** RPM unpacks an architecture-specific binary into the target root filesystem, so the install cannot be moved to a `$BUILDPLATFORM` stage. This is why the `linux/arm64` build requires QEMU.
 *   **The binary lands in `/usr/bin`** according to `nfpms.rpm.prefixes`, not `/usr/local/bin` as in the static image. The entrypoint differs accordingly; the `nonroot` account, `$HOME`, and `/workspace` layout remain compatible.
@@ -161,7 +173,7 @@ Its other job is coverage: the `.deb` is produced by every release, so this imag
 Details worth knowing before editing it:
 
 *   **The directory is named for the package format, not the base.** This image exists to exercise the `.deb`; changing Debian to Ubuntu would not change that purpose.
-*   **`dpkg -i`, not `apt-get install`.** The package declares no dependencies, so nothing needs resolving and the build remains hermetic.
+*   **`dpkg -i`, not `apt-get install`.** The `cargoship` package declares no dependencies, so nothing needs resolving and the build remains hermetic. This is also why the collection package is not installed here: it depends on `cargoship` and on `ansible-core`, and the latter is not in the image.
 *   **The binary lands in `/usr/bin`**, as it does in the RPM-based images.
 *   **`dpkg -i` does not verify package signatures.** The `_gpgorigin` member is available for `debsig-verify` and repository tooling, but is not checked by this Dockerfile.
 
@@ -169,18 +181,20 @@ Details worth knowing before editing it:
 
 A third `dockers_v2` entry builds `containers/ansible/Dockerfile` and publishes `ghcr.io/colonel-byte/cargoship-ansible:<tag>`. It provides a management-node image based on AlmaLinux.
 
-The image installs the signed Cargoship RPM, `ansible-core`, and the collections listed in `ansible/colonel_byte/cargoship/requirements.yml`. The collection is installed under Ansible's system collection path:
+The image installs the signed Cargoship RPM and `ansible-core`, then builds and installs the collection from the source tree with `ansible-galaxy` and links its module files with `hack/ansible-link-modules.sh`. The collection ends up under Ansible's system collection path:
 
 `/usr/share/ansible/collections/ansible_collections`
+
+It does *not* install `ansible-collection-colonel-byte-cargoship`, which cannot reach the build context - see [The Collection Package](#the-collection-package). What that image checks is therefore the `ansible-galaxy` install route, the one an operator without the package takes.
 
 The container is the management node: Ansible and Cargoship run inside it, while Cargoship opens SSH connections from the container to the external fleet.
 
 Details worth knowing before editing it:
 
-*   **`ids: [packagers]`** supplies the generated package artifacts. The Dockerfile selects the target-platform RPM and ignores the `.apk` and `.deb` files that share the nfpms output.
+*   **`ids: [packagers]`** supplies the `cargoship` package artifacts. The Dockerfile selects the target-platform RPM and ignores the `.apk` and `.deb` files that share the nfpms output.
 *   **The RPM signature is verified during the build** using `crypto/software@conlon.dev.gpg`, which is supplied through `extra_files`, imported into the image keyring, and checked before installation.
 *   **Package versions for `ansible-core` and `bash-completion` are pinned** via Dockerfile `ARG` defaults (`ANSIBLE_CORE_VERSION` and `BASH_COMPLETION_VERSION`) and explicitly passed in `.goreleaser.yaml` under `build_args` to comply with Hadolint `DL3041` and ensure reproducible image builds. Run `mage dev:dnfPins` to query the AlmaLinux repodata and refresh both pins when upstream packages roll forward.
-*   **Ansible dependencies come from `requirements.yml`.** The Dockerfile runs `ansible-galaxy collection install` and places the collections in the system collection path.
+*   **The collection comes from the source tree, not from a package.** `extra_files` supplies `ansible/colonel_byte/cargoship` and `hack/ansible-link-modules.sh`; the Dockerfile runs `ansible-galaxy collection build` and `install` into the system collection path, then the script creates the five module symlinks against `/usr/bin/cargoship`. The build then asserts `ansible-galaxy collection list` finds `colonel_byte.cargoship`, which is the one place the binary, its module files and an ansible-core to resolve them all meet.
 *   **There is no `ENTRYPOINT`.** The image is intended to run  `ansible-playbook`, `ansible-inventory`, `ansible-galaxy`, or Cargoship as needed. Its default command is `ansible-playbook --help`.
 *   **The build validates the installed Cargoship package** by running `cargoship version`.
 

@@ -1,6 +1,6 @@
 # Running the Collection from the Container
 
-The `cargoship-ansible` image is a management node in a container: `ansible-core` on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the `colonel_byte.cargoship` collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.
+The `cargoship-ansible` image is a management node in a container: `ansible-core` on an AlmaLinux 10 base, plus the signed cargoship RPM for the binary and the `colonel_byte.cargoship` collection installed beside it. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.
 
 For the modules themselves -- their parameters and what `changed` means -- see [ansible-module](ansible-module.md), and for the inventory they translate, [ansible-inv](ansible-inv.md). Nothing about either changes inside the container.
 

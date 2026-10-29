@@ -22,8 +22,7 @@ COPY ${TARGETPLATFORM}/*.deb /tmp/debs/
 
 RUN dpkg --install /tmp/debs/*.deb \
   && rm -rf /tmp/debs \
-  && cargoship version \
-  && test -x /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_apply
+  && cargoship version
 
 ARG UID=65532
 ARG GID=65532

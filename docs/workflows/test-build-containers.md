@@ -8,4 +8,6 @@ These Dockerfiles are written for GoReleaser's `dockers_v2` pipe, not a plain `d
 
 `labeled` is included in `types` because Dependabot's `docker` label is applied *after* the PR opens - without it, the `if` condition would be evaluated (and fail) on the `opened` event before the label exists, and nothing would re-trigger once it's added.
 
+A final step installs the two release packages together in a throwaway container - `cargoship` and the `noarch` `ansible-collection-colonel-byte-cargoship` - and asserts that `dnf` resolves the dependency between them and that the collection lands on ansible-core's default path. That check belongs in the `cargoship-ansible` image build and cannot live there: a `noarch` nfpm artifact reaches no `dockers_v2` build context, for the reasons in [goreleaser](../dev/goreleaser.md#the-collection-package). The container's base is read off `containers/ansible/Dockerfile`'s `FROM` line rather than named again, so Dependabot keeps owning the one pin.
+
 `--snapshot` skips publish/validate/announce entirely - nothing is pushed anywhere.

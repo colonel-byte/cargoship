@@ -46,10 +46,23 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
   && rm -rf /tmp/rpms \
   && cargoship version
 
-# The collection the package installs is on ansible-core's default collections path. This is the
-# only place in the pipeline where that can be checked: the collection, the binary its module
-# files dispatch to, and an ansible-core to find them are all here.
-RUN ansible-galaxy collection list >/tmp/collections 2>/dev/null \
+# The collection, installed the way a management node that did not install
+# ansible-collection-colonel-byte-cargoship does it: ansible-galaxy from a tarball, then
+# hack/ansible-link-modules.sh for the module files, which are symlinks to the binary installed
+# above. The collection package is noarch and so cannot reach this build context -- see the
+# comment on the ansible-collection nfpms entry in .goreleaser.yaml -- which makes this image a
+# check of the Galaxy install path rather than of the package. /usr/share/ansible/collections is
+# on ansible-core's default collections path, so nothing further is configured.
+COPY ansible/colonel_byte/cargoship /tmp/collection/
+COPY hack/ansible-link-modules.sh /tmp/ansible-link-modules.sh
+
+RUN ansible-galaxy collection build --output-path /tmp /tmp/collection \
+  && ansible-galaxy collection install --no-deps \
+    --collections-path /usr/share/ansible/collections /tmp/colonel_byte-cargoship-*.tar.gz \
+  && /tmp/ansible-link-modules.sh \
+    /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship \
+  && rm -rf /tmp/collection /tmp/ansible-link-modules.sh /tmp/colonel_byte-cargoship-*.tar.gz \
+  && ansible-galaxy collection list >/tmp/collections 2>/dev/null \
   && grep -q 'colonel_byte.cargoship' /tmp/collections \
   && rm -f /tmp/collections
 
