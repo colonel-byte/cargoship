@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.37.1](https://github.com/colonel-byte/cargoship/compare/v0.37.0...v0.37.1) (2026-10-30)
+
+
+### Build
+
+* **deps:** bump chainguard/static from `9e2306b` to `fc42af3` in /containers/base ([#964](https://github.com/colonel-byte/cargoship/issues/964)) ([606d543](https://github.com/colonel-byte/cargoship/commit/606d543527470c358ed0b7574045fabc89bbdc27))
+* **deps:** bump github.com/grpc-ecosystem/grpc-gateway/v2 from 2.32.0 to 2.33.0 ([#971](https://github.com/colonel-byte/cargoship/issues/971)) ([77f1f1c](https://github.com/colonel-byte/cargoship/commit/77f1f1cd20375b6eab6863ce8b45e1fd007776f2))
+* **deps:** bump github.com/prometheus/common from 0.72.1 to 0.73.0 ([#972](https://github.com/colonel-byte/cargoship/issues/972)) ([4067e8a](https://github.com/colonel-byte/cargoship/commit/4067e8aa1aa895841ea11dc069e464a55bc8cf25))
+* **deps:** bump github.com/sigstore/rekor-tiles/v2 from 2.3.0 to 2.4.0 in the sigstore group ([#969](https://github.com/colonel-byte/cargoship/issues/969)) ([9a7394d](https://github.com/colonel-byte/cargoship/commit/9a7394d61ab556af41fb159748c9a7c58cfe200d))
+* **deps:** bump google.golang.org/api from 0.308.0 to 0.309.0 ([#965](https://github.com/colonel-byte/cargoship/issues/965)) ([b3dad34](https://github.com/colonel-byte/cargoship/commit/b3dad348b26e5642a4cfc480e0f8e106cf61ccc1))
+* **deps:** bump google.golang.org/grpc from 1.84.0 to 1.85.0 ([#970](https://github.com/colonel-byte/cargoship/issues/970)) ([eb08cc2](https://github.com/colonel-byte/cargoship/commit/eb08cc28e2ca777f4ab413fd0e5735df9eae7ae8))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit from v0.17.2 to 0.17.3 ([#968](https://github.com/colonel-byte/cargoship/issues/968)) ([4716414](https://github.com/colonel-byte/cargoship/commit/4716414ca0b968ac68d7ccb2963e6b3949a2ba22))
+
 ## [0.37.0](https://github.com/colonel-byte/cargoship/compare/v0.36.0...v0.37.0) (2026-10-27)
 
 
