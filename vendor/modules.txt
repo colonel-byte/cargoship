@@ -988,8 +988,8 @@ github.com/sigstore/rekor/pkg/types/rekord/v0.0.1
 github.com/sigstore/rekor/pkg/util
 github.com/sigstore/rekor/pkg/util/jcs
 github.com/sigstore/rekor/pkg/verify
-# github.com/sigstore/rekor-tiles/v2 v2.3.0
-## explicit; go 1.25.8
+# github.com/sigstore/rekor-tiles/v2 v2.4.0
+## explicit; go 1.27.0
 github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry
 github.com/sigstore/rekor-tiles/v2/internal/safeint
 github.com/sigstore/rekor-tiles/v2/pkg/client
@@ -1234,8 +1234,6 @@ go.opentelemetry.io/otel/log/embedded
 go.opentelemetry.io/otel/metric
 go.opentelemetry.io/otel/metric/embedded
 # go.opentelemetry.io/otel/sdk/log v1.47.0
-## explicit; go 1.26.0
-# go.opentelemetry.io/otel/sdk/metric v1.47.0
 ## explicit; go 1.26.0
 # go.opentelemetry.io/otel/trace v1.47.0
 ## explicit; go 1.26.0
