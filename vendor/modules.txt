@@ -888,7 +888,7 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/prometheus/common v0.72.1
+# github.com/prometheus/common v0.73.0
 ## explicit; go 1.26.0
 # github.com/pterm/pterm v0.12.84
 ## explicit; go 1.26.0
