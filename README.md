@@ -111,7 +111,7 @@ For example, the **`apply`** workflow runs these phases, in this order:
 3.  **Validation:** Verify that host nodes meet the prerequisites, and stop if the cluster holds a node the config does not.
 4.  **Lock:** Take an exclusive host lock, held for the rest of the run, so a second cargoship cannot change the same hosts.
 5.  **Prepare:** Install OS packages, configure sysctl and environment, SELinux and `fapolicyd` rules, `/etc/hosts`, and the node firewall.
-6.  **Upload:** Securely transfer package binaries, RPMs or DEBs, configuration templates, and OCI images to the nodes, then import the images.
+6.  **Upload:** Securely transfer package binaries, RPMs or DEBs, configuration templates, and OCI images to the nodes, then import the images. Image tarballs the package no longer carries are removed from the nodes in the same pass -- see [Image Tarballs on a Node](./docs/guides/image-tarballs.md).
 7.  **Bootstrap / Upgrade:** Render the engine config, initialize control-plane nodes, apply bundled manifests, join workers, and upgrade any node already running an older version.
 8.  **Engine Config Sync:** Reconcile registry, audit, and pod-security config on any node whose config drifted.
 9.  **Kubeconfig Retrieval and Labelling:** Fetch the generated admin credentials and label nodes with their profile group.
@@ -154,6 +154,15 @@ Bootstrap a new cluster or upgrade an existing one from the compiled package:
 ```bash
 cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 ```
+
+An apply reconciles the node's image directory as well as filling it: a tarball the package has stopped carrying -- including the older tag of an image a version bump replaced -- is deleted from every node, and so is a tarball sitting there that no cargoship run recorded. On a node where something other than cargoship also stages images, keep those by creating a marker file in the image directory, which leaves the package's own images reconciled as normal:
+
+```bash
+# on the node: keep image tarballs cargoship did not upload, and warn about them every run
+sudo touch /var/lib/rancher/k3s/agent/images/cargoship-keep-images
+```
+
+[Image Tarballs on a Node](./docs/guides/image-tarballs.md) covers the naming, both cleanups, and how a kept file is reported.
 
 ### 4. Fetch the Kubeconfig
 
@@ -259,7 +268,7 @@ cargoship apply ./build/cargoship-distro-amd64.tar.zst \
 cargoship redact-receipt ./receipt.json -o ./share.json
 ```
 
-The receipt carries the invocation and the cargoship that ran it, the package's digests and signature status, the cluster inventory, and the phase-by-phase ledger with per-host change reasons and diffs. `redact-receipt` renumbers the hosts `host-01`, `host-02`, drops the diff bodies -- an engine configuration diff carries join tokens -- and removes the cluster name, operator and command line, leaving what a maintainer triages from.
+The receipt carries the invocation and the cargoship that ran it, the package's digests and signature status, the cluster inventory, the phase-by-phase ledger with per-host change reasons and diffs, and any warnings the run raised under `outcome.warnings` -- a successful run that left something on a host worth looking at says so there. `redact-receipt` renumbers the hosts `host-01`, `host-02`, drops the diff bodies -- an engine configuration diff carries join tokens -- and removes the cluster name, operator and command line, leaving what a maintainer triages from.
 
 A fleet that keeps an audit trail sets the path once in the config file instead, under `.distro.receipt_path`, where `apply`, `prepare`, `reset` and `engine-config-sync` all pick it up:
 
@@ -312,7 +321,7 @@ metadata:
 
 The corresponding JSON schemas are automatically generated from Go structs into `schema/`, and `cargoship schema` writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; `cargoship validate` checks a file against the right one without an editor.
 
-An inventory authoring guide is available in [Setting up an inventory](./docs/guides/setup-inv.md).
+An inventory authoring guide is available in [Setting up an inventory](./docs/guides/setup-inv.md), and the full set of guides -- image tarballs, file and registry overrides, credential encryption, multi-architecture packages, firewalls -- is under [`docs/guides/`](./docs/guides/).
 
 ### The `zarf.dev` group is deprecated
 

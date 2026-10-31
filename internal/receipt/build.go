@@ -162,6 +162,14 @@ func outcomeOf(result phase.RunResult, opts Options) Outcome {
 	if !result.Complete() {
 		o.ChangedUndeclared = result.Undeclared()
 	}
+	for _, w := range result.Warnings {
+		o.Warnings = append(o.Warnings, Warning{
+			Phase:  w.Phase,
+			Host:   w.Host,
+			Path:   w.Path,
+			Reason: w.Reason,
+		})
+	}
 
 	// A run that never reached its phases knows nothing, which is a different answer from a run
 	// in which nothing changed. Saying partial there would name every phase as undeclared and

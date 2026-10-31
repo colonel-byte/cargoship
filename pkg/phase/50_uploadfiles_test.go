@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -278,7 +279,7 @@ func TestExportImagesForArchWritesPerArchTarballs(t *testing.T) {
 			t.Fatalf("imgFiles[%s] has %d entries, want 1", arch, len(files))
 		}
 
-		want := filepath.Join(tempDir, config.TarBallDir, string(arch), "ghcr.io_colonel-byte_pause.tar")
+		want := filepath.Join(tempDir, config.TarBallDir, string(arch), "ghcr.io_colonel-byte_pause_3.10.tar")
 		if files[0].LocalSource.Path != want {
 			t.Errorf("tarball path = %q, want %q", files[0].LocalSource.Path, want)
 		}
@@ -617,7 +618,7 @@ func TestExportImagesForArchSkipsADisabledChartsImages(t *testing.T) {
 	}
 	assertTarballNamesImage(t, files[0].LocalSource.Path, kept)
 
-	if _, err := os.Stat(filepath.Join(tempDir, config.TarBallDir, string(api.ArchAMD64), "ghcr.io_colonel-byte_hubble-ui.tar")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(tempDir, config.TarBallDir, string(api.ArchAMD64), "ghcr.io_colonel-byte_hubble-ui_0.13.6.tar")); !os.IsNotExist(err) {
 		t.Error("a disabled chart's image was exported to a tarball")
 	}
 }
@@ -675,4 +676,288 @@ func TestExportImagesForArchKeepsAnEnabledChartsImages(t *testing.T) {
 		t.Fatalf("imgFiles has %d entries, want 1", len(files))
 	}
 	assertTarballNamesImage(t, files[0].LocalSource.Path, ref)
+}
+
+// Every image in a package is exported to its own tarball, so two references that are not the
+// same image may never produce the same filename -- one export would otherwise overwrite the
+// other and the host would be sent the wrong image.
+func TestImageTarBallName(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		image  string
+		suffix string
+		want   string
+	}{
+		{
+			name:   "a tagged image keeps its tag",
+			image:  "docker.io/library/pause:3.10",
+			suffix: ".tar",
+			want:   "docker.io_library_pause_3.10.tar",
+		},
+		{
+			name:   "two tags of one repository do not collide",
+			image:  "docker.io/library/pause:3.9",
+			suffix: ".tar",
+			want:   "docker.io_library_pause_3.9.tar",
+		},
+		{
+			name:   "a registry port stays in the name",
+			image:  "registry:5000/colonel-byte/pause:3.10",
+			suffix: ".tar",
+			want:   "registry_5000_colonel-byte_pause_3.10.tar",
+		},
+		{
+			name:   "a second image from the same ported registry does not collide",
+			image:  "registry:5000/colonel-byte/etcd:3.5.21",
+			suffix: ".tar",
+			want:   "registry_5000_colonel-byte_etcd_3.5.21.tar",
+		},
+		{
+			name:   "a digest reference keeps its digest",
+			image:  "ghcr.io/colonel-byte/pause@sha256:0123abcd",
+			suffix: ".tar",
+			want:   "ghcr.io_colonel-byte_pause_sha256_0123abcd.tar",
+		},
+		{
+			name:   "the compression suffix is carried through",
+			image:  "ghcr.io/colonel-byte/pause:3.10",
+			suffix: ".tar.zst",
+			want:   "ghcr.io_colonel-byte_pause_3.10.tar.zst",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, imageTarBallName(tt.image, tt.suffix))
+			require.Equal(t, tt.want, filepath.Base(tt.want), "the name is a filename, not a path")
+		})
+	}
+}
+
+// A tarball name carries the image's tag (see imageTarBallName), so a version bump changes the
+// path rather than overwriting the file at it. What keeps the old one off the host is
+// cleanStaleUploads: the prior manifest names it, this run did not upload it, so it is pruned.
+//
+// This is the half of the naming decision that has to hold for it to be safe -- without it an
+// upgrade leaves every superseded image sitting in the engine's image directory forever. See
+// docs/agent/choice-image-tarball-names.md.
+func TestCleanStaleUploadsPrunesImagesThisRunDidNotUpload(t *testing.T) {
+	const imagesDir = "/var/lib/rancher/k3s/agent/images"
+
+	for _, tt := range []struct {
+		name string
+		// prior is the manifest as the previous apply left it.
+		prior []ManifestEntry
+		// uploaded is what this run put on the host, in manifest form.
+		uploaded []string
+		want     []string
+	}{
+		{
+			name: "a tag bump prunes the version it replaces",
+			prior: []ManifestEntry{
+				{
+					Category: "image",
+					Path:     imagesDir + "/docker.io_rancher_mirrored-pause_3.10.tar",
+				},
+			},
+			uploaded: []string{"image	" + imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar"},
+			want:     []string{imagesDir + "/docker.io_rancher_mirrored-pause_3.10.tar"},
+		},
+		{
+			name: "an image dropped from the package is pruned",
+			prior: []ManifestEntry{
+				{
+					Category: "image",
+					Path:     imagesDir + "/docker.io_rancher_klipper-lb_v0.4.17.tar",
+				},
+				{
+					Category: "image",
+					Path:     imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar",
+				},
+			},
+			uploaded: []string{"image	" + imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar"},
+			want:     []string{imagesDir + "/docker.io_rancher_klipper-lb_v0.4.17.tar"},
+		},
+		{
+			name: "an image added to the package prunes nothing",
+			prior: []ManifestEntry{
+				{
+					Category: "image",
+					Path:     imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar",
+				},
+			},
+			uploaded: []string{
+				"image	" + imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar",
+				"image	" + imagesDir + "/docker.io_rancher_klipper-lb_v0.4.17.tar",
+			},
+			want: nil,
+		},
+		{
+			name: "a sibling phase's engine binary is not an image, and survives",
+			prior: []ManifestEntry{
+				{
+					Category: "engine",
+					Path:     "/usr/local/bin/k3s",
+				},
+				{
+					Category: "image",
+					Path:     imagesDir + "/docker.io_rancher_mirrored-pause_3.10.tar",
+				},
+			},
+			uploaded: []string{"image	" + imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar"},
+			want:     []string{imagesDir + "/docker.io_rancher_mirrored-pause_3.10.tar"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := &manifestFS{}
+			h := &cluster.Host{Hostname: "worker1"}
+			h.SetFS(fs)
+			h.Metadata.UploadedFiles = tt.uploaded
+
+			p := &UploadFiles{
+				priorManifest: map[*cluster.Host][]ManifestEntry{h: tt.prior},
+			}
+			p.SetManager(imagePruneManager(imagesDir))
+
+			require.NoError(t, p.cleanStaleUploads(context.Background(), h))
+			require.Equal(t, tt.want, fs.removed)
+		})
+	}
+}
+
+// imagePruneManager is the least manager the prune and the sweep read: they need the image
+// directory the distro configures and nothing else.
+func imagePruneManager(dir string) *Manager {
+	return &Manager{
+		Distro: &distro.Distro{
+			Spec: distro.Spec{
+				Config: distro.Config{
+					ImagesConfig: distro.ImageConfig{
+						Path: dir,
+					},
+				},
+			},
+		},
+	}
+}
+
+// dirEntry is a name in a listing. The sweep reads nothing else off one.
+type dirEntry struct {
+	name  string
+	isDir bool
+}
+
+func (d dirEntry) Name() string                 { return d.name }
+func (d dirEntry) IsDir() bool                  { return d.isDir }
+func (d dirEntry) Type() iofs.FileMode          { return 0 }
+func (d dirEntry) Info() (iofs.FileInfo, error) { return nil, nil }
+
+// The image directory is cargoship's to manage, so a tarball in it that no manifest names is
+// one nothing else would ever remove -- see docs/agent/choice-image-tarball-names.md. The
+// escape hatch is a marker file, and it buys a warning rather than silence.
+func TestSweepUnmanagedImages(t *testing.T) {
+	const imagesDir = "/var/lib/rancher/k3s/agent/images"
+	const uploaded = imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar"
+
+	for _, tt := range []struct {
+		name string
+		// listing is what the image directory holds, the uploaded tarball included.
+		listing []iofs.DirEntry
+		// marker is whether the host carries KeepImagesMarker.
+		marker      bool
+		wantRemoved []string
+		wantKept    []Warning
+	}{
+		{
+			name: "a tarball no manifest names is removed",
+			listing: []iofs.DirEntry{
+				dirEntry{name: "docker.io_rancher_mirrored-pause_3.10.2.tar"},
+				dirEntry{name: "vendor-appliance.tar"},
+			},
+			wantRemoved: []string{imagesDir + "/vendor-appliance.tar"},
+		},
+		{
+			name: "the marker keeps it, and says so",
+			listing: []iofs.DirEntry{
+				dirEntry{name: "docker.io_rancher_mirrored-pause_3.10.2.tar"},
+				dirEntry{name: "vendor-appliance.tar"},
+			},
+			marker: true,
+			wantKept: []Warning{
+				{
+					Path:   imagesDir + "/vendor-appliance.tar",
+					Reason: "kept, unmanaged",
+				},
+			},
+		},
+		{
+			name: "a tarball left by the previous naming scheme is removed",
+			listing: []iofs.DirEntry{
+				dirEntry{name: "docker.io_rancher_mirrored-pause_3.10.2.tar"},
+				dirEntry{name: "docker.io_rancher_mirrored-pause.tar"},
+			},
+			wantRemoved: []string{imagesDir + "/docker.io_rancher_mirrored-pause.tar"},
+		},
+		{
+			name: "another compression's tarball is removed",
+			listing: []iofs.DirEntry{
+				dirEntry{name: "docker.io_rancher_mirrored-pause_3.10.2.tar"},
+				dirEntry{name: "docker.io_rancher_mirrored-pause_3.10.2.tar.zst"},
+			},
+			wantRemoved: []string{imagesDir + "/docker.io_rancher_mirrored-pause_3.10.2.tar.zst"},
+		},
+		{
+			name: "what is not a tarball is left alone, marker and all",
+			listing: []iofs.DirEntry{
+				dirEntry{name: "docker.io_rancher_mirrored-pause_3.10.2.tar"},
+				dirEntry{name: "images.txt"},
+				dirEntry{name: KeepImagesMarker},
+				dirEntry{
+					name:  "pulled",
+					isDir: true,
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := &manifestFS{
+				entries: tt.listing,
+				exists:  map[string]bool{},
+			}
+			if tt.marker {
+				fs.exists[imagesDir+"/"+KeepImagesMarker] = true
+			}
+
+			h := &cluster.Host{Hostname: "worker1"}
+			h.SetFS(fs)
+			h.Metadata.UploadedFiles = []string{"image\t" + uploaded}
+
+			p := &UploadFiles{}
+			p.SetManager(imagePruneManager(imagesDir))
+
+			// The address, not the hostname: a warning names a host the way the cluster
+			// configuration does, so an operator can find it in their own inventory.
+			want := tt.wantKept
+			for i := range want {
+				want[i].Host = h.ConfiguredAddress()
+			}
+
+			require.NoError(t, p.cleanStaleUploads(context.Background(), h))
+			require.Equal(t, tt.wantRemoved, fs.removed)
+			require.Equal(t, want, p.Warnings())
+		})
+	}
+}
+
+// An unconfigured image directory is not a directory to sweep, and listing "" would be a sweep
+// of the host's root.
+func TestSweepUnmanagedImagesNeedsAnImageDirectory(t *testing.T) {
+	fs := &manifestFS{entries: []iofs.DirEntry{dirEntry{name: "anything.tar"}}}
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(fs)
+
+	p := &UploadFiles{}
+	p.SetManager(imagePruneManager(""))
+
+	require.NoError(t, p.cleanStaleUploads(context.Background(), h))
+	require.Empty(t, fs.removed)
+	require.Empty(t, p.Warnings())
 }

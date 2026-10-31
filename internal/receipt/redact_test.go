@@ -83,6 +83,17 @@ func TestRedactKeepsWhatTriageNeeds(t *testing.T) {
 
 	require.Equal(t, 2, got.Cluster.HostCount)
 
+	// A warning survives with its phase, path and reason, and with the same alias the phase
+	// ledger gave that host: a kept file an operator has to go and look at is worth nothing
+	// without knowing which host to look on.
+	require.Len(t, got.Outcome.Warnings, 1)
+	require.Equal(t, Warning{
+		Phase:  "Upload files",
+		Host:   "host-01",
+		Path:   "/var/lib/rancher/rke2/agent/images/vendor-appliance.tar",
+		Reason: "kept, unmanaged",
+	}, got.Outcome.Warnings[0])
+
 	require.NotNil(t, got.Package)
 	require.Equal(t, "rke2", got.Package.Engine)
 	require.Equal(t, "3.4.5", got.Package.Version)
@@ -215,7 +226,12 @@ func TestRedactedFieldsAreClassified(t *testing.T) {
 		{
 			name: "Outcome",
 			got:  fieldNames[Outcome](),
-			want: []string{"Succeeded", "Error", "Changed", "ChangedSignal", "ChangedUndeclared", "HostsUndeclared"},
+			want: []string{"Succeeded", "Error", "Changed", "ChangedSignal", "ChangedUndeclared", "HostsUndeclared", "Warnings"},
+		},
+		{
+			name: "Warning",
+			got:  fieldNames[Warning](),
+			want: []string{"Phase", "Host", "Path", "Reason"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
