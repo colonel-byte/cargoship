@@ -141,6 +141,23 @@ cargoship create .
 cargoship create ./distro-defs -o ./build/
 ```
 
+A build normally fetches the images and files a definition declares from the registries and URLs it names. Where that content has already been collected with [hauler](https://github.com/hauler-dev/hauler) and carried across the airlock, point the build at the haul instead and nothing is fetched:
+
+```bash
+# Build from a hauler store directory, or from an archive written by `hauler store save`
+cargoship create ./distro-defs --hauler-store ./haul.tar.zst
+```
+
+Images and files are matched against the reference hauler recorded for each artifact when it was added, so no mapping has to be written by hand. Anything the store does not hold still comes from its declared source, which makes a partial haul usable. The same setting lives in the config file:
+
+```yaml
+distro:
+  create:
+    hauler_store: ~/hauls/haul.tar.zst
+```
+
+See [Building From a Hauler Store](guides/hauler-store.md) for the collect-and-carry workflow, what a haul must contain, and how this compares with `--registry-override` and `--file-override`.
+
 ### 2. Prepare Target Nodes
 
 Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, `fapolicyd` rules, and `/etc/hosts`) across target machines using your cluster configuration inventory:

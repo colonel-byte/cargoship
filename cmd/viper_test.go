@@ -117,6 +117,9 @@ func TestExpandHomePaths(t *testing.T) {
 				// must survive untouched.
 				SigningKey: "env://COSIGN_PRIVATE_KEY",
 			},
+			CreateOpts: types.DistroCreateOptions{
+				HaulerStore: "~/hauls/haul.tar.zst",
+			},
 		},
 	}
 
@@ -139,6 +142,9 @@ func TestExpandHomePaths(t *testing.T) {
 			PublicKey:   filepath.Join(home, ".cosign", "cosign.pub"),
 			PublishOpts: types.DistroPublishOptions{
 				SigningKey: "env://COSIGN_PRIVATE_KEY",
+			},
+			CreateOpts: types.DistroCreateOptions{
+				HaulerStore: filepath.Join(home, "hauls", "haul.tar.zst"),
 			},
 		},
 	}

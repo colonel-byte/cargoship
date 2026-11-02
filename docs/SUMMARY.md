@@ -13,6 +13,7 @@
 - [ansible-module](guides/ansible-module.md)
 - [file-override](guides/file-override.md)
 - [firewall](guides/firewall.md)
+- [hauler-store](guides/hauler-store.md)
 - [importing-archives](guides/importing-archives.md)
 - [multi-architecture](guides/multi-architecture.md)
 - [package-values](guides/package-values.md)
