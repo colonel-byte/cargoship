@@ -410,7 +410,7 @@ github.com/go-openapi/jsonreference/internal
 # github.com/go-openapi/loads v0.25.3
 ## explicit; go 1.26.0
 github.com/go-openapi/loads
-# github.com/go-openapi/runtime v0.33.3
+# github.com/go-openapi/runtime v0.33.4
 ## explicit; go 1.26.0
 github.com/go-openapi/runtime
 github.com/go-openapi/runtime/client
@@ -421,7 +421,7 @@ github.com/go-openapi/runtime/middleware/denco
 github.com/go-openapi/runtime/middleware/untyped
 github.com/go-openapi/runtime/security
 github.com/go-openapi/runtime/yamlpc
-# github.com/go-openapi/runtime/server-middleware v0.33.3
+# github.com/go-openapi/runtime/server-middleware v0.33.4
 ## explicit; go 1.26.0
 github.com/go-openapi/runtime/server-middleware/docui
 github.com/go-openapi/runtime/server-middleware/mediatype
@@ -1297,7 +1297,7 @@ golang.org/x/crypto/ssh/knownhosts
 ## explicit; go 1.26.0
 golang.org/x/mod/semver
 golang.org/x/mod/sumdb/note
-# golang.org/x/net v0.61.0
+# golang.org/x/net v0.62.0
 ## explicit; go 1.26.0
 golang.org/x/net/context
 golang.org/x/net/html
