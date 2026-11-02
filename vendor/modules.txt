@@ -12,11 +12,11 @@ atomicgo.dev/keyboard/keys
 # atomicgo.dev/schedule v0.1.0
 ## explicit; go 1.18
 atomicgo.dev/schedule
-# cloud.google.com/go/auth v0.24.1
+# cloud.google.com/go/auth v0.24.2
 ## explicit; go 1.26.0
-# cloud.google.com/go/kms v1.36.0
+# cloud.google.com/go/kms v1.36.1
 ## explicit; go 1.26.0
-# cloud.google.com/go/longrunning v1.4.0
+# cloud.google.com/go/longrunning v1.4.1
 ## explicit; go 1.26.0
 # dario.cat/mergo v1.0.2
 ## explicit; go 1.13
