@@ -42,6 +42,7 @@ repos:
           (?x)^(
               vendor/.*|
               thirdparty-src/.*|
+              pkg/haulerstore/testdata/.*|
               hack/completion/.*
           )$
         exclude_types:
