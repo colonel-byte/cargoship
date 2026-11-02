@@ -473,3 +473,59 @@ func TestRealHaul(t *testing.T) {
 		}
 	}
 }
+
+// Hauler records a Docker Hub image under the registry's canonical host, so an image a distro
+// definition declares as docker.io/... is stored as index.docker.io/..., and an exact-string
+// match would miss every one of them. Both spellings have to resolve.
+func TestDockerHubSpellingsResolve(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "store")
+	// index.docker.io is what hauler writes; docker.io is what a definition declares.
+	image := imageEntry(t, dir, "index.docker.io/rancher/mirrored-pause:3.10.2")
+	writeIndex(t, dir, []ocispec.Descriptor{image})
+
+	s, err := Open(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	for _, ref := range []string{
+		"docker.io/rancher/mirrored-pause:3.10.2",
+		"index.docker.io/rancher/mirrored-pause:3.10.2",
+	} {
+		if !s.HasImage(ref) {
+			t.Errorf("HasImage(%q) false, want true", ref)
+		}
+		if _, err := s.Target().Resolve(context.Background(), ref); err != nil {
+			t.Errorf("Resolve(%q): %v", ref, err)
+		}
+	}
+
+	// An official image is the same reference written three ways.
+	official := filepath.Join(t.TempDir(), "official")
+	writeIndex(t, official, []ocispec.Descriptor{imageEntry(t, official, "index.docker.io/library/nginx:1.0")})
+	o, err := Open(context.Background(), official)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer o.Close() //nolint:errcheck
+	for _, ref := range []string{"nginx:1.0", "docker.io/nginx:1.0", "docker.io/library/nginx:1.0"} {
+		if !o.HasImage(ref) {
+			t.Errorf("HasImage(%q) false, want true", ref)
+		}
+	}
+}
+
+// A file's recorded origin is a URL, not an image reference, and must not be put through the
+// image canonicaliser.
+func TestFileRefIsNotCanonicalised(t *testing.T) {
+	s, err := Open(context.Background(), newStoreDir(t))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	if _, ok := s.File(testFileURL); !ok {
+		t.Errorf("File(%q) not found; a URL key was rewritten", testFileURL)
+	}
+}

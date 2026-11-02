@@ -33,6 +33,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"oras.land/oras-go/v2"
@@ -163,13 +164,30 @@ func (s *Store) load(ctx context.Context, dir string) error {
 			s.files[ref] = file
 			continue
 		}
-		s.images[ref] = desc
+		s.images[canonicalImageRef(ref)] = desc
 	}
 
 	if len(s.images) == 0 && len(s.files) == 0 {
 		return fmt.Errorf("%s holds no content cargoship can use: no entry carries a %s annotation, which is how hauler records what an artifact came from", s.source, AnnotationOriginalRef)
 	}
 	return nil
+}
+
+// canonicalImageRef puts an image reference into the one spelling two equal references share,
+// so the store is indexed and searched by the same key.
+//
+// Hauler records what it collected under the registry's canonical host: an image added as
+// docker.io/rancher/pause:3.10 comes back as index.docker.io/rancher/pause:3.10, which is the
+// same image under a name a distro definition does not use. The same split applies to an
+// official image, where docker.io/nginx, nginx and docker.io/library/nginx are one reference
+// written three ways. A reference that will not parse is keyed as it was written -- it would
+// not have matched anything anyway, and failing the lookup beats failing the open.
+func canonicalImageRef(ref string) string {
+	parsed, err := name.ParseReference(ref)
+	if err != nil {
+		return ref
+	}
+	return parsed.Name()
 }
 
 // isAttached reports whether desc describes other content -- a signature, attestation, SBOM or
@@ -236,7 +254,7 @@ const mediaTypeDockerManifestList = "application/vnd.docker.distribution.manifes
 // HasImage reports whether the store holds the image ref, spelled as a distro definition
 // spells it.
 func (s *Store) HasImage(ref string) bool {
-	_, ok := s.images[ref]
+	_, ok := s.images[canonicalImageRef(ref)]
 	return ok
 }
 
@@ -325,7 +343,7 @@ func (t *target) Exists(ctx context.Context, desc ocispec.Descriptor) (bool, err
 }
 
 func (t *target) Resolve(_ context.Context, reference string) (ocispec.Descriptor, error) {
-	desc, ok := t.images[reference]
+	desc, ok := t.images[canonicalImageRef(reference)]
 	if !ok {
 		return ocispec.Descriptor{}, fmt.Errorf("%s does not hold the image %s", t.source, reference)
 	}
