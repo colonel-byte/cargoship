@@ -28,7 +28,6 @@
 #
 # --exclude-extras leaves out the cosign signatures, attestations and SBOMs attached to these
 # images. Cargoship ignores them, so the only thing carrying them costs is haul size.
----
 apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:

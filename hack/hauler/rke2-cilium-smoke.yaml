@@ -23,7 +23,6 @@
 # example can be built offline from; the manifests in example/rke2-multi-cni-hauler/ are.
 #
 # Every entry is a real one from that definition, so the references and URLs match it exactly.
----
 apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:

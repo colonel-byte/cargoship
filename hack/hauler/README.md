@@ -4,10 +4,10 @@ A small [hauler](https://github.com/hauler-dev/hauler) manifest and a matching d
 
 Every entry is a real one from [`example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1`](../../example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1) - the references, URLs, shasums and targets are copied from it rather than invented, so a build here exercises the same matching a build of that example would. The manifests that collect that example *completely* are in [`example/rke2-multi-cni-hauler/`](../../example/rke2-multi-cni-hauler).
 
-| File                                                   | What it is                                                                        |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [`rke2-cilium-smoke.yaml`](rke2-cilium-smoke.yaml)     | Three images and one file. Two images from the flat list, one through the chart.  |
-| [`smoke-distro/`](smoke-distro)                        | A definition declaring exactly that subset, so the pair needs no network.          |
+| File                                                   | What it is                                                                       |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| [`rke2-cilium-smoke.yaml`](rke2-cilium-smoke.yaml)     | Three images and one file. Two images from the flat list, one through the chart. |
+| [`smoke-distro/`](smoke-distro)                        | A definition declaring exactly that subset, so the pair needs no network.        |
 
 The definition is hand-written and targets amd64 alone, which is what makes a one-platform haul enough. It is not an example of that release and is not rendered by `mage generate:examples`.
 

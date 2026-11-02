@@ -46,3 +46,5 @@ book/
 # bytecode beside the source.
 __pycache__/
 *.py[cod]
+
+store/

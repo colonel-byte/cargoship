@@ -26,12 +26,17 @@
 #     as written and the match is a string comparison.
 #   - They are URLs, not local paths. `hauler store add file ./rke2.tar.gz` records the absolute
 #     path of the machine that built the haul, which no definition declares.
-#   - Renaming with `--name` is safe. The recorded origin is the URL either way, so the name
-#     only affects what the artifact is called inside the store.
+#   - A `name` only renames the artifact inside the store. The recorded origin stays the URL,
+#     so renaming does not affect what a definition matches against -- which is what makes the
+#     workaround below safe.
+#
+# Rancher's RPM filenames carry a `~` before the rke2 revision, and `~` is not legal in an OCI
+# tag, so hauler cannot derive a store reference from those names and fails the whole sync with
+# `could not parse reference`. Each one therefore carries an explicit `name` with the `~`
+# written as `-`. The URL above it is untouched, tilde included.
 #
 # Every file in this example declares a shasum, which is the precondition for taking it from a
 # store: cargoship refuses store content for a file it cannot verify.
----
 apiVersion: content.hauler.cattle.io/v1
 kind: Files
 metadata:
@@ -44,11 +49,17 @@ spec:
     - path: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz
     - path: https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz
     - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-agent-1.36.5~rke2r1-0.el9.x86_64.rpm
+      name: rke2-agent-1.36.5-rke2r1-0.el9.x86_64.rpm
     - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.5~rke2r1-0.el9.x86_64.rpm
+      name: rke2-common-1.36.5-rke2r1-0.el9.x86_64.rpm
     - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-server-1.36.5~rke2r1-0.el9.x86_64.rpm
+      name: rke2-server-1.36.5-rke2r1-0.el9.x86_64.rpm
     # arm64 only.
     - path: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-arm64.tar.gz
     - path: https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-arm64.tar.gz
     - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-agent-1.36.5~rke2r1-0.el9.aarch64.rpm
+      name: rke2-agent-1.36.5-rke2r1-0.el9.aarch64.rpm
     - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-common-1.36.5~rke2r1-0.el9.aarch64.rpm
+      name: rke2-common-1.36.5-rke2r1-0.el9.aarch64.rpm
     - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-server-1.36.5~rke2r1-0.el9.aarch64.rpm
+      name: rke2-server-1.36.5-rke2r1-0.el9.aarch64.rpm
