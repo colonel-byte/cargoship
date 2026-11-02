@@ -1,0 +1,54 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Every file source example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1 declares, deduplicated:
+# the definition names the rke2 release tarball in several entries that extract different paths
+# out of it, and that is one artifact in the store. Collect it on a connected machine:
+#
+#   hauler store sync --filename example/rke2-multi-cni-hauler/v1.36.5-rke2r1-files.yaml
+#
+# Three things about these paths are load-bearing, because cargoship matches a file by the URL
+# hauler recorded it as having come from:
+#
+#   - They are byte-exact copies of the definition's `source` values, %2B encoding included.
+#     v1.36.5%2Brke2r1 is not interchangeable with v1.36.5+rke2r1 here; hauler stores the URL
+#     as written and the match is a string comparison.
+#   - They are URLs, not local paths. `hauler store add file ./rke2.tar.gz` records the absolute
+#     path of the machine that built the haul, which no definition declares.
+#   - Renaming with `--name` is safe. The recorded origin is the URL either way, so the name
+#     only affects what the artifact is called inside the store.
+#
+# Every file in this example declares a shasum, which is the precondition for taking it from a
+# store: cargoship refuses store content for a file it cannot verify.
+---
+apiVersion: content.hauler.cattle.io/v1
+kind: Files
+metadata:
+  name: rke2-cilium-files
+spec:
+  files:
+    # Architecture independent.
+    - path: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
+    # amd64 only.
+    - path: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz
+    - path: https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-agent-1.36.5~rke2r1-0.el9.x86_64.rpm
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.5~rke2r1-0.el9.x86_64.rpm
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-server-1.36.5~rke2r1-0.el9.x86_64.rpm
+    # arm64 only.
+    - path: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-arm64.tar.gz
+    - path: https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-arm64.tar.gz
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-agent-1.36.5~rke2r1-0.el9.aarch64.rpm
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-common-1.36.5~rke2r1-0.el9.aarch64.rpm
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-server-1.36.5~rke2r1-0.el9.aarch64.rpm

@@ -41,6 +41,8 @@ A hauler manifest is the practical way to do this for a real package, rather tha
 hauler store sync --filename hauler-manifest.yaml
 ```
 
+Manifests collecting everything one of the shipped examples declares live in [`example/rke2-multi-cni-hauler/`](https://github.com/colonel-byte/cargoship/tree/main/example/rke2-multi-cni-hauler), and [`hack/hauler/`](https://github.com/colonel-byte/cargoship/tree/main/hack/hauler) holds a roughly 19 MB subset with a matching definition - useful for checking the mechanism before collecting a whole release.
+
 Then save the store as a single archive to carry:
 
 ```bash
