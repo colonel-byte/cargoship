@@ -21,11 +21,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
 )
@@ -378,5 +380,30 @@ func TestSortIndexFileIsIndependentOfTagOrder(t *testing.T) {
 func TestSortIndexFileWithoutAnIndexErrors(t *testing.T) {
 	if err := sortIndexFile(filepath.Join(t.TempDir(), ocispec.ImageIndexFile)); err == nil {
 		t.Error("sortIndexFile() = nil error, want one for a missing index")
+	}
+}
+
+// An image that cannot be resolved has to fail the pull. It used to be collected into a slice
+// nothing read, so the goroutine reported success and the image was dropped: Pull returned a
+// shorter list with no error, create exited 0, and the gap did not surface until the package
+// was published or installed. See #983.
+func TestPullErrorsWhenAnImageCannotBeResolved(t *testing.T) {
+	ctx := context.Background()
+	const ref = "registry.invalid/pause:3.10"
+
+	refInfo, err := transform.ParseImageRef(ref)
+	if err != nil {
+		t.Fatalf("failed to parse %s: %v", ref, err)
+	}
+
+	got, err := Pull(ctx, []transform.Image{refInfo}, t.TempDir(), PullOptions{
+		Arches:         []string{"amd64"},
+		CacheDirectory: t.TempDir(),
+	})
+	if err == nil {
+		t.Fatalf("Pull of an unresolvable image returned no error and %d images, so a package would be built without it", len(got))
+	}
+	if !strings.Contains(err.Error(), ref) {
+		t.Errorf("error %q does not name the image that could not be resolved", err)
 	}
 }

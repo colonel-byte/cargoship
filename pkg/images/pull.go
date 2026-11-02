@@ -175,13 +175,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	pullPlatforms := platformsForArches(opts.Arches)
 	imagesWithManifests := []ImageWithManifest{}
 	imagesInfo := []imagePullInfo{}
-	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
 
-	// This loop pulls the metadata from images with three goals
+	// This loop pulls the metadata from images with two goals
 	// - Get all the manifests from images that will be pulled so they can be returned to the function
 	// - discover if any images are sha'd to an index, if so error and inform user on the different available platforms
-	// - Mark any images that don't resolve so we can attempt to pull them from the daemon
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 	for _, image := range imagesWithOverride {
@@ -198,13 +196,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			repo.PlainHTTP = opts.PlainHTTP
 			if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
 				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
-				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
-					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-					imageListLock.Lock()
-					defer imageListLock.Unlock()
-					dockerFallBackImages = append(dockerFallBackImages, image)
-					return nil
+					return fmt.Errorf("unable to connect to the registry %s for image %s: %w",
+						repo.Reference.Host(), image.overridden.Reference, err)
 				}
 			}
 
@@ -215,11 +209,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
-				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-				imageListLock.Lock()
-				defer imageListLock.Unlock()
-				dockerFallBackImages = append(dockerFallBackImages, image)
-				return nil
+				return fmt.Errorf("unable to find image %s: %w", image.overridden.Reference, err)
 			}
 
 			// If the image sha points to an index then error
