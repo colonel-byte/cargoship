@@ -1,0 +1,32 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Do not edit; see example/AGENTS.md.
+apiVersion: content.hauler.cattle.io/v1
+kind: Images
+metadata:
+  name: multi-cni-cilium-rke2-cilium
+spec:
+  images:
+    - name: docker.io/rancher/mirrored-cilium-certgen:v0.4.9
+    - name: docker.io/rancher/mirrored-cilium-cilium:v1.20.1
+    - name: docker.io/rancher/mirrored-cilium-cilium-envoy:v1.37.5-1786810558-766ccfb37260a43e9d228837aa84ce3faf9f64e7
+    - name: docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.20.1
+    - name: docker.io/rancher/mirrored-cilium-hubble-relay:v1.20.1
+    - name: docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.5
+    - name: docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.5
+    - name: docker.io/rancher/mirrored-cilium-operator-aws:v1.20.1
+    - name: docker.io/rancher/mirrored-cilium-operator-azure:v1.20.1
+    - name: docker.io/rancher/mirrored-cilium-operator-generic:v1.20.1
+    - name: docker.io/rancher/hardened-cni-plugins:v1.9.1-build20260903

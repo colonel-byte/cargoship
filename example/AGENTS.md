@@ -18,8 +18,6 @@ To change a generated example, edit its template in `magefiles/templates/` and r
 
 Every path in that table is also marked `linguist-generated` in [`.gitattributes`](../.gitattributes), so a target that starts writing a new file needs a pattern there as well. See the "Keeping `.gitattributes` in sync with the generators" section of the root [`AGENTS.md`](../AGENTS.md).
 
-One directory here is hand-written and is not rendered by anything: [`example/rke2-multi-cni-hauler/`](rke2-multi-cni-hauler), which holds hauler manifests collecting what `example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1` declares. It sits beside the flavor directories rather than inside one on purpose - a render deletes a version directory outright once upstream stops publishing that build, so a hand-written file next to a `distro.yaml` would go with it. Nothing visits it, because flavor paths are a declared list in [`magefiles/pkg/gen/examples/distros.go`](../magefiles/pkg/gen/examples/distros.go) and it is not one of them. Its files stay unmarked in `.gitattributes`, since they are not generated.
-
 ## Adding a release line
 
 `Generate.ExampleLine` backfills a whole minor line: it lists every non-RC tag of that distro on that line and renders each one, into every flavor directory of that distro that covers the line. The leading `v` is optional.
