@@ -38,6 +38,7 @@ type exampleFlavor struct {
 	imageLists        []exampleImageList // the airgap manifests it adds to the core one
 	replacesKubeProxy bool               // whether the CNI takes over from kube-proxy
 	values            []string           // the values templates written next to distro.yaml; none when empty
+	haulerManifests   bool               // whether hauler manifests are written next to distro.yaml
 	cloudProvider     string             // rancher-vsphere -- the bundled cloud provider it selects; none when empty
 	arches            []string           // the architectures its examples target; amd64 alone when empty
 	minors            []string           // v1_36 -- the minor lines it renders, all of them when empty
