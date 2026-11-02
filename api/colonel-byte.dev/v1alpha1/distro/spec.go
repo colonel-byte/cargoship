@@ -87,10 +87,13 @@ type FileSource struct {
 	// the build host.
 	Resolved string `json:"resolved"`
 	// Override is the Source prefix of the override that matched, which is the one that won
-	// when several could have.
-	Override string `json:"override"`
-	// Shasum is the checksum the bytes were verified against. An override is refused for a
-	// file that declares none, so this is never empty.
+	// when several could have. It is empty when the bytes came from a local content store.
+	Override string `json:"override,omitempty"`
+	// Store names the local content store the bytes were read from, such as a hauler store
+	// passed to --hauler-store. It is empty when an override or the declared source was used.
+	Store string `json:"store,omitempty"`
+	// Shasum is the checksum the bytes were verified against. Neither an override nor a
+	// content store is accepted for a file that declares none, so this is never empty.
 	Shasum string `json:"shasum"`
 }
 

@@ -306,7 +306,7 @@
           "type": "string"
         },
         "override": {
-          "description": "is the Source prefix of the override that matched, which is the one that won\nwhen several could have.",
+          "description": "is the Source prefix of the override that matched, which is the one that won\nwhen several could have. It is empty when the bytes came from a local content store.",
           "type": "string"
         },
         "path": {
@@ -318,7 +318,11 @@
           "type": "string"
         },
         "shasum": {
-          "description": "is the checksum the bytes were verified against. An override is refused for a\nfile that declares none, so this is never empty.",
+          "description": "is the checksum the bytes were verified against. Neither an override nor a\ncontent store is accepted for a file that declares none, so this is never empty.",
+          "type": "string"
+        },
+        "store": {
+          "description": "names the local content store the bytes were read from, such as a hauler store\npassed to --hauler-store. It is empty when an override or the declared source was used.",
           "type": "string"
         }
       },
@@ -326,7 +330,6 @@
         "path",
         "declared",
         "resolved",
-        "override",
         "shasum"
       ],
       "type": "object"
