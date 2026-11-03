@@ -18,14 +18,14 @@ Six of the 260 modules in `go.mod` overflow the cap, and they are not a random s
 
 The set was wider when this was written: it held ten modules, topped by `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` at 117, and included the Azure keyvault, Aliyun and aws-sdk-go-v2 trees. Those left the graph with the dependency trim in [#847](https://github.com/colonel-byte/cargoship/pull/847), which is the first of the two exit conditions below coming half true.
 
-| Title length | Module                                                                |
-| ------------ | --------------------------------------------------------------------- |
-| 107          | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`   |
-| 107          | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`   |
-| 105          | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`     |
-| 105          | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`     |
-| 101          | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`         |
-| 101          | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`         |
+| Title length | Module                                                              |
+| ------------ | ------------------------------------------------------------------- |
+| 107          | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` |
+| 107          | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` |
+| 105          | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`   |
+| 105          | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`   |
+| 101          | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`       |
+| 101          | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`       |
 
 None of them is a direct dependency. All six arrive through the vendored otel tree, so there is no import to rewrite and no module to drop: the names are what they are.
 
