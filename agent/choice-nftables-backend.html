@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -212,7 +212,7 @@
 <p>Cargoship’s rules are loaded into the running ruleset by <code>nft -f</code>, which does not survive a reboot. Persistence is an <code>include "/etc/cargoship/nftables.nft"</code> line appended once to whichever boot-time file the distro reads.</p>
 <p>The alternative, dumping <code>nft list ruleset</code> into that file, would capture kube-proxy’s and the CNI’s rules along with cargoship’s and replay them at boot as static rules – stale ones, describing services that may no longer exist. Appending an include leaves the operator’s file otherwise intact, keeps cargoship’s contribution in one identifiable place, and stays correct when cargoship’s ruleset is regenerated. A host with neither conf file gets a warning rather than an error: the rules are loaded for this boot, but nothing will reload them at the next one.</p>
 <h2 id="one-inet-table-rather-than-separate-ip-and-ip6-tables"><a class="header" href="#one-inet-table-rather-than-separate-ip-and-ip6-tables">One <code>inet</code> table rather than separate <code>ip</code> and <code>ip6</code> tables</a></h2>
-<p>The <code>inet</code> family covers IPv4 and IPv6 in a single table, so a plan renders one table, one set of chains, and one transaction regardless of what the cluster’s addressing looks like. The cost is that address matches must name their family explicitly – <code>ip saddr</code> versus <code>ip6 saddr</code> – and that trusted addresses split into two sets, <code>cluster_v4</code> and <code>cluster_v6</code>, since a set has one type. Both are handled in rendering (<code>nftAddrFamily</code>, <code>nftSplitFamilies</code>) and are cheaper than maintaining two parallel tables and deciding which of them a dual-stack plan belongs in.</p>
+<p>The <code>inet</code> family covers IPv4 and IPv6 in a single table, so a plan renders one table, one set of chains, and one transaction regardless of what the cluster’s addressing looks like. The cost is that address matches must name their family explicitly – <code>ip saddr</code> versus <code>ip6 saddr</code> – and that trusted addresses split into two sets, <code>cluster_v4</code> and <code>cluster_v6</code>, since a set has one type. Both are handled in rendering (<code>nftAddrFamily</code>, <code>NftSplitFamilies</code>) and are cheaper than maintaining two parallel tables and deciding which of them a dual-stack plan belongs in.</p>
 
                     </main>
 

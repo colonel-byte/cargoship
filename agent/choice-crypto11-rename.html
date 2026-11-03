@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -183,6 +183,9 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="why-crypto11-is-ignored-by-dependabot-rather-than-pointed-at-its-new-home"><a class="header" href="#why-crypto11-is-ignored-by-dependabot-rather-than-pointed-at-its-new-home">Why crypto11 is ignored by Dependabot rather than pointed at its new home</a></h1>
+<blockquote>
+<p><strong>Superseded.</strong> <code>github.com/ThalesIgnite/crypto11</code> has left the module graph entirely - it is absent from <code>go.mod</code>, <code>go.sum</code> and <code>vendor/</code>, removed with the dependency trim in <a href="https://github.com/colonel-byte/cargoship/pull/847">#847</a>, which forked <code>pkg/signing</code> off zarf’s and stopped linking cosign’s CLI command structs. The import chain described below no longer exists, and the cosign version named is behind. What survives is the <code>.github/dependabot.yaml</code> ignore entry, kept deliberately dormant: the failure it prevents takes out the whole daily run rather than one pull request, and the comment there says so. Read the rest as the record of why that entry is phrased the way it is, not as a description of the current tree.</p>
+</blockquote>
 <p><code>github.com/ThalesIgnite/crypto11</code> is pinned at v1.2.5 and will stay there. The upstream repository has been renamed twice and every tag after v1.2.5 declares a different module path, so Dependabot cannot update it and fails its entire daily run trying. <code>.github/dependabot.yaml</code> ignores the dependency outright. This document records why the obvious fix - a <code>replace</code> directive pointing at the renamed module - was built, tested, and rejected anyway, and why the thing this dependency looks like it affects is not actually in the shipped binary.</p>
 <h2 id="what-forced-it"><a class="header" href="#what-forced-it">What forced it</a></h2>
 <p>The <a href="https://github.com/colonel-byte/cargoship/actions/runs/36991546018">Dependabot run of 2026-10-02</a> created six update pull requests and then exited 1 on a single dependency:</p>

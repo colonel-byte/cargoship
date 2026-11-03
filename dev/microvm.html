@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="a-local-vm-fleet"><a class="header" href="#a-local-vm-fleet">A local VM fleet</a></h1>
-<p><code>mage dev:vmUp</code> brings up a fleet of Rocky 10 virtual machines on your own machine and writes a <code>ZarfCluster</code> inventory pointing at them, so that <code>cargoship prepare</code> and <code>cargoship apply</code> can be run against hosts with a real kernel. <code>mage dev:vmDown</code> takes it away again.</p>
+<p><code>mage dev:vmUp</code> brings up a fleet of Rocky 10 virtual machines on your own machine and writes a <code>Cluster</code> inventory pointing at them, so that <code>cargoship prepare</code> and <code>cargoship apply</code> can be run against hosts with a real kernel. <code>mage dev:vmDown</code> takes it away again.</p>
 <p>It exists for the phases the <a href="e2e-tests.html">cluster e2e suite</a> cannot reach. Those nodes are containers, and a container reports no SELinux, runs no fapolicyd and has no firewall of its own, so <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go"><code>pkg/phase/21_prepare_selinux.go</code></a> and its neighbours correctly do nothing there. Testing a change to any of them means a virtual machine. <a href="../agent/choice-microvm-backend.html">choice-microvm-backend</a> records why this is plain qemu rather than Firecracker or libvirt.</p>
 <p>Nothing it does touches the host. It needs no root, starts no daemon, and changes no SELinux, firewall or kernel setting on your machine - which is the point, since the configuration under investigation is usually the host’s own.</p>
 <h2 id="what-you-need"><a class="header" href="#what-you-need">What you need</a></h2>
@@ -341,7 +341,7 @@ kw0    Ready    &lt;none&gt;               10.73.156.12
 kw1    Ready    &lt;none&gt;               10.73.156.13
 </code></pre>
 <h2 id="driving-the-opentofu-provider-at-a-fleet"><a class="header" href="#driving-the-opentofu-provider-at-a-fleet">Driving the OpenTofu provider at a fleet</a></h2>
-<p>The provider takes the same hosts, so a fleet is also how <code>cargoship_cluster</code> gets exercised against real machines rather than one container. <code>mage dev:vmUp</code> writes a <code>ZarfCluster</code> inventory, and every field a <code>hosts</code> entry needs is in it:</p>
+<p>The provider takes the same hosts, so a fleet is also how <code>cargoship_cluster</code> gets exercised against real machines rather than one container. <code>mage dev:vmUp</code> writes a <code>Cluster</code> inventory, and every field a <code>hosts</code> entry needs is in it:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -398,7 +398,7 @@ kw1    Ready    &lt;none&gt;               10.73.156.13
 <li><strong>Leave <code>export_kubeconfig</code> and <code>label_nodes</code> off.</strong> Both need the management node to reach the API server, which it cannot on a fleet whose load balancer is private – see above. A provider run that sets either will fail there rather than in anything it is testing.</li>
 </ul>
 <p>The <code>hosts</code> key orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader. Keying the map by the fleet’s own hostnames keeps that in step with how <code>mage dev:vmUp</code> numbers them.</p>
-<p>Bring the fleet up, generate the block from the inventory, and <code>tofu apply</code>. A removal is the other half: set a host’s <code>state = "absent"</code> and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work <a href="e2e-external-inventory.html">e2e-external-inventory</a> drives through the CLI. <a href="tofu-provider.html">tofu-provider</a> covers building and running the provider itself.</p>
+<p>Bring the fleet up, generate the block from the inventory, and <code>tofu apply</code>. A removal is the other half: set a host’s <code>state = "absent"</code> and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work <a href="e2e-external-inventory.html">e2e-external-inventory</a> drives through the CLI. <a href="https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/dev/tofu-provider.md">tofu-provider</a> in the provider’s own repository covers building and running it.</p>
 <h2 id="the-shipped-k3s-packages-and-what-is-still-unproven"><a class="header" href="#the-shipped-k3s-packages-and-what-is-still-unproven">The shipped k3s packages, and what is still unproven</a></h2>
 <p>Two separate things used to stop a k3s cluster coming up, and only one of them is fixed.</p>
 <p><strong>Fixed: the join URL named the wrong port.</strong> <code>ConfigureEngine</code> wrote <code>server: https://&lt;host&gt;:9345</code> for both engines. 9345 is rke2’s – it runs its supervisor separately – while k3s multiplexes its supervisor onto 6443 and listens on nothing at 9345. <code>K3S</code> embeds the shared Rancher configuration without overriding that, so every k3s cluster was handed a join URL its own engine was not serving, and nothing could join. The port now comes from the distro.</p>

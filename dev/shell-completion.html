@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -197,11 +197,13 @@ cargoship completion zsh  &gt; ~/.zsh/completions/_cargoship
 </code></pre>
 <p>This completes every target - the same list <code>mage -autocomplete</code> prints - and every mage flag, marking <code>-d</code>, <code>-w</code> and <code>--compile</code> as taking a path. Do this first; the overlay below only adds arguments.</p>
 <h2 id="mage-positional-arguments"><a class="header" href="#mage-positional-arguments">mage: positional arguments</a></h2>
-<p>Two targets take arguments mage has no way to know about:</p>
+<p>Three targets take arguments mage has no way to know about, and the overlay completes two of them:</p>
 <pre><code class="language-console">mage generate:exampleLine &lt;distro&gt; &lt;minor&gt;
 mage generate:latestTag &lt;distro&gt; &lt;minor&gt;
+mage dev:vmShell &lt;node&gt;          # not completed; see below
 </code></pre>
-<p>Both arguments are readable off the tree: <code>&lt;distro&gt;</code> is a directory under <code>thirdparty-src/</code>, and <code>&lt;minor&gt;</code> is a directory under <code>thirdparty-src/&lt;distro&gt;/</code> with the underscore written as a dot (<code>v1_36</code> on disk, <code>v1.36</code> on the command line). Deriving them keeps completion correct as release lines are added and dropped, which a hardcoded list does not.</p>
+<p>Both arguments of the first two are readable off the tree: <code>&lt;distro&gt;</code> is a directory under <code>thirdparty-src/</code>, and <code>&lt;minor&gt;</code> is a directory under <code>thirdparty-src/&lt;distro&gt;/</code> with the underscore written as a dot (<code>v1_36</code> on disk, <code>v1.36</code> on the command line). Deriving them keeps completion correct as release lines are added and dropped, which a hardcoded list does not.</p>
+<p><code>dev:vmShell</code> is left alone on purpose. Its <code>&lt;node&gt;</code> is a node of a running fleet rather than anything in the checkout, so there is nothing to derive it from without talking to libvirt - which would put a polkit prompt behind pressing Tab. <code>mage dev:vmList</code> prints the names instead.</p>
 <p>Three things worth knowing before installing any of these:</p>
 <ul>
 <li><code>mage -autocomplete</code> prints target names lowercased (<code>generate:exampleline</code>). Mage matches targets case-insensitively, so either spelling runs, but completion only ever produces the lowercase one. The scripts below lowercase before matching so a hand-typed <code>generate:exampleLine</code> still completes its arguments.</li>

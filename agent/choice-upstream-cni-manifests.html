@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -198,7 +198,7 @@
 <p>The URL names a version rather than using <code>releases/latest/download</code>. An alias serves different bytes from one stable URL, and <code>example/shasums.json</code> keys entries by file name – so <code>kube-flannel.yml</code> would flip digests on every upstream release, which is precisely the “same name, different content” case the cache treats as a cache miss worth re-hashing.</p>
 <h2 id="cilium-rendered-because-there-is-nothing-to-download"><a class="header" href="#cilium-rendered-because-there-is-nothing-to-download">Cilium: rendered, because there is nothing to download</a></h2>
 <p>Cilium stopped publishing an applyable manifest around v1.10; <code>install/kubernetes/quick-install.yaml</code> 404s. What exists is the Helm chart. Cargoship has no Helm dependency and the apply phase takes <code>kubectl apply -f</code> paths, so the manifest is produced at generate time with <code>helm template</code> and committed.</p>
-<p><strong>Rendered once per chart version, not once per example.</strong> It lands in <code>example/upstream-cilium/cni/cilium-&lt;chart&gt;.yaml</code> and every version directory refers to it as <code>../../cni/…</code>, the way k3s examples share <code>example/k3s/core/</code>. Nineteen committed copies of a 65 KB manifest would otherwise say the same thing nineteen times.</p>
+<p><strong>Rendered once per chart version, not once per example.</strong> It lands in <code>example/upstream-cilium/cni/cilium-&lt;chart&gt;.yaml</code> and every version directory refers to it as <code>../../cni/…</code>, the way k3s examples share <code>example/k3s/core/</code>. One committed copy of a 65 KB manifest per version directory would otherwise say the same thing twenty-one times.</p>
 <p><strong>The render is skipped while the file exists.</strong> This is what keeps <code>helm</code> out of the loop that keeps the examples current: only a chart pin bump produces a path that is not already in the repository, so <code>mage generate:examples</code> on a committed tree never shells out to helm, and <code>refresh-examples.yaml</code> – which runs weekly and never touches the pin – needs nothing but the Go toolchain. The cost of a new pinned tool falls on whoever moves the pin, locally.</p>
 <h3 id="hubbletlsautomethodcronjob-is-not-optional"><a class="header" href="#hubbletlsautomethodcronjob-is-not-optional"><code>hubble.tls.auto.method=cronJob</code> is not optional</a></h3>
 <p>The chart’s default (<code>helm</code>) generates Hubble’s CA keypair <em>while templating</em> and writes it into a Secret in the output – it labels that object <code>cilium.io/helm-template-non-idempotent</code> itself. Two consequences, both disqualifying:</p>

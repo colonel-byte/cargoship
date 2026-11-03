@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-b36b5188.js"></script>
@@ -201,7 +201,7 @@
 <tr><td><code>cargoship_package</code></td><td><code>str</code></td><td><code>""</code></td><td>The distro package to install, stage, or synchronise from. Required by every action except <code>reset</code> and <code>kube_config</code>, which install nothing.</td></tr>
 <tr><td><code>cargoship_cluster</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The settings that belong to the cluster rather than to any host. <code>name</code> and <code>loadbalancer</code> are required; <code>profiles</code>, <code>registries</code>, and <code>values</code> are optional and take the shape the inventory schema documents. See the inventory guide for the full document.</td></tr>
 <tr><td><code>cargoship_role_groups</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The mapping from a cargoship role onto the Ansible groups that carry it, for an inventory that does not name its groups <code>controller</code> and <code>worker</code>. Left empty, the default mapping applies.</td></tr>
-<tr><td><code>cargoship_inventory_path</code></td><td><code>str</code></td><td><code>""</code></td><td>Where to write the generated ZarfCluster document. A private temporary file when empty, removed after a run that succeeded.</td></tr>
+<tr><td><code>cargoship_inventory_path</code></td><td><code>str</code></td><td><code>""</code></td><td>Where to write the generated Cluster document. A private temporary file when empty, removed after a run that succeeded.</td></tr>
 <tr><td><code>cargoship_age_recipients</code></td><td><code>list</code> of <code>str</code></td><td><code>[]</code></td><td>Age public keys used to encrypt registry credentials written to disk in the generated inventory document.</td></tr>
 <tr><td><code>cargoship_age_identity_files</code></td><td><code>list</code> of <code>str</code></td><td><code>[]</code></td><td>Paths to age identity files, or SSH private keys, used to decrypt registry credentials at apply time.</td></tr>
 <tr><td><code>cargoship_log_file</code></td><td><code>bool</code></td><td><code>false</code></td><td>Whether to always write a full-verbosity debug log to a file, regardless of log level.</td></tr>

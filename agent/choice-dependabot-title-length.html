@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -191,27 +191,24 @@ build(deps): bump github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding 
 ✖   header must not be longer than 100 characters, current length is 103 [header-max-length]
 </code></pre>
 <p><code>PR Title Check</code> failed four times on that pull request across three head commits, because every <code>synchronize</code> re-lints a title that has not changed. It passed at 20:53 on the same commit it had failed on at 19:50 - an <code>edited</code> event, which is a person renaming the pull request. Four other commits on <code>main</code> carry the same <code>/.../</code> elision made by hand: <a href="https://github.com/colonel-byte/cargoship/pull/660">#660</a>, <a href="https://github.com/colonel-byte/cargoship/pull/649">#649</a>, <a href="https://github.com/colonel-byte/cargoship/pull/639">#639</a> and <a href="https://github.com/colonel-byte/cargoship/pull/638">#638</a>.</p>
-<p>Ten of the 451 modules in <code>go.mod</code> overflow the cap, and they are not a random ten - they are the transitive trees that bump most often, which is why this came up five times in three weeks. Lengths below are for a 7-character version pair such as <code>1.13.19</code>, the worst case; the otel bump in #660 measured 115 rather than 117 because its versions are a character shorter.</p>
+<p>Six of the 260 modules in <code>go.mod</code> overflow the cap, and they are not a random six - they are the transitive trees that bump most often, which is why this came up five times in three weeks. Lengths below are for a 7-character version pair such as <code>1.13.19</code>, the worst case; the otel bump in #660 measured 115 rather than 117 because its versions are a character shorter.</p>
+<p>The set was wider when this was written: it held ten modules, topped by <code>go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc</code> at 117, and included the Azure keyvault, Aliyun and aws-sdk-go-v2 trees. Those left the graph with the dependency trim in <a href="https://github.com/colonel-byte/cargoship/pull/847">#847</a>, which is the first of the two exit conditions below coming half true.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Title length</th><th>Module</th></tr>
 </thead>
 <tbody>
-<tr><td>117</td><td><code>go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc</code></td></tr>
-<tr><td>113</td><td><code>github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider</code></td></tr>
+<tr><td>107</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp</code></td></tr>
 <tr><td>107</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc</code></td></tr>
-<tr><td>106</td><td><code>github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal</code></td></tr>
+<tr><td>105</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp</code></td></tr>
 <tr><td>105</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc</code></td></tr>
-<tr><td>104</td><td><code>github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys</code></td></tr>
-<tr><td>104</td><td><code>github.com/AliyunContainerService/ack-ram-tool/pkg/ecsmetadata</code></td></tr>
-<tr><td>103</td><td><code>go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp</code></td></tr>
-<tr><td>103</td><td><code>github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding</code></td></tr>
-<tr><td>101</td><td><code>github.com/aws/aws-sdk-go-v2/service/internal/presigned-url</code></td></tr>
+<tr><td>101</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp</code></td></tr>
+<tr><td>101</td><td><code>go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc</code></td></tr>
 </tbody>
 </table>
 </div>
-<p>None of them is a direct dependency. All ten arrive through the vendored cosign, Azure and otel trees, so there is no import to rewrite and no module to drop: the names are what they are.</p>
+<p>None of them is a direct dependency. All six arrive through the vendored otel tree, so there is no import to rewrite and no module to drop: the names are what they are.</p>
 <h2 id="grouping-lengthens-the-title-it-was-supposed-to-shorten"><a class="header" href="#grouping-lengthens-the-title-it-was-supposed-to-shorten">Grouping lengthens the title it was supposed to shorten</a></h2>
 <p>The gomod entry in <a href="../../.github/dependabot.yaml"><code>.github/dependabot.yaml</code></a> had seven groups until <code>934972b78</code> removed them, and re-adding one looks like it would collapse these titles to <code>build(deps): bump the opentelemetry group with N updates</code>. It would, on a day when the group has more than one member. On a day when it has exactly one, Dependabot keeps the full module name and appends the group instead:</p>
 <pre><code>build(deps): bump k8s.io/streaming from 0.37.0 to 0.37.1 in the k8s group
@@ -230,7 +227,7 @@ build(deps): bump github.com/ulikunitz/xz from 0.5.16 to 0.5.17 in the misc grou
 <h2 id="what-this-does-not-fix"><a class="header" href="#what-this-does-not-fix">What this does not fix</a></h2>
 <p><code>Check for go mod changes</code> still fails on the first run of every gomod pull request, and that is unrelated and deliberate. <code>go mod vendor</code> deletes the four generated <code>osv-scanner.toml</code> files under <code>vendor/</code>, <code>dev:verifyVendor</code> fails because of it, <a href="../../.github/workflows/fix-vendor-osv.yaml"><code>fix-vendor-osv.yaml</code></a> pushes them back, and the rerun passes. The <code>cancelled</code> Unit tests, E2E cluster and CodeQL runs on a Dependabot branch’s first commit are that push superseding the in-flight ones. Both are self-healing and need nobody; the header comment on <a href="../../.github/workflows/check-go-mod.yaml"><code>check-go-mod.yaml</code></a> explains the sequence.</p>
 <h2 id="when-this-entry-can-go-away"><a class="header" href="#when-this-entry-can-go-away">When this entry can go away</a></h2>
-<p>Raise the floor rather than delete the file: this stops mattering only if every one of the ten modules leaves the graph, which means cosign, the Azure keyvault SDK and the otel exporters all leaving it. More likely the file outlives the problem quietly. If <code>@commitlint/config-conventional</code> ever gains a rule that needs to differ between the two configs, that is the point to revisit whether a shared JS base is worth the resolution it would buy.</p>
+<p>Raise the floor rather than delete the file: this stops mattering only if every one of the six remaining modules leaves the graph, which now means the otel exporters alone - the Azure keyvault SDK and the cosign cloud trees have already gone. More likely the file outlives the problem quietly. If <code>@commitlint/config-conventional</code> ever gains a rule that needs to differ between the two configs, that is the point to revisit whether a shared JS base is worth the resolution it would buy.</p>
 
                     </main>
 

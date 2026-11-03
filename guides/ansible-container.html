@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -241,11 +241,11 @@ chmod 0644 kubeconfig.yaml
   -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
   ghcr.io/colonel-byte/cargoship-ansible:v0.37.0 \
-  zarf tools kubectl get nodes
+  cargoship version
 </code></pre>
 <!-- x-release-please-end-version -->
-<p>It is the shorter way to a one-off check, and it costs the container’s network namespace, which a run that also opens SSH connections to a fleet should not give up lightly. The port is whatever <code>docker port k3d-zarf-serverlb 6443</code> reports, and it is reassigned every time the cluster is recreated. <code>zarf tools kubectl</code> is the smoke test to reach for because the image has no <code>kubectl</code> of its own.</p>
-<p>Either way the kubeconfig is mounted read-only – zarf reads it and writes nothing back – and it has to be readable by UID 65532, which is what the <code>chmod 0644</code> on the copy is for. A mounted <em>directory</em> has to be traversable by that UID too, so a playbook tree under a <code>0700</code> directory arrives as a <code>/workspace</code> the container cannot open, and <code>ansible-playbook</code> reports a playbook it could not find rather than a permission error.</p>
+<p>It is the shorter way to a one-off check, and it costs the container’s network namespace, which a run that also opens SSH connections to a fleet should not give up lightly. The port is whatever <code>docker port k3d-zarf-serverlb 6443</code> reports, and it is reassigned every time the cluster is recreated. The image carries no Kubernetes client at all - it is <code>ansible-core</code>, <code>bash-completion</code> and the cargoship RPM - so <code>cargoship version</code> is as far as a check from inside goes, and anything that queries the cluster has to run from the host against <code>k3d kubeconfig get</code>.</p>
+<p>Either way the kubeconfig is mounted read-only – cargoship reads it and writes nothing back – and it has to be readable by UID 65532, which is what the <code>chmod 0644</code> on the copy is for. A mounted <em>directory</em> has to be traversable by that UID too, so a playbook tree under a <code>0700</code> directory arrives as a <code>/workspace</code> the container cannot open, and <code>ansible-playbook</code> reports a playbook it could not find rather than a permission error.</p>
 <p>None of this applies to a real fleet. A cluster cargoship installed is reached over the network like any other host, and <code>cargoship_kube_config</code> – or an apply’s <code>update_kubeconfig</code>, above – is what puts its credentials where a later task can find them.</p>
 <h2 id="the-package-mount-is-read-only-because-nothing-writes-to-it"><a class="header" href="#the-package-mount-is-read-only-because-nothing-writes-to-it">The Package Mount Is Read-Only Because Nothing Writes to It</a></h2>
 <p>A distro package is the one input large enough that copying it into an image, or into the container’s writable layer, is a real cost – it carries every image and file the cluster installs. It is also read-only by nature: <code>cargoship apply</code> reads the package and writes to the fleet, never back into the artifact. Mounting it <code>:ro</code> costs nothing and turns a whole class of mistake, a run that mutates the staging directory every other run depends on, into an error at the moment it is attempted.</p>
@@ -296,7 +296,7 @@ podman run --rm \
 <h2 id="host-keys"><a class="header" href="#host-keys">Host Keys</a></h2>
 <p>Cargoship verifies host keys against <code>~/.ssh/known_hosts</code> – <code>/home/nonroot/.ssh/known_hosts</code> in the container – and appends a key it has not seen before, which is trust on first use. A fresh container has no such file, so with nothing mounted every host in the fleet is trusted on the first connection of every run, and the file recording that decision is thrown away with the container. That is weaker than it looks: it is not a first use, it is a first use each time.</p>
 <p>Two ways out, in order of preference. Mount a <code>known_hosts</code> file writable, as above, so the first run records what it saw and every later run verifies against it. Or point <code>SSH_KNOWN_HOSTS</code> at a file you seeded beforehand; a read-only mount is fine here, but only because every key is already in it – cargoship still has to be able to append when one is not, and a read-only file fails that write.</p>
-<p>Setting <code>SSH_KNOWN_HOSTS=/dev/null</code> disables host key verification entirely. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.</p>
+<p>Setting <code>SSH_KNOWN_HOSTS=""</code> disables host key verification entirely. An empty value is the switch; <code>/dev/null</code> is not the same thing, because it reads as a trust source that happens to hold no keys, which refuses every host rather than accepting it. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.</p>
 <h2 id="ssh-agents-work-with-the-socket-mounted"><a class="header" href="#ssh-agents-work-with-the-socket-mounted">SSH Agents Work, With the Socket Mounted</a></h2>
 <p>Cargoship reads <code>SSH_AUTH_SOCK</code> and offers the agent’s keys, so an agent on the host serves a run in the container once its socket is mounted and the variable points at it.</p>
 <!-- x-release-please-start-version -->
@@ -312,7 +312,7 @@ podman run --rm \
 <!-- x-release-please-end-version -->
 <p>An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.</p>
 <h2 id="encrypting-the-generated-inventory-on-disk"><a class="header" href="#encrypting-the-generated-inventory-on-disk">Encrypting the Generated Inventory on Disk</a></h2>
-<p>When <code>inventory_path</code> is set to keep the generated ZarfCluster document across runs, that file normally holds decrypted registry passwords in plaintext with <code>0600</code> permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:</p>
+<p>When <code>inventory_path</code> is set to keep the generated Cluster document across runs, that file normally holds decrypted registry passwords in plaintext with <code>0600</code> permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:</p>
 <pre><code class="language-yaml">- name: Install cluster
   ansible.builtin.include_role:
     name: colonel_byte.cargoship.cluster

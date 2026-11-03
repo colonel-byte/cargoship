@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -215,7 +215,7 @@ hauler store add image registry.k8s.io/pause:3.10.2
 <p>A hauler manifest is the practical way to do this for a real package, rather than one command per artifact:</p>
 <pre><code class="language-bash">hauler store sync --filename hauler-manifest.yaml
 </code></pre>
-<p>Manifests collecting everything a shipped example declares are generated beside its definition as <code>hauler-{images,files}-&lt;arch&gt;.yaml</code> - see <a href="https://github.com/colonel-byte/cargoship/tree/main/example/rke2-multi-cni-cilium"><code>example/rke2-multi-cni-cilium/</code></a> - and <a href="https://github.com/colonel-byte/cargoship/tree/main/hack/hauler"><code>hack/hauler/</code></a> holds a roughly 19 MB subset with a matching definition - useful for checking the mechanism before collecting a whole release.</p>
+<p>Manifests collecting everything a shipped example declares are generated beside its definition as <code>hauler-files-&lt;arch&gt;.yaml</code> and <code>hauler-images-&lt;component&gt;.yaml</code> - see <a href="https://github.com/colonel-byte/cargoship/tree/main/example/rke2-multi-cni-cilium"><code>example/rke2-multi-cni-cilium/</code></a> - and <a href="https://github.com/colonel-byte/cargoship/tree/main/hack/hauler"><code>hack/hauler/</code></a> holds a roughly 19 MB subset with a matching definition - useful for checking the mechanism before collecting a whole release.</p>
 <p>Then save the store as a single archive to carry:</p>
 <pre><code class="language-bash">hauler store save --filename haul.tar.zst
 </code></pre>

@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b36b5188.js"></script>
@@ -342,7 +342,7 @@ skopeo copy --override-os multi docker://ghcr.io/my-org/my-package:1.0.0 oci-arc
 cargoship import ./my-package.tar -o ./build/
 </code></pre>
 <p><code>import</code> reads an OCI Image Layout, as a <code>.tar</code> or as an unpacked directory; see <a href="guides/importing-archives.html">Importing Archives</a> for the other tools that write one, and why a <code>docker-archive</code> cannot carry a package.</p>
-<p>A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see <a href="https://github.com/colonel-byte/cargoship/issues/848">#848</a>. The commands that load a package - <code>apply</code>, <code>prepare</code>, <code>engine-config-sync</code>, <code>publish</code>, <code>pull</code>, <code>validate</code>, <code>schema</code> - verify as part of loading, gated on <code>--verify=never|if-possible|always</code>. <code>verify</code> does nothing but check the signature, which is what makes it the one to run before a playbook.</p>
+<p>A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see <a href="https://github.com/colonel-byte/cargoship/issues/848">#848</a>. The commands that load a package - <code>apply</code>, <code>prepare</code>, <code>engine-config-sync</code>, <code>publish</code>, <code>pull</code>, <code>import</code>, <code>validate</code>, <code>schema</code> - verify as part of loading, gated on <code>--verify=never|if-possible|always</code>. <code>verify</code> does nothing but check the signature, which is what makes it the one to run before a playbook.</p>
 <h3 id="8-encrypt-credentials-in-a-config-file"><a class="header" href="#8-encrypt-credentials-in-a-config-file">8. Encrypt Credentials in a Config File</a></h3>
 <p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
 <pre><code class="language-bash"># Encrypt one value for a registry's user/pass/token field

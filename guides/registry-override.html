@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -273,8 +273,8 @@
 <p>Syncing a node means draining it, rewriting the files, restarting the engine, and uncordoning it once it is ready again – one node at a time. The log line before each drain names the files that drifted and why, so a cluster-wide rewrite is legible while it happens.</p>
 <p>That matters on upgrade. Cargoship 0.21 changed how <code>registries.yaml</code> is written: keys under <code>mirrors</code> and <code>configs</code> are quoted, an endpoint given without a scheme is completed to <code>https://</code>, a <code>user</code> and <code>pass</code> pair is encoded into a single <code>auth</code> credential, and the file is written <code>0640</code> instead of <code>0600</code>. None of that changes what the engine does, but all of it changes the file, so the first <code>apply</code> after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.</p>
 <h3 id="encrypting-the-credential"><a class="header" href="#encrypting-the-credential">Encrypting the Credential</a></h3>
-<p>Use <code>cargoship vault-encrypt</code> to produce the encrypted value. It reads the plaintext from an argument, from stdin, or – if stdin is a terminal – prompts for it with hidden input so the secret is never echoed or left in shell history:</p>
-<pre><code>cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+<p>Use <code>cargoship vault encrypt</code> to produce the encrypted value. It reads the plaintext from an argument, from stdin, or – if stdin is a terminal – prompts for it with hidden input so the secret is never echoed or left in shell history:</p>
+<pre><code>cargoship vault encrypt --vault-password-file ./vault-pass.txt
 Value to encrypt:
 $ANSIBLE_VAULT;1.1;AES256
 62306432326630316632646366363136303161316635343463306637643137646336363634363338

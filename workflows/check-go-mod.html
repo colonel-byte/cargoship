@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -189,7 +189,7 @@
 <li>Runs <code>go mod tidy</code> and fails if it produces a diff against the committed <code>go.mod</code>/<code>go.sum</code>.</li>
 <li>Runs <code>mage dev:verifyVendor</code> to check the four generated <code>osv-scanner.toml</code> override files under <code>vendor/</code> are present and current. These overrides keep the Scorecard Vulnerabilities check reporting on cargoship’s own code rather than on the JS/Python tooling its Go dependencies happen to ship in their own repos.</li>
 </ol>
-<p><code>go mod vendor</code> deletes and regenerates <code>vendor/</code>, so any PR that re-vendors (which Dependabot always does) drops these override files and fails this check on the first push. <code>fix-vendor-osv.yaml</code> regenerates and pushes them back onto Dependabot’s branch so the check passes on rerun. A genuinely dropped module or newly uncovered lockfile still fails here, since fixing that needs a manual edit to <code>osvOverrides</code>.</p>
+<p><code>go mod vendor</code> deletes and regenerates <code>vendor/</code>, so any PR that re-vendors (which Dependabot always does) drops these override files and fails this check on the first push. <code>fix-vendor-osv.yaml</code> regenerates and pushes them back onto Dependabot’s branch so the check passes on rerun. A genuinely dropped module or newly uncovered lockfile still fails here, since fixing that needs a manual edit to <code>Overrides</code>.</p>
 <p>Uses <code>go run ./magefiles/core</code> rather than an installed <code>mage</code> binary - same targets, but built from <code>vendor/</code> with no extra tool needed on the runner.</p>
 
                     </main>

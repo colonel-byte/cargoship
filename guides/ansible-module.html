@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -226,7 +226,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.37.0.tar.gz
 <p>Of the five, <code>cargoship_engine_config_sync</code> is the most Ansible-shaped thing cargoship does: it converges configuration across a fleet that is already installed.</p>
 <p>A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why <code>label_nodes: false</code> and omitting <code>label_nodes</code> are different.</p>
 <h2 id="signature-verification"><a class="header" href="#signature-verification">Signature verification</a></h2>
-<p><code>public_key</code> and <code>verify</code> are the package signature parameters, and they are the key-based ones only. Keyless verification identifies a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have. Verify a keyless-signed package with <code>cargoship package verify</code> before the play, where the flags and their exclusions are all available.</p>
+<p><code>public_key</code> and <code>verify</code> are the package signature parameters, and a Cosign key pair is the only signing method there is. Keyless verification identified a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have, so it was removed along with cloud KMS key references - see <a href="signing-packages.html">Signing Packages</a>. To verify outside a play, <code>cargoship verify</code> takes the same key with <code>--key</code>.</p>
 <h2 id="key-material"><a class="header" href="#key-material">Key material</a></h2>
 <p>Key material is always named by a path, never given by value. Ansible writes a module’s parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set <code>no_log: true</code> on the task regardless: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
 <h2 id="the-cluster-role"><a class="header" href="#the-cluster-role">The <code>cluster</code> role</a></h2>

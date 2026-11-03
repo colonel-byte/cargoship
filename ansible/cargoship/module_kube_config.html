@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-b36b5188.js"></script>
@@ -197,11 +197,11 @@
 <tr><th>Parameter</th><th>Type</th><th>Required</th><th>Flag</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>inventory</code></td><td><code>dict</code></td><td>yes</td><td>None</td><td>The resolved Ansible inventory the module translates into a ZarfCluster document: <code>groups</code>, <code>hostvars</code>, and a <code>cluster</code> block. The action plugin fills <code>groups</code> and <code>hostvars</code> in from the play, so a task normally sets only <code>cluster</code>. Renders no flag of its own. The translated document is passed to the command as <code>--config</code>.</td></tr>
+<tr><td><code>inventory</code></td><td><code>dict</code></td><td>yes</td><td>None</td><td>The resolved Ansible inventory the module translates into a Cluster document: <code>groups</code>, <code>hostvars</code>, and a <code>cluster</code> block. The action plugin fills <code>groups</code> and <code>hostvars</code> in from the play, so a task normally sets only <code>cluster</code>. Renders no flag of its own. The translated document is passed to the command as <code>--config</code>.</td></tr>
 <tr><td><code>parameters</code></td><td><code>dict</code></td><td>no</td><td>None</td><td>Further module parameters, merged into the ones given directly. It is how the <code>cluster</code> role passes a caller-supplied set without templating a whole task’s arguments. A parameter given both directly and inside <code>parameters</code> is an error naming it. The action plugin consumes this key; the module never sees it.</td></tr>
 <tr><td><code>distro</code></td><td><code>str</code></td><td>no</td><td><code>--distro</code></td><td>The distro the cluster runs. One of <code>k3s</code>, <code>rke2</code>.</td></tr>
 <tr><td><code>kubeconfig</code></td><td><code>str</code></td><td>no</td><td><code>--kubeconfig</code></td><td>The kubeconfig to read or write.</td></tr>
-<tr><td><code>inventory_path</code></td><td><code>str</code></td><td>no</td><td><code>--config</code></td><td>Where to write the generated ZarfCluster document. A private temporary file when unset, removed after a run that succeeded. A run that fails leaves the document on disk either way, because it is the first thing to look at when a failure reads like the wrong cluster.</td></tr>
+<tr><td><code>inventory_path</code></td><td><code>str</code></td><td>no</td><td><code>--config</code></td><td>Where to write the generated Cluster document. A private temporary file when unset, removed after a run that succeeded. A run that fails leaves the document on disk either way, because it is the first thing to look at when a failure reads like the wrong cluster.</td></tr>
 <tr><td><code>age_recipient</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Age public keys used to encrypt registry credentials written into the generated inventory document. Consumed while that document is written, so it renders no flag.</td></tr>
 <tr><td><code>age_recipients_file</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Files holding age public keys, read for the same purpose as <code>age_recipient</code>.</td></tr>
 <tr><td><code>log_level</code></td><td><code>str</code></td><td>no</td><td><code>--log-level</code></td><td>Cargoship’s log level. Defaults to <code>debug</code> when the play runs with <code>-v</code>.</td></tr>

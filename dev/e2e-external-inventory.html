@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="running-the-cluster-suite-against-your-own-fleet"><a class="header" href="#running-the-cluster-suite-against-your-own-fleet">Running the cluster suite against your own fleet</a></h1>
-<p>The cluster phase suite normally provisions the hosts it tests: bootloose containers by default, or local virtual machines with <code>CARGOSHIP_E2E_BACKEND=microvm</code>. The third backend provisions nothing. Point it at a <code>ZarfCluster</code> document naming hosts that already exist and it runs the same phase assertions against them.</p>
+<p>The cluster phase suite normally provisions the hosts it tests: bootloose containers by default, or local virtual machines with <code>CARGOSHIP_E2E_BACKEND=microvm</code>. The third backend provisions nothing. Point it at a <code>Cluster</code> document naming hosts that already exist and it runs the same phase assertions against them.</p>
 <pre><code class="language-sh">CARGOSHIP_E2E_BACKEND=inventory \
 CARGOSHIP_E2E_INVENTORY=$PWD/my-fleet.yaml \
   go test -mod=vendor -count=1 -v -timeout=90m ./test/e2e/cluster/...
@@ -192,7 +192,7 @@ CARGOSHIP_E2E_INVENTORY=$PWD/my-fleet.yaml \
 <p><strong>The apply walk expects hosts with no engine on them.</strong> <code>Test_12_GatherFactsDistro</code> asserts every host reports no engine version before anything is installed, which is what makes the later upgrade-phase assertions mean anything. So the walk is a one-shot against a given fleet: running it a second time fails, correctly, and what follows an install is the upgrade or reset walk rather than another apply. Reset or rebuild the hosts before installing again.</p>
 <p><strong>It changes the hosts it is given, and it does not change them back.</strong> The walk installs an engine, rewrites <code>/etc/hosts</code>, configures the firewall, writes sysctl and fapolicyd files, and installs packages. Nothing is torn down on the way out – the suite did not create these machines, so it will not destroy them, and that cuts both ways. Use hosts you are willing to lose.</p>
 <h2 id="the-document"><a class="header" href="#the-document">The document</a></h2>
-<p>The same <code>ZarfCluster</code> document <code>cargoship apply --config</code> takes. It is read through the loader the CLI uses, so anything cargoship accepts is accepted here and anything it rejects fails before a host is touched.</p>
+<p>The same <code>Cluster</code> document <code>cargoship apply --config</code> takes. It is read through the loader the CLI uses, so anything cargoship accepts is accepted here and anything it rejects fails before a host is touched.</p>
 <pre><code class="language-yaml">apiVersion: colonel-byte.dev/v1alpha1
 kind: Cluster
 metadata:
@@ -237,7 +237,7 @@ spec:
 </thead>
 <tbody>
 <tr><td><code>CARGOSHIP_E2E_BACKEND</code></td><td><code>inventory</code> to select this backend</td></tr>
-<tr><td><code>CARGOSHIP_E2E_INVENTORY</code></td><td>Path to the <code>ZarfCluster</code> document</td></tr>
+<tr><td><code>CARGOSHIP_E2E_INVENTORY</code></td><td>Path to the <code>Cluster</code> document</td></tr>
 <tr><td><code>CARGOSHIP_E2E_JOIN_HOST</code></td><td>Hostname the join walk should join. Unset skips that walk; see below</td></tr>
 <tr><td><code>CARGOSHIP_E2E_DISTRO</code></td><td><code>k3s</code> (default), <code>rke2</code> or <code>upstream</code>, which engine to install</td></tr>
 <tr><td><code>SSH_KNOWN_HOSTS</code></td><td>Set to <code>""</code> when your hosts’ keys are not in a known-hosts file the test binary reads</td></tr>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -188,7 +188,7 @@
 <p>Nothing, and that is deliberate. Every phase after the fact-gathering ones reads <code>.spec.hosts</code> and acts on what it finds there, so a host you delete from the config becomes invisible to all of them. The machine keeps running the engine and stays joined to the cluster while the apply that was supposed to remove it reports success.</p>
 <p>An apply catches this instead of walking past it. Right after it gathers facts, and before it changes anything, it lists the nodes joined to the cluster and compares them to the hosts in the config. If the cluster holds a node no host accounts for, the apply stops:</p>
 <pre><code>the cluster holds nodes the config does not: add the host back to the config,
-run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to
+run `cargoship reset` against it, or pass --allow-unmanaged-nodes to
 apply anyway: worker3 (worker)
 </code></pre>
 <p>Each node is named with its role, because a leftover controller is the more dangerous case. The check is read-only, so <code>--dry-run</code> runs it too, which is where you want to find out about a removal you did not intend.</p>

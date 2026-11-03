@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -242,18 +242,28 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UP
     go test -mod=vendor -timeout=3h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 </code></pre>
 <p>No CI job runs this; it is the only way to cover the upgrade phases.</p>
-<h2 id="testcleanzarfclusters"><a class="header" href="#testcleanzarfclusters"><code>Test.CleanZarfClusters</code></a></h2>
-<pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
+<h2 id="testendtoendclustervm"><a class="header" href="#testendtoendclustervm"><code>Test.EndToEndClusterVM</code></a></h2>
+<pre><code class="language-console">$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_DISTRO=rke2 \
+    go test -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 </code></pre>
-<p>The cleanup <code>EndToEndZarf</code> runs before it starts, exposed on its own. The cluster names are <code>K3dClusters</code> in <code>magefiles/pkg/testrunner/testrunner.go</code>. A cluster that is not there is not an error.</p>
+<p>The same package as <code>EndToEndCluster</code>, against local virtual machines. No bootloose cleanup runs, because there are no containers to clean. <code>CARGOSHIP_E2E_DISTRO=rke2</code> is the target’s own default rather than the suite’s: the shipped k3s examples declare <code>selinux: true</code> and ship <code>k3s-selinux</code> with <code>selector.package: binary</code>, so the RPM is staged and never installed, the policy module is absent on a host that has SELinux, and the agent does not start. Setting <code>CARGOSHIP_E2E_DISTRO</code> yourself still wins. Needs KVM; see <a href="microvm.html">microvm</a>.</p>
+<h2 id="testendtoendclusterinventory"><a class="header" href="#testendtoendclusterinventory"><code>Test.EndToEndClusterInventory</code></a></h2>
+<pre><code class="language-console">$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    CARGOSHIP_E2E_BACKEND=inventory CARGOSHIP_E2E_INVENTORY=./cluster.yaml \
+    go test -timeout=2h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
+</code></pre>
+<p>Against hosts that already exist, named by the cluster document the inventory path points at. Nothing is provisioned and nothing is torn down: it changes those hosts and does not change them back. See <a href="e2e-external-inventory.html">e2e-external-inventory</a>.</p>
 <h2 id="testcleancluster"><a class="header" href="#testcleancluster"><code>Test.CleanCluster</code></a></h2>
 <pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
 </code></pre>
 <p>No test runs; this is only the cleanup step the two cluster targets run before they start, exposed on its own for a run that was killed before teardown.</p>
 <h2 id="testunit"><a class="header" href="#testunit"><code>Test.Unit</code></a></h2>
-<pre><code class="language-console">$ go test -count=1 $(go list ./... | grep -v '^github.com/colonel-byte/cargoship/test/')
+<pre><code class="language-console">$ go test -count=1 $(go list ./... | grep -v '^github.com/colonel-byte/cargoship/test/e2e/')
 </code></pre>
-<p>Every package except the e2e suites under <code>test/</code>, which have runners of their own. The target builds the list with <code>go list</code> rather than hardcoding it, so a new package is covered the moment it exists. No binary, no Docker, no temp-dir env vars.</p>
+<p>Every package except the e2e suites under <code>test/e2e/</code>, which have runners of their own. Note the prefix: <code>test/</code> also holds the shared harness - the root <code>test</code> package and <code>test/microvm</code> - whose unit tests need no fleet and belong here, and excluding all of <code>test/</code> dropped them silently, which reads as a green unit job rather than as missing coverage. The target builds the list with <code>go list</code> rather than hardcoding it, so a new package is covered the moment it exists. No binary, no Docker, no temp-dir env vars.</p>
 <h2 id="testfuzz"><a class="header" href="#testfuzz"><code>Test.Fuzz</code></a></h2>
 <pre><code class="language-console">$ go test -count=1 ./fuzz/...
 </code></pre>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="why-pkgpackageractions-is-a-fork-and-why-a-create-time-cluster-wait-now-fails"><a class="header" href="#why-pkgpackageractions-is-a-fork-and-why-a-create-time-cluster-wait-now-fails">Why <code>pkg/packager/actions</code> is a fork, and why a create-time cluster wait now fails</a></h1>
-<p>cargoship runs the <code>onCreate</code> actions in a distro package through zarf’s action executor. <code>runCreateActions</code> in <a href="../golang/pkg/packager/assemble.html"><code>pkg/packager/assemble/actions.go</code></a> renders each action with cargoship’s template engine and then hands it to <code>actions.Run</code>, which owns everything that makes an action an action: shells, retries, timeouts, output capture, <code>setVariables</code> and <code>setValues</code>. Only the rendering was ever cargoship’s - see <a href="choice-v1alpha1-action-conversion.html"><code>choice-v1alpha1-action-conversion.md</code></a> for why the conversion into zarf’s normalized types happens at the call site.</p>
+<p>cargoship runs the <code>onCreate</code> actions in a distro package through zarf’s action executor. <code>runCreateActions</code> in <a href="../../pkg/packager/assemble/actions.go"><code>pkg/packager/assemble/actions.go</code></a> renders each action with cargoship’s template engine and then hands it to <code>actions.Run</code>, which owns everything that makes an action an action: shells, retries, timeouts, output capture, <code>setVariables</code> and <code>setValues</code>. Only the rendering was ever cargoship’s - see <a href="choice-v1alpha1-action-conversion.html"><code>choice-v1alpha1-action-conversion.md</code></a> for why the conversion into zarf’s normalized types happens at the call site.</p>
 <p>The executor is now a fork. The reason is one import.</p>
 <h2 id="what-the-import-cost"><a class="header" href="#what-the-import-cost">What the import cost</a></h2>
 <p>zarf’s <code>src/pkg/packager/actions</code> imports <code>src/pkg/wait</code>, and uses it in exactly one function, <code>runWaitAction</code>. zarf’s <code>wait</code> package serves both kinds of wait from one file: <code>ForNetwork</code>, which probes HTTP or TCP with the standard library, and <code>ForResource</code>, which is <code>kubectl wait</code>’s logic with retries for a resource that does not exist yet. The second one brings:</p>

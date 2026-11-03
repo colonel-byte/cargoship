@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
+            window.path_to_searchindex_js = "../searchindex-39f93507.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b36b5188.js"></script>
@@ -187,8 +187,8 @@
 <p>It also has to stay out of <code>src/test/</code>. OpenSSF Scorecard’s file walker discards every path beginning <code>src/test/</code> before any check reads it – <code>isTestdataFile</code> in <a href="https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go"><code>checks/fileparser/listing.go</code></a>, which carries the Maven <code>src/test/java</code> convention – so for as long as these targets lived at <code>src/test/e2e/fuzz</code> the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under <code>src/test/</code> would silently take it to 0 again. The e2e suites themselves moved out of <code>src/test/</code> to <code>test/</code> for unrelated reasons, which loses that same exclusion for their tree – worth knowing if a future Scorecard run starts flagging something in <code>test/</code> that it did not before.</p>
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
 <p>One file per concern: 49 targets across 24 target files. The shared scaffolding:</p>
-<pre><code>fuzz/main_test.go                    package documentation and TestMain
-fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
+<pre><code>fuzz/main_test.go                    package documentation
+fuzz/keyring_test.go                 TestMain, and the shared keyrings it builds once, one per format
 fuzz/testdata/fuzz/&lt;Target&gt;/         committed crashers, one directory per target
 fuzz/AGENTS.md                       the naming rule: no target name may be a prefix of another
 </code></pre>
@@ -201,7 +201,7 @@ vault_meta_fuzz_test.go              the recipients recorded in a document's vau
 keymaterial_fuzz_test.go             AgeRecipientsIn, ResolveKeyring, RekeyTarget
 parse_recipients_fuzz_test.go        age recipient lines and recipient lists
 cfg_fuzz_test.go                     cfg.Parse and cfg.ParseMultiDoc over arbitrary document bytes
-clustercfg_parse_fuzz_test.go        the cluster inventory parser
+cluster_parse_fuzz_test.go           the cluster inventory parser
 schema_decode_fuzz_test.go           schema decoding
 url_and_config_fuzz_test.go          ExtractBasePathFromURL and ReadByteStrict over a distro config
 dns_fuzz_test.go                     ParseServiceURL and IsLocalhost
