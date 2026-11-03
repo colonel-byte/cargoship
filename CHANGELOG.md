@@ -1,5 +1,67 @@
 # Changelog
 
+## [0.38.0](https://github.com/colonel-byte/cargoship/compare/v0.37.0...v0.38.0) (2026-11-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cmd:** add --hauler-store and document the workflow ([#981](https://github.com/colonel-byte/cargoship/issues/981))
+* **images:** fail an unresolvable image instead of silently dropping it ([#985](https://github.com/colonel-byte/cargoship/issues/985))
+
+### Features
+
+* **assemble:** resolve images and files from a content store ([#980](https://github.com/colonel-byte/cargoship/issues/980)) ([f8c43d0](https://github.com/colonel-byte/cargoship/commit/f8c43d011a385aa9f00a5e58a805406c68e5704b))
+* **cmd:** add --hauler-store and document the workflow ([#981](https://github.com/colonel-byte/cargoship/issues/981)) ([fb1e5c2](https://github.com/colonel-byte/cargoship/commit/fb1e5c25c218dd6704434698ebc5034686cab5dd))
+* **examples:** generate hauler manifests beside a distro.yaml ([#1001](https://github.com/colonel-byte/cargoship/issues/1001)) ([f6909a3](https://github.com/colonel-byte/cargoship/commit/f6909a37b2151ad3949be374169ce07a25c621de))
+* **examples:** render the generated hauler manifests ([#1002](https://github.com/colonel-byte/cargoship/issues/1002)) ([e95fb0a](https://github.com/colonel-byte/cargoship/commit/e95fb0a65b01a8748e706fa8a5bf5731918a3186))
+* **haulerstore:** read a hauler store directory or archive ([#978](https://github.com/colonel-byte/cargoship/issues/978)) ([ab0b6d4](https://github.com/colonel-byte/cargoship/commit/ab0b6d40e2168c289236a5cec46cdb69620a7aa7))
+* **images:** add a local ImageSource seam to PullOptions ([#979](https://github.com/colonel-byte/cargoship/issues/979)) ([713883c](https://github.com/colonel-byte/cargoship/commit/713883c65b672ef6cd1ca7f49657ea599b7e7b3f))
+* **magefiles:** add dev:checkTables for markdown table padding ([#1003](https://github.com/colonel-byte/cargoship/issues/1003)) ([3b89fb8](https://github.com/colonel-byte/cargoship/commit/3b89fb8fd0448330ad6bf0ea4703426b56cc4e7a))
+* **magefiles:** expose pod security admission exemptions as package values ([#1008](https://github.com/colonel-byte/cargoship/issues/1008)) ([3fdbe11](https://github.com/colonel-byte/cargoship/commit/3fdbe11c81382fcb68e35c77490d9f0e19041c5e))
+
+
+### Bug Fixes
+
+* **images:** fail an unresolvable image instead of silently dropping it ([#985](https://github.com/colonel-byte/cargoship/issues/985)) ([dabe59e](https://github.com/colonel-byte/cargoship/commit/dabe59ea78aa2ab56d0c18a3d2997d63bd42218c))
+* **phase:** keep the tag in an image tarball's name and sweep orphans ([#967](https://github.com/colonel-byte/cargoship/issues/967)) ([26c3977](https://github.com/colonel-byte/cargoship/commit/26c397771b7614f20256f507793bd30374d2031a))
+
+
+### Documentation
+
+* correct stale references across docs/, README, AGENTS files and comments ([#1004](https://github.com/colonel-byte/cargoship/issues/1004)) ([1c52456](https://github.com/colonel-byte/cargoship/commit/1c52456ecda1ab9146f8a4607cc348f15012cda1))
+
+
+### Miscellaneous
+
+* **examples:** refresh generated examples ([#986](https://github.com/colonel-byte/cargoship/issues/986)) ([657222e](https://github.com/colonel-byte/cargoship/commit/657222ecd83a89834b9915ea38492b26d9bc9348))
+* **examples:** regenerate packages with the pod security exemption values ([#1009](https://github.com/colonel-byte/cargoship/issues/1009)) ([bb10bbf](https://github.com/colonel-byte/cargoship/commit/bb10bbffd34e6dc2b3adb5e8107211a91a7f1fcc))
+
+
+### Build
+
+* **deps:** bump chainguard/static from `9e2306b` to `fc42af3` in /containers/base ([#964](https://github.com/colonel-byte/cargoship/issues/964)) ([606d543](https://github.com/colonel-byte/cargoship/commit/606d543527470c358ed0b7574045fabc89bbdc27))
+* **deps:** bump github.com/fxamacker/cbor/v2 from 2.9.6 to 2.10.0 ([#996](https://github.com/colonel-byte/cargoship/issues/996)) ([1d7235f](https://github.com/colonel-byte/cargoship/commit/1d7235f8c7b60d6ddf7de455887f6ea75fe1a2cd))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.1.6 to 4.1.7 ([#1006](https://github.com/colonel-byte/cargoship/issues/1006)) ([5ba87bf](https://github.com/colonel-byte/cargoship/commit/5ba87bfe6e1378d2978dd75c733751ac2f9a6e3a))
+* **deps:** bump github.com/goccy/go-json from 0.11.2 to 0.12.0 ([#995](https://github.com/colonel-byte/cargoship/issues/995)) ([c688ac9](https://github.com/colonel-byte/cargoship/commit/c688ac99ad00503decf736a410128d1611645596))
+* **deps:** bump github.com/grpc-ecosystem/grpc-gateway/v2 from 2.32.0 to 2.33.0 ([#971](https://github.com/colonel-byte/cargoship/issues/971)) ([77f1f1c](https://github.com/colonel-byte/cargoship/commit/77f1f1cd20375b6eab6863ce8b45e1fd007776f2))
+* **deps:** bump github.com/klauspost/cpuid/v2 from 2.4.1 to 2.4.2 ([#1007](https://github.com/colonel-byte/cargoship/issues/1007)) ([d9ba555](https://github.com/colonel-byte/cargoship/commit/d9ba555b7c8bdf98c050cb75d1cac08f9d75308e))
+* **deps:** bump github.com/prometheus/common from 0.72.1 to 0.73.0 ([#972](https://github.com/colonel-byte/cargoship/issues/972)) ([4067e8a](https://github.com/colonel-byte/cargoship/commit/4067e8aa1aa895841ea11dc069e464a55bc8cf25))
+* **deps:** bump github.com/prometheus/common from 0.73.0 to 0.73.1 ([#993](https://github.com/colonel-byte/cargoship/issues/993)) ([440a52a](https://github.com/colonel-byte/cargoship/commit/440a52a0d4cd7161b684320838f94b607953d8ed))
+* **deps:** bump github.com/sigstore/rekor-tiles/v2 from 2.3.0 to 2.4.0 in the sigstore group ([#969](https://github.com/colonel-byte/cargoship/issues/969)) ([9a7394d](https://github.com/colonel-byte/cargoship/commit/9a7394d61ab556af41fb159748c9a7c58cfe200d))
+* **deps:** bump github.com/sigstore/sigstore-go from 1.3.0 to 1.4.0 in the sigstore group ([#989](https://github.com/colonel-byte/cargoship/issues/989)) ([abc4a82](https://github.com/colonel-byte/cargoship/commit/abc4a823766716b0dc9e662a8307a1af833e6b71))
+* **deps:** bump github.com/zarf-dev/zarf from 0.88.0 to 0.89.0 ([#997](https://github.com/colonel-byte/cargoship/issues/997)) ([121f0a9](https://github.com/colonel-byte/cargoship/commit/121f0a958c1e524726723f35aa1767c9ce93acfb))
+* **deps:** bump go.yaml.in/yaml/v3 from 3.0.5 to 3.0.6 ([#998](https://github.com/colonel-byte/cargoship/issues/998)) ([6bc64eb](https://github.com/colonel-byte/cargoship/commit/6bc64eb620e35447b237df41a54862ddb6559c21))
+* **deps:** bump golang.org/x/net from 0.61.0 to 0.62.0 in the golang group ([#990](https://github.com/colonel-byte/cargoship/issues/990)) ([a6b064e](https://github.com/colonel-byte/cargoship/commit/a6b064effc9a0b91fcacfba61cae894c8e89c1be))
+* **deps:** bump google.golang.org/api from 0.308.0 to 0.309.0 ([#965](https://github.com/colonel-byte/cargoship/issues/965)) ([b3dad34](https://github.com/colonel-byte/cargoship/commit/b3dad348b26e5642a4cfc480e0f8e106cf61ccc1))
+* **deps:** bump google.golang.org/api from 0.309.0 to 0.310.0 ([#991](https://github.com/colonel-byte/cargoship/issues/991)) ([021fa2f](https://github.com/colonel-byte/cargoship/commit/021fa2f49e0d0afbc22c6476f7337efc0f8beadc))
+* **deps:** bump google.golang.org/grpc from 1.84.0 to 1.85.0 ([#970](https://github.com/colonel-byte/cargoship/issues/970)) ([eb08cc2](https://github.com/colonel-byte/cargoship/commit/eb08cc28e2ca777f4ab413fd0e5735df9eae7ae8))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit from v0.17.2 to 0.17.3 ([#968](https://github.com/colonel-byte/cargoship/issues/968)) ([4716414](https://github.com/colonel-byte/cargoship/commit/4716414ca0b968ac68d7ccb2963e6b3949a2ba22))
+* **deps:** bump library/debian from `62bd423` to `f6b08b0` in /containers/deb ([#987](https://github.com/colonel-byte/cargoship/issues/987)) ([8799d37](https://github.com/colonel-byte/cargoship/commit/8799d377f23182e049fa5173ac8a6838e31885cd))
+* **deps:** bump the cloud-kms group with 3 updates ([#994](https://github.com/colonel-byte/cargoship/issues/994)) ([9b652b3](https://github.com/colonel-byte/cargoship/commit/9b652b3ec7eb1256590fb1e968e597a87d95f12e))
+* **deps:** bump the k8s group with 2 updates ([#988](https://github.com/colonel-byte/cargoship/issues/988)) ([e868d1d](https://github.com/colonel-byte/cargoship/commit/e868d1d9a79da6a90afbabfafe1e1505c6a2e110))
+* **deps:** bump the openapi group with 2 updates ([#992](https://github.com/colonel-byte/cargoship/issues/992)) ([6ed0b42](https://github.com/colonel-byte/cargoship/commit/6ed0b42deaf54c90551b8195903b738d26034210))
+* **deps:** bump the sigstore group with 2 updates ([#1005](https://github.com/colonel-byte/cargoship/issues/1005)) ([2c1a0e0](https://github.com/colonel-byte/cargoship/commit/2c1a0e018755305525dd5709b07b1ee055748861))
+
 ## [0.37.0](https://github.com/colonel-byte/cargoship/compare/v0.36.0...v0.37.0) (2026-10-27)
 
 
