@@ -106,6 +106,9 @@ func writeExample(tmpl *template.Template, repoURL, tag string, spec exampleDist
 	if err := writeExampleValues(dir, f, v); err != nil {
 		return "", err
 	}
+	if err := writeExampleHaulerManifests(dir, spec, f, v); err != nil {
+		return "", err
+	}
 	return path, nil
 }
 

@@ -63,6 +63,12 @@ type exampleDistroSpec struct {
 	template string
 	flavors  []exampleFlavor
 
+	// haulerTemplates are the hauler manifest templates rendered, once per architecture, for
+	// a flavor that sets haulerManifests. Per distro rather than per flavor because what a
+	// release publishes to install from is a property of the distro: rke2 has RPMs and a
+	// tarball, k3s has one binary.
+	haulerTemplates []string
+
 	// coreImages is the release's own image manifest: everything the distro ships before a
 	// flavor adds its CNI's images. RKE2 splits the two, k3s publishes one combined list.
 	// Either way an example's images are what that release ships, not a list rebuilt here.
@@ -93,6 +99,15 @@ var (
 		"magefiles/templates/rke2/values.yaml.tmpl",
 		"magefiles/templates/rke2/values.schema.json.tmpl",
 	}
+	// exampleRKE2Hauler are the hauler manifests an rke2 flavor renders when it asks for them,
+	// one template per manifest. Each guards its own body, so a template describing something
+	// a flavor does not have writes no file -- see writeExampleHaulerManifests.
+	exampleRKE2Hauler = []string{
+		"magefiles/templates/rke2/hauler-images-core.yaml.tmpl",
+		"magefiles/templates/rke2/hauler-images-rke2-cilium.yaml.tmpl",
+		"magefiles/templates/rke2/hauler-files-amd64.yaml.tmpl",
+		"magefiles/templates/rke2/hauler-files-arm64.yaml.tmpl",
+	}
 	exampleK3sValues = []string{
 		"magefiles/templates/k3s/values.yaml.tmpl",
 		"magefiles/templates/k3s/values.schema.json.tmpl",
@@ -105,6 +120,8 @@ var exampleDistros = []exampleDistroSpec{
 		name:       "rke2",
 		template:   "magefiles/templates/rke2-distro.yaml.tmpl",
 		coreImages: "rke2-images-core.linux-amd64.txt",
+		// Rendered only for a flavor that sets haulerManifests; see writeExampleHaulerManifests.
+		haulerTemplates: exampleRKE2Hauler,
 		flavors: []exampleFlavor{
 			{
 				cni:               "cilium",
@@ -112,6 +129,7 @@ var exampleDistros = []exampleDistroSpec{
 				dir:               "example/rke2-multi-cni-cilium",
 				imageLists:        []exampleImageList{{asset: "rke2-images-cilium.linux-amd64.txt", charts: []string{"rke2-cilium"}}},
 				arches:            exampleMultiArches,
+				haulerManifests:   true,
 				minors:            exampleMultiMinors,
 				replacesKubeProxy: true,
 				values:            exampleRKE2Values,
