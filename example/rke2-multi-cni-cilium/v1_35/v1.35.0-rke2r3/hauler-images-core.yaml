@@ -1,0 +1,36 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Do not edit; see example/AGENTS.md.
+apiVersion: content.hauler.cattle.io/v1
+kind: Images
+metadata:
+  name: multi-cni-cilium-core
+spec:
+  images:
+    - name: docker.io/rancher/rke2-runtime:v1.35.0-rke2r3
+    - name: docker.io/rancher/hardened-kubernetes:v1.35.0-rke2r3-build20260127
+    - name: docker.io/rancher/hardened-coredns:v1.14.1-build20260116
+    - name: docker.io/rancher/hardened-cluster-autoscaler:v1.10.2-build20260116
+    - name: docker.io/rancher/hardened-dns-node-cache:1.26.7-build20260119
+    - name: docker.io/rancher/hardened-etcd:v3.6.7-k3s1-build20260126
+    - name: docker.io/rancher/hardened-k8s-metrics-server:v0.8.0-build20260116
+    - name: docker.io/rancher/hardened-addon-resizer:1.8.23-build20260119
+    - name: docker.io/rancher/klipper-helm:v0.9.12-build20251215
+    - name: docker.io/rancher/klipper-lb:v0.4.13
+    - name: docker.io/rancher/mirrored-pause:3.6
+    - name: docker.io/rancher/mirrored-ingress-nginx-kube-webhook-certgen:v1.6.7
+    - name: docker.io/rancher/nginx-ingress-controller:v1.14.3-hardened1
+    - name: docker.io/rancher/rke2-cloud-provider:v1.35.0-rc1.0.20251218152248-a6c6cd15c0c4-build20251219
+    - name: docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260108

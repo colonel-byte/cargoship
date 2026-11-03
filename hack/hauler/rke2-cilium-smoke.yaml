@@ -20,7 +20,7 @@
 # This is a PARTIAL haul on purpose. A build of that example against it resolves these four
 # artifacts from the store and falls back to the network for the rest, logging a warning per
 # miss - which is the fallback path, and worth seeing at least once. It is not a store that
-# example can be built offline from; the manifests in example/rke2-multi-cni-hauler/ are.
+# example can be built offline from; the generated hauler-*.yaml beside its definition are.
 #
 # Every entry is a real one from that definition, so the references and URLs match it exactly.
 apiVersion: content.hauler.cattle.io/v1

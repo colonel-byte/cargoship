@@ -1,0 +1,30 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Do not edit; see example/AGENTS.md.
+apiVersion: content.hauler.cattle.io/v1
+kind: Files
+metadata:
+  name: multi-cni-cilium-files-arm64
+spec:
+  files:
+    - path: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-common-1.36.0~rke2r1-0.el9.aarch64.rpm
+      name: rke2-common-1.36.0-rke2r1-0.el9.aarch64.rpm
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-server-1.36.0~rke2r1-0.el9.aarch64.rpm
+      name: rke2-server-1.36.0-rke2r1-0.el9.aarch64.rpm
+    - path: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-agent-1.36.0~rke2r1-0.el9.aarch64.rpm
+      name: rke2-agent-1.36.0-rke2r1-0.el9.aarch64.rpm
+    - path: https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-arm64.tar.gz
+    - path: https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-arm64.tar.gz

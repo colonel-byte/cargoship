@@ -2,7 +2,7 @@
 
 A small [hauler](https://github.com/hauler-dev/hauler) manifest and a matching distro definition, for checking that `cargoship create --hauler-store` works without collecting a whole release. Around 19 MB, so the loop takes under a minute. See [`docs/guides/hauler-store.md`](../../docs/guides/hauler-store.md) for what the flag does and how matching works.
 
-Every entry is a real one from [`example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1`](../../example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1) - the references, URLs, shasums and targets are copied from it rather than invented, so a build here exercises the same matching a build of that example would. The manifests that collect that example *completely* are in [`example/rke2-multi-cni-hauler/`](../../example/rke2-multi-cni-hauler).
+Every entry is a real one from [`example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1`](../../example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1) - the references, URLs, shasums and targets are copied from it rather than invented, so a build here exercises the same matching a build of that example would. The manifests that collect that example *completely* are generated beside its definition, as `hauler-{images,files}-<arch>.yaml` in each version directory of [`example/rke2-multi-cni-cilium/`](../../example/rke2-multi-cni-cilium).
 
 | File                                                   | What it is                                                                       |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
@@ -49,4 +49,21 @@ cargoship create example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1 \
   --hauler-store /tmp/haul/store -o /tmp/out
 ```
 
-For an offline build of that example, use the full manifests in [`example/rke2-multi-cni-hauler/`](../../example/rke2-multi-cni-hauler).
+For an offline build of that example, use the generated manifests beside its definition:
+
+```sh
+D=example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1
+hauler store sync --store /tmp/full/store --exclude-extras \
+  --filename $D/hauler-images-core.yaml \
+  --filename $D/hauler-images-rke2-cilium.yaml \
+  --filename $D/hauler-files-amd64.yaml \
+  --filename $D/hauler-files-arm64.yaml
+
+cargoship create $D --hauler-store /tmp/full/store -o /tmp/out
+```
+
+Those are generated from the same fields the `distro.yaml` beside them is, so they cannot drift from it - which is why they are generated rather than kept here. One manifest per file, so each is something a `hauler store sync` line can name: the core images, each chart's images, and one architecture's files.
+
+Both architectures' file manifests are needed even for a build narrowed to one. Narrowing with `-a` narrows the images and not the files: `create` stages every file the definition declares, and the architecture selector is applied at install time.
+
+The image manifests carry no platform, so a sync collects every platform they publish. Narrow them with `--platform linux/amd64` on the sync line rather than looking for a per-architecture manifest: hauler keys its index on the reference, so two manifests naming the same image under different platforms overwrite one another and the store keeps only whichever was synced last.
