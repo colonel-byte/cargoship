@@ -108,6 +108,27 @@
             }
           },
           "additionalProperties": false
+        },
+        "exemptions": {
+          "type": "object",
+          "properties": {
+            "usernames": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Users whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it."
+            },
+            "runtimeClasses": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Runtime classes whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it."
+            },
+            "namespaces": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Namespaces whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it, so name kube-system and zarf as well or the cluster's own components are enforced against."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

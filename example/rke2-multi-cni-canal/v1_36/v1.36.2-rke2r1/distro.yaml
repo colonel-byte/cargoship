@@ -47,6 +47,12 @@ spec:
         target: .podSecurity.plugins[0].configuration.defaults.audit
       - source: .podSecurity.defaults.warn
         target: .podSecurity.plugins[0].configuration.defaults.warn
+      - source: .podSecurity.exemptions.usernames
+        target: .podSecurity.plugins[0].configuration.exemptions.usernames
+      - source: .podSecurity.exemptions.runtimeClasses
+        target: .podSecurity.plugins[0].configuration.exemptions.runtimeClasses
+      - source: .podSecurity.exemptions.namespaces
+        target: .podSecurity.plugins[0].configuration.exemptions.namespaces
   config:
     engine:
       config:
