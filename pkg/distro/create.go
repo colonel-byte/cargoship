@@ -27,6 +27,7 @@ import (
 	"fmt"
 
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
+	"github.com/colonel-byte/cargoship/pkg/haulerstore"
 	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/colonel-byte/cargoship/pkg/packager/assemble"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
@@ -51,6 +52,9 @@ type CreateOptions struct {
 	// FileOverrides redirect the file downloads a distro definition declares to an internal
 	// mirror or to a directory of pre-staged assets.
 	FileOverrides []fileoverride.Override
+	// HaulerStore is the path to a hauler store directory or archive that images and files
+	// are resolved from before the network. Empty means no store.
+	HaulerStore string
 	// SigningKeyPath and SigningKeyPassword sign the package as part of creation
 	// when set. Empty values are a no-op -- see DistroLayout.SignPackage.
 	SigningKeyPath     string
@@ -80,6 +84,25 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		return "", fmt.Errorf("unable to access package path %q: %w", distroPath, err)
 	}
 
+	// The store is opened once for the whole build and closed with it, because opening an
+	// archive unpacks it and every file and image staged below reads from that one copy.
+	var store *haulerstore.Store
+	if opts.HaulerStore != "" {
+		store, err = haulerstore.Open(ctx, opts.HaulerStore)
+		if err != nil {
+			return "", err
+		}
+		// Create's results are unnamed, so a deferred assignment to err would be discarded.
+		// Close only removes the directory an archive was unpacked into, so a failure is
+		// reported rather than returned.
+		defer func() {
+			if cerr := store.Close(); cerr != nil {
+				logger.From(ctx).Warn("failed to remove the unpacked hauler store", "error", cerr)
+			}
+		}()
+		logger.From(ctx).Info("resolving package content from a hauler store", "store", opts.HaulerStore)
+	}
+
 	assembleOpt := assemble.AssembleOptions{
 		RemoteOptions:      opts.RemoteOptions,
 		OCIConcurrency:     opts.OCIConcurrency,
@@ -87,6 +110,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		Reproducible:       opts.Reproducible,
 		RegistryOverrides:  opts.RegistryOverrides,
 		FileOverrides:      opts.FileOverrides,
+		HaulerStore:        store,
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 		// Don't have sbom logic yet....

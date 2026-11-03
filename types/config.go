@@ -154,6 +154,13 @@ type DistroCreateOptions struct {
 	// instead, for example {"https://rpm.rancher.io": "https://mirror.example.com/rpm-rancher"}.
 	// The value may also be a local directory, for builds from pre-staged assets.
 	FileOverride FileOverrideMap `json:"file_override,omitempty" mapstructure:"-"` // mapstructure:"-": same reasoning as RegistryOverride above, and more so -- a URL key carries ".", ":" and "/"
+	// HaulerStore is a hauler store (https://github.com/hauler-dev/hauler) that images and
+	// files are resolved from instead of being fetched over the network: either a store
+	// directory, or an archive written by `hauler store save`. Content the store does not
+	// hold still comes from the source the distro definition declared, so a partial store
+	// works. A file is accepted from the store only when the definition declares a shasum
+	// for it, since nothing else would verify bytes the definition's author never saw.
+	HaulerStore string `json:"hauler_store,omitempty" mapstructure:"hauler_store" jsonschema:"example=/opt/hauls/haul.tar.zst,example=~/hauls/rke2/store"`
 }
 
 // DistroPublishOptions holds the values for the `.distro.publish` section of the config file

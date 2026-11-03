@@ -55,6 +55,14 @@
           "$ref": "#/$defs/FileOverrideMap",
           "description": "maps a source URL prefix to the location cargoship downloads from\ninstead, for example {\"https://rpm.rancher.io\": \"https://mirror.example.com/rpm-rancher\"}.\nThe value may also be a local directory, for builds from pre-staged assets."
         },
+        "hauler_store": {
+          "description": "is a hauler store (https://github.com/hauler-dev/hauler) that images and\nfiles are resolved from instead of being fetched over the network: either a store\ndirectory, or an archive written by `hauler store save`. Content the store does not\nhold still comes from the source the distro definition declared, so a partial store\nworks. A file is accepted from the store only when the definition declares a shasum\nfor it, since nothing else would verify bytes the definition's author never saw.",
+          "examples": [
+            "/opt/hauls/haul.tar.zst",
+            "~/hauls/rke2/store"
+          ],
+          "type": "string"
+        },
         "registry_override": {
           "$ref": "#/$defs/RegistryOverrideMap",
           "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"

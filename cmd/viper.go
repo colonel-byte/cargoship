@@ -158,6 +158,7 @@ func expandHomePaths(cfg *types.DistroConfig) error {
 		&cfg.DistroOpts.Output,
 		&cfg.DistroOpts.PublicKey,
 		&cfg.DistroOpts.PublishOpts.SigningKey,
+		&cfg.DistroOpts.CreateOpts.HaulerStore,
 	}
 	for i := range cfg.AgeOpts.IdentityFiles {
 		paths = append(paths, &cfg.AgeOpts.IdentityFiles[i])
@@ -255,6 +256,7 @@ func setDefaults() {
 	v.SetDefault(configPath("Architecture"), "")
 	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
 	v.SetDefault(configPath("DistroOpts", "KubeConfig"), "")
+	v.SetDefault(configPath("DistroOpts", "CreateOpts", "HaulerStore"), "")
 	v.SetDefault(configPath("DistroOpts", "ReceiptPath"), "")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
