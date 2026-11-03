@@ -1,4 +1,0 @@
-repo:   https://github.com/rancher/rke2
-tag:    v1.34.12+rke2r1
-commit: fb8b9bec418ce65d13700c4fc3eb7c693dad7c13
-files:  pkg/cli/cmds/server.go pkg/cli/cmds/agent.go pkg/cli/cmds/root.go pkg/cli/cmds/k3sopts.go pkg/cli/types.go

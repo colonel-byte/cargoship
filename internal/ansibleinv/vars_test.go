@@ -18,13 +18,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/stretchr/testify/require"
 )
 
 // translateOne translates a single controller carrying the given host variables, which is the
 // shape every test in this file wants.
-func translateOne(t *testing.T, vars map[string]any) (*cluster.ZarfHost, error) {
+func translateOne(t *testing.T, vars map[string]any) (*cluster.Host, error) {
 	t.Helper()
 	out, err := Translate(Input{
 		Groups:   map[string][]string{"controller": {"kc01"}},

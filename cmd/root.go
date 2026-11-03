@@ -65,6 +65,8 @@ const (
 const (
 	// InstallConfig flag
 	InstallConfig = "config"
+	// InstallTargetHosts flag
+	InstallTargetHosts = "target-hosts"
 	// InstallConfirm flag
 	InstallConfirm = "confirm"
 	// InstallDistro flag. Named directly by the commands that load no package -- reset and
@@ -80,8 +82,6 @@ const (
 	InstallUpdateHost = "hosts"
 	// InstallUpdateFirewall flag
 	InstallUpdateFirewall = "firewall"
-	// InstallUpdateFAPolicyD flag
-	InstallUpdateFAPolicyD = "fapolicyd"
 	// InstallLabelNodes flag
 	InstallLabelNodes = "label-nodes"
 	// InstallAllowUnmanagedNodes flag
@@ -96,6 +96,8 @@ const (
 	InstallVaultPasswordFile = "vault-password-file"
 	// InstallValues flag
 	InstallValues = "values"
+	// InstallReceiptPath flag
+	InstallReceiptPath = "receipt-path"
 )
 
 const (
@@ -172,7 +174,9 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.AddCommand(newPackagePublishCommand())
 	rootCmd.AddCommand(newPackagePullCommand())
+	rootCmd.AddCommand(newPackageImportCommand())
 	rootCmd.AddCommand(newPackageSignCommand())
+	rootCmd.AddCommand(newPackageVerifyCommand())
 	// Install related
 	rootCmd.AddCommand(newInstallApplyCommand())
 	rootCmd.AddCommand(newInstallPrepareCommand())
@@ -182,6 +186,7 @@ func NewCargoshipCommand() *cobra.Command {
 	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
+	rootCmd.AddCommand(newRedactReceiptCommand())
 	rootCmd.AddCommand(newSchemaCommand())
 	rootCmd.AddCommand(newInventoryCommand())
 	rootCmd.AddCommand(newValidateCommand())

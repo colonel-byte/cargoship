@@ -21,16 +21,21 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
+	"github.com/colonel-byte/cargoship/pkg/haulerstore"
+	"github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/image-spec/specs-go"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,13 +65,13 @@ func TestFileGrabberRemoteOverride(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + srv.URL + "/mirror"})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -92,13 +97,13 @@ func TestFileGrabberLocalOverride(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + staged})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -120,12 +125,12 @@ func TestFileGrabberRefusesOverrideWithoutShasum(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + srv.URL})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 	}
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
 	require.ErrorContains(t, err, "declares no shasum")
 }
 
@@ -139,13 +144,13 @@ func TestFileGrabberChecksumMismatchLeavesNothingBehind(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=" + srv.URL})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "https://rpm.rancher.io/public/k3s.rpm",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
 	}
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
 	require.Error(t, err)
 
 	_, statErr := os.Stat(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -161,13 +166,13 @@ func TestFileGrabberUnmatchedSourceIsUntouched(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://rpm.rancher.io=https://mirror.invalid"})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: srv.URL + "/k3s",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
 	require.NoError(t, err)
 	require.Nil(t, provenance, "a file no override touched must record nothing, so packages built without overrides are unchanged")
 
@@ -183,13 +188,13 @@ func TestFileGrabberLocalSourceStillResolvesAgainstDistroPath(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(distroPath, "k3s"), []byte(grabbedPayload), 0o600))
 
 	buildPath := t.TempDir()
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source: "k3s",
 		Target: "/usr/local/bin/k3s",
 		Shasum: payloadShasum(),
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil, nil, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -213,14 +218,14 @@ func TestFileGrabberExtractPathChecksExtractedFileShasum(t *testing.T) {
 	overrides, err := fileoverride.Parse([]string{"https://github.com=" + srv.URL})
 	require.NoError(t, err)
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      "https://github.com/rancher/rke2/releases/download/v1.37.0+rke2r1/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",
 		Shasum:      extractedHex,
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, provenance)
 	require.Equal(t, extractedHex, provenance.Shasum)
@@ -259,23 +264,23 @@ func TestFileGrabberExtractPathReusesCachedArchive(t *testing.T) {
 		require.NoError(t, archives.cleanup())
 	})
 
-	file1 := v1alpha1.ZarfFile{
+	file1 := v1alpha1.File{
 		Source:      srv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/one",
 		Target:      "/usr/local/bin/one",
 		Shasum:      file1Hex,
 	}
-	file2 := v1alpha1.ZarfFile{
+	file2 := v1alpha1.File{
 		Source:      srv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/two",
 		Target:      "/usr/local/bin/two",
 		Shasum:      file2Hex,
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file1, nil, archives)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file1, nil, nil, archives)
 	require.NoError(t, err)
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, file2, nil, archives)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, file2, nil, nil, archives)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, downloadCount, "archive must be downloaded exactly once across both extractions")
@@ -364,14 +369,14 @@ func TestFileGrabberExtractPathWithoutCacheRemovesArchive(t *testing.T) {
 	tempRoot := isolateTempDirectory(t)
 	buildPath := t.TempDir()
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",
 		Shasum:      hex.EncodeToString(sum[:]),
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil, nil)
 	require.NoError(t, err)
 
 	left, err := os.ReadDir(tempRoot)
@@ -390,13 +395,13 @@ func TestFileGrabberExtractPathFailedDownloadRemovesArchive(t *testing.T) {
 	tempRoot := isolateTempDirectory(t)
 	archives := newDownloadCache()
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, archives)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, nil, archives)
 	require.Error(t, err)
 
 	require.NoError(t, archives.cleanup())
@@ -428,13 +433,13 @@ func TestFileGrabberExtractPathArchivesSharingABaseName(t *testing.T) {
 		require.NoError(t, archives.cleanup())
 	})
 
-	first := v1alpha1.ZarfFile{
+	first := v1alpha1.File{
 		Source:      firstSrv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/tool",
 		Target:      "/usr/local/bin/first",
 		Shasum:      hex.EncodeToString(firstSum[:]),
 	}
-	second := v1alpha1.ZarfFile{
+	second := v1alpha1.File{
 		Source:      secondSrv.URL + "/archive.tar.gz",
 		ExtractPath: "bin/tool",
 		Target:      "/usr/local/bin/second",
@@ -448,11 +453,11 @@ func TestFileGrabberExtractPathArchivesSharingABaseName(t *testing.T) {
 	firstAgain := first
 	firstAgain.Target = "/usr/local/bin/first-again"
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, first, nil, archives)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, first, nil, nil, archives)
 	require.NoError(t, err)
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, second, nil, archives)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, second, nil, nil, archives)
 	require.NoError(t, err)
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 2, firstAgain, nil, archives)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 2, firstAgain, nil, nil, archives)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "first"))
@@ -482,14 +487,14 @@ func TestDownloadCacheCleanupRemovesCachedArchives(t *testing.T) {
 	tempRoot := isolateTempDirectory(t)
 	archives := newDownloadCache()
 
-	file := v1alpha1.ZarfFile{
+	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
 		ExtractPath: "bin/rke2",
 		Target:      "/usr/local/bin/rke2",
 		Shasum:      hex.EncodeToString(sum[:]),
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, archives)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, nil, archives)
 	require.NoError(t, err)
 
 	left, err := os.ReadDir(tempRoot)
@@ -506,4 +511,147 @@ func TestDownloadCacheCleanupRemovesCachedArchives(t *testing.T) {
 	require.NoError(t, archives.cleanup())
 	require.NoError(t, newDownloadCache().cleanup())
 	require.NoError(t, (*downloadCache)(nil).cleanup())
+}
+
+// haulWithFile writes a hauler store holding one file artifact recorded as having come from
+// originalRef, and returns it opened. Only a file artifact is built: fileGrabber never looks at
+// the image half of a store.
+func haulWithFile(t *testing.T, originalRef string, name string, content string) *haulerstore.Store {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "store")
+	blobDir := filepath.Join(dir, "blobs", "sha256")
+	require.NoError(t, os.MkdirAll(blobDir, 0o755))
+
+	blob := func(mediaType string, b []byte, annotations map[string]string) ocispec.Descriptor {
+		sum := sha256.Sum256(b)
+		hexSum := hex.EncodeToString(sum[:])
+		require.NoError(t, os.WriteFile(filepath.Join(blobDir, hexSum), b, 0o644))
+		return ocispec.Descriptor{
+			MediaType:   mediaType,
+			Digest:      digest.NewDigestFromEncoded(digest.SHA256, hexSum),
+			Size:        int64(len(b)),
+			Annotations: annotations,
+		}
+	}
+
+	layer := blob("application/vnd.content.hauler.file.layer.v1", []byte(content),
+		map[string]string{ocispec.AnnotationTitle: name})
+	config := blob("application/vnd.content.hauler.file.http.config.v1+json", []byte(`{}`), nil)
+	manifestBytes, err := json.Marshal(ocispec.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: ocispec.MediaTypeImageManifest,
+		Config:    config,
+		Layers:    []ocispec.Descriptor{layer},
+	})
+	require.NoError(t, err)
+	manifest := blob(ocispec.MediaTypeImageManifest, manifestBytes, map[string]string{
+		haulerstore.AnnotationOriginalRef: originalRef,
+		haulerstore.AnnotationKind:        "dev.hauler/image",
+	})
+
+	indexBytes, err := json.Marshal(ocispec.Index{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: []ocispec.Descriptor{manifest},
+	})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ocispec.ImageIndexFile), indexBytes, 0o644))
+
+	store, err := haulerstore.Open(context.Background(), dir)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, store.Close()) })
+	return store
+}
+
+func TestFileGrabberFromHaulerStore(t *testing.T) {
+	const declared = "https://get.k3s.io/k3s"
+	buildPath := t.TempDir()
+	store := haulWithFile(t, declared, "k3s", grabbedPayload)
+
+	file := v1alpha1.File{
+		Source: declared,
+		Target: "/usr/local/bin/k3s",
+		Shasum: payloadShasum(),
+	}
+
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store, nil)
+	require.NoError(t, err)
+
+	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
+	require.NoError(t, err)
+	require.Equal(t, grabbedPayload, string(got))
+
+	require.NotNil(t, provenance, "a file taken from a store must report where it came from")
+	require.Equal(t, distro.FileSource{
+		Path:     "files/0/k3s",
+		Declared: declared,
+		Resolved: "k3s",
+		Store:    store.Source(),
+		Shasum:   payloadShasum(),
+	}, *provenance)
+}
+
+// The store is bytes the definition's author never saw, so -- exactly as for an override -- it
+// is refused for a file that declares no shasum to verify it against.
+func TestFileGrabberHaulerStoreRefusesFileWithoutShasum(t *testing.T) {
+	const declared = "https://get.k3s.io/k3s"
+	store := haulWithFile(t, declared, "k3s", grabbedPayload)
+
+	file := v1alpha1.File{
+		Source: declared,
+		Target: "/usr/local/bin/k3s",
+	}
+
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "shasum")
+}
+
+// An explicit override was asked for by name, so it wins over a store that happens to hold the
+// same file.
+func TestFileGrabberOverrideBeatsHaulerStore(t *testing.T) {
+	const declared = "https://get.k3s.io/k3s"
+	srv := mirrorServer(t, grabbedPayload)
+	buildPath := t.TempDir()
+	store := haulWithFile(t, declared, "k3s", "store contents that must not be used\n")
+
+	overrides, err := fileoverride.Parse([]string{"https://get.k3s.io=" + srv.URL + "/mirror"})
+	require.NoError(t, err)
+
+	file := v1alpha1.File{
+		Source: declared,
+		Target: "/usr/local/bin/k3s",
+		Shasum: payloadShasum(),
+	}
+
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, store, nil)
+	require.NoError(t, err)
+
+	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
+	require.NoError(t, err)
+	require.Equal(t, grabbedPayload, string(got), "the override's bytes must win over the store's")
+	require.Equal(t, srv.URL+"/mirror/k3s", provenance.Resolved)
+	require.Empty(t, provenance.Store, "an overridden file did not come from the store")
+}
+
+// A file the store does not hold falls back to its declared source, so a partial haul still
+// builds.
+func TestFileGrabberFallsBackWhenStoreLacksTheFile(t *testing.T) {
+	srv := mirrorServer(t, grabbedPayload)
+	buildPath := t.TempDir()
+	store := haulWithFile(t, "https://get.k3s.io/something-else", "other", "other\n")
+
+	file := v1alpha1.File{
+		Source: srv.URL + "/k3s",
+		Target: "/usr/local/bin/k3s",
+		Shasum: payloadShasum(),
+	}
+
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store, nil)
+	require.NoError(t, err)
+	require.Nil(t, provenance, "a file read from its declared source reports no redirection")
+
+	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
+	require.NoError(t, err)
+	require.Equal(t, grabbedPayload, string(got))
 }

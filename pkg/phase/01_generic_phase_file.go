@@ -31,20 +31,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.ZarfHost, dir, perm, owner string) error {
+func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.Host, dir, perm, owner string) error {
 	logger.From(ctx).Debug("ensuring directory exists", "host", h, "dir", dir)
 	if !h.FileExist(dir) {
 		targetPerm := perm
 		if targetPerm == "" {
 			targetPerm = "0755"
 		}
-		err := p.Wet(h, fmt.Sprintf("create a directory for uploading: `mkdir -p \"%s\"`", dir), func() error {
+		err := p.Wet(func() error {
 			mode := fs.FileMode(0o755)
 			if v, perr := strconv.ParseUint(targetPerm, 8, 32); perr == nil {
 				mode = fs.FileMode(v)
@@ -57,7 +57,7 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.ZarfHost, dir, 
 	}
 
 	if owner != "" {
-		err := p.Wet(h, fmt.Sprintf("set owner for directory %s to %s", dir, owner), func() error {
+		err := p.Wet(func() error {
 			return h.Sudo().FS().Chown(dir, owner)
 		})
 		if err != nil {
@@ -69,12 +69,12 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.ZarfHost, dir, 
 		perm = "0755"
 	}
 
-	return p.Wet(h, fmt.Sprintf("set permissions for directory %s to %s", dir, perm), func() error {
+	return p.Wet(func() error {
 		return chmodWithString(h, dir, perm)
 	})
 }
 
-func (p *GenericPhase) uploadFiles(ctx context.Context, h *cluster.ZarfHost, files []v1alpha1.ZarfFile) error {
+func (p *GenericPhase) uploadFiles(ctx context.Context, h *cluster.Host, files []v1alpha1.File) error {
 	for i, f := range files {
 		logger.From(ctx).Debug("file", "num", i+1, "count", len(files))
 		if err := p.uploadFile(ctx, h, &f); err != nil {
@@ -85,7 +85,7 @@ func (p *GenericPhase) uploadFiles(ctx context.Context, h *cluster.ZarfHost, fil
 	return nil
 }
 
-func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v1alpha1.ZarfFile) error {
+func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.Host, f *v1alpha1.File) error {
 	logger.From(ctx).Info("uploading", "host", h, "file", f)
 	owner := f.Owner()
 
@@ -105,7 +105,7 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 	}
 
 	if h.FileChanged(src, target) {
-		err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, target), func() error {
+		err := p.Wet(func() error {
 			stat, err := os.Stat(src)
 			if err != nil {
 				return fmt.Errorf("failed to stat local file %s: %w", src, err)
@@ -142,7 +142,7 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 	return p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime)
 }
 
-func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v1alpha1.ZarfFile) error {
+func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.Host, f *v1alpha1.File) error {
 	logger.From(ctx).Info("uploading inline data", "host", h)
 	dest := f.Target
 
@@ -152,7 +152,7 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v
 		return err
 	}
 
-	err := p.Wet(h, fmt.Sprintf("upload inline data => %s", dest), func() error {
+	err := p.Wet(func() error {
 		fileMode, err := strconv.ParseUint(f.PermString, 8, 32)
 		if err != nil {
 			logger.From(ctx).Warn("got an", "error", err)
@@ -185,7 +185,7 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v
 	return p.applyFileMetadata(ctx, h, dest, owner, "", nil)
 }
 
-func (p *GenericPhase) applyFileMetadata(ctx context.Context, h *cluster.ZarfHost, dest, owner, perm string, timestamp *time.Time) error {
+func (p *GenericPhase) applyFileMetadata(ctx context.Context, h *cluster.Host, dest, owner, perm string, timestamp *time.Time) error {
 	if owner != "" {
 		logger.From(ctx).Debug("setting owner", "host", h, "owner", owner, "destination", dest)
 		err := h.Sudo().FS().Chown(dest, owner)
@@ -212,7 +212,7 @@ func (p *GenericPhase) applyFileMetadata(ctx context.Context, h *cluster.ZarfHos
 	return nil
 }
 
-func chmodWithString(h *cluster.ZarfHost, path, perm string) error {
+func chmodWithString(h *cluster.Host, path, perm string) error {
 	mode, err := strconv.ParseUint(perm, 8, 32)
 	if err != nil {
 		return fmt.Errorf("invalid file mode %q: %w", perm, err)
@@ -220,7 +220,7 @@ func chmodWithString(h *cluster.ZarfHost, path, perm string) error {
 	return chmodWithMode(h, path, fs.FileMode(mode))
 }
 
-func chmodWithMode(h *cluster.ZarfHost, path string, mode fs.FileMode) error {
+func chmodWithMode(h *cluster.Host, path string, mode fs.FileMode) error {
 	return h.Sudo().FS().Chmod(path, mode)
 }
 

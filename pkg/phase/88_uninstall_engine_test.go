@@ -17,9 +17,16 @@ package phase
 import (
 	"context"
 	"errors"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,14 +38,14 @@ type fakePreUninstallResetterDistro struct {
 	err   error
 }
 
-func (f *fakePreUninstallResetterDistro) PreUninstallReset(_ context.Context, h *cluster.ZarfHost) error {
+func (f *fakePreUninstallResetterDistro) PreUninstallReset(_ context.Context, h *cluster.Host) error {
 	f.calls = append(f.calls, h.Hostname)
 	return f.err
 }
 
 func TestPreUninstallResetNoOpWhenNotImplemented(t *testing.T) {
 	p := &UninstallEngine{Distro: fakeServiceDistro{}}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 
 	require.NoError(t, p.preUninstallReset(context.Background(), h))
 }
@@ -46,7 +53,7 @@ func TestPreUninstallResetNoOpWhenNotImplemented(t *testing.T) {
 func TestPreUninstallResetDispatchesWhenImplemented(t *testing.T) {
 	d := &fakePreUninstallResetterDistro{}
 	p := &UninstallEngine{Distro: d}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 
 	require.NoError(t, p.preUninstallReset(context.Background(), h))
 	require.Equal(t, []string{"node1"}, d.calls)
@@ -56,9 +63,184 @@ func TestPreUninstallResetPropagatesError(t *testing.T) {
 	wantErr := errors.New("kubeadm reset failed")
 	d := &fakePreUninstallResetterDistro{err: wantErr}
 	p := &UninstallEngine{Distro: d}
-	h := &cluster.ZarfHost{Hostname: "node1"}
+	h := &cluster.Host{Hostname: "node1"}
 
 	err := p.preUninstallReset(context.Background(), h)
 
 	require.ErrorIs(t, err, wantErr)
+}
+
+type fakeBinaryDistro struct {
+	fakeServiceDistro
+	binary string
+}
+
+func (f fakeBinaryDistro) BinaryName() string {
+	return f.binary
+}
+
+func (f fakeBinaryDistro) PackageStagingDir() string {
+	return ""
+}
+
+func (f fakeBinaryDistro) CleanupPaths() []string {
+	return nil
+}
+
+func TestUninstallEngineTargetHostsFiltersHosts(t *testing.T) {
+	p := &UninstallEngine{
+		Distro:      fakeServiceDistro{},
+		TargetHosts: []string{"worker1"},
+	}
+	m := &Manager{
+		Config: &cluster.Cluster{
+			Spec: cluster.Spec{
+				Hosts: cluster.Hosts{
+					{Hostname: "controller1", Role: cluster.RoleController},
+					{Hostname: "worker1", Role: cluster.RoleWorker},
+					{Hostname: "worker2", Role: cluster.RoleWorker},
+				},
+			},
+		},
+	}
+	p.SetManager(m)
+
+	require.NoError(t, p.Prepare(context.Background(), m.Config, nil))
+	require.Len(t, p.hosts, 1)
+	require.Equal(t, "worker1", p.hosts[0].Hostname)
+}
+
+func TestDetectInstalledEnginePackagesNoDistro(t *testing.T) {
+	p := &UninstallEngine{Distro: nil}
+	h := &cluster.Host{Hostname: "node1"}
+	pkgs := p.detectInstalledEnginePackages(context.Background(), h)
+	require.Nil(t, pkgs)
+}
+
+func TestDetectInstalledEnginePackagesUnknownDistro(t *testing.T) {
+	p := &UninstallEngine{Distro: fakeBinaryDistro{binary: "unknown"}}
+	h := &cluster.Host{Hostname: "node1"}
+	pkgs := p.detectInstalledEnginePackages(context.Background(), h)
+	require.Nil(t, pkgs)
+}
+
+func TestCleanManagedDirsNoDistro(_ *testing.T) {
+	p := &UninstallEngine{Distro: nil}
+	h := &cluster.Host{Hostname: "node1"}
+	// Should not panic or error with nil distro
+	p.cleanManagedDirs(context.Background(), h)
+}
+
+// recordingDirsDistro counts the times a distro is asked what it manages on a host.
+type recordingDirsDistro struct {
+	fakeBinaryDistro
+	asked *int
+}
+
+func (f recordingDirsDistro) ManagedDirs() []distrocfg.ManagedDir {
+	*f.asked++
+	return []distrocfg.ManagedDir{{Path: "/etc/cargoship"}}
+}
+
+// TestUninstallNodeCleansWhatCargoshipManages is the removal path's half of the cleanup: a host
+// marked absent is uninstalled through this same function, so the managed directories -- the TLS
+// material, the state directory, the chart manifests -- have to go with the engine rather than
+// outliving a node that is no longer in the cluster.
+func TestUninstallNodeCleansWhatCargoshipManages(t *testing.T) {
+	asked := 0
+	p := &UninstallEngine{
+		Distro: recordingDirsDistro{
+			fakeBinaryDistro: fakeBinaryDistro{binary: "unknown"},
+			asked:            &asked,
+		},
+		TargetHosts: []string{"worker1"},
+	}
+	h := &cluster.Host{Hostname: "worker1"}
+
+	require.NoError(t, p.uninstallNode(context.Background(), h))
+	require.Positive(t, asked, "the uninstall never asked the distro what it manages")
+}
+
+// dirFS models the one distinction that mattered: a path that is a directory exists, and
+// `test -f` says it does not. Anything else panics through the nil embedded interface.
+type dirFS struct {
+	remotefs.FS
+
+	dirs  map[string]bool
+	files map[string]bool
+}
+
+func (d *dirFS) FileExist(path string) bool { return d.files[path] }
+
+func (d *dirFS) Stat(path string) (fs.FileInfo, error) {
+	if d.dirs[path] || d.files[path] {
+		return nil, nil //nolint:nilnil // only the error is read; see pathExists
+	}
+	return nil, errors.New("no such file or directory")
+}
+
+// TestPathExistsFindsDirectories is the whole of a defect that made an uninstall quietly skip
+// every path it was meant to remove.
+//
+// Host.FileExist is `test -f`, so it is false for a directory, and every path an uninstall
+// removes is one: the engine's data directory, its config directory, /etc/cargoship, the
+// package staging directory. Guarding their removal on it meant nothing was attempted, so
+// nothing failed and nothing was logged -- a reset reported success having left 2.3G in
+// /var/lib/rancher/rke2 and a config.yaml naming the old cluster.
+func TestPathExistsFindsDirectories(t *testing.T) {
+	t.Parallel()
+
+	const (
+		dataDir = "/var/lib/rancher/rke2"
+		config  = "/etc/rancher/rke2/config.yaml"
+	)
+
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(&dirFS{
+		dirs:  map[string]bool{dataDir: true},
+		files: map[string]bool{config: true},
+	})
+
+	require.True(t, pathExists(h, dataDir), "a directory is a path an uninstall has to remove")
+	require.False(t, h.FileExist(dataDir),
+		"FileExist is test -f, which is why it cannot be the guard on removing a directory")
+
+	require.True(t, pathExists(h, config), "and a file is still a path that exists")
+	require.False(t, pathExists(h, "/var/lib/rancher/absent"))
+	require.False(t, pathExists(h, ""), "an empty path is nothing to remove")
+}
+
+// TestUnmountUnderCommandSelectsOnlyWhatIsUnderThePath runs the command's own awk program over a
+// fixture mount table, with umount swapped for echo, because the whole of the logic is in that
+// program rather than in Go.
+//
+// Two things have to hold. Children come before their parents, or the parent unmount fails with
+// the child still on it. And the match is on a path component rather than a string prefix:
+// /var/lib/kubeletX is not under /var/lib/kubelet, and unmounting someone else's filesystem
+// during a reset is worse than leaving a directory behind.
+func TestUnmountUnderCommandSelectsOnlyWhatIsUnderThePath(t *testing.T) {
+	t.Parallel()
+
+	mounts := filepath.Join(t.TempDir(), "mounts")
+	require.NoError(t, os.WriteFile(mounts, []byte(strings.Join([]string{
+		"tmpfs /var/lib/kubelet tmpfs rw 0 0",
+		"tmpfs /var/lib/kubelet/pods/abc/volumes/kubernetes.io~projected/token tmpfs rw 0 0",
+		"tmpfs /var/lib/kubelet/pods/abc/volumes tmpfs rw 0 0",
+		"tmpfs /var/lib/kubeletX tmpfs rw 0 0",
+		"tmpfs /var/lib/rancher/k3s tmpfs rw 0 0",
+		"",
+	}, "\n")), 0o600))
+
+	cmd := unmountUnderCommand("/var/lib/kubelet")
+	cmd = strings.ReplaceAll(cmd, "/proc/self/mounts", mounts)
+	cmd = strings.ReplaceAll(cmd, "umount -lf", "echo")
+
+	out, err := exec.Command("sh", "-c", cmd).Output()
+	require.NoError(t, err)
+
+	require.Equal(t, []string{
+		"/var/lib/kubelet/pods/abc/volumes/kubernetes.io~projected/token",
+		"/var/lib/kubelet/pods/abc/volumes",
+		"/var/lib/kubelet",
+	}, strings.Fields(strings.TrimSpace(string(out))))
 }

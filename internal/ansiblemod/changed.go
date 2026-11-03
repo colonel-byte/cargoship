@@ -49,10 +49,8 @@ func reportChanged(resp *Response, sink *phase.ResultSink, checkMode bool) {
 		resp.Changed = result.Changed()
 	}
 
-	if result.Complete() {
-		resp.Cargoship.ChangedSignal = SignalComplete
-		return
+	resp.Cargoship.ChangedSignal = result.Signal()
+	if !result.Complete() {
+		resp.Cargoship.ChangedUndeclared = result.Undeclared()
 	}
-	resp.Cargoship.ChangedSignal = SignalPartial
-	resp.Cargoship.ChangedUndeclared = result.Undeclared()
 }

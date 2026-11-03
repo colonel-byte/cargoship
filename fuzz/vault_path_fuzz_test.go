@@ -20,7 +20,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
@@ -32,8 +32,8 @@ import (
 // value being replaced, and a sequence after that.
 const passPath = "$.spec.config.registries[0].auth.pass"
 
-const docTemplate = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+const docTemplate = `apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: fuzz
 spec:
@@ -282,10 +282,10 @@ func credentialIn(t *testing.T, doc []byte) string {
 }
 
 // decode unmarshals doc into the configuration type an apply uses.
-func decode(t *testing.T, doc []byte) cluster.ZarfCluster {
+func decode(t *testing.T, doc []byte) cluster.Cluster {
 	t.Helper()
 
-	var parsed cluster.ZarfCluster
+	var parsed cluster.Cluster
 	require.NoError(t, goyaml.Unmarshal(doc, &parsed), "the rewritten document does not decode:\n%s", doc)
 
 	return parsed

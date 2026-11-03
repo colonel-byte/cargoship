@@ -24,25 +24,16 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/internal/heartbeat"
 	"github.com/colonel-byte/cargoship/pkg/retry"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/creasty/defaults"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
-
-// NoWait is used by various phases to decide if node ready state should be waited for or not
-var NoWait bool
-
-// Force is used by various phases to attempt a forced installation
-var Force bool
 
 // Phase represents a runnable phase which can be added to Manager.
 type Phase interface {
@@ -54,46 +45,9 @@ type Phase interface {
 // Phases is a slice of Phases
 type Phases []Phase
 
-// Index returns the index of the first occurrence matching the given phase title or -1 if not found
-func (p Phases) Index(title string) int {
-	for i, phase := range p {
-		if phase.Title() == title {
-			return i
-		}
-	}
-	return -1
-}
-
-// InsertAfter inserts a phase after the first occurrence of a phase with the given title
-func (p *Phases) InsertAfter(title string, phase Phase) {
-	i := p.Index(title)
-	if i == -1 {
-		return
-	}
-	*p = append((*p)[:i+1], append(Phases{phase}, (*p)[i+1:]...)...)
-}
-
-// InsertBefore inserts a phase before the first occurrence of a phase with the given title
-func (p *Phases) InsertBefore(title string, phase Phase) {
-	i := p.Index(title)
-	if i == -1 {
-		return
-	}
-	*p = append((*p)[:i], append(Phases{phase}, (*p)[i:]...)...)
-}
-
-// Replace replaces the first occurrence of a phase with the given title
-func (p *Phases) Replace(title string, phase Phase) {
-	i := p.Index(title)
-	if i == -1 {
-		return
-	}
-	(*p)[i] = phase
-}
-
 type withconfig interface {
 	Title() string
-	Prepare(context.Context, *cluster.ZarfCluster, *distro.ZarfDistro) error
+	Prepare(context.Context, *cluster.Cluster, *distro.Distro) error
 }
 
 type conditional interface {
@@ -194,6 +148,50 @@ type changedReporter interface {
 	Changed() bool
 }
 
+// hostChangedReporter is the per-host counterpart of changedReporter: a phase that knows not
+// only whether it changed the fleet, but which hosts it changed and what it did to them.
+//
+// It is opt-in on the same terms. A phase that implements changedReporter but not this one is
+// recorded as having said nothing per host -- not as having changed no host -- and is named by
+// RunResult.HostsUndeclared, so a caller rendering a per-host summary is told the coverage is
+// partial rather than handed a confident wrong one.
+//
+// Like Changed, it is read after the run, so a phase answers from what it did rather than from
+// what it expected to do.
+type hostChangedReporter interface {
+	HostsChanged() []HostChange
+}
+
+// HostChange is what one phase did to one host.
+type HostChange struct {
+	// Host identifies the host as the cluster configuration would: the address from its host
+	// block, with the port when it is not the default. A hostname is not enough on its own,
+	// because Host.Hostname is an optional override that is empty on most hosts.
+	Host    string
+	Changed bool
+	// Details names what moved on this host, one entry per file or setting. It is empty when
+	// the phase knows the host changed but not what in it, which is a weaker answer than a
+	// populated list rather than a claim that nothing in particular happened.
+	Details []HostChangeDetail
+}
+
+// HostChangeDetail is one thing a phase did to one host.
+type HostChangeDetail struct {
+	// Path is the file this is about, absolute as the host sees it.
+	Path string
+	// Reason is why the phase touched it, in the vocabulary the phases already log: "missing",
+	// "out of sync", "wrong mode", "stale".
+	Reason string
+	// Diff is a unified diff of the change. It is empty when the phase never read the prior
+	// content -- several phases compare by checksum or write unconditionally, and an empty Diff
+	// says the content was not compared rather than that it did not differ.
+	//
+	// It can carry anything the file carried, which for an engine configuration includes join
+	// tokens and registry credentials. Anything rendering a receipt outside the management node
+	// is expected to drop it.
+	Diff string
+}
+
 // PhaseResult is what a single phase did during a run.
 type PhaseResult struct {
 	Title       string
@@ -204,6 +202,14 @@ type PhaseResult struct {
 	// false because nothing was asked, not because nothing happened.
 	Declared bool
 	Changed  bool
+	// HostsDeclared is whether the phase implements hostChangedReporter, and stands to Hosts as
+	// Declared stands to Changed.
+	HostsDeclared bool
+	Hosts         []HostChange
+	// Duration is how long the phase's Run -- or its DryRun, under a dry run -- took. It
+	// excludes the phase's Prepare, ShouldRun and in-phase Before/After hooks, so two phases'
+	// durations are comparable to each other rather than to the run's wall clock.
+	Duration time.Duration
 }
 
 // RunResult is what a whole Manager.Run did, phase by phase. Manager.Run fills it in on the way
@@ -266,6 +272,98 @@ func (r RunResult) Undeclared() []string {
 // Complete reports whether every phase the run reached declared whether it changed anything.
 func (r RunResult) Complete() bool {
 	return len(r.Undeclared()) == 0
+}
+
+// Changed signal values, naming how much a reported Changed is worth.
+//
+// They live here rather than with any one caller because more than one reports them: the Ansible
+// module's changedSignal and the CLI run receipt are the same claim about the same RunResult, and
+// a second copy of the vocabulary is a second thing to keep in step.
+const (
+	// SignalUnknown means no phase reported whether it changed anything, so the changed answer
+	// beside it is a convention rather than an observation.
+	SignalUnknown = "unknown"
+	// SignalPartial means some phases reported and some did not. The ones that did not are
+	// named by Undeclared.
+	SignalPartial = "partial"
+	// SignalComplete means every phase the run reached reported whether it changed anything.
+	SignalComplete = "complete"
+)
+
+// Signal reports how much Changed is worth, as one of SignalComplete or SignalPartial.
+//
+// SignalUnknown is deliberately not among the answers. It means no run reached its phases at
+// all, which is a property of the sink rather than of a result -- an empty RunResult and a run in
+// which nothing was declared are the same value here. See ResultSink.Observed.
+func (r RunResult) Signal() string {
+	if r.Complete() {
+		return SignalComplete
+	}
+	return SignalPartial
+}
+
+// HostsUndeclared names the phases that did not say which hosts they changed, in the order the
+// run reached them. It stands to the per-host answer as Undeclared stands to the fleet-wide one:
+// a caller rendering a per-host summary is expected to report these alongside it, because a host
+// missing from the summary may simply never have been spoken for.
+func (r RunResult) HostsUndeclared() []string {
+	var out []string
+	for _, group := range [][]PhaseResult{r.Ran, r.Planned, r.Skipped} {
+		for _, p := range group {
+			if !p.HostsDeclared {
+				out = append(out, p.Title)
+			}
+		}
+	}
+	return out
+}
+
+// HostSummary is one host's line in a run summary.
+type HostSummary struct {
+	Host    string
+	Changed bool
+	// Named is how many phases named this host, and Reporting how many declared per host at
+	// all. They are reported as a pair because Named alone cannot be read: a host named by two
+	// of two reporting phases has been fully accounted for, and a host named by two of fifteen
+	// has not, and the two look identical without the denominator.
+	Named     int
+	Reporting int
+}
+
+// HostSummaries rolls the per-host answers up across every phase of the run, in the order the
+// hosts were first named.
+//
+// A host appears here only if some phase named it, so this is not a roster of the fleet: a caller
+// wanting every host, including the ones no phase spoke for, is expected to start from the
+// cluster configuration and look each one up.
+func (r RunResult) HostSummaries() []HostSummary {
+	var out []HostSummary
+	index := map[string]int{}
+
+	var reporting int
+	for _, group := range [][]PhaseResult{r.Ran, r.Planned, r.Skipped} {
+		for _, p := range group {
+			if !p.HostsDeclared {
+				continue
+			}
+			reporting++
+			for _, h := range p.Hosts {
+				i, ok := index[h.Host]
+				if !ok {
+					index[h.Host] = len(out)
+					out = append(out, HostSummary{Host: h.Host})
+					i = len(out) - 1
+				}
+				out[i].Named++
+				out[i].Changed = out[i].Changed || h.Changed
+			}
+		}
+	}
+
+	for i := range out {
+		out[i].Reporting = reporting
+	}
+	return out
 }
 
 // Titles names the phases in a slice, for a caller that reports a list of names rather than the
@@ -333,39 +431,56 @@ func (s *ResultSink) Observed() bool {
 	return s.observed
 }
 
-// phaseResult records what one phase did, asking it whether it changed anything if it is willing
-// to say.
-func phaseResult(p Phase) PhaseResult {
+// timedPhase is a phase that executed, with how long it took.
+//
+// Run keeps these rather than a slice of phases and a parallel slice of durations, so the two
+// cannot fall out of step on one of the several paths that leave the loop early.
+type timedPhase struct {
+	phase    Phase
+	duration time.Duration
+}
+
+// phaseResult records what one phase did, asking it whether it changed anything -- and which
+// hosts it changed -- if it is willing to say.
+//
+// duration is zero for a phase that did not execute, which is what a phase that was planned or
+// skipped did take.
+func phaseResult(p Phase, duration time.Duration) PhaseResult {
 	r := PhaseResult{
 		Title:       p.Title(),
 		Explanation: p.Explanation(),
 		DryRun:      ClassifyDryRun(p),
+		Duration:    duration,
 	}
 	if c, ok := p.(changedReporter); ok {
 		r.Declared = true
 		r.Changed = c.Changed()
 	}
+	if c, ok := p.(hostChangedReporter); ok {
+		r.HostsDeclared = true
+		r.Hosts = c.HostsChanged()
+	}
 	return r
 }
 
 // collectResult turns the phase lists Run kept into the result it publishes.
-func collectResult(ran, planned, skipped []Phase) RunResult {
+func collectResult(ran []timedPhase, planned, skipped []Phase) RunResult {
 	var out RunResult
-	for _, p := range ran {
-		out.Ran = append(out.Ran, phaseResult(p))
+	for _, t := range ran {
+		out.Ran = append(out.Ran, phaseResult(t.phase, t.duration))
 	}
 	for _, p := range planned {
-		out.Planned = append(out.Planned, phaseResult(p))
+		out.Planned = append(out.Planned, phaseResult(p, 0))
 	}
 	for _, p := range skipped {
-		out.Skipped = append(out.Skipped, phaseResult(p))
+		out.Skipped = append(out.Skipped, phaseResult(p, 0))
 	}
 	return out
 }
 
 // In-phase hooks for phases to run logic immediately before/after Run().
-// These are strictly internal hooks for phases themselves and are separate
-// from user-configured lifecycle hooks handled by the RunHooks phase.
+// These are strictly internal hooks for phases themselves, not a user-configurable
+// lifecycle hook: running scripts around a cargoship run is the Ansible collection's job.
 type withBefore interface {
 	Before(context.Context) error
 }
@@ -376,8 +491,8 @@ type withAfter interface {
 // Manager executes phases to construct the cluster
 type Manager struct {
 	phases Phases
-	Config *cluster.ZarfCluster
-	Distro *distro.ZarfDistro
+	Config *cluster.Cluster
+	Distro *distro.Distro
 	// Values is the configuration the package ships with, merged with the
 	// overrides in the cluster inventory and checked against the package's
 	// values schema. Phases read it instead of re-reading either source, so
@@ -395,33 +510,6 @@ type Manager struct {
 	// a field rather than a return value because Run has five call sites and one caller that
 	// wants this.
 	Result RunResult
-}
-
-// ManagerDistroConfig stores some values for manager distro config
-type ManagerDistroConfig struct {
-	BinaryDir string
-	Binary    string
-	Config    string
-	Token     string
-	Data      string
-	Version   string
-}
-
-// NewManager creates a new Manager
-func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error) {
-	if config == nil {
-		return nil, fmt.Errorf("config is nil")
-	}
-	if distro == nil {
-		return nil, fmt.Errorf("distro is nil")
-	}
-
-	return &Manager{Config: config, Writer: os.Stdout}, nil
-}
-
-// AddPhase adds a Phase to Manager
-func (m *Manager) AddPhase(p ...Phase) {
-	m.phases = append(m.phases, p...)
 }
 
 // SetPhases sets the list of phases
@@ -442,34 +530,27 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 	return retry.WithDefaultTimeout(ctx, f)
 }
 
-// GetDistroOSFiles returns the ZarfFiles for a distro
-func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles {
-	return m.Distro.Spec.Config.OS.Files
-}
-
 type errorfunc func() error
 
-// Wet runs the first given function when not in dry-run mode. The second function will be
-// run when in dry-mode and the message will be displayed. Any error returned from the
-// functions will be returned and will halt the operation.
-func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error {
-	if !m.DryRun {
-		if len(funcs) > 0 && funcs[0] != nil {
-			return funcs[0]()
-		}
+// Wet runs f unless this is a dry run, where it does nothing and reports no error. It is how a
+// phase that changes a host declares which part of itself is the change.
+//
+// It used to take a host and a message as well, and a second function to run instead during a
+// dry run. Neither parameter was ever read -- the signature named them `_` -- and no caller ever
+// passed the second function, so a dry run's account of a phase came from nowhere. What reports
+// a dry run now is the DryRunBehavior classification above: a phase says what it would do
+// through ClassifyDryRun and DryRunNote, once per phase, rather than per operation through a
+// message that was built with fmt.Sprintf on every uploaded file and then discarded.
+func (m *Manager) Wet(f errorfunc) error {
+	if m.DryRun {
 		return nil
 	}
-
-	if m.DryRun && len(funcs) == 2 && funcs[1] != nil {
-		return funcs[1]()
-	}
-
-	return nil
+	return f()
 }
 
 // Run executes all the added Phases in order
 func (m *Manager) Run(ctx context.Context) error {
-	var ran []Phase
+	var ran []timedPhase
 	// planned collects the phases a dry run reported instead of running, for the summary below.
 	var planned []Phase
 	// skipped collects the phases ShouldRun filtered out. They run nothing, but a phase can
@@ -490,9 +571,9 @@ func (m *Manager) Run(ctx context.Context) error {
 
 	defer func() {
 		if result != nil {
-			for _, p := range ran {
-				if c, ok := p.(withcleanup); ok {
-					l.Info("running clean-up", "phase", p.Title())
+			for _, t := range ran {
+				if c, ok := t.phase.(withcleanup); ok {
+					l.Info("running clean-up", "phase", t.phase.Title())
 					c.CleanUp(ctx)
 				}
 			}
@@ -592,16 +673,19 @@ func (m *Manager) Run(ctx context.Context) error {
 		l.Info("running", "phase", title)
 
 		if dp, ok := p.(withDryRun); ok && m.DryRun {
-			ran = append(ran, p)
-			if err := dp.DryRun(); err != nil {
+			start := time.Now()
+			err := dp.DryRun()
+			ran = append(ran, timedPhase{phase: p, duration: time.Since(start)})
+			if err != nil {
 				result = err
 				return result
 			}
 			continue
 		}
 
+		start := time.Now()
 		result = p.Run(ctx)
-		ran = append(ran, p)
+		ran = append(ran, timedPhase{phase: p, duration: time.Since(start)})
 
 		// Only run in-phase After hook if Run() succeeded.
 		// If After() fails after a successful Run(), return the After() error.
@@ -639,7 +723,7 @@ func (m *Manager) Run(ctx context.Context) error {
 // The list is not a static roster. Every phase's Prepare and ShouldRun has already run against
 // the live hosts, and both only read, so a phase whose work is already done -- an engine that is
 // running, a file that is present -- is filtered out before it reaches here.
-func (m *Manager) logDryRunSummary(ctx context.Context, ran, planned []Phase) {
+func (m *Manager) logDryRunSummary(ctx context.Context, ran []timedPhase, planned []Phase) {
 	l := logger.From(ctx)
 
 	l.Info("dry run finished", "ran", len(ran), "wouldRun", len(planned))

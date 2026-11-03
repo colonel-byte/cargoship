@@ -16,13 +16,9 @@ package phase
 
 import (
 	"context"
-	"errors"
-	"strings"
-	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/cargoship/pkg/node"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -38,9 +34,16 @@ type UpgradeHosts struct {
 	GenericPhase
 	Distro  distrocfg.Distro
 	service string
-	hosts   cluster.ZarfHosts
-	leader  *cluster.ZarfHost
-	dis     *distro.ZarfDistro
+	hosts   cluster.Hosts
+	leader  *cluster.Host
+	dis     *distro.Distro
+	// nodes maps a host to the name its node carries in the cluster. See nodeName.
+	nodes nodeNameCache
+}
+
+// nodeName is what the cluster calls h's node. See nodeNameCache.
+func (p *UpgradeHosts) nodeName(ctx context.Context, h *cluster.Host) string {
+	return p.nodes.nameFor(ctx, p.leader, p.Distro, p.hosts, h)
 }
 
 // ShouldRun is true when there are workers
@@ -48,25 +51,20 @@ func (p *UpgradeHosts) ShouldRun() bool {
 	return len(p.hosts) > 0
 }
 
-func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("draining nodes", "node", h)
-	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
-	})
+	return p.drainClusterNode(ctx, p.leader, p.Distro, p.nodeName(ctx, h))
 }
 
-func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("installing distro packages", "host", h)
-	if h.Metadata.Install != nil {
-		return h.Metadata.Install(ctx, h)
-	}
-	return nil
+	return p.installPackages(ctx, h)
 }
 
 // preStartUpgrade runs the distro's kubeadm-style upgrade step, when it implements one, after the
 // new packages are staged but before the service restarts. A no-op for rke2/k3s, whose plain
 // restart on the new binary needs nothing in between.
-func (p *UpgradeHosts) preStartUpgrade(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) preStartUpgrade(ctx context.Context, h *cluster.Host) error {
 	u, ok := p.Distro.(distrocfg.PreStartUpgrader)
 	if !ok {
 		return nil
@@ -75,39 +73,16 @@ func (p *UpgradeHosts) preStartUpgrade(ctx context.Context, h *cluster.ZarfHost)
 	return u.PreStartUpgrade(ctx, h, *p.dis)
 }
 
-func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the service to start", "service", p.service, "host", h)
-
-	startedAt := time.Now()
-	go func() {
-		err := h.StartService(ctx, p.service)
-		if err != nil {
-			logger.From(ctx).Warn("failed to start", "service", p.service, "host", h)
-		}
-	}()
-
-	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.service)); err != nil {
-		return p.captureServiceLogsOnFailure(ctx, h, p.service, startedAt, err)
-	}
-
-	return h.EnableService(ctx, p.service)
+	return p.startAndEnableService(ctx, h, p.service)
 }
 
-func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
-
-	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		out, err := p.leader.Sudo().ExecOutput(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)))
-		if err != nil {
-			return err
-		}
-		if strings.ToLower(out) != "true" {
-			return errors.New("node not ready")
-		}
-		return nil
-	})
+	return p.waitNodeReady(ctx, p.leader, p.Distro, p.nodeName(ctx, h))
 }
 
-func (p *UpgradeHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
-	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)))
+func (p *UpgradeHosts) uncordonNode(ctx context.Context, h *cluster.Host) error {
+	return uncordonClusterNode(p.leader, p.Distro, p.nodeName(ctx, h))
 }

@@ -24,24 +24,16 @@ package layout
 import (
 	"errors"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/cargoship/types"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 )
-
-// Distro struct
-type Distro struct {
-	cfg    *types.DistroConfig
-	distro distro.ZarfDistro
-	tmp    string
-}
 
 // DistroLayout struct
 type DistroLayout struct {
 	dirPath string
 	digest  string
 	cache   *manifestCache
-	Distro  distro.ZarfDistro
+	Distro  distro.Distro
 }
 
 // DistroLayoutOptions struct
@@ -68,14 +60,3 @@ const (
 // ErrNoVerificationMaterial is returned when there is nothing to verify against.
 // VerifyIfPossible tolerates this; all other verification errors are always fatal.
 var ErrNoVerificationMaterial = errors.New("no verification material available")
-
-// New creates a new Distro object
-func New(cfg *types.DistroConfig) (*Distro, error) {
-	dis := Distro{
-		cfg:    cfg,
-		distro: distro.ZarfDistro{},
-		tmp:    "/tmp",
-	}
-
-	return &dis, nil
-}

@@ -21,8 +21,6 @@
 package helpers
 
 const (
-	// ReadUser is used for any internal file to be read only
-	ReadUser = 0400
 	// ReadWriteUser is used for any internal file not normally used by the end user or containing sensitive data
 	ReadWriteUser = 0600
 	// ReadAllWriteUser is used for any non sensitive file intended to be consumed by the end user

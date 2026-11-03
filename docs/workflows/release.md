@@ -4,7 +4,7 @@
 
 The actual release pipeline ("goreleaser" job), granted `contents: write` (create release, upload archives), `packages: write` (push images), `id-token: write` (OIDC token for cosign), and `attestations: write`.
 
-Sets up Syft (SBOM), cosign, ansible-core, Go, QEMU, and Docker Buildx, then logs into three registries (GHCR, Registry1/DSO, Docker Hub) before running GoReleaser (`goreleaser release --clean`), which builds and publishes binaries, packages, and container images.
+Sets up Syft (SBOM), cosign, ansible-core, Go, QEMU, and Docker Buildx, then logs into two registries (GHCR, Docker Hub) before running GoReleaser (`goreleaser release --clean`), which builds and publishes binaries, packages, and container images.
 
 Package signing keys (GPG for rpm/deb, a bare RSA key for apk) are written to `RUNNER_TEMP` - outside the checkout, so no `.goreleaser.yaml` glob can accidentally pick them up - and removed at the end regardless of outcome. A missing signing secret disables signing for that artifact type with a warning rather than failing the release.
 

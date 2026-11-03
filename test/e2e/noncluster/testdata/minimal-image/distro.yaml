@@ -1,0 +1,55 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# testdata/minimal with two images, so a package carries an images/ layer: the import and
+# publish paths assemble image layers separately from the metadata ones, and a package with
+# no images never exercises that branch. A pause image is the smallest thing that is still
+# an image.
+#
+# The two images are declared the two different ways on purpose. pause is in the flat
+# imageConfig.images list; cilium belongs to a chart entry under engine.manifest, which is
+# only found through Config.AllImages. A package's layers are collected from that same set,
+# and a declared image whose blobs are not in the layout fails the publish - so a chart's
+# images going missing from create or from the layer walk shows up here as a failed
+# round-trip rather than on a node months later.
+#
+# __REGISTRY__ is rewritten to the address of the in-memory registry the test starts, and
+# that registry is the only host contacted - the image is built and pushed in process, so
+# the suite still needs no network. Nothing outside the test is contacted.
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/distro-v1alpha1-schema.json
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
+metadata:
+  name: e2e-minimal-image
+  version: 0.0.1
+  architecture: amd64
+spec:
+  type: rke2
+  version: 1.35.0-rke2r1
+  config:
+    imageConfig:
+      images:
+        - __REGISTRY__/pause:3.10
+    engine:
+      config:
+        cluster-cidr: 10.42.0.0/16
+        cluster-domain: cluster.local
+      manifest:
+        rke2-cilium:
+          images:
+            - __REGISTRY__/cilium:1.20.2
+          values: |-
+            kubeProxyReplacement: true

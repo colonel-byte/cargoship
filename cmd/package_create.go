@@ -56,6 +56,7 @@ type packageCreateOptions struct {
 	signingKeyPath     string
 	signingKeyPassword string
 	tag                string
+	haulerStore        string
 }
 
 func newPackageCreateCommand() *cobra.Command {
@@ -93,10 +94,11 @@ func newPackageCreateCommand() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().StringSliceVar(&o.fileOverrides, "file-override", fileOverrideDefaults, lang.CmdPackageCreateFlagFileOverride)
+	cmd.Flags().StringVar(&o.haulerStore, "hauler-store", resolvedConfig.DistroOpts.CreateOpts.HaulerStore, lang.CmdPackageCreateFlagHaulerStore)
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackageCreateFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackageFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageCreateFlagSigningKeyPassword)
 	cmd.Flags().StringVar(&o.tag, PackageTag, "", lang.CmdPackageCreateFlagTag)
 
@@ -175,6 +177,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		OCIConcurrency:     o.ociConcurrency,
 		RegistryOverrides:  registryOverrides,
 		FileOverrides:      fileOverrides,
+		HaulerStore:        o.haulerStore,
 		RemoteOptions:      defaultRemoteOptions(),
 		Reproducible:       o.reproducible,
 		SigningKeyPath:     o.signingKeyPath,

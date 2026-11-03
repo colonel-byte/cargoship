@@ -1,0 +1,460 @@
+// Copyright 2021 zarf authors
+// Copyright 2026 colonel-byte
+//
+// This file contains code derived from zarf:
+// https://github.com/zarf-dev/zarf
+//
+// Modifications Copyright 2026 colonel-byte.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package actions
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/template"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+)
+
+// RunOptions configures optional action execution behavior.
+type RunOptions struct {
+	DefaultConfig  api.ActionDefaults
+	VariableConfig *variables.VariableConfig
+	Values         value.Values
+	StateAccess    template.StateAccess
+}
+
+// Run runs all provided actions.
+func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOptions) error {
+	// Upstream falls back to zarf's own variable config here, out of an internal
+	// package a fork cannot import. Every caller in this repo supplies one - it has
+	// to, because a config built per call loses the variables an action set, so
+	// setVariables would not reach the action after it. Erroring says that plainly
+	// rather than silently running with a config that forgets.
+	if opts.VariableConfig == nil {
+		return errors.New("actions.Run needs a VariableConfig: build one with variables.New")
+	}
+
+	for _, a := range actions {
+		if err := runAction(ctx, basePath, opts.DefaultConfig, a, opts.VariableConfig, opts.Values, opts.StateAccess); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Run commands that a component has provided.
+func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaults, action api.Action, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
+	var cmdEscaped string
+	var err error
+	cmd := action.Cmd
+	l := logger.From(ctx)
+	start := time.Now()
+
+	tmplObjs, err := template.NewObjects(values).
+		WithConstants(variableConfig.GetConstants()).
+		WithVariables(variableConfig.GetSetVariableMap()).
+		WithState(stateAccess)
+	if err != nil {
+		return err
+	}
+
+	if action.Wait != nil {
+		err := runWaitAction(ctx, action, variableConfig, tmplObjs)
+		if err != nil {
+			return err
+		}
+		l.Debug("wait action succeeded", "duration", time.Since(start))
+		return nil
+	}
+
+	if action.Description != "" {
+		cmdEscaped = action.Description
+	} else {
+		cmdEscaped = helpers.Truncate(cmd, 60, false)
+	}
+
+	// Apply go-templates in cmds if templating is enabled
+	if action.EnableTemplating {
+		cmd, err = template.Apply(ctx, cmd, tmplObjs)
+		if err != nil {
+			return fmt.Errorf("could not template cmd %s: %w", cmdEscaped, err)
+		}
+	}
+
+	l.Info("running command", "cmd", cmdEscaped)
+
+	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
+	actionDefaults.Dir = filepath.Join(basePath, actionDefaults.Dir)
+
+	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell, runtime.GOOS); err != nil {
+		l.Error("error mutating command", "cmd", cmdEscaped, "err", err.Error())
+	}
+
+	duration := time.Duration(actionDefaults.MaxTotalSeconds) * time.Second
+	timeout := time.After(duration)
+
+	// Keep trying until the max retries is reached.
+	// TODO: Refactor using go-retry
+retryCmd:
+	for remaining := actionDefaults.Retries + 1; remaining > 0; remaining-- {
+		// Perform the action run.
+		tryCmd := func(ctx context.Context) error {
+			// Try running the command and continue the retry loop if it fails.
+			stdout, _, err := actionRun(ctx, actionDefaults, cmd)
+			if err != nil {
+				return err
+			}
+			l.Info("action succeeded", "cmd", cmdEscaped)
+
+			outTrimmed := strings.TrimSpace(stdout)
+
+			// If an output variable is defined, set it.
+			for _, v := range action.SetVariables {
+				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
+				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
+					return err
+				}
+			}
+
+			// If an output value is defined, parse the result and set it to values map.
+			for _, v := range action.SetValues {
+				if err := parseAndSetValue(outTrimmed, v, values); err != nil {
+					return err
+				}
+			}
+
+			l.Debug("completed action", "cmd", cmdEscaped, "duration", time.Since(start))
+
+			// If the command ran successfully, continue to the next action.
+			return nil
+		}
+
+		// If no timeout is set, run the command and return or continue retrying.
+		if actionDefaults.MaxTotalSeconds < 1 {
+			l.Info("waiting for action (no timeout)", "cmd", cmdEscaped)
+			if err := tryCmd(ctx); err != nil {
+				continue retryCmd
+			}
+
+			return nil
+		}
+
+		// Run the command on repeat until success or timeout.
+		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", fmt.Sprintf("%d seconds", actionDefaults.MaxTotalSeconds))
+		select {
+		// On timeout break the loop to abort.
+		case <-timeout:
+			break retryCmd
+
+		// Otherwise, try running the command.
+		default:
+			ctx, cancel := context.WithTimeout(ctx, duration)
+			defer cancel()
+			if err := tryCmd(ctx); err != nil {
+				l.Warn("action failed", "cmd", cmdEscaped, "err", err.Error())
+				continue retryCmd
+			}
+
+			return nil
+		}
+	}
+
+	select {
+	case <-timeout:
+		// If we reached this point, the timeout was reached or command failed with no retries.
+		if actionDefaults.MaxTotalSeconds < 1 {
+			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.Retries)
+		} else {
+			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
+		}
+	default:
+		// If we reached this point, the retry limit was reached.
+		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.Retries)
+	}
+}
+
+func runWaitAction(ctx context.Context, action api.Action, variableConfig *variables.VariableConfig, tmplObjs template.Objects) error {
+	waitCfg := action.Wait
+
+	timeout := 5 * time.Minute
+	if action.MaxTotalSeconds != nil && *action.MaxTotalSeconds > 0 {
+		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
+	}
+
+	// Apply variable substitution to wait action fields.
+	templates := variableConfig.GetAllTemplates()
+
+	// Apply go-templates if templating is enabled, in the same way as regular actions.
+	var applyTemplates func(s string) (string, error)
+	if action.EnableTemplating {
+		applyTemplates = func(s string) (string, error) {
+			return template.Apply(ctx, s, tmplObjs)
+		}
+	}
+
+	switch {
+	case waitCfg.Cluster != nil:
+		cluster := waitCfg.Cluster
+		cluster.Kind = templateString(cluster.Kind, templates)
+		cluster.Name = templateString(cluster.Name, templates)
+		cluster.Namespace = templateString(cluster.Namespace, templates)
+		cluster.Condition.Expression = templateString(cluster.Condition.Expression, templates)
+		if applyTemplates != nil {
+			var err error
+			if cluster.Kind, err = applyTemplates(cluster.Kind); err != nil {
+				return fmt.Errorf("could not template wait.cluster.kind: %w", err)
+			}
+			if cluster.Name, err = applyTemplates(cluster.Name); err != nil {
+				return fmt.Errorf("could not template wait.cluster.name: %w", err)
+			}
+			if cluster.Namespace, err = applyTemplates(cluster.Namespace); err != nil {
+				return fmt.Errorf("could not template wait.cluster.namespace: %w", err)
+			}
+			if cluster.Condition.Expression, err = applyTemplates(cluster.Condition.Expression); err != nil {
+				return fmt.Errorf("could not template wait.cluster.condition: %w", err)
+			}
+		}
+		return runWaitClusterAction(ctx, cluster, timeout)
+	case waitCfg.Network != nil:
+		network := waitCfg.Network
+		network.Protocol = templateString(network.Protocol, templates)
+		network.Address = templateString(network.Address, templates)
+		if applyTemplates != nil {
+			var err error
+			if network.Protocol, err = applyTemplates(network.Protocol); err != nil {
+				return fmt.Errorf("could not template wait.network.protocol: %w", err)
+			}
+			if network.Address, err = applyTemplates(network.Address); err != nil {
+				return fmt.Errorf("could not template wait.network.address: %w", err)
+			}
+		}
+		return runWaitNetworkAction(ctx, network, timeout)
+	default:
+		return fmt.Errorf("wait action is missing a cluster or network")
+	}
+}
+
+func templateString(s string, templates map[string]*variables.TextTemplate) string {
+	// Replace ${VAR} syntax (unambiguous due to braces).
+	for key, tmpl := range templates {
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("${%s}", envName), tmpl.Value)
+	}
+
+	// Replace bare $VAR syntax, processing longer names first to avoid
+	// partial matches (e.g. $ZARF_VAR_NAME matching inside $ZARF_VAR_NAMESPACE).
+	keys := make([]string, 0, len(templates))
+	for key := range templates {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+	for _, key := range keys {
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("$%s", envName), templates[key].Value)
+	}
+	return s
+}
+
+// runWaitClusterAction reports that a cluster wait cannot run here.
+//
+// cargoship runs actions only while building a package, and a package is built on
+// a management node that is typically air-gapped and has no cluster of its own.
+// Upstream would wait against whatever kubeconfig happened to be on the build
+// machine, which is a different cluster from the one the package is later applied
+// to, or none at all. Failing with the action named beats waiting five minutes on
+// the wrong cluster. wait.network is unaffected and still runs.
+func runWaitClusterAction(_ context.Context, cluster *api.ActionWaitCluster, _ time.Duration) error {
+	return fmt.Errorf(
+		"wait.cluster is not supported in an onCreate action (waiting for %s/%s): cargoship runs actions while building the package, before any cluster exists - use wait.network instead",
+		cluster.Kind, cluster.Name,
+	)
+}
+
+func runWaitNetworkAction(ctx context.Context, network *api.ActionWaitNetwork, timeout time.Duration) error {
+	l := logger.From(ctx)
+
+	kind := strings.ToLower(network.Protocol)
+	identifier := network.Address
+	var condition string
+	if strings.HasPrefix(kind, "http") && network.Code == 0 {
+		condition = "200"
+	} else if network.Code != 0 {
+		condition = strconv.Itoa(network.Code)
+	}
+
+	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
+	if condition != "" {
+		desc = fmt.Sprintf("%s to be %s", desc, condition)
+	}
+	l.Info("running wait action", "description", desc)
+
+	return ForNetwork(ctx, kind, identifier, condition, timeout)
+}
+
+// Perform some basic string mutations to make commands more useful.
+func actionCmdMutation(ctx context.Context, cmd string, shellPref api.Shell, goos string) (string, error) {
+	zarfCommand, err := utils.GetFinalExecutableCommand()
+	if err != nil {
+		return cmd, err
+	}
+
+	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".
+	cmd = strings.ReplaceAll(cmd, "./zarf ", zarfCommand+" ")
+
+	// Make commands 'more' compatible with Windows OS PowerShell
+	if goos == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {
+		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
+		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
+		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
+		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)
+
+		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively
+		// (also TF_VAR_* and ZARF_CONST_).
+		// https://regex101.com/r/xk1rkw/1
+		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_(VAR|CONST)_([a-zA-Z0-9_-])+)}?)`)
+		getFunctions := MatchAllRegex(envVarRegex, cmd)
+
+		newCmd := cmd
+		for _, get := range getFunctions {
+			newCmd = strings.ReplaceAll(newCmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
+		}
+		if newCmd != cmd {
+			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
+		}
+		cmd = newCmd
+	}
+
+	return cmd, nil
+}
+
+// Merge the ActionSet defaults with the action config.
+func actionGetCfg(_ context.Context, cfg api.ActionDefaults, a api.Action, vars map[string]*variables.TextTemplate) api.ActionDefaults {
+	if a.Silent != nil {
+		cfg.Silent = *a.Silent
+	}
+
+	// Default is no timeout, but add a timeout if one is provided.
+	if a.MaxTotalSeconds != nil {
+		cfg.MaxTotalSeconds = *a.MaxTotalSeconds
+	}
+
+	if a.Retries != nil {
+		cfg.Retries = *a.Retries
+	}
+
+	if a.Dir != nil {
+		cfg.Dir = *a.Dir
+	}
+
+	if len(a.Env) > 0 {
+		cfg.Env = append(cfg.Env, a.Env...)
+	}
+
+	if a.Shell != nil {
+		cfg.Shell = *a.Shell
+	}
+
+	// Add variables to the environment.
+	for k, v := range vars {
+		// Remove # from env variable name.
+		k = strings.ReplaceAll(k, "#", "")
+		// Make terraform variables available to the action as TF_VAR_lowercase_name.
+		k1 := strings.ReplaceAll(strings.ToLower(k), "zarf_var", "TF_VAR")
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v.Value))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v.Value))
+	}
+
+	return cfg
+}
+
+func actionRun(ctx context.Context, cfg api.ActionDefaults, cmd string) (string, string, error) {
+	l := logger.From(ctx)
+	start := time.Now()
+	shell, shellArgs := exec.GetOSShell(cfg.Shell)
+
+	l.Debug("running command", "shell", shell, "cmd", cmd)
+
+	execCfg := exec.Config{
+		Env:   cfg.Env,
+		Dir:   cfg.Dir,
+		Print: !cfg.Silent,
+	}
+
+	stdout, stderr, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
+	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
+	if !cfg.Silent {
+		l.Debug("command complete", "stdout", stdout, "stderr", stderr, "duration", time.Since(start))
+	}
+	return stdout, stderr, err
+}
+
+// MatchAllRegex wraps a get function around each substring match, returning all matches.
+func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
+	// Validate the string.
+	matches := regex.FindAllStringSubmatch(str, -1)
+
+	// Parse the string into its components.
+	var funcs []func(string) string
+	for _, match := range matches {
+		funcs = append(funcs, func(name string) string {
+			return match[regex.SubexpIndex(name)]
+		})
+	}
+	return funcs
+}
+
+// parseAndSetValue parses the output string according to the setValue type and sets it in the values map.
+func parseAndSetValue(output string, setValue api.SetValue, values value.Values) error {
+	var val any
+	switch setValue.Type {
+	case api.SetValueYAML:
+		var parsed any
+		if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
+			return fmt.Errorf("failed to parse YAML output for setValue %q: %w", setValue.Key, err)
+		}
+		val = parsed
+	case api.SetValueJSON:
+		var parsed any
+		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+			return fmt.Errorf("failed to parse JSON output for setValue %q: %w", setValue.Key, err)
+		}
+		val = parsed
+	case api.SetValueString, "":
+		// Empty Type behaves as api.SetValueString.
+		val = output
+	default:
+		return fmt.Errorf("unknown setValue type %q for key %q", setValue.Type, setValue.Key)
+	}
+	return values.Set(value.Path(setValue.Key), val)
+}

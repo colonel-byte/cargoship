@@ -37,9 +37,9 @@ Installing from a tarball or a checkout instead, install the collection, then po
 <!-- x-release-please-start-version -->
 ```sh
 cosign verify-blob --key cosign.pub \
-  --bundle colonel_byte-cargoship-0.30.0.tar.gz.sigstore.json \
-  colonel_byte-cargoship-0.30.0.tar.gz
-ansible-galaxy collection install colonel_byte-cargoship-0.30.0.tar.gz
+  --bundle colonel_byte-cargoship-0.37.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.37.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.37.0.tar.gz
 ./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
 ```
 <!-- x-release-please-end-version -->
@@ -147,9 +147,9 @@ Cargoship's own logging goes to stderr, which Ansible captures and shows on fail
 A fleet-wide `apply` is one Ansible task that runs for several minutes, so the modules report where they are while they run. The action plugin prints one line per phase transition:
 
 ```
-[cargoship] Phase 1/12: Connect to hosts [running]
-[cargoship] Phase 1/12: Connect to hosts [done]
-[cargoship] Phase 2/12: Detect host operating systems [running]
+[cargoship] Phase 01/12: Connect to hosts [running]
+[cargoship] Phase 01/12: Connect to hosts [done]
+[cargoship] Phase 02/12: Detect host operating systems [running]
 ```
 
 The counter is the phase's position in the list for that module, so `docs/phases/apply.md` and its siblings read as the same sequence. A phase that fails is printed `[failed]`, ahead of the failure Ansible itself reports.

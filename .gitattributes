@@ -14,7 +14,6 @@ hack/completion/* linguist-generated
 # mage generate:document
 docs/commands/**/*.md linguist-generated
 docs/phases/**/*.md linguist-generated
-docs/golang/**/*.md linguist-generated
 docs/schema/**/*.md linguist-generated
 docs/ansible/**/module_*.md linguist-generated
 docs/ansible/**/role_*.md linguist-generated
@@ -22,16 +21,22 @@ docs/index.md linguist-generated
 docs/security.md linguist-generated
 docs/SUMMARY.md linguist-generated
 
-# mage generate:zarfFlags
-internal/zarfmod/testdata/zarf-*-flags.txt linguist-generated
 
 # mage generate:examples
 example/*/**/distro.yaml linguist-generated
 example/*/**/values.yaml linguist-generated
 example/*/**/values.schema.json linguist-generated
+example/*/**/hauler-images-*.yaml linguist-generated
+example/*/**/hauler-files-*.yaml linguist-generated
+example/*/cni/*.yaml linguist-generated
 example/shasums.json linguist-generated
+example/assets.json linguist-generated
 
 # mage dev:vendor
-vendor/**/osv-scanner.toml linguist-generated
+# The whole tree, not just the osv-scanner.toml files mage writes into it: `go mod vendor`
+# generates all of it, and a dependency change that moves 8000 files buries the 70 that were
+# actually written. linguist-generated collapses them in a GitHub diff and keeps them out of the
+# language statistics; the files are still tracked, still reviewable, and still diffable locally.
+vendor/** linguist-generated
 
 thirdparty-src/** linguist-vendored

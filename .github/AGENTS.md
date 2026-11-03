@@ -2,11 +2,25 @@
 
 ## Keeping `docs/workflows/` in sync
 
-Every file under [`workflows/`](workflows/) has a matching high-level explanation under [`docs/workflows/`](../docs/workflows/), named after the workflow file with a `.md` extension, and indexed in [`docs/workflows/README.md`](../docs/workflows/README.md). When you add, remove, or meaningfully change a workflow's triggers, jobs, or behavior, update its doc in the same pull request:
+Every file under [`workflows/`](workflows/) has a matching high-level explanation under [`docs/workflows/`](../docs/workflows/), named after the workflow file with a `.md` extension. The index is [`docs/SUMMARY.md`](../docs/SUMMARY.md), which `mage generate:document` writes from what is on disk - there is no hand-written index to keep in step. When you add, remove, or meaningfully change a workflow's triggers, jobs, or behavior, update its doc in the same pull request:
 
-- New workflow: add `docs/workflows/<name>.md` and a row in `docs/workflows/README.md`.
-- Removed workflow: delete both.
+- New workflow: add `docs/workflows/<name>.md`, then run `go run ./magefiles/core generate:document` so the chapter appears in `docs/SUMMARY.md`.
+- Removed workflow: delete the doc and regenerate.
 - Changed triggers, jobs, or behavior: update the doc's content to match; the doc is a summary, not a mirror, so only what a reader needs to understand what the workflow does and why has to stay current.
+
+## Keeping the issue forms current
+
+[`ISSUE_TEMPLATE/`](ISSUE_TEMPLATE/) holds YAML issue forms rather than Markdown templates, because the dropdowns, required fields, and `render: shell` blocks they rely on only exist in the forms schema. A Markdown template would be free text with a preamble, which is what the tracker had before.
+
+Three things in those forms go stale silently, and GitHub fails none of them in CI:
+
+- The `Which CI job` dropdown in [`ISSUE_TEMPLATE/01-failing-build.yml`](ISSUE_TEMPLATE/01-failing-build.yml) lists the `name:` a workflow displays in the checks list, not its filename - `workflows/e2e.yaml` shows as `Basic build`. Adding, renaming, or removing a workflow means updating that list in the same pull request.
+- The phase dropdown in [`ISSUE_TEMPLATE/03-bug.yml`](ISSUE_TEMPLATE/03-bug.yml) tracks `docs/phases/`, and the suite dropdown in [`ISSUE_TEMPLATE/02-flaky-e2e.yml`](ISSUE_TEMPLATE/02-flaky-e2e.yml) tracks the packages under `test/e2e/`. A new phase or suite belongs in both the code and the form.
+- Every label a form names in `labels:` has to exist on the repository. GitHub drops an unknown label from the created issue without reporting anything, so the issue arrives unlabelled and nothing says why. Check with `gh label list --repo colonel-byte/cargoship`.
+
+A malformed form is reported as a banner on <https://github.com/colonel-byte/cargoship/issues/new/choose> and nowhere else. Open that page on the branch after changing a form; parsing as YAML is not enough to know it renders.
+
+Security reports are a `contact_links` entry in [`ISSUE_TEMPLATE/config.yml`](ISSUE_TEMPLATE/config.yml) pointing at the draft advisory form, not an issue form. [`SECURITY.md`](SECURITY.md) says not to open a public issue for a vulnerability; do not add a template that invites one.
 
 ## Checking a workflow against OpenSSF Scorecard
 

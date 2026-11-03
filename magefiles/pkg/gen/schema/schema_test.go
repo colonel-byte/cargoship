@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/schema"
 	strcase "github.com/stoewer/go-strcase"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +31,7 @@ import (
 func TestGenerateV1Alpha1Schema(t *testing.T) {
 	t.Chdir("../../../..")
 
-	b, err := schema.GenerateV1Alpha1Schema(&cluster.ZarfCluster{}, []string{"api", "zarf.dev", "v1alpha1", "cluster"}, strcase.LowerCamelCase)
+	b, err := schema.GenerateV1Alpha1Schema(&cluster.Cluster{}, []string{"api", "colonel-byte.dev", "v1alpha1", "cluster"}, strcase.LowerCamelCase)
 	require.NoError(t, err)
 
 	var parsed map[string]any
@@ -118,8 +118,8 @@ func TestSensitivePropertiesAreMarked(t *testing.T) {
 	}{
 		{
 			name:   "registry credentials",
-			target: "zarf-v1alpha1-cluster-schema.json",
-			def:    "ZarfClusterRegistryAuth",
+			target: "cluster-v1alpha1-schema.json",
+			def:    "RegistryAuth",
 			properties: []string{
 				"pass",
 				"token",
@@ -128,7 +128,7 @@ func TestSensitivePropertiesAreMarked(t *testing.T) {
 		},
 		{
 			name:   "package signing key password",
-			target: "zarf-config-distro-schema.json",
+			target: "config-distro-schema.json",
 			def:    "DistroPublishOptions",
 			properties: []string{
 				"signing_key_password",

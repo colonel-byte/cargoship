@@ -6,6 +6,8 @@ Fetch the cluster kubeconfig onto the management node.
 
 Write it as `colonel_byte.cargoship.cargoship_kube_config`. It runs on the management node; nothing is installed on the fleet.
 
+Added in `colonel_byte.cargoship` 0.26.0.
+
 Runs `cargoship kube-config` against the fleet described by an Ansible inventory.
 
 It is the one module that changes the node the play runs on rather than the fleet.

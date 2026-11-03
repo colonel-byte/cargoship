@@ -21,8 +21,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/k0sproject/dig"
 )
 
@@ -32,7 +32,7 @@ func newTestUpstream() *Upstream {
 			ID:                DistroUpstream,
 			BinaryDir:         "/usr/bin",
 			Binary:            "kubectl",
-			Config:            "/etc/kubernetes",
+			Config:            kubeadmConfigPath,
 			Data:              "/var/lib/kubelet",
 			PackageDir:        "/var/lib/kubernetes",
 			ServiceController: "kubelet",
@@ -44,7 +44,7 @@ func newTestUpstream() *Upstream {
 func TestUpstreamKubeconfigPath(t *testing.T) {
 	d := newTestUpstream()
 
-	got := d.KubeconfigPath(&cluster.ZarfHost{}, "/var/lib/kubelet")
+	got := d.KubeconfigPath(&cluster.Host{}, "/var/lib/kubelet")
 
 	if got != "/etc/kubernetes/admin.conf" {
 		t.Fatalf("KubeconfigPath() = %q, want %q", got, "/etc/kubernetes/admin.conf")
@@ -54,7 +54,7 @@ func TestUpstreamKubeconfigPath(t *testing.T) {
 func TestUpstreamKubectlCmdf(t *testing.T) {
 	d := newTestUpstream()
 
-	got := d.KubectlCmdf(&cluster.ZarfHost{}, "", "get nodes -o %s", "wide")
+	got := d.KubectlCmdf(&cluster.Host{}, "", "get nodes -o %s", "wide")
 
 	want := `env "KUBECONFIG=/etc/kubernetes/admin.conf" kubectl get nodes -o wide`
 	if got != want {
@@ -76,7 +76,7 @@ func TestUpstreamDistroCmdf(t *testing.T) {
 func TestUpstreamRunningVersionLookPathError(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{lookPathErr: errors.New("not found")}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	_, err := d.RunningVersion(host)
 
@@ -88,7 +88,7 @@ func TestUpstreamRunningVersionLookPathError(t *testing.T) {
 func TestUpstreamRunningVersionExecNotConnected(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{lookPathResult: "/usr/bin/kubelet"}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	_, err := d.RunningVersion(host)
 
@@ -122,7 +122,7 @@ func TestUpstreamGetClusterCIDR(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newTestUpstream()
-			dis := distro.ZarfDistro{}
+			dis := distro.Distro{}
 			dis.Spec.Config.Engine = tt.engine
 
 			got := d.GetClusterCIDR(dis)
@@ -135,7 +135,7 @@ func TestUpstreamGetClusterCIDR(t *testing.T) {
 
 func TestUpstreamGetClusterCIDRWithPodSubnet(t *testing.T) {
 	d := newTestUpstream()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		"config": dig.Mapping{
 			keyNetworking: dig.Mapping{
@@ -155,9 +155,9 @@ func TestUpstreamGetClusterCIDRWithPodSubnet(t *testing.T) {
 func TestUpstreamConfigureEngineWritesDesiredFiles(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{fileExist: map[string]bool{}}
-	host := cfg.attach(&cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker})
+	host := cfg.attach(&cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker})
 
-	if err := d.ConfigureEngine(context.Background(), host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{}); err != nil {
+	if err := d.ConfigureEngine(context.Background(), host, cluster.RuntimeMeta{}, distro.Distro{}); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v, want nil", err)
 	}
 
@@ -166,12 +166,60 @@ func TestUpstreamConfigureEngineWritesDesiredFiles(t *testing.T) {
 			t.Fatalf("ConfigureEngine() did not write %s, files = %+v", path, cfg.files)
 		}
 	}
+
+	// The runtime is not touched here. The packages that provide it are installed by the
+	// Initialize phases, after this one, so there is no containerd.service to enable yet -- the
+	// fake reports an unexpected service call as an error, which is what would have surfaced it.
+	if len(cfg.enabled)+len(cfg.started)+len(cfg.restarted) != 0 {
+		t.Fatalf("ConfigureEngine() touched services: enabled = %v, started = %v, restarted = %v",
+			cfg.enabled, cfg.started, cfg.restarted)
+	}
+}
+
+// TestEnsureRuntimeBringsContainerdUp is the gap that stopped an upstream apply dead: cargoship
+// installed containerd from the package and wrote its configuration, then ran `kubeadm init`
+// against a runtime nothing had started, which failed its own preflight on the CRI socket.
+//
+// Unlike rke2 and k3s, whose agent embeds a runtime and starts it, this one is cargoship's to
+// bring up. Bootstrap calls this, because that is the first point at which the package providing
+// the service is installed.
+func TestEnsureRuntimeBringsContainerdUp(t *testing.T) {
+	d := newTestUpstream()
+
+	stopped := &fakeHost{allowServiceChanges: true}
+	host := stopped.attach(&cluster.Host{Hostname: "control-1", Role: cluster.RoleController})
+	if err := d.ensureRuntime(context.Background(), host); err != nil {
+		t.Fatalf("ensureRuntime() error = %v, want nil", err)
+	}
+	if want := []string{containerdService}; !reflect.DeepEqual(stopped.enabled, want) {
+		t.Fatalf("enabled = %v, want %v: a node that reboots comes back without a runtime", stopped.enabled, want)
+	}
+	if want := []string{containerdService}; !reflect.DeepEqual(stopped.started, want) {
+		t.Fatalf("started = %v, want %v", stopped.started, want)
+	}
+
+	// A runtime that is already up is enabled and left alone: restarting it here would bounce
+	// the runtime under a kubelet on every host that rejoins.
+	running := &fakeHost{
+		serviceRunning:      true,
+		allowServiceChanges: true,
+	}
+	if err := d.ensureRuntime(context.Background(), running.attach(&cluster.Host{Hostname: "worker-1"})); err != nil {
+		t.Fatalf("ensureRuntime() error = %v, want nil", err)
+	}
+	if want := []string{containerdService}; !reflect.DeepEqual(running.enabled, want) {
+		t.Fatalf("enabled = %v, want %v", running.enabled, want)
+	}
+	if len(running.started)+len(running.restarted) != 0 {
+		t.Fatalf("started = %v, restarted = %v, want neither for a runtime already up",
+			running.started, running.restarted)
+	}
 }
 
 func TestUpstreamDesiredFilesRendersContainerdAndCrictl(t *testing.T) {
 	d := newTestUpstream()
 
-	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.Host{}, cluster.RuntimeMeta{}, distro.Distro{})
 
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -186,18 +234,18 @@ func TestUpstreamDesiredFilesRendersContainerdAndCrictl(t *testing.T) {
 
 func TestUpstreamDesiredFilesRendersRegistryHostsTOML(t *testing.T) {
 	d := newTestUpstream()
-	run := cluster.ZarfRuntimeMeta{
-		Registries: []cluster.ZarfClusterRegistries{
+	run := cluster.RuntimeMeta{
+		Registries: []cluster.Registries{
 			{
 				Name: "docker.io",
-				Proxy: &cluster.ZarfClusterRegistryProxy{
+				Proxy: &cluster.RegistryProxy{
 					URL: "mirror.example.com",
 				},
 			},
 		},
 	}
 
-	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.Host{}, run, distro.Distro{})
 
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -211,25 +259,25 @@ func TestUpstreamDesiredFilesRendersRegistryHostsTOML(t *testing.T) {
 func TestUpstreamDesiredFilesRendersKubeadmConfigPerRole(t *testing.T) {
 	tests := []struct {
 		name    string
-		host    *cluster.ZarfHost
+		host    *cluster.Host
 		wantHas []string
 		wantNot []string
 	}{
 		{
 			name:    "leader",
-			host:    &cluster.ZarfHost{Hostname: "leader-1", Metadata: cluster.ZarfHostMetadata{IsLeader: true}},
+			host:    &cluster.Host{Hostname: "leader-1", Metadata: cluster.HostMetadata{IsLeader: true}},
 			wantHas: []string{"kind: ClusterConfiguration", "kind: InitConfiguration", "kind: KubeletConfiguration"},
 			wantNot: []string{"kind: JoinConfiguration"},
 		},
 		{
 			name:    "joining controller",
-			host:    &cluster.ZarfHost{Hostname: "controller-2", Role: cluster.RoleController},
+			host:    &cluster.Host{Hostname: "controller-2", Role: cluster.RoleController},
 			wantHas: []string{"kind: JoinConfiguration", "kind: KubeletConfiguration", "controlPlane"},
 			wantNot: []string{"kind: ClusterConfiguration", "kind: InitConfiguration"},
 		},
 		{
 			name:    "worker",
-			host:    &cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker},
+			host:    &cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker},
 			wantHas: []string{"kind: JoinConfiguration", "kind: KubeletConfiguration"},
 			wantNot: []string{"kind: ClusterConfiguration", "kind: InitConfiguration", "controlPlane"},
 		},
@@ -239,7 +287,7 @@ func TestUpstreamDesiredFilesRendersKubeadmConfigPerRole(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newTestUpstream()
 
-			files, err := d.DesiredFiles(context.Background(), tt.host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+			files, err := d.DesiredFiles(context.Background(), tt.host, cluster.RuntimeMeta{}, distro.Distro{})
 
 			if err != nil {
 				t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -273,6 +321,17 @@ func TestUpstreamManagedDirsIncludesRegistryTLSDir(t *testing.T) {
 	}
 }
 
+// TestUpstreamConfigPathIsTheKubeadmConfigFile pins the half of the Distro contract upstream
+// used to break: ConfigPath is the engine's config file, as it is for rke2 and k3s, not the
+// directory holding it. A caller reading it got "Is a directory" back when this was /etc/kubernetes.
+func TestUpstreamConfigPathIsTheKubeadmConfigFile(t *testing.T) {
+	d := newTestUpstream()
+
+	if got := d.ConfigPath(); got != "/etc/kubernetes/kubeadm-config.yaml" {
+		t.Fatalf("ConfigPath() = %q, want the kubeadm config file", got)
+	}
+}
+
 func TestUpstreamCleanupPaths(t *testing.T) {
 	d := newTestUpstream()
 
@@ -301,7 +360,7 @@ func TestUpstreamJoinTokenPathAgentEmpty(t *testing.T) {
 
 func TestUpstreamManifestPaths(t *testing.T) {
 	d := newTestUpstream()
-	dis := distro.ZarfDistro{}
+	dis := distro.Distro{}
 	dis.Spec.Config.Manifests = []string{"/etc/kubernetes/manifests/cni.yaml"}
 
 	got := d.ManifestPaths(dis)
@@ -314,7 +373,7 @@ func TestUpstreamManifestPaths(t *testing.T) {
 func TestUpstreamManifestPathsEmpty(t *testing.T) {
 	d := newTestUpstream()
 
-	if got := d.ManifestPaths(distro.ZarfDistro{}); len(got) != 0 {
+	if got := d.ManifestPaths(distro.Distro{}); len(got) != 0 {
 		t.Fatalf("ManifestPaths() = %v, want empty", got)
 	}
 }
@@ -322,7 +381,7 @@ func TestUpstreamManifestPathsEmpty(t *testing.T) {
 func TestUpstreamStopControllerService(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{serviceRunning: true}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	if err := d.StopControllerService(host); err != nil {
 		t.Fatalf("StopControllerService() error = %v", err)
@@ -332,9 +391,46 @@ func TestUpstreamStopControllerService(t *testing.T) {
 func TestUpstreamStopWorkerService(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{serviceRunning: true}
-	host := cfg.attach(&cluster.ZarfHost{})
+	host := cfg.attach(&cluster.Host{})
 
 	if err := d.StopWorkerService(host); err != nil {
 		t.Fatalf("StopWorkerService() error = %v", err)
+	}
+}
+
+// TestUpstreamStopServiceToleratesAHostWithNoUnit is the reset an operator reaches for after an
+// apply failed half way.
+//
+// A worker whose packages were staged but never installed has no kubelet unit, and systemd exits
+// 5 with "Unit kubelet.service not loaded" for one, which failed the whole reset before the
+// uninstall could remove the files that *are* there. Both roles share one kubelet service here,
+// so both stops take the same guard.
+func TestUpstreamStopServiceToleratesAHostWithNoUnit(t *testing.T) {
+	d := newTestUpstream()
+
+	// Nothing running: the service was never installed, so there is nothing to stop and the
+	// fake would report an unexpected stop if one were attempted.
+	absent := &fakeHost{}
+	host := absent.attach(&cluster.Host{Hostname: "worker-1", Role: cluster.RoleWorker})
+	if err := d.StopWorkerService(host); err != nil {
+		t.Fatalf("StopWorkerService() error = %v, want nil for a host with no unit", err)
+	}
+	if err := d.StopControllerService(host); err != nil {
+		t.Fatalf("StopControllerService() error = %v, want nil for a host with no unit", err)
+	}
+	if len(absent.stopped) != 0 {
+		t.Fatalf("stopped = %v, want nothing attempted", absent.stopped)
+	}
+
+	// A running service is still stopped, which is the whole point of the call.
+	running := &fakeHost{
+		serviceRunning:      true,
+		allowServiceChanges: true,
+	}
+	if err := d.StopWorkerService(running.attach(&cluster.Host{Hostname: "worker-1"})); err != nil {
+		t.Fatalf("StopWorkerService() error = %v, want nil", err)
+	}
+	if want := []string{"kubelet"}; !reflect.DeepEqual(running.stopped, want) {
+		t.Fatalf("stopped = %v, want %v", running.stopped, want)
 	}
 }

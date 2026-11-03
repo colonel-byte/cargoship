@@ -99,7 +99,7 @@ func (o *packageSchemaSource) resolvePackage(ctx context.Context, cmd *cobra.Com
 		CachePath:            cachePath,
 		Architecture:         config.CLIArch,
 		VerificationStrategy: o.verify.toStrategy(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(),
 	})
 	if err != nil {
 		return "", "", "", noop, err

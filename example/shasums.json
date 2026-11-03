@@ -1,4 +1,10 @@
 {
+  "canal.yaml": {
+    "urls": [
+      "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/canal.yaml"
+    ],
+    "sha256": "07cb3eaab0cd11c96e6c223c02fc7651c6fc1283337004973ee763d81c2d14e7"
+  },
   "containerd.io-2.3.6-1.el9.aarch64.rpm": {
     "urls": [
       "https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.3.6-1.el9.aarch64.rpm"
@@ -11,6 +17,42 @@
     ],
     "sha256": "57445951673c94e937aa382ec5acf981f9bf1731545eb22ba620b80181b8877c"
   },
+  "containerd.io-2.4.1-2.el9.aarch64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.1-2.el9.aarch64.rpm"
+    ],
+    "sha256": "fb4f4c35d974d26ccce98eee9bd62a43ab95b6e62559bec493842ad9149c2137"
+  },
+  "containerd.io-2.4.1-2.el9.x86_64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.1-2.el9.x86_64.rpm"
+    ],
+    "sha256": "725168d015f5bf4b7faa78405786888527ce4368996bc7e83bee2c933f08aa70"
+  },
+  "containerd.io-2.4.2-2.el9.aarch64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.2-2.el9.aarch64.rpm"
+    ],
+    "sha256": "34416f488258345e9328fd815c5677f9fe35f0d9d4c63414cdcde345ee1665d2"
+  },
+  "containerd.io-2.4.2-2.el9.x86_64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.2-2.el9.x86_64.rpm"
+    ],
+    "sha256": "47133d0f38737e184a245ae4269ab64d8d45ad4875b650d02480329eeca2036e"
+  },
+  "containerd.io-2.4.2-3.el9.aarch64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.2-3.el9.aarch64.rpm"
+    ],
+    "sha256": "4adaf3aed0de56b4205b8a77e8cfb6b2f6c2af1a2e7a8dc169074e340a12792c"
+  },
+  "containerd.io-2.4.2-3.el9.x86_64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.2-3.el9.x86_64.rpm"
+    ],
+    "sha256": "00cc633c758248b58ef183da36f769b89f42969d61ea175bd8db2a3936424f82"
+  },
   "containerd.io_2.3.6-1~debian.13~trixie_amd64.deb": {
     "urls": [
       "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.3.6-1~debian.13~trixie_amd64.deb"
@@ -22,6 +64,42 @@
       "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.3.6-1~debian.13~trixie_arm64.deb"
     ],
     "sha256": "10c67eebc8e371f3b246fc35ff4a89c3ecf00d28e857c9659519050f47b4fb31"
+  },
+  "containerd.io_2.4.1-2~debian.13~trixie_amd64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.1-2~debian.13~trixie_amd64.deb"
+    ],
+    "sha256": "ebcffac9d869e111054abf235042afd5d908a9e1a009f9c99776428dd80f2620"
+  },
+  "containerd.io_2.4.1-2~debian.13~trixie_arm64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.1-2~debian.13~trixie_arm64.deb"
+    ],
+    "sha256": "03af94dfe2b8f291a9a50e37276c14e87ad418fd1625544ad52040989c39350b"
+  },
+  "containerd.io_2.4.2-2~debian.13~trixie_amd64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.2-2~debian.13~trixie_amd64.deb"
+    ],
+    "sha256": "a3e696cb98baafbb63895dc18b53f143088a2ead95c57820ac90dc5e1d61b05d"
+  },
+  "containerd.io_2.4.2-2~debian.13~trixie_arm64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.2-2~debian.13~trixie_arm64.deb"
+    ],
+    "sha256": "ec62600bdae178642eb3a6bc9817ff9ccd95a5891b6c3076ffbba11f3b4d1da6"
+  },
+  "containerd.io_2.4.2-3~debian.13~trixie_amd64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.2-3~debian.13~trixie_amd64.deb"
+    ],
+    "sha256": "454998e47186869c1dae0858e9f167a68e47eba7df5794b7206cc845615aeeba"
+  },
+  "containerd.io_2.4.2-3~debian.13~trixie_arm64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.2-3~debian.13~trixie_arm64.deb"
+    ],
+    "sha256": "fca3f3a279c0d2675e4a97eae4f0b192632d52c962c8f142fc4a77d3455c9e06"
   },
   "cri-tools-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -172,6 +250,12 @@
       "https://rpm.rancher.io/k3s/latest/common/centos/9/noarch/k3s-selinux-1.6-1.el9.noarch.rpm"
     ],
     "sha256": "1115a1223b0db998c7977c879f2a3a6f07a0c63240f68f6e3b665a7ae27c38f7"
+  },
+  "kube-flannel.yml": {
+    "urls": [
+      "https://github.com/flannel-io/flannel/releases/download/v0.28.10/kube-flannel.yml"
+    ],
+    "sha256": "393bdbce53eb50c8eb97dd513b218518b7d6e7985dc7b889be956e112a711084"
   },
   "kubeadm-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -689,6 +773,18 @@
     ],
     "sha256": "f3256691d70a5d2c9000a95bb4d337a29983d0b565cce3d361f185d4e3fec557"
   },
+  "kubeadm-1.35.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "1e555fd4d94404e43a3feed2678e98c044d373080c2ddda963e212d529ce7c18"
+  },
+  "kubeadm-1.35.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "e67973939fc36b5dc9e4a09c25c83dd0ffce8561b02878e622c161bbfb662255"
+  },
   "kubeadm-1.35.2-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.2-150500.1.1.aarch64.rpm"
@@ -857,6 +953,18 @@
     ],
     "sha256": "0f857b25db48cb01e5c69dc1d02a1fc02c125a0d04a5cd58440a4e9adb631f5a"
   },
+  "kubeadm-1.36.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "0d5a6d51b52b963792a273da144e0f3f070b2b4efea00ff2bc825d103ca51b39"
+  },
+  "kubeadm-1.36.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "a67771b15794e860a5f974801d4bc285ae841e7b26357eb567f368cb00d6c0b7"
+  },
   "kubeadm-1.37.0-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubeadm-1.37.0-150500.1.1.aarch64.rpm"
@@ -880,6 +988,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubeadm-1.37.1-150500.1.1.x86_64.rpm"
     ],
     "sha256": "2cc39a29b20b926eee305375e793b0e20ae207b2ace5a7fa175ebbc40ecd2cb8"
+  },
+  "kubeadm-1.37.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubeadm-1.37.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "08dcc89808c3bb9946e158e1f3816d26155b04f11435cb3aa870f2dcb831e6ca"
+  },
+  "kubeadm-1.37.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubeadm-1.37.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "c5fa621c0174a41b6ece53693a97307babe15c93526a3e5413cb41f0dd411c26"
   },
   "kubeadm_1.32.0-1.1_amd64.deb": {
     "urls": [
@@ -1397,6 +1517,18 @@
     ],
     "sha256": "e42b97536446611c56b647a43a26d0399a23aa513302edd22787eefde968f9d1"
   },
+  "kubeadm_1.35.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.10-1.1_amd64.deb"
+    ],
+    "sha256": "466c0f54147d08da458634a0c2d86193d243a435374e9fd9dff7b713dac7328f"
+  },
+  "kubeadm_1.35.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.10-1.1_arm64.deb"
+    ],
+    "sha256": "8b05fc264fb68a579f873e001100f555ed5bdbb9fb66bb7a3ae787a4396f414f"
+  },
   "kubeadm_1.35.2-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.2-1.1_amd64.deb"
@@ -1565,6 +1697,18 @@
     ],
     "sha256": "d08b7af27b50d539d91d9c5af69f73feff0e59455fe74d478e0a009cc2bdf260"
   },
+  "kubeadm_1.36.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.6-1.1_amd64.deb"
+    ],
+    "sha256": "fc0e20caeb13b9ae5fd77d695797641ec310da0160f95e4d7cb18993c5aeaafc"
+  },
+  "kubeadm_1.36.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.6-1.1_arm64.deb"
+    ],
+    "sha256": "0757d9046f8cf294fc215d60aba1c1895afbd17761e58a9e5bc0ab99b6c32342"
+  },
   "kubeadm_1.37.0-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubeadm_1.37.0-1.1_amd64.deb"
@@ -1588,6 +1732,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubeadm_1.37.1-1.1_arm64.deb"
     ],
     "sha256": "25d485eade81e05d63000ed2848781fd0127218c6e0e9ca66bfa62d39d41886e"
+  },
+  "kubeadm_1.37.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubeadm_1.37.2-1.1_amd64.deb"
+    ],
+    "sha256": "d1674bffcf80b36531375b35cf68d0dc23453a373c1b4537d78b6960732bc699"
+  },
+  "kubeadm_1.37.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubeadm_1.37.2-1.1_arm64.deb"
+    ],
+    "sha256": "20a237d3e4125980ccb9f806831c7982fc22d691be3da05c60df36daa52f8129"
   },
   "kubectl-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -2105,6 +2261,18 @@
     ],
     "sha256": "662c18b7df5872bc9ee969fb9aed9580f30aeec277bbec0e2da6f9f1b34d2b42"
   },
+  "kubectl-1.35.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "606d8de7f30558eca97f8d29ea3566b1f7d4da03e89ff94c4adc97d431f65257"
+  },
+  "kubectl-1.35.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "53a6ab5980686d6d736ade34df33bde952ae8e0e22a17f903c9b6a36dc7568da"
+  },
   "kubectl-1.35.2-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.2-150500.1.1.aarch64.rpm"
@@ -2273,6 +2441,18 @@
     ],
     "sha256": "9e406829bad036e45e08f6c49176f479c06d239cf64a96befa56f8b1b55a37fc"
   },
+  "kubectl-1.36.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "51842bcddaaed810f810ffa2ed4242450f8184a80f35d4df83c48ad2a9b8acef"
+  },
+  "kubectl-1.36.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f088a16a46a3bc3ea4ae75a0203072207137905c0dd1ac1cae8e6a9d5a2580fe"
+  },
   "kubectl-1.37.0-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubectl-1.37.0-150500.1.1.aarch64.rpm"
@@ -2296,6 +2476,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubectl-1.37.1-150500.1.1.x86_64.rpm"
     ],
     "sha256": "ee93977ad16b76038bc5362aae824e4539855057f4bb4443d792ee06cb2a9cfe"
+  },
+  "kubectl-1.37.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubectl-1.37.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "3c4757d2b30f7ea95166b4357660f729b55e339faec90709344f3b46eab21b9c"
+  },
+  "kubectl-1.37.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubectl-1.37.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "dbba14d962160c26c9526a90ffc4c98ea300d34083c286ca8ea4567f6275359e"
   },
   "kubectl_1.32.0-1.1_amd64.deb": {
     "urls": [
@@ -2813,6 +3005,18 @@
     ],
     "sha256": "704fbfac6a250f5ca4e0fe16f3b97b22674e195127f344efe4185955efead95a"
   },
+  "kubectl_1.35.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.10-1.1_amd64.deb"
+    ],
+    "sha256": "908b4aa516368210335d834b7cdcb785c784d93d11797d30f58c994a33ceab41"
+  },
+  "kubectl_1.35.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.10-1.1_arm64.deb"
+    ],
+    "sha256": "e8a009c8f6077f2f69001df1d6cc864e730542f93b87f6c92d74d9520a930236"
+  },
   "kubectl_1.35.2-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.2-1.1_amd64.deb"
@@ -2981,6 +3185,18 @@
     ],
     "sha256": "65cdaa8817b252ef493768ba8976b292eccddcfd3d5e9b6d24bbb67ec58027fb"
   },
+  "kubectl_1.36.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.6-1.1_amd64.deb"
+    ],
+    "sha256": "0588c400146c5287c40deaa007bdff8aecdf8a93d5ae0e374a99c61b76b8d83a"
+  },
+  "kubectl_1.36.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.6-1.1_arm64.deb"
+    ],
+    "sha256": "71c608ad4b35fc13c1580af5513ea4afc0c4da44feee7df8b1f0b758eb523d17"
+  },
   "kubectl_1.37.0-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubectl_1.37.0-1.1_amd64.deb"
@@ -3004,6 +3220,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubectl_1.37.1-1.1_arm64.deb"
     ],
     "sha256": "4e6ab8199a5ce617286630fe191abb3ed60ee05e347df919911703587caa870a"
+  },
+  "kubectl_1.37.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubectl_1.37.2-1.1_amd64.deb"
+    ],
+    "sha256": "e95d73aaf1da438cc8b287545b128fbe5e6a9f3723ecaa25eac1b42b8fe542ab"
+  },
+  "kubectl_1.37.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubectl_1.37.2-1.1_arm64.deb"
+    ],
+    "sha256": "e3554cd2c972636cd2bf40cded9204cc62ed36df2193d62d54f7840afe4e41df"
   },
   "kubelet-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -3521,6 +3749,18 @@
     ],
     "sha256": "d2d3ec8077f9cdce45166d921527a7e69efbf4b43822a6a4fcc19ceabcd15700"
   },
+  "kubelet-1.35.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "ae5587316a1f8825bb9f796e5554de5fa2e5f7ac893c39e3f9ef428f85041034"
+  },
+  "kubelet-1.35.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "a1f6d423ae5ab207ff532f1890fc9c4ab46bdd395363a8cdef05aca0f1815683"
+  },
   "kubelet-1.35.2-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.2-150500.1.1.aarch64.rpm"
@@ -3689,6 +3929,18 @@
     ],
     "sha256": "15b55de802c19f1c5b89c065086ad8feec3430fd58da836300f51688ecbbb63b"
   },
+  "kubelet-1.36.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7291382beb8d2c049d75ff9965523d90147c96bfa3b61aceaa141c609ddafda2"
+  },
+  "kubelet-1.36.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "7800b0753a05015545bf33d9175ac829081a9d202a9670c2eb8795765f209371"
+  },
   "kubelet-1.37.0-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubelet-1.37.0-150500.1.1.aarch64.rpm"
@@ -3712,6 +3964,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubelet-1.37.1-150500.1.1.x86_64.rpm"
     ],
     "sha256": "7682e706bbe6de00a113fe97279d222ec058484e1e7b9afa3a03e4745d659b56"
+  },
+  "kubelet-1.37.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubelet-1.37.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "6f408262174cf2e41b0bb0b341ee39ba27c5b730ed988e568190e8f95cc43401"
+  },
+  "kubelet-1.37.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubelet-1.37.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "914acd93199ccea3269f7340394f932de4307fb42cb8c3e162e928640359f1de"
   },
   "kubelet_1.32.0-1.1_amd64.deb": {
     "urls": [
@@ -4229,6 +4493,18 @@
     ],
     "sha256": "9880530936db9690855a661885a86d93a4a8767ddf661f93052271f72652aaed"
   },
+  "kubelet_1.35.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.10-1.1_amd64.deb"
+    ],
+    "sha256": "1bc0e63686add0154363f830e361c458bbf4aa2d166876375859dea5a2eeb5a5"
+  },
+  "kubelet_1.35.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.10-1.1_arm64.deb"
+    ],
+    "sha256": "a0c8e859d4e006df4c8b6e56486d6bdd3b32fc78f09db877156e3e354ea5ca6e"
+  },
   "kubelet_1.35.2-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.2-1.1_amd64.deb"
@@ -4397,6 +4673,18 @@
     ],
     "sha256": "946ae8079938f6be46ec48ff317005d03c87de09a5b557627f348a11c080e0ef"
   },
+  "kubelet_1.36.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.6-1.1_amd64.deb"
+    ],
+    "sha256": "bd58b235d36be657d318ea2e87c655a17c0fc4fd7cc828d5859c5f18af0c62ee"
+  },
+  "kubelet_1.36.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.6-1.1_arm64.deb"
+    ],
+    "sha256": "3bcb290c74e70068b782d8b4578fd3d64377c2f196d6ef50272c0e45c36934dc"
+  },
   "kubelet_1.37.0-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubelet_1.37.0-1.1_amd64.deb"
@@ -4420,6 +4708,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubelet_1.37.1-1.1_arm64.deb"
     ],
     "sha256": "c4337289f95727dbe8dea323570acc85969dc06d5c9fd531c3bc711ff4d0ce88"
+  },
+  "kubelet_1.37.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubelet_1.37.2-1.1_amd64.deb"
+    ],
+    "sha256": "f95d0b572a24563bb6e2a1a1f0e84a8a30a24e11c95068b2e81c294a0e1bee11"
+  },
+  "kubelet_1.37.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubelet_1.37.2-1.1_arm64.deb"
+    ],
+    "sha256": "33b3deb2cfc28acefe76ce3392777cc7568539c1e2d848e0a6dce14b7e0d432f"
   },
   "kubernetes-cni-1.6.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -9949,6 +10249,30 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.0%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s1/k3s"
+    ],
+    "sha256": "959c9310a6ab893958d1c95bc5d7609de9d7884630c8832180f059369b6dc331"
+  },
+  "v1.35.0%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c0b1673a1f2b740cb7bb08355c885efb6a4aa5c8022e5bb306c621c8c1492883"
+  },
+  "v1.35.0%2Bk3s3/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s3/k3s"
+    ],
+    "sha256": "cf99be0b6562545f7f9d2c35ee9f3f2933a42e6598762b93f5b38e072d5bff77"
+  },
+  "v1.35.0%2Bk3s3/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s3/k3s-arm64"
+    ],
+    "sha256": "9f45d76e52eb79a28a89336a34e5324c7e729409249422b37372ebb19198a228"
+  },
   "v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10069,6 +10393,18 @@
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
   },
+  "v1.35.1%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.1%2Bk3s1/k3s"
+    ],
+    "sha256": "e406ca6e47673d747ab4665c90a9285615fe082e2593343725ed043ae163abbf"
+  },
+  "v1.35.1%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.1%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c8d08bc38ad51be20ba531b3c412855c38d534f99cdff30fde6891b6f555a846"
+  },
   "v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10129,6 +10465,18 @@
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
   },
+  "v1.35.2%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.2%2Bk3s1/k3s"
+    ],
+    "sha256": "3ae8e35a62ac83e8e197c117858a564134057a7b8703cf73e67ce60d19f4a22b"
+  },
+  "v1.35.2%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.2%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "228809a7ef47d25c1bdbe746944931ec2fd2edf842b9cf50f1dd4f9ec2505b0e"
+  },
   "v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10188,6 +10536,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.3%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.3%2Bk3s1/k3s"
+    ],
+    "sha256": "e8661b03d0004e5792da6c2aae7f05de4c54711ee4228d0cce28e02c404626a6"
+  },
+  "v1.35.3%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.3%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "7c450b3b8c6101ae904c95c00db0f8fab275be1d3fc6533e8852eabc30327e0d"
   },
   "v1.35.3%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10309,6 +10669,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.4%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.4%2Bk3s1/k3s"
+    ],
+    "sha256": "080498ece50acdaf23fe5d736f41c616e276a89a4e5605a3f274f39b0fcee85b"
+  },
+  "v1.35.4%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.4%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "53eab87ef5601265a6cbd09756840646693e71db84ee8578884d8f7749345a73"
+  },
   "v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10368,6 +10740,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.5%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.5%2Bk3s1/k3s"
+    ],
+    "sha256": "267d18da7b3c837d82283f0588fb9031a8a6ff3c0dac772c260c40852ce515f6"
+  },
+  "v1.35.5%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.5%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "aced90bea6a4e025abef4cf6db7d8cc316a7d20a2b963f809852a37f2b9dbc03"
   },
   "v1.35.5%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10489,6 +10873,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.6%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.6%2Bk3s1/k3s"
+    ],
+    "sha256": "2b52a2c1ca6eb502e2a0ffa1a4cf79eef94875926577c1e43347ed292cc92432"
+  },
+  "v1.35.6%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.6%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "64c71644eb83d48f54da43c86ee8ba0ddff69db87e11d96a48fec7a965b1bc80"
+  },
   "v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10548,6 +10944,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.7%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.7%2Bk3s1/k3s"
+    ],
+    "sha256": "5fc25309c53031e0cf03f7ee85f6f60969381ff3649039ffda19e30f5c26947a"
+  },
+  "v1.35.7%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.7%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "4875d2a7dd7be60020ddcce44aed92d46d4d8d867f038bdceeca9a20558fa613"
   },
   "v1.35.7%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10609,6 +11017,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.8%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.8%2Bk3s1/k3s"
+    ],
+    "sha256": "12f81c9bb5b71e098a4f7a2d187e350902a9339a6c3d5e56c20a03f7a417e07f"
+  },
+  "v1.35.8%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.8%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "898476e008704289382377ef19946f23b511cf2678042cb5c8aef991e64f840a"
+  },
   "v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10668,6 +11088,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.9%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.9%2Bk3s1/k3s"
+    ],
+    "sha256": "897acb21cca57d477a211102251a6591450ce767344a9faaa121a1007ca9fa9a"
+  },
+  "v1.35.9%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.9%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "6176dd12c512e177af998e6035920f6283c5fdbd5adfdff85c103a7fdf2a00b5"
   },
   "v1.35.9%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10729,6 +11161,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.0%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.0%2Bk3s1/k3s"
+    ],
+    "sha256": "efa953454c8f7bf8d9d35c2dad2a76c9bdaac6860d60361629a3a2719009876b"
+  },
+  "v1.36.0%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.0%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "5a4e4e76ddacb7997384746992439b9a75ed930d8d2b9caf1938571d416d8a0e"
+  },
   "v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10788,6 +11232,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.1%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.1%2Bk3s1/k3s"
+    ],
+    "sha256": "a443db3fe9820cd93617ae67e4386d87c1514c1e96ceb30f4c2791c39065653c"
+  },
+  "v1.36.1%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.1%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "2240e9f7fd8cf36e9998d7ef18781975780d724b59408174618ec15b410891dc"
   },
   "v1.36.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -10909,6 +11365,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.2%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.2%2Bk3s1/k3s"
+    ],
+    "sha256": "65a55ec56c24eab44383086166ec620a491952b7e23941a49ddca6e8a4c4b4de"
+  },
+  "v1.36.2%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.2%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "1dc5fc17f15c28fa0a3f011cee28ad613f918c3d967a426e5a05d43ddb239817"
+  },
   "v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10968,6 +11436,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.3%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.3%2Bk3s1/k3s"
+    ],
+    "sha256": "2f98a9f8fe5782479ee2d54e70a1b10a7f6fd4cae8d38ed3098452dc6eed76b5"
+  },
+  "v1.36.3%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.3%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c9a209103f480f163b7c6a56f00862b4481927b284dc29a3716bb70d886691a8"
   },
   "v1.36.3%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -11029,6 +11509,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.4%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.4%2Bk3s1/k3s"
+    ],
+    "sha256": "835873f37245fc615f547a2fe2af9402a347875f13fa64a1f136de644955ea3f"
+  },
+  "v1.36.4%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.4%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "c920706346d5ad4e5cd3c7bf1bb09ce71ebe07fec829e513e40f1caf98aed8bb"
+  },
   "v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11088,6 +11580,18 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.5%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.5%2Bk3s1/k3s"
+    ],
+    "sha256": "d73847bcd3c5fccef0115b372e2f9a91f3032dc84bbf71518a4617565294d313"
+  },
+  "v1.36.5%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.5%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "135e34cb9e8a1cfae3cb55577789e93501efe7edc080a8b2630458a85b07721e"
   },
   "v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
@@ -11149,6 +11653,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.37.0%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.0%2Bk3s1/k3s"
+    ],
+    "sha256": "39eed8f53f277497dfc2542f66eab0ed68a94dfc598946dbebfb50366916c7a2"
+  },
+  "v1.37.0%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.0%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "9bc2c128a597bf7c10ee45df844f2838251ba53806f7673d7fea24a6cb1b6a99"
+  },
   "v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11209,6 +11725,18 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.37.1%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.1%2Bk3s1/k3s"
+    ],
+    "sha256": "92b94582eb7b34a8cf532e6006842b9ed215a6783cf56a3dd6271fd35243b2c0"
+  },
+  "v1.37.1%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.1%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "a1561ca4aef8b99f5588a840d4468ac39c8c1cd92470bbcb9634823fa221741a"
+  },
   "v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11268,5 +11796,77 @@
       "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v3.5.17/etcd-v3.5.17-linux-amd64.tar.gz!etcd-v3.5.17-linux-amd64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.5.17/etcd-v3.5.17-linux-amd64.tar.gz"
+    ],
+    "sha256": "e10f7eb202d4784b908716ca79b371b87af936c8bae819ead69025193798b36a"
+  },
+  "v3.5.17/etcd-v3.5.17-linux-arm64.tar.gz!etcd-v3.5.17-linux-arm64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.5.17/etcd-v3.5.17-linux-arm64.tar.gz"
+    ],
+    "sha256": "9d66a072f711221e60cb145c76915c5918fda632e7dfa0cd4770d80c2b6a45a7"
+  },
+  "v3.6.12/etcd-v3.6.12-linux-amd64.tar.gz!etcd-v3.6.12-linux-amd64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.12/etcd-v3.6.12-linux-amd64.tar.gz"
+    ],
+    "sha256": "de15ef4c2d7d1abaa0509015740a7463098b4f77a205cb0f52be677773393469"
+  },
+  "v3.6.12/etcd-v3.6.12-linux-arm64.tar.gz!etcd-v3.6.12-linux-arm64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.12/etcd-v3.6.12-linux-arm64.tar.gz"
+    ],
+    "sha256": "d86ec975439c909364a526079143796b21545e7ef9669d6c73b2174a215c8593"
+  },
+  "v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz!etcd-v3.6.14-linux-amd64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz"
+    ],
+    "sha256": "dba085f02f045d6fc0cd59c533ef2a8dc922ad82418c0e538b194525c715450b"
+  },
+  "v3.6.14/etcd-v3.6.14-linux-arm64.tar.gz!etcd-v3.6.14-linux-arm64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-arm64.tar.gz"
+    ],
+    "sha256": "200f5faebd4b6021388f386bfd5ca74f798c3634e47cf10598ccf4ba28e5b9ae"
+  },
+  "v3.6.6/etcd-v3.6.6-linux-amd64.tar.gz!etcd-v3.6.6-linux-amd64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.6/etcd-v3.6.6-linux-amd64.tar.gz"
+    ],
+    "sha256": "a2ba61c41f98defc6cca6ecfdf17bf6595965e799b24be46250f344f40427ae9"
+  },
+  "v3.6.6/etcd-v3.6.6-linux-arm64.tar.gz!etcd-v3.6.6-linux-arm64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.6/etcd-v3.6.6-linux-arm64.tar.gz"
+    ],
+    "sha256": "62220d3272bd40e27a8e4e94e79d99995565710fbee502e25afd1981d7128603"
+  },
+  "v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz!etcd-v3.6.7-linux-amd64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz"
+    ],
+    "sha256": "a14e39a212e828313da156dc1c261374247cbf32a20aa8aa15e12203318d7fef"
+  },
+  "v3.6.7/etcd-v3.6.7-linux-arm64.tar.gz!etcd-v3.6.7-linux-arm64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-arm64.tar.gz"
+    ],
+    "sha256": "538052f45e8efbe06f66ea1f387fcde5a8d6e1a3cedbae7b18574492de44ff38"
+  },
+  "v3.7.1/etcd-v3.7.1-linux-amd64.tar.gz!etcd-v3.7.1-linux-amd64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.7.1/etcd-v3.7.1-linux-amd64.tar.gz"
+    ],
+    "sha256": "ef161d78fbf2941e9d0e8ba4cc474b0ea2263c57cad8ee653730796e8f15f768"
+  },
+  "v3.7.1/etcd-v3.7.1-linux-arm64.tar.gz!etcd-v3.7.1-linux-arm64/etcdctl": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.7.1/etcd-v3.7.1-linux-arm64.tar.gz"
+    ],
+    "sha256": "a1fe34bce459d21caf7f291084c159a70b11b9570f9b00e4bd1cc0ee4ae9c47c"
   }
 }

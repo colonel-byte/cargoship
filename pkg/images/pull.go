@@ -47,10 +47,10 @@ import (
 
 	"github.com/colonel-byte/cargoship/internal/dns"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
-	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	orasCache "github.com/zarf-dev/zarf/src/pkg/oci/cache"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -69,6 +69,21 @@ type PullOptions struct {
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
 	ResponseHeaderTimeout time.Duration
+	// Source is a local store of images, such as a hauler store, consulted before the
+	// registry an image names. An image the source does not hold is pulled from its registry
+	// as usual, so a partial source works.
+	Source ImageSource
+}
+
+// ImageSource is a local, already-populated source of images -- content that was collected
+// elsewhere and carried in, rather than fetched from the registry the reference names.
+type ImageSource interface {
+	// HasImage reports whether the source holds ref, spelled as the image list spells it.
+	HasImage(ref string) bool
+	// Target resolves those same references to content.
+	Target() oras.ReadOnlyTarget
+	// Describe names the source in log lines.
+	Describe() string
 }
 
 type imagePullInfo struct {
@@ -175,55 +190,58 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	pullPlatforms := platformsForArches(opts.Arches)
 	imagesWithManifests := []ImageWithManifest{}
 	imagesInfo := []imagePullInfo{}
-	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
 
-	// This loop pulls the metadata from images with three goals
+	// This loop pulls the metadata from images with two goals
 	// - Get all the manifests from images that will be pulled so they can be returned to the function
 	// - discover if any images are sha'd to an index, if so error and inform user on the different available platforms
-	// - Mark any images that don't resolve so we can attempt to pull them from the daemon
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 	for _, image := range imagesWithOverride {
 		eg.Go(func() error {
-			repo := &orasRemote.Repository{}
-
-			ref, err := registry.ParseReference(image.overridden.Reference)
-			if err != nil {
-				return err
-			}
-			repo.Reference = ref
-			repo.Client = client
-
-			repo.PlainHTTP = opts.PlainHTTP
-			if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
-				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
-				// If the pings to localhost fail, it could be an image on the daemon
-				if err != nil {
-					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-					imageListLock.Lock()
-					defer imageListLock.Unlock()
-					dockerFallBackImages = append(dockerFallBackImages, image)
-					return nil
+			// A local source stands in for the registry entirely, so none of the transport
+			// setup below -- the credentials and the plain-HTTP sniffing -- applies to an
+			// image it holds.
+			var src oras.ReadOnlyTarget
+			if opts.Source != nil && opts.Source.HasImage(image.overridden.Reference) {
+				src = opts.Source.Target()
+			} else {
+				if opts.Source != nil {
+					l.Warn("image not held by the local image source, falling back to its registry",
+						"image", image.overridden.Reference, "source", opts.Source.Describe())
 				}
+				repo := &orasRemote.Repository{}
+
+				ref, err := registry.ParseReference(image.overridden.Reference)
+				if err != nil {
+					return err
+				}
+				repo.Reference = ref
+				repo.Client = client
+
+				repo.PlainHTTP = opts.PlainHTTP
+				if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
+					repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+					if err != nil {
+						return fmt.Errorf("unable to connect to the registry %s for image %s: %w",
+							repo.Reference.Host(), image.overridden.Reference, err)
+					}
+				}
+				src = repo
 			}
 
 			fetchOpts := oras.DefaultFetchBytesOptions
-			desc, b, err := oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
+			desc, b, err := oras.FetchBytes(ectx, src, image.overridden.Reference, fetchOpts)
 			if err != nil {
 				// TODO we could use the k8s library for backoffs here - https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/wait/backoff.go
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
-				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-				imageListLock.Lock()
-				defer imageListLock.Unlock()
-				dockerFallBackImages = append(dockerFallBackImages, image)
-				return nil
+				return fmt.Errorf("unable to find image %s: %w", image.overridden.Reference, err)
 			}
 
 			// If the image sha points to an index then error
-			if image.original.Digest != "" && isIndex(desc.MediaType) {
+			if image.original.Digest != "" && IsIndex(desc.MediaType) {
 				// Both index types can be marshalled into an ocispec.Index
 				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
 				var idx ocispec.Index
@@ -236,12 +254,12 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// non container image, and that single manifest is what every requested architecture gets.
 			// If it's not a manifest then we received an index and need to pull one manifest per platform.
 			fetched := []fetchedManifest{{desc: desc, body: b}}
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				fetched = fetched[:0]
 				for _, pullPlatform := range pullPlatforms {
 					platformOpts := oras.DefaultFetchBytesOptions
 					platformOpts.FetchOptions.TargetPlatform = &pullPlatform
-					platformDesc, platformBody, err := oras.FetchBytes(ectx, repo, image.overridden.Reference, platformOpts)
+					platformDesc, platformBody, err := oras.FetchBytes(ectx, src, image.overridden.Reference, platformOpts)
 					if err != nil {
 						return fmt.Errorf("failed to fetch image %s with architecture %s: %w", image.overridden.Reference, pullPlatform.Architecture, err)
 					}
@@ -254,7 +272,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			seen := map[digest.Digest]struct{}{}
 			for _, f := range fetched {
 				// extra validation before we marshall, this should never be true
-				if !isManifest(f.desc.MediaType) {
+				if !IsManifest(f.desc.MediaType) {
 					return fmt.Errorf("received unexpected mediatype %s", f.desc.MediaType)
 				}
 				// An index is allowed to point several platforms at the same manifest, and there is no
@@ -345,19 +363,32 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	l := logger.From(ctx)
 	var pullSrc oras.ReadOnlyTarget
 	var err error
-	repo := &orasRemote.Repository{}
-	repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
-	}
-	repo.PlainHTTP = opts.PlainHTTP
-	if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
-		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+	fromSource := opts.Source != nil && opts.Source.HasImage(imageInfo.registryOverrideRef)
+	if !fromSource {
+		repo := &orasRemote.Repository{}
+		repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
 		if err != nil {
-			return ocispec.Descriptor{}, fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
+			return ocispec.Descriptor{}, fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
 		}
+		repo.PlainHTTP = opts.PlainHTTP
+		if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
+			repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+			if err != nil {
+				return ocispec.Descriptor{}, fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
+			}
+		}
+		repo.Client = client
+		// The blob cache sits in front of the registry so a blob already pulled is not pulled
+		// again. A local source needs no cache -- it is already local, and caching its blobs a
+		// second time would double the disk a haul costs to build from.
+		localCache, cacheErr := oci.NewWithContext(ctx, opts.CacheDirectory)
+		if cacheErr != nil {
+			return ocispec.Descriptor{}, fmt.Errorf("failed to create oci formatted directory: %w", cacheErr)
+		}
+		pullSrc = orasCache.New(repo, localCache)
+	} else {
+		pullSrc = opts.Source.Target()
 	}
-	repo.Client = client
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
@@ -371,12 +402,10 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 		saveArgs = append(saveArgs, "architecture", imageInfo.manifestDesc.Platform.Architecture)
 	}
 	saveArgs = append(saveArgs, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
-	l.Info("saving image", saveArgs...)
-	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to create oci formatted directory: %w", err)
+	if fromSource {
+		saveArgs = append(saveArgs, "source", opts.Source.Describe())
 	}
-	pullSrc = orasCache.New(repo, localCache)
+	l.Info("saving image", saveArgs...)
 	var desc ocispec.Descriptor
 	err = retry.Do(
 		func() error {

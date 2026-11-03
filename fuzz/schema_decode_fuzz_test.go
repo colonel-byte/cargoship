@@ -29,7 +29,7 @@ import (
 // timestamp -- has to be handled by json.Marshal rather than by anything this package wrote, and the
 // bytes reaching it come straight from a file on disk with no shape assumed yet.
 func FuzzSchemaDecodeNoPanic(f *testing.F) {
-	f.Add([]byte("kind: ZarfCluster\n"))
+	f.Add([]byte("kind: Cluster\n"))
 	f.Add([]byte(""))
 	f.Add([]byte("1: one\ntrue: yes\n"))
 	f.Add([]byte("a: 99999999999999999999999999999999\n"))

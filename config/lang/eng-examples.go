@@ -133,9 +133,18 @@ $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --shasum 4a4f1f5eb0a1e3f2
 
 # Refuse to keep the package unless a signature validates against this key
 $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./public-key.pem
+`
 
-# Require a keyless signature from a known identity and OIDC issuer
-$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --certificate-identity signer@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com`
+	// CmdPackageImportExample import example
+	CmdPackageImportExample = `# Import a Skopeo oci-archive into the current directory
+$ cargoship import ./my-package.tar
+
+# Import an oci-archive into a specific output directory
+$ cargoship import ./my-package.tar --output ./build/
+
+# Import an extracted OCI directory layout
+$ cargoship import ./oci-layout-dir -o ./build/
+`
 
 	// CmdDistroSignExample sign example
 	CmdDistroSignExample = `# Sign an unsigned package
@@ -150,8 +159,19 @@ $ cargoship sign oci://ghcr.io/my-org/my-package:1.0.0 --signing-key ./private-k
 # Sign a package and publish directly to an OCI registry
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem --output oci://ghcr.io/my-org/signed-packages
 
-# Sign with a cloud KMS key
-$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key`
+# Sign with a key held in an environment variable rather than on disk
+$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key env://COSIGN_PRIVATE_KEY`
+
+	// CmdDistroVerifyExample verify example
+	CmdDistroVerifyExample = `# Verify a signed package against a public key
+$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --key ./cosign.pub
+
+# Verify a package in an OCI registry
+$ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
+
+
+# Match the signer identity by pattern instead
+`
 
 	// CmdSha256SumExample sha256sum example
 	CmdSha256SumExample = `# Checksum a local file
@@ -313,11 +333,11 @@ $ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer
 
 	// CmdSchemaExample schema example
 	CmdSchemaExample = `# Write the inventory schema next to an inventory file, for an editor to read
-$ cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+$ cargoship schema inventory -o ./cluster-v1alpha1-schema.json
 
 # Then point the inventory at it, as its first line
 $ head -1 ./inventory.yaml
-# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=./cluster-v1alpha1-schema.json
 
 # Compose in a package's own values, so spec.config.values completes too
 $ cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json
@@ -353,4 +373,12 @@ $ cargoship version --output yaml
 
 # Print it as JSON, for piping into jq
 $ cargoship version -o json`
+	// CmdRedactReceiptExample redact-receipt example
+	CmdRedactReceiptExample = `
+# Print a shareable copy of a run receipt
+$ cargoship redact-receipt ./apply-20260928-143000.json
+
+# Write one to a file, ready to attach to an issue
+$ cargoship redact-receipt ./apply-20260928-143000.json -o ./share.json
+`
 )

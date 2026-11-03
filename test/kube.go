@@ -21,14 +21,20 @@ import (
 	"testing"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// KubeClient builds a Kubernetes clientset from the kubeconfig at $KUBECONFIG.
-func (e2e *CargoE2ETest) KubeClient(t *testing.T) (*kubernetes.Clientset, error) {
+// NodesResource names the node resource for the dynamic client. The suite reads node
+// names, labels and two spec/status fields, and the typed clientset would link every
+// Kubernetes API group into the test binary for it.
+var NodesResource = schema.GroupVersionResource{Version: "v1", Resource: "nodes"}
+
+// KubeClient builds a Kubernetes client from the kubeconfig at $KUBECONFIG.
+func (e2e *CargoE2ETest) KubeClient(t *testing.T) (dynamic.Interface, error) {
 	t.Helper()
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if kubeconfig == "" {
@@ -38,11 +44,11 @@ func (e2e *CargoE2ETest) KubeClient(t *testing.T) (*kubernetes.Clientset, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build kube config: %w", err)
 	}
-	return kubernetes.NewForConfig(cfg)
+	return dynamic.NewForConfig(cfg)
 }
 
 // WaitForNodesReady polls the cluster until expectedCount nodes report Ready, or timeout elapses.
-func WaitForNodesReady(ctx context.Context, cs *kubernetes.Clientset, expectedCount int, timeout time.Duration) error {
+func WaitForNodesReady(ctx context.Context, cs dynamic.Interface, expectedCount int, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -50,11 +56,11 @@ func WaitForNodesReady(ctx context.Context, cs *kubernetes.Clientset, expectedCo
 	defer ticker.Stop()
 
 	for {
-		nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		nodes, err := cs.Resource(NodesResource).List(ctx, metav1.ListOptions{})
 		if err == nil {
 			ready := 0
-			for _, n := range nodes.Items {
-				if nodeIsReady(n) {
+			for i := range nodes.Items {
+				if nodeIsReady(&nodes.Items[i]) {
 					ready++
 				}
 			}
@@ -71,10 +77,21 @@ func WaitForNodesReady(ctx context.Context, cs *kubernetes.Clientset, expectedCo
 	}
 }
 
-func nodeIsReady(n corev1.Node) bool {
-	for _, cond := range n.Status.Conditions {
-		if cond.Type == corev1.NodeReady {
-			return cond.Status == corev1.ConditionTrue
+// nodeIsReady reads the Ready condition out of an unstructured node. A missing or
+// malformed status reads as not ready, which is the right answer while a node is
+// still coming up.
+func nodeIsReady(n *unstructured.Unstructured) bool {
+	conditions, found, err := unstructured.NestedSlice(n.Object, "status", "conditions")
+	if err != nil || !found {
+		return false
+	}
+	for _, c := range conditions {
+		cond, ok := c.(map[string]any)
+		if !ok {
+			continue
+		}
+		if cond["type"] == "Ready" {
+			return cond["status"] == "True"
 		}
 	}
 	return false

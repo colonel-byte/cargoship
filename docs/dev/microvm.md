@@ -1,0 +1,305 @@
+# A local VM fleet
+
+`mage dev:vmUp` brings up a fleet of Rocky 10 virtual machines on your own machine and writes a `ZarfCluster` inventory pointing at them, so that `cargoship prepare` and `cargoship apply` can be run against hosts with a real kernel. `mage dev:vmDown` takes it away again.
+
+It exists for the phases the [cluster e2e suite](e2e-tests.md) cannot reach. Those nodes are containers, and a container reports no SELinux, runs no fapolicyd and has no firewall of its own, so [`pkg/phase/21_prepare_selinux.go`](https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go) and its neighbours correctly do nothing there. Testing a change to any of them means a virtual machine. [choice-microvm-backend](../agent/choice-microvm-backend.md) records why this is plain qemu rather than Firecracker or libvirt.
+
+Nothing it does touches the host. It needs no root, starts no daemon, and changes no SELinux, firewall or kernel setting on your machine - which is the point, since the configuration under investigation is usually the host's own.
+
+## What you need
+
+`qemu-system-x86_64`, `qemu-img`, `mkfs.vfat`, `mcopy`, `ssh`, and a readable `/dev/kvm`. `mage dev:vmUp` reports every missing tool at once rather than failing part way through a bring-up.
+
+[qemu-setup](qemu-setup.md) is the full walkthrough: which package provides each of those on Fedora and Debian, how `/dev/kvm` access works without joining a group, what to do when your development machine is itself a virtual machine, and how to tell a node is really accelerated rather than emulated.
+
+## Bringing a fleet up
+
+```sh
+mage dev:vmUp -control=1 -worker=2
+mage dev:vmUp -control=1 -worker=2 -infra=3 -distro=rke2
+```
+
+Every flag has a default, so `mage dev:vmUp` on its own gives one control-plane node and two workers running k3s.
+
+| Flag             | Default | What it does                                                                                    |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `-control`       | `1`     | Control-plane nodes. The first is the leader, which is what the inventory's load balancer names |
+| `-worker`        | `2`     | Plain worker nodes                                                                              |
+| `-infra`         | `0`     | Infra nodes: workers carrying an `infra` profile of their own                                   |
+| `-ubuntuControl` | `0`     | Control-plane nodes running Ubuntu instead of Rocky                                             |
+| `-ubuntuWorker`  | `0`     | Worker nodes running Ubuntu instead of Rocky                                                    |
+| `-distro`        | `k3s`   | The engine the fleet is prepared for, `k3s`, `rke2` or `upstream`                               |
+
+`-distro` changes nothing about the guests. It decides only which of the leader's ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 while k3s multiplexes onto 6443 and upstream kubeadm has no supervisor port at all.
+
+Infra nodes join as workers -- the engine has no third role -- and what makes them infra is their profile, which [`pkg/phase/81_label_nodes.go`](https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go) turns into a `node-role.kubernetes.io/infra` label and which a cluster config can hang a per-profile concurrency off. They are worth asking for because every other host in the generated inventory has a profile that just restates its role, which leaves both of those mechanisms indistinguishable from the role they came from. Ask for some and the engine phases batch them separately: `starting agent (profile: infra)`.
+
+The first run downloads a pinned Rocky 10 GenericCloud image, roughly 520MiB, into `$XDG_CACHE_HOME/cargoship/microvm` and verifies its digest. That cache is outside the repository and survives a clean checkout; later runs reuse it.
+
+Each node is a copy-on-write overlay over that image, so a bring-up costs a few megabytes rather than another copy. Bring-up takes a minute or two: a node answers SSH about six seconds in, and the rest is cloud-init installing firewalld and fapolicyd. The fleet is only handed back once cloud-init has finished on every node, because the gates in phases 22 and 26 ask whether those services are *running* - a fleet returned any earlier looks healthy and has both of those phases silently skipping.
+
+```
+NODE  ROLE        STATE                 SSH              PRIVATE ADDRESS
+kc0   controller  running (pid 197656)  127.0.0.1:26241  10.73.156.11
+kw0   worker      running (pid 197673)  127.0.0.1:26242  10.73.156.12
+kw1   worker      running (pid 197714)  127.0.0.1:26243  10.73.156.13
+
+Inventory: build/microvm/dev/inventory.yaml
+```
+
+Then drive cargoship at it the way you would any other inventory. `prepare` and `apply` take a built package rather than the definition directory it was built from, so `create` comes first -- that is the one step that needs a network, and the one the fleet itself does not:
+
+```sh
+cargoship create ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1 -o ./build/
+cargoship prepare ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
+cargoship apply ./build/cargoship-rancher-rke2-multi-cni-cilium-multi-1.36.1-rke2r1.tar.zst --config build/microvm/dev/inventory.yaml --confirm
+```
+
+`prepare` is optional -- an apply runs the same preparation phases itself. Both change every host they are pointed at, which is what `--confirm` acknowledges; pass `--dry-run` instead to see what they would change.
+
+## What a bring-up is doing while it waits
+
+`dev:vmUp` blocks until the fleet is usable, and on a six-node fleet that is minutes. It reports what it is waiting on so a long wait does not read as a hung shell:
+
+```console
+$ mage dev:vmUp -control=3 -worker=3
+Bringing up 3 control-plane, 3 worker node(s) for k3s
+waiting for 6 node(s) to finish cloud-init, up to 15m0s
+  ready: kc0   1m4s
+  waiting: kc1 cloud-init is still running (30s)
+  ready: kc1   1m12s
+```
+
+The wait is for cloud-init rather than for sshd, which answers about six seconds in. The packages that open the fapolicyd and firewall gates are installed after that, so a fleet handed back at the earlier moment looks healthy and has both of those phases silently skipping -- see "Bringing a fleet up" above.
+
+The 15 minute budget covers the whole fleet, not each node: they are all started before any is waited on, so the wall time is the slowest node rather than the sum.
+
+**Interrupting the wait does not stop the fleet.** Each node is a detached qemu process, so `Ctrl-C` leaves them running and the inventory in place -- which is deliberate, since a node that is slow to configure is usually one worth logging into. `dev:vmList` shows what is there and `dev:vmDown` removes it; a later `dev:vmUp` refuses rather than adopting a fleet that is already up.
+
+**Memory is the limit worth planning.** Each node takes 4096MiB and 2 vCPUs by default, so six nodes want 24GiB and a bring-up that would not fit in `MemAvailable` is refused rather than left to the OOM killer. `-memory` and `-cpus` are how to fit a bigger fleet into a smaller machine:
+
+```sh
+mage dev:vmUp -control=3 -worker=3 -memory=2048
+```
+
+2048MiB is ample for the host-preparation phases. An rke2 control-plane node wants the default: three of them at 2048 will come up and then struggle once etcd and the control plane are both running.
+
+The e2e suite has no flags, so it reads the same setting from `CARGOSHIP_E2E_VM_MEMORY`. It matters more there than for `dev:vmUp`, because the suite brings its fleet up at the size the join walk needs rather than the size the apply walk uses - four nodes, so 16GiB at the default:
+
+```sh
+CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_VM_MEMORY=3072 mage test:endToEndCluster
+```
+
+A value that is not a positive number is ignored and leaves the default, since a fleet that does not fit is reported clearly by the bring-up anyway.
+
+## A mixed fleet
+
+The fleet runs Rocky 10 unless you ask for something else. Two counts opt in to Ubuntu nodes alongside them:
+
+```sh
+mage dev:vmUp -control=1 -worker=1 -ubuntuWorker=2 -distro=k3s
+mage dev:vmUp -control=0 -ubuntuControl=1 -ubuntuWorker=1 -distro=k3s   # Ubuntu only
+```
+
+Rocky nodes are `kc*` / `kw*` / `ki*`; Ubuntu nodes are `uc*` / `uw*`. `dev:vmList` shows which guest each node runs.
+
+This is what a single-distribution fleet cannot cover, and it is the gap [choice-microvm-backend](../agent/choice-microvm-backend.md) records as the reason the container matrix is still the only thing that covers family routing. With Ubuntu nodes in the fleet, apply routes for real:
+
+| On a Rocky node                                                                 | On an Ubuntu node                                                                                 |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Phase 21 installs `container-selinux`, because `getenforce` reports `Enforcing` | Phase 21 does nothing, because there is no SELinux                                                |
+| Phase 22 writes fapolicyd rules and restarts the service                        | Phase 22 does nothing: fapolicyd is not packaged for Ubuntu                                       |
+| Phase 26 selects the firewalld backend                                          | Phase 26 selects ufw                                                                              |
+| Phase 57 installs the staged RPMs through `dnf`                                 | Phase 57 declines it; 59 installs the binary the package ships for hosts it carries no `.deb` for |
+
+Each of those *doing nothing* on the other guest is the assertion worth having: the phase tests compare what ran against what the hosts report, so a gate that routes wrongly shows up as a mismatch rather than as a silent skip.
+
+Two things to know before reaching for one:
+
+*   **An Ubuntu node is installed from a binary, not from packages, and it does join.** The `rke2` examples ship RPMs for the Enterprise Linux family and a tarball for everything else, so phase 57 claims the Rocky nodes and phase 59 claims the Ubuntu one. Verified on a mixed fleet: no `dpkg` entry for rke2, a 133MB `/usr/local/bin/rke2`, `rke2-agent` active, the node `Ready`. The glibc constraint that makes the container fleet's Alpine node upload-only is about musl, and Ubuntu is not musl.
+
+    What that means for coverage is narrower than it looks. Phase 58 runs and has nothing to install, because no `k3s` or `rke2` example carries a `.deb`; the `upstream-*` packages are the only ones that do, so they are what exercises the APT path with real packages. A `k3s` or `rke2` fleet exercises the *routing* -- which phase claims which host -- rather than the apt install itself.
+*   **ufw is enabled by cloud-init**, which cargoship deliberately never does: bringing up a default-deny firewall over the SSH connection a phase is running on can cut it, so `pkg/firewall/ufw.go` applies only to a host whose ufw is already active. A stock cloud image ships it inactive, so without that the ufw path is not reachable at all.
+
+## Updating a pinned image
+
+Both guests are pinned by dated build and digest in `test/microvm/image.go`, not by a `latest` alias. The aliases move without warning, and a release that ships a broken build -- Rocky has published a GenericCloud image with no cloud-init in it -- is then something this package steps over by not moving, rather than something every developer hits at once. `TestEveryImageIsPinnedAndVerifiable` fails on a URL containing `latest`, so the pin cannot quietly become a moving one.
+
+Bumping one is three edits and a download. For **Rocky**, the dated builds and their checksums are published side by side:
+
+```sh
+curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/ | grep -o 'Rocky-10-GenericCloud-Base-[0-9.]*-[0-9.]*\.x86_64\.qcow2' | sort -u | tail -3
+curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/<file>.CHECKSUM
+```
+
+For **Ubuntu**, the dated directory is what to pin -- `releases/26.04/release/` is a pointer that moves:
+
+```sh
+curl -s https://cloud-images.ubuntu.com/releases/26.04/ | grep -o 'release-[0-9]\{8\}' | sort -u | tail -3
+curl -s https://cloud-images.ubuntu.com/releases/26.04/release-<date>/SHA256SUMS | grep amd64.img
+```
+
+Then update `file`, `url` and `sha256` on that image, and run the download so the verification actually sees the new build:
+
+```sh
+mage dev:vmImage -image=rocky        # or ubuntu, or all
+```
+
+`Fetch` checks the digest and then asks `guestfish` two things the digest cannot: that cloud-init is in the image at all, and -- for a guest declared `selinux: true` -- that it sets `SELINUX=enforcing`. Both have been wrong in a published build, and both fail late and unrecognisably if nobody looks: without cloud-init the seed is ignored and every node simply times out waiting for SSH, and with SELinux disabled the fleet comes up fine and every phase it exists to test quietly skips.
+
+A cached image whose digest no longer matches the pin is reported rather than silently replaced, naming the file to remove -- re-downloading half a gigabyte is not something to do behind somebody's back. After a bump, bring a fleet up and check the guest is what you think it is:
+
+```sh
+mage dev:vmUp -control=1 -worker=0
+mage dev:vmShell kc0        # then: cat /etc/os-release; getenforce
+```
+
+## Looking around, and tearing down
+
+```sh
+mage dev:vmList         # what is there and whether it is running
+mage dev:vmShell kc0    # a root shell on one node
+mage dev:vmDown         # every node stopped, every trace removed
+mage dev:vmImage        # fetch and verify the base image, start nothing
+```
+
+Each of those takes `-fleet` as well, and it matters once the e2e suite has been run against VMs: `CARGOSHIP_E2E_BACKEND=microvm` brings up a fleet named `e2e`, which the default `dev` fleet does not cover. A suite run killed before its own teardown leaves that fleet behind, and nothing else will remove it:
+
+```sh
+mage dev:vmList -fleet=e2e
+mage dev:vmDown -fleet=e2e
+```
+
+`dev:vmUp` refuses a fleet that is already up rather than adopting it, so every bring-up starts from a fresh overlay. Tear the old one down first. That refusal is deliberate: a node still carrying the state of a previous apply is the one thing that makes a phase failure impossible to reason about.
+
+Note that `mage dev:clean` does not remove a fleet. It removes built binaries, and deleting a live fleet's directory from under it would leave its qemu processes running with no record of them. `dev:vmDown` is what takes a fleet away.
+
+## How the networking works
+
+Each node has two interfaces, and which is which matters when reading a phase's output.
+
+`enp0s3` is the management interface, a qemu `user` (slirp) network. It carries the SSH forward your machine connects through, and outbound access to the internet - which phase 21 depends on, since it installs `container-selinux` by name and fails the run if it cannot. Every node has the same address on it, `10.0.2.15`, and no node can reach another there.
+
+`enp0s4` is the fleet's own layer 2 segment, carried between the qemu processes on a multicast socket. This is where the nodes see each other, on `10.73.<fleet>.<node>`, and it is what the inventory names as each host's `privateAddress` and `privateInterface`. Those two fields are set explicitly rather than discovered, because the default route is on the management interface: fact gathering would pick `10.0.2.15` for every host, and the firewall and `/etc/hosts` phases would faithfully distribute an address no peer can reach.
+
+The leader additionally forwards its engine API port to your machine, so `cargoship kube-config` and `kubectl` work from here rather than only from inside the fleet.
+
+## When a node does not come up
+
+A node that never answers is reported with the tail of its serial console, and the full log is at `build/microvm/dev/<node>/console.log`. That is the only record: qemu is detached, so nothing else captured its boot.
+
+A node whose cloud-init failed is reported with cloud-init's own explanation, from `cloud-init status --long`. Run that on the node yourself for more, and read `/var/log/cloud-init.log`.
+
+Host keys are regenerated on every bring-up, so host key checking is off and known-hosts is `/dev/null` for every connection the fleet makes. Set `SSH_KNOWN_HOSTS=""` when running `cargoship` against the inventory, for the same reason.
+
+## What the management node can and cannot reach
+
+Your machine reaches a node on exactly one path: the forwarded SSH port. That is enough for every phase cargoship drives over SSH, which is all of the host preparation, the uploads, the engine install and the join -- and it is all this fleet sets out to cover.
+
+It is not enough for the phases that talk to the Kubernetes API from the management node. Two independent things stop them:
+
+*   The inventory's `loadbalancer` is the leader's address on the fleet's private segment, because that is the address the other nodes join through. Nothing outside the qemu processes can route to that segment, so a phase that dials the load balancer from here gets a timeout.
+*   Once `--firewall` has run, firewalld's `public` zone -- which holds both of a node's interfaces -- allows ssh and nothing else. Node-to-node traffic works because the trusted zone admits the private addresses by source, so the leader's forwarded API port reaches the guest and is then dropped. This is the firewall behaving correctly.
+
+In practice that means `cargoship apply --label-nodes` fails at `Labeling nodes with their profile group`, and a kubeconfig written for this fleet does not work from here. Drive `kubectl` from inside a node instead:
+
+```sh
+mage dev:vmShell kc0
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml   # or /etc/rancher/k3s/k3s.yaml
+/var/lib/rancher/rke2/bin/kubectl get nodes -o wide
+```
+
+Note what that costs in the suite: `Test_ZZ1_ClusterHealthy` is the only step that asserts the cluster actually works, and it is skipped here because it needs an API route from the management node. A green run against this fleet therefore says the phases did their work, not that the cluster is healthy. Check that from inside a node when it matters.
+
+Giving the management node a routable path onto the private segment would mean a tap device or a bridge, which needs root and puts the fleet back under the host's firewall -- the two things [choice-microvm-backend](../agent/choice-microvm-backend.md) picked a multicast socket to avoid.
+
+## The engine's node IP
+
+Each node reports its own address on the private segment, which is what makes a multi-controller cluster possible here at all. That was not always true, and the story is worth knowing because this fleet is what found it.
+
+Cargoship used to render no `node-ip`, so the engine chose its own node address from whichever interface held the default route -- the management one. Every node then reported `10.0.2.15`, the same slirp address, and a three-controller cluster could not form: all three advertised the same etcd peer URL, so the second could never be added and the apply sat on `MemberAdd request timed out` until it gave up. A single controller hid it completely. The API server also could not reach a kubelet it believed was at an address shared with every other node, so `kubectl logs` and `kubectl exec` returned `502 Bad Gateway` and a Helm-installed CNI could fail outright, leaving every node `NotReady`.
+
+`ConfigureEngine` now writes `node-ip` from the host's `privateAddress`, beside the `node-name` it already wrote, so the fleet behaves the way any multi-homed fleet should:
+
+```console
+$ kubectl get nodes -o wide
+NAME   STATUS   ROLES                INTERNAL-IP
+kc0    Ready    control-plane,etcd   10.73.156.11
+kw0    Ready    <none>               10.73.156.12
+kw1    Ready    <none>               10.73.156.13
+```
+
+## Driving the OpenTofu provider at a fleet
+
+The provider takes the same hosts, so a fleet is also how `cargoship_cluster` gets exercised against real machines rather than one container. `mage dev:vmUp` writes a `ZarfCluster` inventory, and every field a `hosts` entry needs is in it:
+
+| Inventory             | `hosts` entry        | For the fleet                                        |
+| --------------------- | -------------------- | ---------------------------------------------------- |
+| `ssh.address`         | `address`            | Always `127.0.0.1` -- the forwards bind loopback     |
+| `ssh.port`            | `port`               | The per-node forwarded SSH port                      |
+| `ssh.user`            | `user`               | `root`                                               |
+| `ssh.keyPath`         | `key_path`           | The fleet key, under `build/microvm/<fleet>/key`     |
+| `hostname`            | `hostname`           | `kc0`, `kw0`, ...                                    |
+| `privateAddress`      | `private_address`    | The node's address on the private segment            |
+| `privateInterface`    | `private_interface`  | `enp0s4`                                             |
+| `role` / `profile`    | `role` / `profile`   | Unchanged                                            |
+
+```hcl
+resource "cargoship_cluster" "fleet" {
+  name          = "microvm-dev"
+  load_balancer = "10.73.156.11"            # the leader's private address
+  package       = "./build/cargoship-distro-amd64.tar.zst"
+
+  hosts = {
+    kc0 = {
+      address           = "127.0.0.1"
+      port              = 26241
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kc0"
+      private_address   = "10.73.156.11"
+      private_interface = "enp0s4"
+      role              = "controller"
+      profile           = "controller"
+    }
+    kw0 = {
+      address           = "127.0.0.1"
+      port              = 26242
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kw0"
+      private_address   = "10.73.156.12"
+      private_interface = "enp0s4"
+      role              = "worker"
+      profile           = "worker"
+    }
+  }
+}
+```
+
+Four things to get right, each of which is a property of the fleet rather than of the provider:
+
+*   **`key_path` must be absolute.** The inventory already holds an absolute path for this reason; OpenTofu runs from wherever you invoke it.
+*   **`load_balancer` is the leader's private address**, not a forwarded loopback port. It is the address the other nodes join through, and they reach each other on the private segment rather than through your machine.
+*   **Export `SSH_KNOWN_HOSTS=""`** before `tofu apply`. Host keys are regenerated on every bring-up, so a known-hosts entry is wrong by construction.
+*   **Leave `export_kubeconfig` and `label_nodes` off.** Both need the management node to reach the API server, which it cannot on a fleet whose load balancer is private -- see above. A provider run that sets either will fail there rather than in anything it is testing.
+
+The `hosts` key orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader. Keying the map by the fleet's own hostnames keeps that in step with how `mage dev:vmUp` numbers them.
+
+Bring the fleet up, generate the block from the inventory, and `tofu apply`. A removal is the other half: set a host's `state = "absent"` and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work [e2e-external-inventory](e2e-external-inventory.md) drives through the CLI. [tofu-provider](tofu-provider.md) covers building and running the provider itself.
+
+## The shipped k3s packages, and what is still unproven
+
+Two separate things used to stop a k3s cluster coming up, and only one of them is fixed.
+
+**Fixed: the join URL named the wrong port.** `ConfigureEngine` wrote `server: https://<host>:9345` for both engines. 9345 is rke2's -- it runs its supervisor separately -- while k3s multiplexes its supervisor onto 6443 and listens on nothing at 9345. `K3S` embeds the shared Rancher configuration without overriding that, so every k3s cluster was handed a join URL its own engine was not serving, and nothing could join. The port now comes from the distro.
+
+**Not fixed, and not retested since: the SELinux policy is staged and never installed.** Every `example/k3s-*` package sets `selinux: true` and ships `k3s-selinux-*.rpm` under `selector.package: binary`. The BIN upload phase moves staged files into place and runs no package manager, so that RPM lands in `/var/lib/rancher/k3s/rpm/` and the `%post` that loads the policy module never runs -- leaving a node with SELinux enforcing, an engine told to use it, and no policy for it. The `rke2` examples select `package: rpm` for the equivalent file, which is why `semodule -l` lists `rke2` there.
+
+So a k3s walk on this fleet is worth trying and is not yet known to pass. `mage test:endToEndClusterVM` still defaults to rke2 for that reason; `CARGOSHIP_E2E_DISTRO=k3s` is how to find out, and the node's journal is where the answer will be.
+
+## Limits
+
+The fleet runs Rocky and, when asked, Ubuntu. That covers the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and -- with `-ubuntuWorker` -- the Debian branch beside it, which is the pair apply routes between in most of the places it routes at all.
+
+It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer `selinux-policy`, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in `test/microvm/image.go` plus its cloud-init packages, so neither is hard -- they are simply not done. Run both suites.

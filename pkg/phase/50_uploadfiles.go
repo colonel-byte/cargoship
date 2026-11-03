@@ -35,15 +35,18 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/api"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
-	carch "github.com/colonel-byte/cargoship/pkg/oci/archive"
-	"github.com/containerd/containerd/v2/core/images/archive"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/containerd/platforms"
+	"github.com/google/go-containerregistry/pkg/name"
+	ggcrv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
@@ -53,17 +56,17 @@ import (
 type UploadFiles struct {
 	GenericPhase
 
-	hosts    cluster.ZarfHosts
-	disFiles v1alpha1.ZarfFiles
+	hosts    cluster.Hosts
+	disFiles v1alpha1.Files
 	// imgFiles holds the image tarballs to upload, keyed by the architecture of the host
 	// receiving them. An image pulled for several architectures is exported once per
 	// architecture the cluster actually runs, into its own directory under the tarball dir.
-	imgFiles map[api.Arch][]v1alpha1.ZarfFile
+	imgFiles map[api.Arch][]v1alpha1.File
 
 	// priorManifest holds each host's upload manifest as it was before this run touched it,
 	// captured in Prepare so Run can tell which images an upgrade no longer uploads (e.g. an
 	// image tag that was removed from the distro config, or renamed to a new version).
-	priorManifest map[*cluster.ZarfHost][]ManifestEntry
+	priorManifest map[*cluster.Host][]ManifestEntry
 }
 
 // Title for the phase
@@ -82,14 +85,14 @@ var (
 )
 
 // Prepare the phase
-func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	p.manager.Config = c
-	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return (len(h.Files) + len(d.Spec.Config.Files) + len(p.manager.Distro.Spec.Config.ImagesConfig.Images)) > 0
+	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.Host) bool {
+		return (len(h.Files) + len(d.Spec.Config.Files) + len(p.manager.Distro.Spec.Config.EnabledImages())) > 0
 	})
 	p.disFiles = p.manager.Distro.Spec.Config.Files
 
-	p.priorManifest = make(map[*cluster.ZarfHost][]ManifestEntry, len(p.manager.Config.Spec.Hosts))
+	p.priorManifest = make(map[*cluster.Host][]ManifestEntry, len(p.manager.Config.Spec.Hosts))
 	for _, h := range p.manager.Config.Spec.Hosts {
 		p.priorManifest[h] = p.readManifest(h)
 	}
@@ -100,16 +103,19 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 		return err
 	}
 
-	store := &carch.OciArchiveStore{Root: imagesPath, Src: src}
+	lp, err := layout.FromPath(imagesPath)
+	if err != nil {
+		return err
+	}
 
 	// Tarballs are built for the architectures the cluster actually runs rather than every
 	// architecture the package carries, so applying a multi-architecture package to a cluster of
 	// one architecture does not pay to export images nobody uploads.
 	arches := hostArches(ctx, p.manager.Config.Spec.Hosts)
-	p.imgFiles = make(map[api.Arch][]v1alpha1.ZarfFile, len(arches))
+	p.imgFiles = make(map[api.Arch][]v1alpha1.File, len(arches))
 
 	for _, arch := range arches {
-		if err := p.exportImagesForArch(ctx, src, store, arch); err != nil {
+		if err := p.exportImagesForArch(ctx, src, lp, arch); err != nil {
 			return err
 		}
 	}
@@ -122,7 +128,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 // Each architecture gets its own directory under the tarball dir. The tarball name is derived from
 // the image reference alone, so two architectures of the same image would otherwise be written to
 // the same path, and the exporter opens tarballs for appending.
-func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, store *carch.OciArchiveStore, arch api.Arch) error {
+func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, lp layout.Path, arch api.Arch) error {
 	compression := p.manager.Distro.Spec.Config.ImagesConfig.Compression
 	tarSuffix, err := p.manager.Distro.Spec.Config.ImagesConfig.TarballSuffix()
 	if err != nil {
@@ -136,22 +142,36 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 		return err
 	}
 
-	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
+	// shortcut: follows the chart entries' enabled key and not the engine's disable list, so
+	// a chart disabled through addons.disabled still has its images uploaded; upgrade when
+	// enabled and disable are reconciled -- see docs/agent/todo-chart-disable-image-gating.md
+	//
+	// EnabledImages, not imageConfig.images: a chart manifest the cluster disabled keeps
+	// its images in the package and has none of them exported or uploaded. Enablement is
+	// a property of the cluster rather than of a host, so it is resolved once here and
+	// the per-arch keying below is unaffected.
+	for _, i := range p.manager.Distro.Spec.Config.EnabledImages() {
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), tarSuffix)
 		tarballPath := filepath.Join(tarBallDir, tarBallName)
 
-		desc, err := src.Resolve(ctx, i)
+		tagged, err := src.Resolve(ctx, i)
 		if err != nil {
 			return err
 		}
 
-		desc, err = resolveImageManifest(ctx, src, desc, exportPlatform)
+		desc, err := resolveImageManifest(ctx, src, tagged, exportPlatform)
 		if err != nil {
 			return fmt.Errorf("failed to select a %s manifest for image %s: %w", arch, i, err)
 		}
 
-		desc.URLs = []string{
-			i,
+		img, err := layoutImage(lp, tagged, desc)
+		if err != nil {
+			return fmt.Errorf("failed to open the %s manifest for image %s: %w", arch, i, err)
+		}
+
+		ref, err := name.ParseReference(i)
+		if err != nil {
+			return fmt.Errorf("failed to parse image reference %s: %w", i, err)
 		}
 
 		writer, err := os.OpenFile(tarballPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -167,14 +187,7 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 			return err
 		}
 
-		err = archive.Export(
-			ctx,
-			store,
-			compressor,
-			archive.WithManifest(desc, i),
-			archive.WithPlatform(exportPlatform),
-		)
-		if err != nil {
+		if err := tarball.Write(ref, img, compressor); err != nil {
 			logger.From(ctx).Warn("failed to create archive", "error", err)
 		}
 
@@ -194,7 +207,7 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 			return err
 		}
 
-		p.imgFiles[arch] = append(p.imgFiles[arch], v1alpha1.ZarfFile{
+		p.imgFiles[arch] = append(p.imgFiles[arch], v1alpha1.File{
 			Name:        tarBallName,
 			Target:      p.manager.Distro.Spec.Config.ImagesConfig.Path,
 			TargetIsDir: true,
@@ -226,12 +239,38 @@ func imageExportPlatform(arch api.Arch) platforms.MatchComparer {
 	})
 }
 
+// ggcrHash converts an OCI descriptor digest into the hash type go-containerregistry addresses
+// blobs by.
+func ggcrHash(d digest.Digest) ggcrv1.Hash {
+	return ggcrv1.Hash{Algorithm: d.Algorithm().String(), Hex: d.Encoded()}
+}
+
+// layoutImage opens the manifest chosen for an architecture out of the OCI layout the images were
+// pulled into. tagged is the descriptor the image reference resolves to and resolved the manifest
+// picked out of it, which are the same descriptor for a single-architecture image.
+//
+// layout.Path resolves a digest against index.json alone and does not recurse, so a manifest that
+// is a child of a tagged index has to be reached through its parent rather than looked up directly.
+func layoutImage(lp layout.Path, tagged, resolved ocispec.Descriptor) (ggcrv1.Image, error) {
+	root, err := lp.ImageIndex()
+	if err != nil {
+		return nil, err
+	}
+	if tagged.Digest == resolved.Digest {
+		return root.Image(ggcrHash(resolved.Digest))
+	}
+	parent, err := root.ImageIndex(ggcrHash(tagged.Digest))
+	if err != nil {
+		return nil, err
+	}
+	return parent.Image(ggcrHash(resolved.Digest))
+}
+
 // resolveImageManifest picks the manifest to export for an image. An image pulled for a single
 // architecture is tagged as a manifest and comes back unchanged. An image pulled for several is
-// tagged as an index, so the manifest matching the platform is chosen out of it here rather than
-// left to archive.Export: the exporter filters an index's children by platform but still writes the
-// whole index blob into the tarball, which would leave the tarball referencing blobs for a platform
-// it deliberately left out.
+// tagged as an index, so the manifest matching the platform is chosen out of it here: a tarball
+// carries one image per architecture, and the tarball writer is handed a manifest rather than an
+// index so it never writes blobs for a platform this host will not run.
 func resolveImageManifest(ctx context.Context, src *oci.Store, desc ocispec.Descriptor, matcher platforms.MatchComparer) (ocispec.Descriptor, error) {
 	if !images.IsIndex(desc.MediaType) {
 		return desc, nil
@@ -296,7 +335,7 @@ func (p *UploadFiles) Run(ctx context.Context) error {
 // is scoped to the "image" category: the engine binary phases run after this one and haven't
 // recorded their own files into h.Metadata.UploadedFiles yet, so comparing the full manifest
 // here would misread their files as stale and delete a still-in-use engine binary.
-func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.Host) error {
 	current := ParseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
 	old := filterManifestByCategory(p.priorManifest[h], "image")
 	current = filterManifestByCategory(current, "image")
@@ -304,7 +343,7 @@ func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost
 	return nil
 }
 
-func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.Host) error {
 	l := logger.From(ctx)
 
 	files := slices.Concat(p.disFiles, p.manager.Distro.Spec.Config.OS.Files)
@@ -340,8 +379,8 @@ func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHos
 
 // distroFilesFor is the package's own files as this host needs them uploaded, holding only the
 // files a host running arch has any use for.
-func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.ZarfHost, arch api.Arch) ([]v1alpha1.ZarfFile, error) {
-	files := []v1alpha1.ZarfFile{}
+func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.Host, arch api.Arch) ([]v1alpha1.File, error) {
+	files := []v1alpha1.File{}
 
 	for i, f := range p.disFiles {
 		if ctx.Err() != nil {
@@ -354,13 +393,20 @@ func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.ZarfHost, a
 			logger.From(ctx).Debug("file is not for this host architecture", "file", filepath.Base(f.Target), "host", h, "arch", arch)
 			continue
 		}
-		target := f.Target
-		if f.Executable {
-			target = stageTempPath(h.IsWindows(), f.Target)
-			f.OriginalTarget = target
+		if f.Selector.Profile != "" && f.Selector.Profile != hostProfile(h) {
+			logger.From(ctx).Debug("file is not for this host profile", "file", filepath.Base(f.Target), "host", h, "profile", f.Selector.Profile)
+			continue
 		}
+		if !whenEnabled(ctx, p.manager.Values, f.Selector.When, filepath.Base(f.Target)) {
+			continue
+		}
+		// No staging here. These are the package's own files rather than an install
+		// method's, so no phase runs after this one to rename a staged file into place --
+		// see the comment in profileFilesForArch. An executable goes straight to its target,
+		// where uploadFile's permission handling already makes it executable.
+		target := f.Target
 		logger.From(ctx).Debug("need to upload from distro package", "source", filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)), "target", target)
-		files = append(files, v1alpha1.ZarfFile{
+		files = append(files, v1alpha1.File{
 			Name:           filepath.Base(f.Target),
 			Target:         target,
 			OriginalTarget: f.Target,
@@ -375,7 +421,7 @@ func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.ZarfHost, a
 	return files, nil
 }
 
-func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.Host) error {
 	arch, err := hostArch(h)
 	if err != nil {
 		return err
@@ -392,7 +438,7 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		}
 		logger.From(ctx).Debug("need to upload", "target", f.Destination)
 		if f.Data != "" {
-			err := p.uploadData(ctx, h, &v1alpha1.ZarfFile{
+			err := p.uploadData(ctx, h, &v1alpha1.File{
 				Name:   filepath.Base(f.Destination),
 				Target: f.Destination,
 				Data:   f.Data,

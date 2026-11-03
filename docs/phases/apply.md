@@ -33,7 +33,10 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - Installs container-selinux on systems that have SELinux enabled on them
     - Dry run: reported, not run
 1. Prepare hosts - Enterprise Linux support - Fapolicyd
-    - Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
+    - Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules and executable rules to /etc/fapolicyd/rules.d/32-cargoship-executable.rules
+    - Dry run: reported, not run
+1. Prepare hosts - Enterprise Linux support - SELinux policy
+    - Installs the policy modules, booleans and file contexts from spec.config.os.selinux on hosts running SELinux in enforcing mode, using semodule, setsebool and semanage fcontext
     - Dry run: reported, not run
 1. Updating hosts file for clusters nodes
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
@@ -73,6 +76,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - Dry run: reported, not run
 1. Upgrade Worker
     - If the remote node is a worker and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node by the set concurrency limit
+    - Dry run: reported, not run
+1. Install staged files
+    - Moves staged engine files into place on any host the initialize and upgrade phases did not install
     - Dry run: reported, not run
 1. Sync Registry Config Controller
     - If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially. Chart values are written in place instead, since the engine reconciles them without a restart

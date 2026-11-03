@@ -35,7 +35,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/api"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/internal/cfg"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
@@ -68,7 +68,7 @@ type manifestCache struct {
 }
 
 // AnnotationsFromMetadata extracts OCI manifest annotations from Zarf package metadata.
-func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string {
+func AnnotationsFromMetadata(metadata distro.Metadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,

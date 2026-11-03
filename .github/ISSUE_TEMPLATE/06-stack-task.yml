@@ -1,0 +1,46 @@
+name: Stack-layer task
+description: One layer of a stacked pull request. For maintainers splitting work that already has a parent issue.
+title: "task: "
+labels:
+  - stack-task
+body:
+  - type: markdown
+    attributes:
+      value: Open the parent issue first. The parent describes the whole change; this issue describes one layer of the stack and is closed by that layer's pull request alone.
+  - type: input
+    id: parent
+    attributes:
+      label: Parent issue
+      description: The issue describing the whole change. This subissue is created off it.
+      placeholder: "#123"
+    validations:
+      required: true
+  - type: input
+    id: layer
+    attributes:
+      label: Which layer
+      description: Position in the stack, bottom first.
+      placeholder: 2 of 5
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: What this layer changes
+      description: What lands in this layer and what is deliberately left to a later one. Name the packages or paths.
+    validations:
+      required: true
+  - type: input
+    id: below
+    attributes:
+      label: Depends on
+      description: The subissue or branch immediately below this one in the stack. Leave blank for the bottom layer.
+      placeholder: "#124"
+  - type: checkboxes
+    id: closing
+    attributes:
+      label: Closing behaviour
+      description: Only the top-most pull request in the stack closes the parent, so the parent stays open until the whole change has landed.
+      options:
+        - label: This layer's pull request closes this subissue and nothing else
+        - label: This is the top-most layer, and its pull request also closes the parent

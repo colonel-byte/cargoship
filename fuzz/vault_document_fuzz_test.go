@@ -20,7 +20,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
@@ -232,8 +232,8 @@ func (s documentShape) documentHolding(value string) []byte {
 	item := strings.Repeat(unit, 3) + "  "
 
 	var b strings.Builder
-	b.WriteString("apiVersion: zarf.dev/v1alpha1\n")
-	b.WriteString("kind: ZarfCluster\n")
+	b.WriteString("apiVersion: colonel-byte.dev/v1alpha1\n")
+	b.WriteString("kind: Cluster\n")
 	b.WriteString("metadata:\n")
 	b.WriteString(unit + "name: fuzz\n")
 	b.WriteString("spec:\n")
@@ -321,7 +321,7 @@ func docWithPlaintext(value string) []byte {
 // The configuration type is not the route here, although it is everywhere the document under test
 // is a configuration. A fuzzed document is whatever YAML it happens to be, and a mapping holding a
 // key the configuration has no field for takes the rest of that mapping down with it: an auth
-// written "{0, pass: hunter2}" decodes to an empty ZarfClusterRegistryAuth, credential and all. A
+// written "{0, pass: hunter2}" decodes to an empty RegistryAuth, credential and all. A
 // decode into the configuration therefore cannot say what EncryptAtPath wrote, which is the one
 // thing the caller needs to know.
 //

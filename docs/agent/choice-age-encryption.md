@@ -14,7 +14,7 @@ That makes coexistence nearly free, so it was chosen over a migration:
 - No mode flag, so no command whose meaning depends on an invocation the reader of the file cannot see.
 - No migration deadline, so a legacy vaulted credential can stay as it is indefinitely.
 
-`cluster.IsEncrypted` (`api/zarf.dev/v1alpha1/cluster/spec.go`) is the union of the two checks and is what non-crypto code asks. `AgeHeader` is spelled out there rather than taken from `filippo.io/age/armor`, so the package defining the public API types stays free of crypto dependencies; `TestAgeHeaderMatchesArmorHeader` pins the constant to `armor.Header` so the two cannot drift.
+`cluster.IsEncrypted` (`api/colonel-byte.dev/v1alpha1/cluster/spec.go`) is the union of the two checks and is what non-crypto code asks. `AgeHeader` is spelled out there rather than taken from `filippo.io/age/armor`, so the package defining the public API types stays free of crypto dependencies; `TestAgeHeaderMatchesArmorHeader` pins the constant to `armor.Header` so the two cannot drift.
 
 The `vault` command group keeps its name despite now covering both formats. Renaming it would break every operator's scripts to fix a word; the group's `Long` string says what it covers instead.
 
@@ -60,7 +60,7 @@ What the field does buy, given that restriction, is the thing the probe section 
 
 ### Placement, and the shape of the block
 
-It sits in `metadata`, beside `name`, rather than in `spec`. `spec` is the desired state an apply acts on, and this is a record of something that already happened to the file; putting it there would invite exactly the reading -- "this is configuration, so something must consume it" -- that the restriction above forbids. The types are in `api/zarf.dev/v1alpha1/cluster/spec.go` as plain strings, keeping that package crypto-free the same way `AgeHeader` does.
+It sits in `metadata`, beside `name`, rather than in `spec`. `spec` is the desired state an apply acts on, and this is a record of something that already happened to the file; putting it there would invite exactly the reading -- "this is configuration, so something must consume it" -- that the restriction above forbids. The types are in `api/colonel-byte.dev/v1alpha1/cluster/spec.go` as plain strings, keeping that package crypto-free the same way `AgeHeader` does.
 
 There is a section per format (`encryption.age`) rather than one flat list, so a document holding both Ansible Vault and age credentials has somewhere to say so later if that ever becomes worth saying. Only age needs a record today: a vaulted value is read with the one password the operator already supplies by name, so there is nothing about it a file could usefully record.
 
@@ -92,7 +92,7 @@ It reads the prior claim from the document as it was read, not as it will be wri
 
 ### Compatibility
 
-`ZarfClusterMetadata` carries `additionalProperties: false`, so a document holding this block fails `cargoship validate` on a binary built before it existed. An apply is unaffected -- `clustercfg.Parse` is a non-strict unmarshal, and the generated schema is used only by `cargoship validate` (`cmd/misc_validate.go`). Both copies of the schema have to be regenerated together with `mage generate:schema`, since CI does not run the generator.
+`Metadata` carries `additionalProperties: false`, so a document holding this block fails `cargoship validate` on a binary built before it existed. An apply is unaffected -- `clustercfg.Parse` is a non-strict unmarshal, and the generated schema is used only by `cargoship validate` (`cmd/misc_validate.go`). Both copies of the schema have to be regenerated together with `mage generate:schema`, since CI does not run the generator.
 
 ## Why encryption picks a format but decryption never does
 

@@ -41,7 +41,6 @@ const (
 	flagWorkConcurrency     = "work-concurrency"
 	flagHosts               = "hosts"
 	flagFirewall            = "firewall"
-	flagFAPolicyd           = "fapolicyd"
 	flagLabelNodes          = "label-nodes"
 	flagAllowUnmanagedNodes = "allow-unmanaged-nodes"
 	flagUpdateKubeConfig    = "update-kubeconfig"
@@ -85,9 +84,8 @@ type common struct {
 // no flag at all, or the module overrules whatever the cargoship configuration file set, which is
 // the opposite of an operator saying nothing.
 type hostUpdates struct {
-	Hosts     *bool `json:"hosts"`
-	Firewall  *bool `json:"firewall"`
-	FAPolicyd *bool `json:"fapolicyd"`
+	Hosts    *bool `json:"hosts"`
+	Firewall *bool `json:"firewall"`
 }
 
 // verification is the package signature surface the modules expose.
@@ -163,11 +161,10 @@ func (c *command) repeated(name string, values []string) {
 	}
 }
 
-// updates adds the three host preparation switches.
+// updates adds the two host preparation switches.
 func (c *command) updates(u hostUpdates) {
 	c.boolFlag(flagHosts, u.Hosts)
 	c.boolFlag(flagFirewall, u.Firewall)
-	c.boolFlag(flagFAPolicyd, u.FAPolicyd)
 }
 
 // verify adds the package signature flags.

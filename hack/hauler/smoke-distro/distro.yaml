@@ -1,0 +1,61 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# A definition that declares exactly what ../rke2-cilium-smoke.yaml collects, so the pair can
+# be built with nothing fetched over the network. Every reference, URL, shasum and target below
+# is copied from example/rke2-multi-cni-cilium/v1_36/v1.36.5-rke2r1 rather than invented, so a
+# build exercises the same matching a build of that example would.
+#
+# This is hand-written and is not part of the generated example tree. It targets amd64 alone,
+# which is what makes a one-platform haul enough.
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/distro-v1alpha1-schema.json
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
+metadata:
+  name: hauler-smoke-rke2-cilium
+  version: 1.36.5-rke2r1
+  architecture: amd64
+spec:
+  type: rke2
+  version: 1.36.5-rke2r1
+  config:
+    os:
+      files:
+        # The one file entry in the example with no architecture selector. The shasum is the
+        # example's own, and it is what lets the file be taken from a store at all: cargoship
+        # refuses store content for a file it cannot verify.
+        - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
+          shasum: cb05b41bc3c3032392aec81258478a54fd121c563dfd2688153d5b2b925d69fc
+    imageConfig:
+      compression: none
+      path: /var/lib/rancher/rke2/agent/images
+      images:
+        - docker.io/rancher/mirrored-pause:3.10.2
+        - docker.io/rancher/klipper-lb:v0.4.17
+    engine:
+      config:
+        cluster-cidr: 10.42.0.0/16
+        cluster-domain: cluster.local
+      manifest:
+        # The chart entry exists so the build reaches an image through Config.AllImages rather
+        # than through the flat list above. A build that found the flat images and missed this
+        # one would still look like it worked.
+        rke2-cilium:
+          images:
+            - docker.io/rancher/mirrored-cilium-certgen:v0.4.11
+          values: |-
+            kubeProxyReplacement: true

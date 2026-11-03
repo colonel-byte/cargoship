@@ -49,11 +49,21 @@ func TestDetectKind(t *testing.T) {
 	}{
 		{
 			name: "inventory",
-			doc:  "kind: ZarfCluster\n",
+			doc:  "kind: Cluster\n",
 			want: KindInventory,
 		},
 		{
 			name: "package",
+			doc:  "kind: Distro\n",
+			want: KindPackage,
+		},
+		{
+			name: "deprecated inventory kind",
+			doc:  "kind: ZarfCluster\n",
+			want: KindInventory,
+		},
+		{
+			name: "deprecated package kind",
 			doc:  "kind: ZarfDistro\n",
 			want: KindPackage,
 		},
@@ -99,8 +109,8 @@ func TestValidatorAcceptsAValidInventory(t *testing.T) {
 	require.Equal(t, KindInventory, v.Kind())
 
 	doc, err := Decode([]byte(`
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: demo
 spec:
@@ -114,13 +124,60 @@ spec:
 	require.NoError(t, v.Validate("inventory.yaml", doc))
 }
 
+// TestValidatorAcceptsTheDeprecatedSpelling pins the transition window on the schema side.
+// An inventory written against zarf.dev/v1alpha1 with kind ZarfCluster must keep validating
+// after the move, because the generated enums carry both spellings.
+func TestValidatorAcceptsTheDeprecatedSpelling(t *testing.T) {
+	v, err := NewValidatorFor(KindInventory)
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		name       string
+		apiVersion string
+		kind       string
+	}{
+		{
+			name:       "deprecated group and kind",
+			apiVersion: "zarf.dev/v1alpha1",
+			kind:       "ZarfCluster",
+		},
+		{
+			name:       "deprecated group with the current kind",
+			apiVersion: "zarf.dev/v1alpha1",
+			kind:       "Cluster",
+		},
+		{
+			name:       "current group with the deprecated kind",
+			apiVersion: "colonel-byte.dev/v1alpha1",
+			kind:       "ZarfCluster",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			doc, err := Decode([]byte(`
+apiVersion: ` + tc.apiVersion + `
+kind: ` + tc.kind + `
+metadata:
+  name: demo
+spec:
+  config:
+    loadbalancer: lb.example.com
+  hosts:
+    - hostname: node1
+      role: controller
+`))
+			require.NoError(t, err)
+			require.NoError(t, v.Validate("inventory.yaml", doc))
+		})
+	}
+}
+
 func TestValidatorReportsEveryProblemSorted(t *testing.T) {
 	v, err := NewValidatorFor(KindInventory)
 	require.NoError(t, err)
 
 	doc, err := Decode([]byte(`
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: demo
 spec:

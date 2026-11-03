@@ -14,7 +14,7 @@ Adding a host that is already there is idempotent. Removing a host that should h
 
 ## The old state is not a substitute for a connection
 
-The tempting way to supply the missing connection details is to take them from the provider's prior state and generate a small config to run `install reset` against. It should not be built.
+The tempting way to supply the missing connection details is to take them from the provider's prior state and generate a small config to run `reset` against. It should not be built.
 
 A state file records what was true after the last successful apply, and reset is destructive. Between then and now the machine may have been rebuilt, re-addressed, or returned to a DHCP pool, and none of that produces a diff the provider would see, because the resource is being removed and there is nothing left to refresh against. The address is the least stable identifier a host has and the one reset would connect through, so the target becomes whatever machine currently answers there. Other kinds of state drift surface as a plan diff somebody reads; this one surfaces as a wiped machine.
 
@@ -24,7 +24,7 @@ Making removals depend on state would also settle the separate question of keepi
 
 ## The phases cannot express a subset anyway
 
-Independent of where the contents come from, there is no config that makes `install reset` remove one host from a live cluster. `DeleteCommon.Prepare` finds its leader by scanning `Spec.Hosts` for a host already running the controller service, so a config holding only the removed host has no leader: both delete phases report `ShouldRun() == false` and the node is never deleted, while `UninstallEngine` runs anyway. Adding a live controller so a leader can be found is worse, because `UninstallEngine.Prepare` sets `p.hosts = p.manager.Config.Spec.Hosts` with no filter and uninstalls the engine from it too.
+Independent of where the contents come from, there is no config that makes `reset` remove one host from a live cluster. `DeleteCommon.Prepare` finds its leader by scanning `Spec.Hosts` for a host already running the controller service, so a config holding only the removed host has no leader: both delete phases report `ShouldRun() == false` and the node is never deleted, while `UninstallEngine` runs anyway. Adding a live controller so a leader can be found is worse, because `UninstallEngine.Prepare` sets `p.hosts = p.manager.Config.Spec.Hosts` with no filter and uninstalls the engine from it too.
 
 Neither is a bug in reset. The unfiltered list is exactly right when the instruction is "tear down this whole cluster". The gap is that no action separates the hosts it targets from the hosts that supply cluster access, which is tracked as #339.
 

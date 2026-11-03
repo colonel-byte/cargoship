@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/colonel-byte/cargoship/security/advisories/new
+    about: Report privately through a draft advisory. Do not open a public issue.
+  - name: Documentation
+    url: https://colonel-byte.github.io/cargoship/
+    about: The Cargoship book - commands, phases, schemas, and the developer guides.

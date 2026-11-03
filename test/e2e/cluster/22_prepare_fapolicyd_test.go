@@ -15,13 +15,20 @@
 package cluster
 
 import (
+	"slices"
+
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // prepareFapolicy covers phase/22_prepare_fapolicyd.go. Like the SELinux phase it is
 // gated on what the hosts run: it only fires where fapolicyd is running and the package
-// carries a rule set. The assertion is that the gate matches the hosts, and that the rule
-// file lands where it fires.
+// either carries a rule set or declares an executable file, which the phase writes a
+// generated allow rule for. The assertion is that the gate matches the hosts, and that
+// each rule file lands where the thing that produces it is present.
+//
+// The generated rules are only reachable with an executable in the package, which on the
+// rke2 package means the etcdctl tool writeInventories enables: see the comment there.
 //
 // Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) prepareFapolicy() {
@@ -33,12 +40,17 @@ func (s *phaseWalk) prepareFapolicy() {
 			fapolicyd++
 		}
 	}
-	carriesRules := s.harness.manager.Distro.Spec.Config.OS.FAPolicyd != ""
+	cfg := s.harness.manager.Distro.Spec.Config
+	carriesRules := cfg.OS.FAPolicyd != ""
+	executables := slices.Concat(cfg.Files, cfg.OS.Files).Filter(func(f *v1alpha1.File) bool {
+		return f.Executable && f.Target != ""
+	})
 
 	p := &phase.PrepareFapolicy{}
 	s.runPhase(p)
-	s.Require().Equalf(fapolicyd > 0 && carriesRules, ran(p),
-		"phase ran=%v with %d fapolicyd hosts and rules=%v", ran(p), fapolicyd, carriesRules)
+	s.Require().Equalf(fapolicyd > 0 && (carriesRules || len(executables) > 0), ran(p),
+		"phase ran=%v with %d fapolicyd hosts, rules=%v and %d executables",
+		ran(p), fapolicyd, carriesRules, len(executables))
 
 	if !ran(p) {
 		return
@@ -48,8 +60,25 @@ func (s *phaseWalk) prepareFapolicy() {
 		if !host.ServiceIsRunning(s.ctx, phase.FAPOLICYD) {
 			continue
 		}
-		s.Require().Truef(host.FileExist(phase.FAPolicydRuleFile),
-			"%s: no rule file at %s", host, phase.FAPolicydRuleFile)
+		if carriesRules {
+			s.Require().Truef(host.FileExist(phase.FAPolicydRuleFile),
+				"%s: no rule file at %s", host, phase.FAPolicydRuleFile)
+		}
+		if len(executables) == 0 {
+			continue
+		}
+
+		s.Require().Truef(host.FileExist(phase.FAPolicydExecutableRuleFile),
+			"%s: no generated rule file at %s", host, phase.FAPolicydExecutableRuleFile)
+
+		// Every executable the package declares is named, whatever selector gated its
+		// upload: the rules are generated from the package, not from what reached a host.
+		written, err := host.Sudo().ExecOutput("cat " + phase.FAPolicydExecutableRuleFile)
+		s.Require().NoErrorf(err, "%s: reading %s", host, phase.FAPolicydExecutableRuleFile)
+		for _, f := range executables {
+			s.Require().Containsf(written, "path="+f.Target,
+				"%s: %s names no rule for %s", host, phase.FAPolicydExecutableRuleFile, f.Target)
+		}
 	}
 }
 

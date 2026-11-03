@@ -18,7 +18,7 @@
 // The released binary is built from ./cmd/cargoship, and that is the one every artifact comes
 // from: .goreleaser.yaml, magefiles/pkg/build.Binary, the container images, and the e2e suites all
 // name it. The repository builds more than one binary now -- the cargoship CLI and the zarf Ansible
-// module files under ./cmd/zarf -- and Go allows one main package per directory, so the released
+// -- and Go allows one main package per directory, so the released
 // entry point moved into a directory of its own rather than staying at the root.
 //
 // This file is a convenience, not a second product. It runs the same command tree against the same

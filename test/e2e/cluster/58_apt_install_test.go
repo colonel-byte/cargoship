@@ -30,8 +30,10 @@ func (s *phaseWalk) aptUploadFiles() {
 	s.T().Helper()
 
 	debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
-	s.Require().NotEmpty(debian,
-		"no Debian host in the cluster, the APT phase would be untested")
+	if carriesFamily(clusterConfig(), familyDebian) {
+		s.Require().NotEmpty(debian,
+			"no Debian host in the cluster, the APT phase would be untested")
+	}
 
 	isDebian := make(map[string]bool, len(debian))
 	for _, host := range debian {
@@ -52,8 +54,7 @@ func (s *phaseWalk) aptUploadFiles() {
 				"%s: the APT phase changed a host it does not claim", host)
 			continue
 		}
-		s.Require().Subsetf(after, before[host.String()],
-			"%s: the APT phase dropped files an earlier upload phase staged", host)
+		s.requireKeptStagedFiles(host, before[host.String()], after, "APT")
 	}
 
 	if s.harness.carriesFilesFor(config.SelectorAPT) {

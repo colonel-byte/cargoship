@@ -24,11 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
-	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
+	"github.com/colonel-byte/cargoship/pkg/riglogger"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"gopkg.in/yaml.v3"
@@ -137,6 +137,9 @@ const (
 	keyMirrors = "mirrors"
 	// keyNodeLabel is the config.yaml key holding the labels the node registers with.
 	keyNodeLabel = "node-label"
+	// keyNodeIP is the config.yaml key holding the address the node registers under, and the
+	// one its etcd member advertises to its peers.
+	keyNodeIP = "node-ip"
 	// keyNodeName is the config.yaml key holding the name the node registers under.
 	keyNodeName = "node-name"
 	// keyNodeTaint is the config.yaml key holding the taints the node registers with.
@@ -182,11 +185,12 @@ const (
 // "rewrite" entry per mirror when `.proxy.rewrite` is set, and a "configs" entry with auth when credentials are set.
 
 // ConfigureEngine does distro specific configuration on a host
-func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) error {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 
 	nodeConfig.DigMapping(config.EngineConfig)[keyNodeName] = host.Hostname
 	nodeConfig.DigMapping(config.EngineConfig)[keyDataDir] = d.Data
+	setNodeIP(nodeConfig.DigMapping(config.EngineConfig), host)
 
 	if len(host.Engine.NodeLabels) > 0 {
 		nodeConfig.DigMapping(config.EngineConfig)[keyNodeLabel] = NodeLabelsMapToList(host.Engine.NodeLabels)
@@ -212,7 +216,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 		}
 
 		if !host.Metadata.IsLeader {
-			nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.Leader.Configurer.LongHostname(run.Leader))
+			nodeConfig.DigMapping(config.EngineConfig)[keyServer] = d.SupervisorURL(run.Leader.Configurer.LongHostname(run.Leader))
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
@@ -230,7 +234,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 		for _, v := range controllerArgs {
 			delete(nodeConfig.DigMapping(config.EngineConfig), v)
 		}
-		nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.LoadBalancer)
+		nodeConfig.DigMapping(config.EngineConfig)[keyServer] = d.SupervisorURL(run.LoadBalancer)
 	}
 	if !host.FileExist(d.JoinTokenPathAgent()) {
 		if err := host.WriteFile(d.JoinTokenPathAgent(), run.AgentToken, "0600"); err != nil {
@@ -341,7 +345,7 @@ func (d *RancherCommon) warnUnknownAddons(ctx context.Context, version string, a
 	}
 }
 
-func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.ZarfHost) bool {
+func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.Host) bool {
 	service := d.GetWorkerService()
 	if h.IsController() {
 		service = d.GetControllerService()
@@ -352,7 +356,7 @@ func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.Zar
 // DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
 // the given host/run/dis, keyed by their full destination path. Content is identical across
 // hosts of the same run (no host-varying fields are involved), unlike config.yaml.
-func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.Host, run cluster.RuntimeMeta, dis distro.Distro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	if len(run.Registries) > 0 {
@@ -422,21 +426,22 @@ func (d *RancherCommon) manifestDir() string {
 // them. That makes them safe to rewrite under a running engine -- a changed value reaches the
 // chart without the node being drained -- which is what NoRestart says here.
 func (d *RancherCommon) helmChartConfigs(nodeConfig dig.Mapping) (map[string]DesiredFile, error) {
-	manifests := nodeConfig.DigMapping(config.EngineManifest)
+	manifests := distro.ChartManifests(nodeConfig)
 	if len(manifests) == 0 {
 		return nil, nil
 	}
 	disabled := disabledCharts(nodeConfig)
 
 	files := make(map[string]DesiredFile, len(manifests))
-	for chart, v := range manifests {
-		// A chart the engine was told not to install has nothing to configure. Leaving the
-		// file out of the desired set is also what gets one written by an earlier run removed,
-		// since the manifest directory is pruned against that set.
-		if disabled[chart] {
+	for chart, m := range manifests {
+		// A chart the engine was told not to install has nothing to configure, and neither
+		// has one whose images were never uploaded. Leaving the file out of the desired set
+		// is also what gets one written by an earlier run removed, since the manifest
+		// directory is pruned against that set.
+		if disabled[chart] || !m.Enabled {
 			continue
 		}
-		values, err := helmValuesContent(v)
+		values, err := helmValuesContent(m.Values)
 		if err != nil {
 			return nil, fmt.Errorf("rendering helm values for chart %s: %w", chart, err)
 		}
@@ -503,7 +508,7 @@ func disabledCharts(nodeConfig dig.Mapping) map[string]bool {
 // https://docs.rke2.io/install/private_registry. Unmarshalling is not strict, so a key spelled
 // any other way is dropped silently and the engine goes on to pull anonymously, which surfaces
 // far away from here as a 401.
-func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mapping {
+func buildRegistriesConfig(registries []cluster.Registries) dig.Mapping {
 	mirrors := dig.Mapping{}
 	configs := dig.Mapping{}
 
@@ -559,7 +564,7 @@ func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mappi
 //
 // A username without a password (or the reverse) cannot be encoded into a pair, so it is written
 // under its own key and left for the engine to complete or reject.
-func registryAuth(a cluster.ZarfClusterRegistryAuth) dig.Mapping {
+func registryAuth(a cluster.RegistryAuth) dig.Mapping {
 	auth := dig.Mapping{}
 	switch {
 	case a.Token != "":
@@ -581,7 +586,7 @@ func registryAuth(a cluster.ZarfClusterRegistryAuth) dig.Mapping {
 // written here -- it goes to its own file on the host (see registryCAFiles), and ca_file points
 // at that path. insecure_skip_verify is written only when it is on, since the engine's own
 // default is to verify.
-func registryTLS(t *cluster.ZarfClusterRegistryTLS, host string) dig.Mapping {
+func registryTLS(t *cluster.RegistryTLS, host string) dig.Mapping {
 	tls := dig.Mapping{}
 	if t == nil {
 		return tls
@@ -608,7 +613,7 @@ func registryTLS(t *cluster.ZarfClusterRegistryTLS, host string) dig.Mapping {
 // every registry that carries an inline PEM CA. Writing them alongside registries.yaml keeps
 // the certificate and the configuration that references it in one place, so the engine-config
 // sync phases notice a changed certificate the same way they notice a changed mirror.
-func registryCAFiles(registries []cluster.ZarfClusterRegistries) map[string][]byte {
+func registryCAFiles(registries []cluster.Registries) map[string][]byte {
 	files := map[string][]byte{}
 	for _, reg := range registries {
 		if reg.TLS == nil || reg.TLS.CA == "" {
@@ -642,7 +647,7 @@ func sanitizeRegistryFilename(host string) string {
 }
 
 // GetClusterCIDR returns a string array with the all the known cluster cidr blocks
-func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
+func (d *RancherCommon) GetClusterCIDR(dis distro.Distro) []string {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 	pod := nodeConfig.DigString(config.EngineConfig, keyCIDRPod)
 	if pod == "" {
@@ -673,9 +678,35 @@ func (d *RancherCommon) ManagedDirs() []ManagedDir {
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the engine data
-// directory and the config directory, both of which rke2 and k3s own outright.
+// directory and the config directory, both of which rke2 and k3s own outright, plus the node
+// directory beside the config one.
+//
+// The node directory is the engine's own -- it holds the password the node registers under -- and
+// a reset that leaves it behind leaves a credential for the cluster on a machine that is no longer
+// in it. It is derived from the config directory's parent rather than spelled out, so a config
+// path pointed somewhere other than /etc/rancher takes its node directory with it.
 func (d *RancherCommon) CleanupPaths() []string {
-	return removablePaths(d.DataDirPath(), filepath.Dir(d.Config))
+	configDir := filepath.Dir(d.Config)
+	paths := []string{d.DataDirPath(), configDir}
+	// filepath.Dir of an unset config is ".", and of "/config.yaml" is "/", so the node directory
+	// is only derived from a config directory that sits somewhere below the root. Without the
+	// guard a half-configured distro hands a recursive remove "node" or "/node", which is the
+	// failure removablePaths exists to prevent.
+	if parent := filepath.Dir(configDir); parent != "." && parent != "/" {
+		paths = append(paths, filepath.Join(parent, "node"))
+	}
+
+	engine := removablePaths(paths...)
+	if len(engine) == 0 {
+		// None of the engine's own paths survived, so this distro is half-configured and the
+		// kubelet directory is not its to remove on that basis alone.
+		return engine
+	}
+	// The kubelet keeps its per-pod bookkeeping outside both of the engine's directories, so a
+	// reset that removed only those left it behind: stale pod directories and their configmap
+	// contents, waiting on a machine that is no longer in the cluster. The upstream distro
+	// already removes it, as its own data directory.
+	return removablePaths(append(engine, kubeletDir)...)
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster.
@@ -684,13 +715,46 @@ func (d *RancherCommon) JoinTokenPathAgent() string {
 	return filepath.Join(filepath.Dir(d.Token), "agent-token")
 }
 
+// setNodeIP writes the address the node registers under, from the host's private address.
+//
+// Without it the engine picks its own node address from whichever interface holds the default
+// route, which on a multi-homed host is usually not the one the cluster talks over. Everything
+// else cargoship renders already treats the private address as that interface -- it goes into
+// the engine's tls-san, into the firewall's node ipset and into /etc/hosts -- and the engine's
+// own node address was the one place it did not reach.
+//
+// The consequence was not only a wrong address in `kubectl get nodes -o wide`. A node's etcd
+// member advertises its peer URL from this address, so on a fleet where the default route is a
+// management interface every controller advertised the same one and a second could never be
+// added: `MemberAdd request timed out`, repeated until the apply gave up. A single-controller
+// cluster hides it, because single-member etcd needs no peer addressing.
+//
+// A value already in the configuration wins. node-name above is assigned unconditionally
+// because cargoship owns it -- it comes from the inventory's hostname -- but an operator
+// setting node-ip in a package has said something specific about a host's addressing, and a
+// one-node package is a reasonable place to do it.
+//
+// The value is a list because that is what the generated schema says the key holds, for both
+// the server and the agent config of every supported version. The engines accept a bare string
+// too; matching the schema keeps what cargoship writes consistent with what it validates a
+// package against.
+func setNodeIP(cfg dig.Mapping, host *cluster.Host) {
+	if host.PrivateAddress == "" {
+		return
+	}
+	if existing, ok := cfg[keyNodeIP]; ok && existing != nil {
+		return
+	}
+	cfg[keyNodeIP] = []string{host.PrivateAddress}
+}
+
 // DistroCmdf returns a string that can be used to execute commands on the core engine binary
 func (d *RancherCommon) DistroCmdf(template string, args ...any) string {
 	return fmt.Sprintf("%s %s", d.BinaryPath(), fmt.Sprintf(template, args...))
 }
 
 // RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
-func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
+func (d *RancherCommon) RunningVersion(host *cluster.Host) (string, error) {
 	bin, err := host.FS().LookPath(d.Binary)
 	if err != nil {
 		return "", ErrVersionNotDetected
@@ -706,7 +770,7 @@ func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
 	return match, nil
 }
 
-func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall string) error {
+func (d *RancherCommon) stopService(h *cluster.Host, ser string, killall string) error {
 	ctx := context.Background()
 	riglogger.Logger().Debug("trying to stop service", "service", ser)
 	if h.ServiceIsRunning(ctx, ser) {

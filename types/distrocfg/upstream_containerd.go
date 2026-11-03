@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/k0sproject/dig"
 )
 
@@ -35,6 +35,10 @@ const (
 	crictlConfigPath = "/etc/crictl.yaml"
 	// containerdSocket is containerd's default CRI socket, used by both crictl and kubelet.
 	containerdSocket = "unix:///run/containerd/containerd.sock"
+	// containerdService is the systemd unit the packaged runtime installs. Unlike rke2 and k3s,
+	// whose agent embeds its own containerd and starts it, an upstream host depends on this one
+	// and nothing but cargoship brings it up.
+	containerdService = "containerd"
 )
 
 // sandboxImage returns the packaged pause image, if one is bundled. Nothing here invents a
@@ -56,7 +60,7 @@ func sandboxImage(images []string) string {
 // buildContainerdConfig renders containerd's config.toml: the systemd cgroup driver kubelet
 // expects, the registry.config_path that makes containerd read any hosts.toml at all, and the
 // packaged pause image when one is bundled.
-func buildContainerdConfig(dis distro.ZarfDistro) dig.Mapping {
+func buildContainerdConfig(dis distro.Distro) dig.Mapping {
 	cri := dig.Mapping{
 		"containerd": dig.Mapping{
 			"runtimes": dig.Mapping{
@@ -97,7 +101,7 @@ func buildCrictlConfig() dig.Mapping {
 // concept the way wharfie's registries.yaml does -- a bearer token and a basic auth pair are both
 // just an Authorization header from its point of view. A username or password given alone cannot
 // form a valid header, so it is left out rather than sent malformed.
-func registryAuthHeader(a cluster.ZarfClusterRegistryAuth) string {
+func registryAuthHeader(a cluster.RegistryAuth) string {
 	switch {
 	case a.Token != "":
 		return "Bearer " + a.Token
@@ -117,7 +121,7 @@ func registryAuthHeader(a cluster.ZarfClusterRegistryAuth) string {
 // CA and client certificate paths are reused as written by registryCAFiles/registryTLS for
 // wharfie's registries.yaml -- that logic is already format-agnostic (a path on disk), only the
 // document shape around it differs here.
-func buildContainerdHostsConfigs(registries []cluster.ZarfClusterRegistries) map[string]dig.Mapping {
+func buildContainerdHostsConfigs(registries []cluster.Registries) map[string]dig.Mapping {
 	docs := map[string]dig.Mapping{}
 
 	for _, reg := range registries {

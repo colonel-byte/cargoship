@@ -94,7 +94,7 @@ func TestSchemaComposesFromSourceDirectory(t *testing.T) {
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
 
-	values := schemaNode(t, doc, "$defs", "ZarfClusterConfig", "properties", "values")
+	values := schemaNode(t, doc, "$defs", "Config", "properties", "values")
 	require.Equal(t, false, values["additionalProperties"])
 	require.Contains(t, schemaNode(t, values, "properties"), "replicas")
 	require.Contains(t, values["description"], "test-package")
@@ -112,7 +112,7 @@ func TestSchemaComposesFromManifestPath(t *testing.T) {
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
 	require.Contains(t,
-		schemaNode(t, doc, "$defs", "ZarfClusterConfig", "properties", "values", "properties"),
+		schemaNode(t, doc, "$defs", "Config", "properties", "values", "properties"),
 		"replicas")
 }
 
@@ -121,7 +121,7 @@ func TestSchemaPackageWithoutValuesSchema(t *testing.T) {
 	writeTestPackage(t, dir)
 	// A package that declares no schema is not an error: it accepts values without describing
 	// them, and the plain inventory schema is the honest answer.
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: ZarfDistro
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: Distro
 metadata:
   name: test-package
   version: "1.0.0"
@@ -135,7 +135,7 @@ spec:
 
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
-	require.NotContains(t, schemaNode(t, doc, "$defs", "ZarfClusterConfig", "properties", "values"), "properties")
+	require.NotContains(t, schemaNode(t, doc, "$defs", "Config", "properties", "values"), "properties")
 }
 
 func TestSchemaMissingPackage(t *testing.T) {
@@ -153,7 +153,7 @@ func TestSchemaTakesExactlyOneKind(t *testing.T) {
 func writeTestPackage(t *testing.T, dir string) {
 	t.Helper()
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: ZarfDistro
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "distro.yaml"), []byte(`kind: Distro
 metadata:
   name: test-package
   version: "1.0.0"

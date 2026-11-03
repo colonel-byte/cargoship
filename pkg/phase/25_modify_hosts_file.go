@@ -19,8 +19,8 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/txn2/txeh"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -29,9 +29,16 @@ const (
 	hostComment = "added by cargoship"
 )
 
+// hostsFilePath is the file this phase rewrites, named once so the read, the write and the
+// change record cannot drift apart.
+const hostsFilePath = "/etc/hosts"
+
 // ModifyHosts state
 type ModifyHosts struct {
 	GenericPhase
+	// hostChanges carries Changed and HostsChanged, which this phase can answer honestly
+	// because it reads /etc/hosts before rewriting it.
+	hostChanges
 	Enabled bool
 	hosts   map[string][]string
 }
@@ -47,7 +54,7 @@ func (p *ModifyHosts) Explanation() string {
 }
 
 // Prepare the phase
-func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.hosts = make(map[string][]string)
 	for _, h := range p.manager.Config.Spec.Hosts {
 		p.hosts[h.PrivateAddress] = []string{
@@ -70,8 +77,8 @@ func (p *ModifyHosts) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.configureHostsFile)
 }
 
-func (p *ModifyHosts) configureHostsFile(_ context.Context, h *cluster.ZarfHost) error {
-	hostsCon, err := h.ReadFile("/etc/hosts")
+func (p *ModifyHosts) configureHostsFile(_ context.Context, h *cluster.Host) error {
+	hostsCon, err := h.ReadFile(hostsFilePath)
 	if err != nil {
 		return err
 	}
@@ -87,5 +94,19 @@ func (p *ModifyHosts) configureHostsFile(_ context.Context, h *cluster.ZarfHost)
 		hostfile.AddHostsWithComment(k, p.hosts[k], hostComment)
 	}
 
-	return h.WriteFile("/etc/hosts", hostfile.RenderHostsFile(), "0644")
+	// Rendering is deterministic, so a host whose file already names every node renders back
+	// byte for byte. Comparing rather than writing regardless is what lets this phase answer
+	// whether it changed anything, and it skips a write on the common case of a re-run over a
+	// fleet that is already correct.
+	rendered := hostfile.RenderHostsFile()
+	if rendered == hostsCon {
+		p.observed(h)
+		return nil
+	}
+
+	if err := h.WriteFile(hostsFilePath, rendered, "0644"); err != nil {
+		return err
+	}
+	p.changedFile(h, hostsFilePath, reasonOutOfSync, unifiedDiff(hostsFilePath, hostsCon, rendered))
+	return nil
 }

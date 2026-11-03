@@ -23,7 +23,6 @@ import (
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/engineconfig"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/examples"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/schema"
-	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/zarfflags"
 	"github.com/magefile/mage/mg"
 )
 
@@ -41,12 +40,6 @@ func (Generate) Document() error {
 // Schema creates the jsonschema files for a number of the yaml files
 func (Generate) Schema() error {
 	return schema.GenerateSchemas()
-}
-
-// ZarfFlags records the flag surface of the zarf commands the Ansible modules wrap, read from the
-// installed zarf. Set CARGOSHIP_ZARF_BINARY to name one that is not on PATH.
-func (Generate) ZarfFlags() error {
-	return zarfflags.Generate()
 }
 
 // Completion generates shell completion scripts for cargoship into hack/completion
@@ -88,4 +81,10 @@ func (Generate) Examples() error {
 // ExampleLine renders an example for every release on one minor line of a distro
 func (Generate) ExampleLine(distro, prefix string) error {
 	return examples.RenderLine(distro, prefix)
+}
+
+// VerifyAssets re-fetches every image manifest cached in example/assets.json and reports the
+// ones upstream no longer serves as recorded
+func (Generate) VerifyAssets() error {
+	return examples.VerifyAssets()
 }

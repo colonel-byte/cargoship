@@ -13,10 +13,10 @@
 # limitations under the License.
 
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
-kind: ZarfDistro
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/distro-v1alpha1-schema.json
+kind: Distro
 metadata:
-  name: upstream
+  name: upstream-{{ .CNI.Name }}
   version: {{ .Version }}
   architectures:
     - amd64
@@ -25,7 +25,81 @@ spec:
   version: {{ .Version }}
   type: upstream
   config:
+    # Upstream ships no CNI of its own, and a cluster without one comes up with every pod stuck
+    # at ContainerCreating. So the package carries one: the manifest below goes to the
+    # controllers, and spec.config.manifests is what tells cargoship to kubectl apply it from
+    # the leader once kubeadm has formed the cluster. The images it runs are in
+    # imageConfig.images further down, read out of this same manifest when it was rendered.
+    files:
+      - source: {{ .CNI.Source }}
+        target: {{ .CNI.Target }}
+{{- with .CNI.SHA256 }}
+        shasum: {{ . }}
+{{- end }}
+        selector:
+          profile: controller
+    manifests:
+      - {{ .CNI.Target }}
+{{- with .CNI.PodSubnet }}
+    engine:
+      config:
+        networking:
+          # {{ $.CNI.Name }}'s manifest hardcodes this pod CIDR, so kubeadm is told the same one.
+          # Disagreeing here is not an error either side reports: the cluster forms and pod
+          # traffic silently does not route.
+          podSubnet: {{ . }}
+{{- end }}
     os:
+      # fapolicyd allows execution only from paths it trusts, and an Enterprise Linux host runs it
+      # by default. The container runtime executes out of its own content store, so without these
+      # rules every sandbox creation fails with `runc create failed: unable to start container
+      # process: can't copy bootstrap data to pipe: write init-p: broken pipe` -- a message that
+      # names neither fapolicyd nor the directory it refused. Cargoship writes this block to
+      # /etc/fapolicyd/rules.d/31-cargoship.rules and restarts the service, on the hosts that run
+      # one; a host without fapolicyd is left alone.
+      fapolicyd: |
+        # Allow the kubeadm control plane and its container runtime to run what they stage.
+        allow perm=any all : dir=/opt/cni/
+        allow perm=any all : dir=/run/containerd/
+        allow perm=any all : dir=/var/lib/containerd/
+        allow perm=any all : dir=/var/lib/kubelet/
+        allow perm=any all : dir=/var/lib/kubernetes/
+      selinux:
+        # The SELinux settings upstream Kubernetes documentation recommends for a kubeadm host.
+        # Cargoship applies them only to hosts that report SELinux enforcing and have semodule
+        # installed; every other host is left alone. Check the type names against the policy
+        # version your hosts run - they come from container-selinux, not from the base policy -
+        # and drop any mapping whose type that release does not define.
+        #
+        # The mappings are spelled out here because upstream Kubernetes ships no policy of its
+        # own. The k3s and RKE2 packages stage a k3s-selinux or rke2-selinux RPM that labels
+        # these directories already, so they configure the boolean and nothing else.
+        booleans:
+          # The kubelet's containers manage their own cgroups, which this boolean permits.
+          container_manage_cgroup: true
+        fileContexts:
+          # The kubelet's working tree, which holds pod volumes and plugin sockets.
+          - path: /var/lib/kubelet(/.*)?
+            type: container_var_lib_t
+          # The container runtime's state. containerd is the default; a CRI-O host wants
+          # /var/lib/containers instead.
+          - path: /var/lib/containerd(/.*)?
+            type: container_var_lib_t
+          # etcd's data directory, labelled for the static pod that writes it.
+          - path: /var/lib/etcd(/.*)?
+            type: container_var_lib_t
+          # The CNI plugin binaries the runtime executes.
+          - path: /opt/cni/bin(/.*)?
+            type: bin_t
+        # A package can also carry policy of its own as CIL, which cargoship installs with
+        # semodule at the priority given here. Nothing upstream ships one, so this stays an
+        # example rather than a default:
+        #
+        # modules:
+        #   - name: cargoship-kubelet
+        #     priority: 400
+        #     cil: |
+        #       (allow kubelet_t self (capability (sys_admin)))
       files:
         # Every file this package installs is architecture specific, so each one is listed once per
         # architecture with a selector saying which hosts it belongs to. A host receives only the
@@ -65,3 +139,9 @@ spec:
         - registry.k8s.io/coredns/coredns:{{ .CoreDNSVersion }}
         - registry.k8s.io/pause:{{ .PauseVersion }}
         - registry.k8s.io/etcd:{{ .EtcdVersion }}
+        # Everything above is what kubeadm pins for this release. Everything below is what the
+        # CNI manifest this package applies names, read out of the manifest itself, so the two
+        # cannot drift apart when the CNI adds a sidecar.
+{{- range .CNI.Images }}
+        - {{ . }}
+{{- end }}

@@ -60,7 +60,7 @@ func (s *UpgradePhaseSuite) Test_67_UpgradeWorkers() {
 
 		version, err := s.harness.distro.RunningVersion(host)
 		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
-		s.Require().Equalf(s.harness.manager.Distro.Spec.Version, version,
+		s.requireSameVersion(s.harness.manager.Distro.Spec.Version, version,
 			"%s: still running the version the upgrade was meant to replace", host)
 	}
 

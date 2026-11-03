@@ -17,7 +17,7 @@ package phase
 import (
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,7 +38,7 @@ func TestVersionSkewTooGreat(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &GenericPhase{}
-			h := &cluster.ZarfHost{}
+			h := &cluster.Host{}
 			h.Metadata.DistroVersion = tt.running
 
 			require.Equal(t, tt.want, p.VersionSkewTooGreat(h, tt.target))

@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/stretchr/testify/require"
 )
@@ -329,7 +329,7 @@ func TestRunTranslatesTheInventoryAndRunsTheCommand(t *testing.T) {
 		// stands in for would have done.
 		b, err := os.ReadFile(argv[3]) //nolint:gosec // the path this module just wrote
 		require.NoError(t, err)
-		require.Contains(t, string(b), "kind: ZarfCluster")
+		require.Contains(t, string(b), "kind: Cluster")
 		require.Contains(t, string(b), "kc01")
 		return nil
 	}
@@ -463,7 +463,7 @@ func (p *silentPhase) Run(context.Context) error { return nil }
 // selects one, by the flag the module rendered, so check mode is proved end to end.
 func runPhases(phases ...phase.Phase) Exec {
 	return func(ctx context.Context, argv []string) error {
-		m := phase.Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+		m := phase.Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 		for _, a := range argv {
 			if a == "--dry-run" {
 				m.DryRun = true
@@ -552,7 +552,7 @@ func TestBuildApplyArgsFull(t *testing.T) {
 		Package:             "./package.tar.zst",
 		Concurrency:         &concurrency,
 		WorkConcurrency:     "25%",
-		hostUpdates:         hostUpdates{Hosts: &yes, Firewall: &no, FAPolicyd: &yes},
+		hostUpdates:         hostUpdates{Hosts: &yes, Firewall: &no},
 		LabelNodes:          &yes,
 		AllowUnmanagedNodes: &yes,
 		UpdateKubeconfig:    &yes,
@@ -572,7 +572,6 @@ func TestBuildApplyArgsFull(t *testing.T) {
 	require.Contains(t, joined, "--confirm")
 	require.Contains(t, joined, "--hosts=true")
 	require.Contains(t, joined, "--firewall=false")
-	require.Contains(t, joined, "--fapolicyd=true")
 	require.Contains(t, joined, "--allow-unmanaged-nodes=true")
 	require.Contains(t, joined, "--key /tmp/cosign.pub")
 	require.Contains(t, joined, "--verify always")
@@ -612,7 +611,7 @@ func TestBuildResetArgs(t *testing.T) {
 	// Reset renders none of the host preparation switches. It shares no parameter with prepare
 	// here, because reset runs no preparation phase and `cargoship reset` has no such flag to
 	// accept -- rendering one would fail the run on an unknown flag.
-	for _, flag := range []string{"--hosts", "--firewall", "--fapolicyd"} {
+	for _, flag := range []string{"--hosts", "--firewall"} {
 		require.NotContains(t, joined, flag)
 	}
 }

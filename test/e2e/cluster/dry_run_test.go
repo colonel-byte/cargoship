@@ -19,11 +19,12 @@ import (
 	"os"
 	"testing"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/test"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -100,7 +101,7 @@ func (s *DryRunSuite) Test_1_CreatePackage() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	definition, err := containerSafeDefinition(examplePackage(), s.pkgDir)
+	definition, err := test.ContainerSafeDefinition(examplePackage(), s.pkgDir)
 	s.Require().NoError(err)
 
 	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
@@ -120,14 +121,17 @@ func (s *DryRunSuite) Test_2_ApplyDryRunLeavesTheHostsAlone() {
 	defer cleanup()
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(ctx)
+	})
+	s.Require().NoError(err)
+
+	err = apply.Run(ctx)
 	s.Require().NoError(err)
 
 	result := sink.Result()
@@ -181,13 +185,13 @@ func (s *DryRunSuite) Test_4_ResetDryRunWithNoRunningController() {
 	s.Require().NoError(err)
 	manager.DryRun = true
 
-	err = action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
-		NoWait:           true,
 		NoDrain:          true,
-	}).Run(s.ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(s.ctx))
 
 	s.reconnect(manager)
 	defer disconnectAll(manager.Config.Spec.Hosts)
@@ -234,7 +238,7 @@ func (s *DryRunSuite) requireNothingRanThatWrites(result phase.RunResult) {
 
 // requireFactsGathered asserts the read-only phases did their work for real. Without this, a dry
 // run that connected to nothing would satisfy requireHostsUntouched.
-func (s *DryRunSuite) requireFactsGathered(hosts apicluster.ZarfHosts) {
+func (s *DryRunSuite) requireFactsGathered(hosts apicluster.Hosts) {
 	s.T().Helper()
 
 	for _, host := range hosts {
@@ -250,7 +254,7 @@ func (s *DryRunSuite) requireFactsGathered(hosts apicluster.ZarfHosts) {
 
 // requireHostsUntouched asserts that none of the artifacts the install walk looks for is present.
 // Each path is the one the matching install test asserts exists, so the two move together.
-func (s *DryRunSuite) requireHostsUntouched(hosts apicluster.ZarfHosts) {
+func (s *DryRunSuite) requireHostsUntouched(hosts apicluster.Hosts) {
 	s.T().Helper()
 
 	service := distroControllerService(s.T())

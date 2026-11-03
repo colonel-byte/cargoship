@@ -130,6 +130,10 @@ func writeRoleDoc(collection ansibleCollection, role string, entry roleEntrypoin
 		md.PlainText("")
 		md.PlainTextf("Include it as `%s.%s`.", collection.fqcn, role)
 		md.PlainText("")
+		if line := renderVersionAdded(collection, entry.VersionAdded); line != "" {
+			md.PlainText(line)
+			md.PlainText("")
+		}
 		for _, line := range entry.Description {
 			md.PlainText(renderProse(line))
 			md.PlainText("")

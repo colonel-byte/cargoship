@@ -6,6 +6,8 @@ Remove the cluster from the fleet.
 
 Write it as `colonel_byte.cargoship.cargoship_reset`. It runs on the management node; nothing is installed on the fleet.
 
+Added in `colonel_byte.cargoship` 0.26.0.
+
 Runs `cargoship reset` against the fleet described by an Ansible inventory.
 
 There is no package: it removes what is installed, and the distro to remove is named directly rather than read out of one. It installs nothing, so it takes no values and no signature parameters.

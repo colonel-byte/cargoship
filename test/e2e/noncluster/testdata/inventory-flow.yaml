@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/cluster-v1alpha1-schema.json
 # An inventory written in flow style, the "{a: b}" and "[a, b]" spellings YAML allows anywhere a
 # block collection is allowed. A credential inside one cannot be rewritten as a literal block: flow
 # style has no block scalar, so the value is quoted onto a single line instead, and the rest of the
@@ -9,8 +9,8 @@
 # flow mapping nested in a block one, and a registry written entirely in flow style inside the list.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: flow
 spec:

@@ -23,8 +23,8 @@ package phase
 import (
 	"context"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -35,7 +35,7 @@ type Unlock struct {
 }
 
 // Prepare the phase
-func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *Unlock) Prepare(_ context.Context, c *cluster.Cluster, _ *distro.Distro) error {
 	p.manager.Config = c
 	if p.Cancel == nil {
 		p.Cancel = func(ctx context.Context) {

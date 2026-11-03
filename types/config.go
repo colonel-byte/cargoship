@@ -23,7 +23,7 @@ import (
 // CommonRegistries are suggested, non-exhaustive registry names used in generated
 // schemas -- editors with YAML/JSON schema support (e.g. the redhat.vscode-yaml
 // extension) offer them as autocomplete, for RegistryOverrideMap's registry_override
-// keys here and for ZarfClusterRegistrieName's registry name field in the cluster API.
+// keys here and for RegistryName's registry name field in the cluster API.
 var CommonRegistries = []string{
 	"docker.io",
 	"ghcr.io",
@@ -101,18 +101,10 @@ type DistroOptions struct {
 	CreateOpts DistroCreateOptions `json:"create,omitempty" mapstructure:"create"`
 	// PublishOpts are options used by the publish subcommand
 	PublishOpts DistroPublishOptions `json:"publish,omitempty" mapstructure:"publish"`
-	// DeployOpts are options used by the deploy subcommand
-	DeployOpts DistroDeployOptions `json:"deploy,omitempty" mapstructure:"deploy"`
-	// ApplyOpts are options used by the apply subcommand
-	ApplyOpts ApplyOptions `json:"apply,omitempty" mapstructure:"apply"`
-	// ResetOptions are options used by the reset subcommand
-	ResetOpts ResetOptions `json:"reset,omitempty" mapstructure:"reset"`
 	// OCIConcurrency is how many concurrent oci artifacts that will be pushed at a time
 	OCIConcurrency int `json:"oci_concurrency,omitempty" mapstructure:"oci_concurrency"`
 	// Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
 	Concurrency int `json:"concurrency,omitempty" mapstructure:"concurrency" jsonschema:"minimum=0"`
-	// FAPolicyd whether we will update hosts with fapolicyd
-	FAPolicyd bool `json:"fapolicyd,omitempty" mapstructure:"fapolicyd" jsonschema:"default=true"`
 	// FirewallUpdate whether we will update the host firewall
 	FirewallUpdate bool `json:"firewall,omitempty" mapstructure:"firewall" jsonschema:"default=true"`
 	// HostUpdate whether we will update the etc host file
@@ -130,10 +122,18 @@ type DistroOptions struct {
 	// KubeConfig path of the kubeconfig file the admin creds are merged into, the standard
 	// location -- KUBECONFIG, else ~/.kube/config -- when empty
 	KubeConfig string `json:"kubeconfig,omitempty" mapstructure:"kubeconfig"`
+	// ReceiptPath is where the lifecycle commands -- apply, prepare, reset and
+	// engine-config-sync -- write the structured JSON record of a run, empty for no receipt.
+	// Equivalent to --receipt-path, and templated the same way: {command} expands to the
+	// command that ran and {timestamp} to when it started, so one configured value gives
+	// every run its own file rather than overwriting the last.
+	ReceiptPath string `json:"receipt_path,omitempty" mapstructure:"receipt_path" jsonschema:"example=/var/log/cargoship/receipts/{command}-{timestamp}.json"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
 	// ("5") or a percentage of the batch ("25%")
 	WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
-	// Retry number of retries we will try
+	// Retry how many times an operation is retried before the run fails, including a
+	// package push to an OCI registry -- it is what --retries defaults to on publish
+	// and sign
 	Retry int `json:"retry,omitempty" mapstructure:"retry" jsonschema:"minimum=0"`
 	// Type of distro we are interacting with
 	Type string `json:"type,omitempty" mapstructure:"type" jsonschema:"enum=rke2,enum=k3s"`
@@ -143,20 +143,6 @@ type DistroOptions struct {
 	Verify string `json:"verify,omitempty" mapstructure:"-" jsonschema:"enum=never,enum=if-possible,enum=always"` // mapstructure:"-": common_verify.go needs v.IsSet to distinguish "unset" from "set to zero value" (never read from the resolved struct)
 	// PublicKey path to public key file for validating signed packages
 	PublicKey string `json:"public_key,omitempty" mapstructure:"public_key"`
-	// CertificateIdentity required identity claim in the signing certificate
-	CertificateIdentity string `json:"certificate_identity,omitempty" mapstructure:"certificate_identity"`
-	// CertificateIdentityRegexp equired identity claim in the signing certificate, allows usage of regex
-	CertificateIdentityRegexp string `json:"certificate_identity_regexp,omitempty" mapstructure:"certificate_identity_regexp"`
-	// CertificateOIDCIssuer required OIDC issuer claim in the signing certificate
-	CertificateOIDCIssuer string `json:"certificate_oidc_issuer,omitempty" mapstructure:"certificate_oidc_issuer"`
-	// CertificateOIDCIssuerRegexp required OIDC issuer claim in the signing certificate, allows usage of regex
-	CertificateOIDCIssuerRegexp string `json:"certificate_oidc_issuer_regexp,omitempty" mapstructure:"certificate_oidc_issuer_regexp"`
-	// TrustedRoot path to a Sigstore TrustedRoot JSON
-	TrustedRoot string `json:"trusted_root,omitempty" mapstructure:"trusted_root"`
-	// InsecureIgnoreTLog
-	InsecureIgnoreTLog string `json:"insecure_ignore_tlog,omitempty" mapstructure:"-"` // mapstructure:"-": same v.IsSet reasoning as Verify above, plus this is really a bool (read via v.GetBool) despite the string type
-	// UseSignedTimestamps verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.
-	UseSignedTimestamps string `json:"use_signed_timestamps,omitempty" mapstructure:"-"` // mapstructure:"-": really a bool (read via v.GetBool in common_verify.go) despite the string type
 }
 
 // DistroCreateOptions holds the values for the `.distro.create` section of the config file
@@ -168,27 +154,22 @@ type DistroCreateOptions struct {
 	// instead, for example {"https://rpm.rancher.io": "https://mirror.example.com/rpm-rancher"}.
 	// The value may also be a local directory, for builds from pre-staged assets.
 	FileOverride FileOverrideMap `json:"file_override,omitempty" mapstructure:"-"` // mapstructure:"-": same reasoning as RegistryOverride above, and more so -- a URL key carries ".", ":" and "/"
+	// HaulerStore is a hauler store (https://github.com/hauler-dev/hauler) that images and
+	// files are resolved from instead of being fetched over the network: either a store
+	// directory, or an archive written by `hauler store save`. Content the store does not
+	// hold still comes from the source the distro definition declared, so a partial store
+	// works. A file is accepted from the store only when the definition declares a shasum
+	// for it, since nothing else would verify bytes the definition's author never saw.
+	HaulerStore string `json:"hauler_store,omitempty" mapstructure:"hauler_store" jsonschema:"example=/opt/hauls/haul.tar.zst,example=~/hauls/rke2/store"`
 }
 
 // DistroPublishOptions holds the values for the `.distro.publish` section of the config file
 type DistroPublishOptions struct {
-	// SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package
-	SigningKey string `json:"signing_key,omitempty" mapstructure:"signing_key" jsonschema:"example=/home/runner/.cosign/sign.key,example=env://[ENV_VAR],example=awskms://[ENDPOINT]/[ID/ALIAS/ARN],example=openbao://[KEY]"`
+	// SigningKey is the private key used to sign, or re-sign, the package: a local file path, or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported -- they cannot be reached from an air-gapped management node.
+	SigningKey string `json:"signing_key,omitempty" mapstructure:"signing_key" jsonschema:"example=/home/runner/.cosign/sign.key,example=env://COSIGN_PRIVATE_KEY"`
 	// SigningKeyPassword the password for the private key used for signing
 	SigningKeyPassword string `json:"signing_key_password,omitempty" mapstructure:"signing_key_password" jsonschema_extras:"x-sensitive=true"`
 }
-
-// DistroDeployOptions holds the values for the `.distro.deploy` section of the config file
-type DistroDeployOptions struct {
-	// Retries how many times we will try to push a package
-	Retries int `json:"retries,omitempty" mapstructure:"retries"`
-}
-
-// ApplyOptions holds the values for the `.distro.apply` section of the config file
-type ApplyOptions struct{}
-
-// ResetOptions holds the values for the `.distro.reset` section of the config file
-type ResetOptions struct{}
 
 // RegistryOverrideMap maps a source registry to the registry cargoship uses instead.
 // It's a named type (rather than a bare map[string]string) solely so it can implement

@@ -18,8 +18,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -40,7 +40,7 @@ func (p *EngineConfigSyncWorker) Explanation() string {
 }
 
 // Prepare the phase
-func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
 	if err := p.loadDesiredConfig(ctx, c, *d); err != nil {
 		return err
 	}
@@ -50,8 +50,8 @@ func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfClu
 
 	candidates := p.manager.Config.Spec.Hosts.Workers()
 	var mu sync.Mutex
-	var matched cluster.ZarfHosts
-	if err := p.parallelDo(ctx, candidates, func(ctx context.Context, h *cluster.ZarfHost) error {
+	var matched cluster.Hosts
+	if err := p.parallelDo(ctx, candidates, func(ctx context.Context, h *cluster.Host) error {
 		if p.needsUpdate(ctx, h) {
 			mu.Lock()
 			matched = append(matched, h)
@@ -74,7 +74,7 @@ func (p *EngineConfigSyncWorker) Run(ctx context.Context) error {
 	// ShouldRun only lets this phase reach Run when Prepare found hosts to sync, and the
 	// first thing done to each of them is a drain. Marking here rather than after a
 	// success is deliberate: a run that fails halfway has still changed the fleet.
-	p.markChanged()
+	p.markChanged(p.hosts...)
 	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"syncing worker config",
@@ -89,7 +89,7 @@ func (p *EngineConfigSyncWorker) Run(ctx context.Context) error {
 	)
 }
 
-func (p *EngineConfigSyncWorker) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncWorker) stopService(ctx context.Context, h *cluster.Host) error {
 	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
 	return p.Distro.StopWorkerService(h)
 }

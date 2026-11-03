@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "1.0",
+  "invocation": {
+    "command": "apply",
+    "args": ["apply", "/srv/acme-corp/distro.tar.zst", "--config", "/srv/acme-corp/prod-cluster.yaml"],
+    "version": "v1.2.3",
+    "commit": "abc1234",
+    "operator": "jrivera",
+    "host": "bastion-acme-prod",
+    "platform": "linux/amd64",
+    "dryRun": false,
+    "startedAt": "2026-09-28T14:30:00Z",
+    "finishedAt": "2026-09-28T14:41:12Z",
+    "duration": "11m12s"
+  },
+  "package": {
+    "path": "/srv/acme-corp/distro.tar.zst",
+    "name": "acme-platform",
+    "version": "3.4.5",
+    "sha256": "9f2b1c0d4e5a6b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e",
+    "digest": "sha256:1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+    "architecture": "amd64",
+    "engine": "rke2",
+    "signed": true,
+    "verification": "always"
+  },
+  "cluster": {
+    "name": "acme-prod-euw1",
+    "loadBalancer": "api.acme-prod.internal",
+    "configPath": "/srv/acme-corp/prod-cluster.yaml",
+    "hostCount": 2
+  },
+  "phases": [
+    {
+      "title": "Syncing engine config",
+      "explanation": "writes the engine configuration",
+      "disposition": "ran",
+      "dryRun": "own-path",
+      "declared": true,
+      "changed": true,
+      "hostsDeclared": true,
+      "duration": "4.2s",
+      "hosts": [
+        {
+          "host": "10.44.3.11",
+          "changed": true,
+          "details": [
+            {
+              "path": "/etc/rancher/rke2/config.yaml",
+              "reason": "out of sync",
+              "diff": "--- a\n+++ b\n-token: OLDTOKEN\n+token: K10SUPERSECRETJOINTOKEN\n"
+            }
+          ]
+        },
+        {
+          "host": "10.44.3.12:2222",
+          "changed": false
+        }
+      ]
+    }
+  ],
+  "hosts": [
+    {
+      "address": "10.44.3.11",
+      "hostname": "acme-kc01.acme-prod.internal",
+      "role": "controller",
+      "profile": "control",
+      "arch": "amd64",
+      "os": "rocky",
+      "osVersion": "9.4",
+      "privateAddress": "10.44.3.11",
+      "privateInterface": "ens192",
+      "engineVersion": "v1.31.2+rke2r1",
+      "changed": true,
+      "phasesNamed": 1,
+      "phasesReporting": 1
+    },
+    {
+      "address": "10.44.3.12:2222",
+      "hostname": "acme-kw01.acme-prod.internal",
+      "role": "worker",
+      "profile": "general",
+      "arch": "arm64",
+      "os": "ubuntu",
+      "osVersion": "22.04",
+      "privateAddress": "10.44.3.12",
+      "privateInterface": "eth0",
+      "engineVersion": "v1.31.2+rke2r1",
+      "changed": false,
+      "phasesNamed": 1,
+      "phasesReporting": 1
+    }
+  ],
+  "outcome": {
+    "succeeded": true,
+    "changed": true,
+    "changedSignal": "partial",
+    "changedUndeclared": ["Connect"],
+    "hostsUndeclared": ["Connect"]
+  }
+}

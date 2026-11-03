@@ -15,16 +15,17 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/test"
 	blcluster "github.com/k0sproject/bootloose/pkg/cluster"
 	"github.com/k0sproject/bootloose/pkg/config"
@@ -57,16 +58,6 @@ const (
 	// the inventory tests for cannot drift apart.
 	bootKWA = uploadOnlyPrefix + "%d"
 )
-
-// joinFedoraWorkers is how many kwf* machines exist once the join walk has added one, and
-// joinHostname is the machine it adds. The join walk is the only walk that starts from a
-// machine the install never saw, so a Fedora worker is what it adds: the new node then has to
-// come through the SELinux, fapolicyd, firewalld and dnf branches on its own rather than
-// inheriting anything the apply walk already proved on the nodes beside it. k3sOS carries two
-// -- kwf0, kwf1 -- so the join walk's is the third, kwf2.
-const joinFedoraWorkers = 3
-
-var joinHostname = fmt.Sprintf(bootKWF, joinFedoraWorkers-1) //nolint:gochecknoglobals
 
 var (
 	e2e   test.CargoE2ETest //nolint:gochecknoglobals
@@ -114,17 +105,14 @@ var (
 	// upload batching is bounded by applyConcurrency, which is 300, so every host already goes
 	// in one batch; and the WorkerConcurrent batching is only reached in the initialize and
 	// upgrade phases, which a stage-only run skips.
-	stageOS = config.Config{
-		Cluster: config.Cluster{
-			Name:       "cargoship-e2e",
-			PrivateKey: "cluster-key",
-		},
-		Machines: []config.MachineReplicas{
-			{Count: 1, Spec: stageMachine(bootKC, bootUbuntu)},
-			{Count: 1, Spec: stageMachine(bootKCF, bootFedora)},
-			{Count: 1, Spec: stageMachine(bootKW, bootUbuntu)},
-			{Count: 1, Spec: stageMachine(bootKWF, bootFedora)},
-			{Count: 1, Spec: stageMachine(bootKWA, bootAlpine)},
+	stageOS = fleetSpec{
+		name: "cargoship-e2e",
+		machines: []machineSpec{
+			{nameTemplate: bootKC, image: bootUbuntu, osID: "ubuntu", count: 1},
+			{nameTemplate: bootKCF, image: bootFedora, osID: "fedora", count: 1},
+			{nameTemplate: bootKW, image: bootUbuntu, osID: "ubuntu", count: 1},
+			{nameTemplate: bootKWF, image: bootFedora, osID: "fedora", count: 1},
+			{nameTemplate: bootKWA, image: bootAlpine, osID: "alpine", count: 1},
 		},
 	}
 )
@@ -163,56 +151,40 @@ func stageMachine(name, image string) *config.Machine {
 // timeouts there under the CPU contention of ten nested node containers, and k3s's SQLite
 // datastore has no quorum to time out. The Alpine upload-only host is left out because it
 // exercises the BIN-upload fallback path, which the stage job's stageOS already covers.
-var k3sOS = config.Config{ //nolint:gochecknoglobals
-	Cluster: config.Cluster{
-		Name:       "cargoship-e2e",
-		PrivateKey: "cluster-key",
-	},
-	Machines: []config.MachineReplicas{
-		{Count: 1, Spec: stageMachine(bootKC, bootUbuntu)},
-		{Count: 2, Spec: stageMachine(bootKW, bootUbuntu)},
-		{Count: 2, Spec: stageMachine(bootKWF, bootFedora)},
+var k3sOS = fleetSpec{ //nolint:gochecknoglobals
+	name: "cargoship-e2e",
+	machines: []machineSpec{
+		{nameTemplate: bootKC, image: bootUbuntu, osID: "ubuntu", count: 1},
+		{nameTemplate: bootKW, image: bootUbuntu, osID: "ubuntu", count: 2},
+		{nameTemplate: bootKWF, image: bootFedora, osID: "fedora", count: 2},
 	},
 }
 
-// clusterConfig is the inventory this run provisions: the smaller staging inventory when asked
-// for that, and the full k3s inventory otherwise.
-func clusterConfig() config.Config {
+// clusterConfig is the fleet this run provisions: the smaller staging inventory when asked for
+// that, and the full k3s inventory otherwise.
+//
+// The microvm backend has one fleet rather than two. Its reason for having a staging split
+// does not apply: that split exists because a hosted runner could not reliably bring an engine
+// up inside nested containers, and a virtual machine has none of that trouble. A stage-only
+// run against VMs still stops before the engine phases, it just does so on the same nodes.
+func clusterConfig() fleetSpec {
+	switch name, err := backend(); {
+	case err != nil:
+	case name == backendInventory:
+		// Derived from the operator's document, so a failure to read it surfaces as an empty
+		// fleet here and as the real error from provision, which runs first.
+		spec, err := externalFleet()
+		if err != nil {
+			return fleetSpec{}
+		}
+		return spec
+	case name == backendMicroVM:
+		return vmOS
+	}
 	if stageOnly() {
 		return stageOS
 	}
 	return k3sOS
-}
-
-// clusterCounts is how many hosts of each kind a bootloose config produces, split the way the
-// suite asserts on them. Deriving these from the config rather than writing them down twice is
-// what lets the same assertions hold against either inventory.
-type clusterCounts struct {
-	inventory   int
-	uploadOnly  int
-	controllers int
-	// workers counts the hosts that run the engine, so it leaves out the upload-only machines
-	// even though renderClusterInventory gives them the worker role.
-	workers int
-}
-
-// countsFor reads those counts off a bootloose config, by the same name prefixes
-// renderClusterInventory maps to roles. The upload-only prefix is tested first because it
-// begins with the worker prefix.
-func countsFor(cfg config.Config) clusterCounts {
-	var c clusterCounts
-	for _, m := range cfg.Machines {
-		c.inventory += m.Count
-		switch {
-		case strings.HasPrefix(m.Spec.Name, uploadOnlyPrefix):
-			c.uploadOnly += m.Count
-		case strings.HasPrefix(m.Spec.Name, "kc"):
-			c.controllers += m.Count
-		case strings.HasPrefix(m.Spec.Name, "kw"):
-			c.workers += m.Count
-		}
-	}
-	return c
 }
 
 // stageOnlyEnvVar stops the run at the boundary phase/60 draws. The phases up to and including
@@ -318,7 +290,11 @@ func TestClusterPhases(t *testing.T) {
 	// The later walks run whatever the walk before them did. A half-joined or half-upgraded
 	// cluster is still a cluster reset has to be able to tear down, and TestMain deletes the
 	// containers either way.
-	t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
+	if canJoin() {
+		t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
+	} else {
+		t.Logf("the join walk needs a host that was not in the cluster when the install ran; this backend creates none, so name one with %s", joinHostEnvVar)
+	}
 	t.Run("upgrade", func(t *testing.T) { suite.Run(t, new(UpgradePhaseSuite)) })
 	t.Run("reset", func(t *testing.T) { suite.Run(t, new(ResetSuite)) })
 }
@@ -347,10 +323,11 @@ func TestMain(m *testing.M) {
 		log.Print(err)
 	}
 
-	// Deleting the machines takes a failed run's evidence with them; see keepClusterEnvVar.
-	// The exit code is untouched either way, so a kept cluster is still a failed run.
-	if testCluster != nil && (code == 0 || !keepCluster()) {
-		if err := shutdown(testCluster); err != nil {
+	// Removing the hosts takes a failed run's evidence with them; see keepClusterEnvVar. The
+	// exit code is untouched either way, so a kept cluster is still a failed run.
+	if code == 0 || !keepCluster() {
+		if err := teardown(); err != nil {
+			log.Print(err)
 			os.Exit(1)
 		}
 	}
@@ -363,16 +340,17 @@ func requireCluster(t *testing.T) {
 	t.Helper()
 
 	clusterOnce.Do(func() {
-		testCluster, testClusterErr = setup(clusterConfig())
-		if testClusterErr != nil {
+		var inv apicluster.Cluster
+		if inv, testClusterErr = provision(context.Background(), clusterConfig()); testClusterErr != nil {
 			return
 		}
-		if testClusterErr = writeInventories(testCluster); testClusterErr != nil {
+		if testClusterErr = writeInventories(inv); testClusterErr != nil {
 			return
 		}
 
-		// bootloose regenerates each container's SSH host key on every Create(), so ignore
-		// host key checking for the cargoship subprocesses this test binary spawns.
+		// Both backends regenerate each host's SSH host key every time they create it, so a
+		// known-hosts entry is wrong by construction. Ignore host key checking for the
+		// cargoship subprocesses this test binary spawns.
 		testClusterErr = os.Setenv("SSH_KNOWN_HOSTS", "")
 	})
 	require.NoError(t, testClusterErr)
@@ -391,47 +369,28 @@ func requireJoinMachine(t *testing.T) {
 	requireCluster(t)
 
 	joinOnce.Do(func() {
-		cluster, err := setup(withJoinMachine(clusterConfig()))
+		inv, err := provision(context.Background(), clusterConfig().withJoinMachine())
 		if err != nil {
 			joinErr = err
 			return
 		}
-		testCluster = cluster
-		joinErr = writeInventories(cluster)
+		joinErr = writeInventories(inv)
 	})
 	require.NoError(t, joinErr)
 }
 
-// withJoinMachine returns cfg with one more Fedora worker in it. It raises the count on the
-// template the other Fedora workers come from rather than adding a second template, because
-// bootloose names a machine by formatting its template's name with the replica index: a
-// second template would start counting from zero again and collide with kwf0.
-func withJoinMachine(cfg config.Config) config.Config {
-	machines := make([]config.MachineReplicas, len(cfg.Machines))
-	copy(machines, cfg.Machines)
-	for i := range machines {
-		if machines[i].Spec.Name == bootKWF {
-			machines[i].Count = joinFedoraWorkers
-		}
-	}
-	cfg.Machines = machines
-	return cfg
-}
-
-// writeInventories renders the live bootloose machines into the two inventory files the walks
-// read: the full one the phase harness is built from, and the engine-only one the CLI-driven
-// steps are given. The join walk calls it a second time, once its machine is up, so that both
-// files name the node it added.
-func writeInventories(c *blcluster.Cluster) error {
-	keyPath, err := filepath.Abs(clusterConfig().Cluster.PrivateKey)
-	if err != nil {
-		return err
-	}
-	inv, err := renderClusterInventory(c, keyPath)
-	if err != nil {
-		return err
-	}
+// writeInventories writes an inventory into the two files the walks read: the full one the
+// phase harness is built from, and the engine-only one the CLI-driven steps are given. The
+// join walk calls it a second time, once its machine is up, so that both files name the node
+// it added.
+//
+// It takes an already-rendered inventory rather than the thing that was provisioned. That is
+// the whole seam between the suite and whatever provides its hosts: nothing downstream of
+// these two files knows what they describe, because phase_harness.go loads them through
+// load.ClusterDefinition exactly as the CLI does.
+func writeInventories(inv apicluster.Cluster) error {
 	invDir := filepath.Join(rootDir, "test/e2e/cluster")
+	enableEtcdctl(&inv)
 
 	fullPath := filepath.Join(invDir, "generated-cluster-full.yaml")
 	if err := writeClusterInventory(inv, fullPath); err != nil {
@@ -448,8 +407,32 @@ func writeInventories(c *blcluster.Cluster) error {
 	return nil
 }
 
-func setup(config config.Config) (*blcluster.Cluster, error) {
-	cluster, err := blcluster.New(config)
+// enableEtcdctl turns on the rke2 package's optional etcdctl tool, which is the only
+// executable in its spec.config.files. Without it nothing in the suite exercises a
+// `when`-gated executable upload, or the allow rule phase 22 generates for an executable
+// target -- the rke2 package's own `os.fapolicyd` block would hide the generated file
+// behind the hand-written one.
+//
+// Only the rke2 package declares `tools.etcdctl`, and the generated values.schema.json sets
+// additionalProperties:false, so setting it for k3s or upstream would fail validation before
+// a host was touched.
+
+func enableEtcdctl(inv *apicluster.Cluster) {
+	if distroID() != "rke2" {
+		return
+	}
+	if inv.Spec.Config.Values == nil {
+		inv.Spec.Config.Values = map[string]any{}
+	}
+	inv.Spec.Config.Values["tools"] = map[string]any{
+		"etcdctl": map[string]any{"enabled": true},
+	}
+}
+
+// setup provisions a fleet as bootloose containers.
+func setup(spec fleetSpec) (*blcluster.Cluster, error) {
+	cfg := spec.bootlooseConfig()
+	cluster, err := blcluster.New(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -457,6 +440,19 @@ func setup(config config.Config) (*blcluster.Cluster, error) {
 		return nil, err
 	}
 	return cluster, detachHostsFile(cluster)
+}
+
+// bootlooseInventory renders the live bootloose machines as a ZarfCluster inventory.
+//
+// The key path is resolved here rather than in renderClusterInventory because it is a property
+// of how bootloose was asked to provision the cluster -- it generates the pair at that path on
+// first Create -- and not of the cluster it produced.
+func bootlooseInventory(c *blcluster.Cluster, spec fleetSpec) (apicluster.Cluster, error) {
+	keyPath, err := filepath.Abs(spec.bootlooseConfig().Cluster.PrivateKey)
+	if err != nil {
+		return apicluster.Cluster{}, err
+	}
+	return renderClusterInventory(c, keyPath)
 }
 
 // detachHostsFileScript replaces the bind mount Docker puts over /etc/hosts with an ordinary

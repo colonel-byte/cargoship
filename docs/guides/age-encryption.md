@@ -400,8 +400,8 @@ Either way, two things follow, because Cargoship reads no stanza at all -- age k
 Because the ciphertext cannot say who it was encrypted to, the document says it instead. After an age encryption, `metadata` carries the recipient set the run used:
 
 ```yaml
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: e72
   encryption:

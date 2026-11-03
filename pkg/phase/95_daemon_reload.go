@@ -23,7 +23,7 @@ package phase
 import (
 	"context"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/k0sproject/rig/v2/initsystem"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -31,6 +31,7 @@ import (
 // DaemonReload phase runs `systemctl daemon-reload` or equivalent on all hosts.
 type DaemonReload struct {
 	GenericPhase
+	TargetHosts []string
 }
 
 // Title for the phase
@@ -45,12 +46,13 @@ func (p *DaemonReload) Explanation() string {
 
 // ShouldRun is true when there are controllers that needs to be reset
 func (p *DaemonReload) ShouldRun() bool {
-	return len(p.manager.Config.Spec.Hosts) > 0
+	return len(filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)) > 0
 }
 
 // Run the phase
 func (p *DaemonReload) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
+	hosts := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
+	return p.parallelDo(ctx, hosts, func(ctx context.Context, h *cluster.Host) error {
 		logger.From(ctx).Info("reloading service manager", "host", h)
 		if err := daemonReload(ctx, h); err != nil {
 			logger.From(ctx).Warn("failed to reload service manager", "host", h, "error", err)
@@ -62,7 +64,7 @@ func (p *DaemonReload) Run(ctx context.Context) error {
 // daemonReload triggers an explicit init system config reload (e.g. `systemctl
 // daemon-reload`) when the detected init system supports one. Not every init
 // system does (e.g. OpenRC), so a missing capability is not an error.
-func daemonReload(ctx context.Context, h *cluster.ZarfHost) error {
+func daemonReload(ctx context.Context, h *cluster.Host) error {
 	mgr, err := h.Sudo().ServiceManager()
 	if err != nil {
 		return err

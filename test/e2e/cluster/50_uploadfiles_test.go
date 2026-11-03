@@ -15,9 +15,10 @@
 package cluster
 
 import (
+	"slices"
 	"strings"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
@@ -49,9 +50,26 @@ func (s *phaseWalk) uploadFiles() {
 	}
 }
 
+// requireKeptStagedFiles asserts an upload phase left the manifest naming everything an earlier
+// phase staged. An entry may leave it only when the file left the host with it: an upgrade
+// deletes the version it replaces and prunes those entries, which is the one legitimate way the
+// manifest shrinks. A manifest a phase clobbered still fails here, because it drops entries whose
+// files are sitting on the host.
+func (s *phaseWalk) requireKeptStagedFiles(host *apicluster.Host, before, after []string, upload string) {
+	s.T().Helper()
+
+	for _, path := range before {
+		if slices.Contains(after, path) {
+			continue
+		}
+		s.Require().Falsef(s.stagedOrPresent(host, path),
+			"%s: the %s phase dropped %s from the manifest while the file is still on the host", host, upload, path)
+	}
+}
+
 // manifestOn returns the paths the upload manifest on host records, one per line as
 // "category\tpath".
-func (s *phaseWalk) manifestOn(host *apicluster.ZarfHost) []string {
+func (s *phaseWalk) manifestOn(host *apicluster.Host) []string {
 	s.T().Helper()
 
 	if !host.FileExist(uploadManifestPath) {

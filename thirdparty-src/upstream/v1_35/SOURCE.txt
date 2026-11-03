@@ -1,4 +1,4 @@
 repo:   https://github.com/kubernetes/kubernetes
-tag:    v1.35.8
-commit: 1c2e10a409eb1b03f2f28f401ce935312e20d9fb
+tag:    v1.35.10
+commit: ae6fece6fea92ecfcccd13af7d5f2ea8cb9b33fe
 files:  cmd/kubeadm/app/constants/constants.go cmd/kubeadm/app/apis/kubeadm/v1beta4/types.go

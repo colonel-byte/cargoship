@@ -18,7 +18,7 @@ The owner of the truth resolves it. Cargoship should read a resolved answer, not
 
 The format is documented and stable. A format that changes under us turns a silent misread into an install against the wrong machines.
 
-Roles are stated, not guessed. A host's role has to come from something the operator wrote -- a group, a column, a tag, a flag. Inferring it from a hostname pattern is guessing, and `ZarfHost.Role` is read verbatim everywhere else in this repository precisely because it is not inferable.
+Roles are stated, not guessed. A host's role has to come from something the operator wrote -- a group, a column, a tag, a flag. Inferring it from a hostname pattern is guessing, and `Host.Role` is read verbatim everywhere else in this repository precisely because it is not inferable.
 
 ## The list, ranked
 

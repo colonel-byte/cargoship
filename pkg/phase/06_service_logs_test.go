@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 	rig "github.com/k0sproject/rig/v2"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,7 @@ func TestCaptureServiceLogsOnFailureNoOpWhenWaitSucceeded(t *testing.T) {
 	config.CommonOptions.CachePath = t.TempDir()
 
 	p := &GenericPhase{}
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 
 	err := p.captureServiceLogsOnFailure(context.Background(), h, "k3s", time.Now(), nil)
 
@@ -42,7 +42,7 @@ func TestCaptureServiceLogsOnFailureNoOpWhenWaitSucceeded(t *testing.T) {
 
 func TestWriteServiceLogFileSanitizesNameAndWritesContent(t *testing.T) {
 	config.CommonOptions.CachePath = t.TempDir()
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 
 	path, err := writeServiceLogFile(h, "k3s agent", "journal output here")
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestWriteServiceLogFileSanitizesNameAndWritesContent(t *testing.T) {
 
 func TestWriteServiceLogFileDoesNotClobberConcurrentCalls(t *testing.T) {
 	config.CommonOptions.CachePath = t.TempDir()
-	h := &cluster.ZarfHost{}
+	h := &cluster.Host{}
 
 	pathA, err := writeServiceLogFile(h, "k3s", "first attempt")
 	require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestCaptureServiceLogsOnFailureReturnsOriginalErrorEvenWhenCaptureFails(t *
 	config.CommonOptions.CachePath = t.TempDir()
 
 	p := &GenericPhase{}
-	h := &cluster.ZarfHost{
+	h := &cluster.Host{
 		ClientWithConfig: rig.ClientWithConfig{
 			ConnectionConfig: rig.CompositeConfig{Localhost: true},
 		},

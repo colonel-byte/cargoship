@@ -82,3 +82,48 @@ func TestExampleShasumUnmarshalJSONMigratesSingleURL(t *testing.T) {
 		t.Fatalf("got %+v, want it migrated into URLs", e)
 	}
 }
+
+// TestFetchK3sBinarySHAReadsTheCache covers the digests that used to be cached as whole
+// sha256sum-<arch>.txt assets and now live here, keyed by release tag so that every version's
+// plainly-named binary gets its own entry. A cache hit must answer without a request, which is
+// what makes a fresh clone able to re-render the k3s examples offline -- so the repo URL here
+// is one that would fail if it were ever reached.
+func TestFetchK3sBinarySHAReadsTheCache(t *testing.T) {
+	const (
+		tag      = "v1.35.0%2Bk3s1"
+		amdURL   = "https://github.com/k3s-io/k3s/releases/download/" + tag + "/k3s"
+		armURL   = "https://github.com/k3s-io/k3s/releases/download/" + tag + "/k3s-arm64"
+		amdSum   = "aaaa"
+		armSum   = "bbbb"
+		noRemote = "https://127.0.0.1:1/k3s-io/k3s"
+	)
+
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	s.storeKey(archiveKey(amdURL), amdURL, amdSum)
+	s.storeKey(archiveKey(armURL), armURL, armSum)
+
+	if _, ok := s.sums[tag+"/k3s"]; !ok {
+		t.Fatalf("want an entry keyed by tag and binary name, got keys %v", s.sums)
+	}
+
+	v := exampleVersion{
+		TagURL: tag,
+		Arches: []exampleArch{
+			{
+				Arch:      "amd64",
+				BinaryURL: amdURL,
+			},
+			{
+				Arch:      "arm64",
+				BinaryURL: armURL,
+			},
+		},
+	}
+	if err := fetchK3sBinarySHA(&v, noRemote, s); err != nil {
+		t.Fatalf("expected the cache to answer without a fetch: %v", err)
+	}
+	if v.Arches[0].BinarySHA != amdSum || v.Arches[1].BinarySHA != armSum {
+		t.Fatalf("got %q and %q, want %q and %q",
+			v.Arches[0].BinarySHA, v.Arches[1].BinarySHA, amdSum, armSum)
+	}
+}

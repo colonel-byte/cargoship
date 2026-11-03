@@ -20,7 +20,11 @@
 
 package utils
 
-import "os"
+import (
+	"os"
+
+	"github.com/colonel-byte/cargoship/pkg/helpers"
+)
 
 const (
 	// TmpPathPrefix is the shared prefix used for all temporary directories
@@ -33,7 +37,7 @@ const (
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
 	if basePath != "" {
-		if err := CreateDirectory(basePath, ReadWriteExecuteUser); err != nil {
+		if err := helpers.CreateDirectory(basePath, ReadWriteExecuteUser); err != nil {
 			return "", err
 		}
 	}
@@ -42,18 +46,4 @@ func MakeTempDir(basePath string) (string, error) {
 		return "", err
 	}
 	return tmp, nil
-}
-
-// CreateDirectory creates a directory for the given path and file mode.
-func CreateDirectory(path string, mode os.FileMode) error {
-	if InvalidPath(path) {
-		return os.MkdirAll(path, mode)
-	}
-	return nil
-}
-
-// InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
-func InvalidPath(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsPermission(err) && err != nil
 }

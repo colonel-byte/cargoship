@@ -24,12 +24,17 @@ import (
 	"slices"
 
 	"github.com/BurntSushi/toml"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"gopkg.in/yaml.v3"
 )
+
+// kubeletDir is the kubelet's own working directory, where it keeps per-pod bookkeeping. Both
+// rancher engines run their kubelet there whatever their data directory is set to, and the
+// upstream distro's data directory is that path, so a reset removes it either way.
+const kubeletDir = "/var/lib/kubelet"
 
 // StateDir is where cargoship records state files describing the applied distro package.
 const StateDir = "/etc/cargoship"
@@ -38,7 +43,7 @@ const StateDir = "/etc/cargoship"
 const DistroReleaseFile = "/etc/cargoship/distro-release.json"
 
 // DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.
-func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error) {
+func DistroReleaseDesiredFile(dis distro.Distro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error) {
 	if dis.Metadata.Name == "" && dis.Spec.Version == "" {
 		return "", DesiredFile{}, false, nil
 	}
@@ -60,7 +65,7 @@ func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]Des
 		"architecture":      dis.Metadata.Architecture,
 		"aggregateChecksum": dis.Metadata.AggregateChecksum,
 		"build":             dis.Build,
-		"images":            dis.Spec.Config.ImagesConfig.Images,
+		"images":            dis.Spec.Config.EnabledImages(),
 		"managedFiles":      managedList,
 	}
 	b, err := json.MarshalIndent(relData, "", "  ")
@@ -73,8 +78,6 @@ func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]Des
 var (
 	// ErrVersionNotDetected if a version is not detected
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
-	// ErrPathKey if a path key is not used
-	ErrPathKey = errors.New("key for set path does not exist")
 	// ErrNotImplemented is returned by a distro module for capabilities its engine does not
 	// support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
 	ErrNotImplemented = errors.New("not implemented for this distro")
@@ -109,10 +112,25 @@ type Common struct {
 	PackageDir string
 	// ServiceController the controller service
 	ServiceController string
+	// Supervisor is the port a joining node registers with the cluster on. It is not always
+	// the apiserver port: rke2 runs its supervisor separately on 9345, while k3s multiplexes
+	// it onto 6443. Writing one distro's port into the other's config.yaml gives a join URL
+	// that nothing is listening on.
+	Supervisor int
 	// ServiceWorker the worker service
 	ServiceWorker string
 	// Token the token path
 	Token string
+}
+
+// SupervisorPort returns the port a joining node registers with the cluster on.
+func (r *Common) SupervisorPort() int {
+	return r.Supervisor
+}
+
+// SupervisorURL returns the URL a node joins the cluster through, for the host that serves it.
+func (r *Common) SupervisorURL(name string) string {
+	return fmt.Sprintf("https://%s:%d", name, r.Supervisor)
 }
 
 // BinaryPath returns the full path to the engine binary
@@ -125,7 +143,10 @@ func (r *Common) BinaryName() string {
 	return r.Binary
 }
 
-// ConfigPath returns the full path for the config directory used by the engine
+// ConfigPath returns the full path of the engine's own config file -- rke2 and k3s's
+// config.yaml, upstream's kubeadm-config.yaml. A caller that wants the directory holding it
+// takes filepath.Dir of this; several of the files cargoship writes beside it are found that
+// way, and so is the tree an uninstall removes.
 func (r *Common) ConfigPath() string {
 	return r.Config
 }
@@ -158,25 +179,6 @@ func (r *Common) GetWorkerService() string {
 // GetControllerService returns the name of the controller service
 func (r *Common) GetControllerService() string {
 	return r.ServiceController
-}
-
-// SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
-func (r *Common) SetPath(key string, value string) error {
-	switch key {
-	case Binary:
-		r.Binary = value
-	case BinaryDir:
-		r.BinaryDir = value
-	case Config:
-		r.Config = value
-	case Token:
-		r.Token = value
-	case Data:
-		r.Data = value
-	default:
-		return ErrPathKey
-	}
-	return nil
 }
 
 // removablePaths cleans paths and drops the ones that are unset or so broad that handing
@@ -320,7 +322,7 @@ func marshalTOML(config dig.Mapping) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (r *Common) writeYAML(ctx context.Context, host *cluster.ZarfHost, config dig.Mapping, path string) error {
+func (r *Common) writeYAML(ctx context.Context, host *cluster.Host, config dig.Mapping, path string) error {
 	out, err := marshalYAML(config)
 	if err != nil {
 		logger.From(ctx).Warn("failed to marshal yaml", "host", host)

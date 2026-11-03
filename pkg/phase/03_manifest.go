@@ -16,9 +16,11 @@ package phase
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -88,7 +90,8 @@ func mergeManifest(entries []ManifestEntry) []ManifestEntry {
 
 // diffManifest returns entries present in old but missing from current, keyed by Path. This is
 // how a stale file from a previous version (e.g. a renamed engine binary) is found after an
-// upgrade uploads its replacement.
+// upgrade uploads its replacement, and -- with the manifest as old and the files just deleted
+// as current -- how the manifest stops claiming them.
 func diffManifest(old, current []ManifestEntry) []ManifestEntry {
 	keep := make(map[string]bool, len(current))
 	for _, e := range current {
@@ -119,7 +122,7 @@ func filterManifestByCategory(entries []ManifestEntry, category string) []Manife
 
 // readManifest reads and parses the manifest from h. It returns nil if the manifest doesn't
 // exist or can't be read.
-func (p *GenericPhase) readManifest(h *cluster.ZarfHost) []ManifestEntry {
+func (p *GenericPhase) readManifest(h *cluster.Host) []ManifestEntry {
 	if !h.FileExist(manifestFile) {
 		return nil
 	}
@@ -134,7 +137,7 @@ func (p *GenericPhase) readManifest(h *cluster.ZarfHost) []ManifestEntry {
 // was uploaded during the current run (used by removeStaleManifestEntries to find files an
 // upgrade no longer needs). Failures are logged and swallowed: a missed manifest entry should
 // never fail an upload.
-func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.ZarfHost, category, path string) {
+func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.Host, category, path string) {
 	if category == "" {
 		category = "file"
 	}
@@ -153,20 +156,55 @@ func (p *GenericPhase) recordManifestEntry(ctx context.Context, h *cluster.ZarfH
 }
 
 // removeStaleManifestEntries deletes files on h that appear in old but not in current, e.g. an
-// engine binary left behind after a version bump renamed it.
-func (p *GenericPhase) removeStaleManifestEntries(ctx context.Context, h *cluster.ZarfHost, old, current []ManifestEntry) {
+// engine binary left behind after a version bump renamed it, and stops the manifest claiming
+// them. Without that second half the manifest only grows: recordManifestEntry appends, nothing
+// subtracts, so every version an upgrade replaces stays in it naming a path that is gone.
+func (p *GenericPhase) removeStaleManifestEntries(ctx context.Context, h *cluster.Host, old, current []ManifestEntry) {
+	removed := []ManifestEntry{}
 	for _, e := range diffManifest(old, current) {
 		logger.From(ctx).Info("removing stale upload from previous install", "host", h, "category", e.Category, "path", e.Path)
-		if err := h.DeleteFile(e.Path); err != nil {
+		if err := deleteRecordedUpload(ctx, h, e.Path); err != nil {
+			// Left in the manifest, so the next run tries again.
 			logger.From(ctx).Warn("failed to remove stale upload", "host", h, "path", e.Path, "error", err)
+			continue
 		}
+		removed = append(removed, e)
 	}
+	if len(removed) == 0 {
+		return
+	}
+
+	// Re-read rather than reuse current: this pass is scoped to one category, and every other
+	// category's entries have to survive it. Swallowed like recordManifestEntry's failures.
+	kept := diffManifest(p.readManifest(h), removed)
+	if err := h.WriteFile(manifestFile, encodeManifest(kept), "0644"); err != nil {
+		logger.From(ctx).Warn("failed to prune the upload manifest, so it still names files this run removed", "host", h, "error", err)
+	}
+}
+
+// deleteRecordedUpload removes one file the manifest recorded, reporting a file that is already
+// gone as the success it is.
+//
+// An uninstall removes the engine's data and config directories before it walks the manifest, so
+// every file the manifest recorded inside them has gone with them -- eight image tarballs on a
+// k3s node, each warned about individually, over work the run had already done. The state being
+// asked for is the file's absence, and it holds either way.
+func deleteRecordedUpload(ctx context.Context, h *cluster.Host, path string) error {
+	err := h.DeleteFile(path)
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		logger.From(ctx).Debug("the uploaded file was already gone", "host", h, "path", path)
+		return nil
+	}
+	return err
 }
 
 // cleanUploadManifest deletes every file listed in h's upload manifest, then the manifest
 // itself. Used during uninstall to remove files an engine's own data/config directories don't
 // cover, such as binaries staged outside the distro's data dir.
-func (p *GenericPhase) cleanUploadManifest(ctx context.Context, h *cluster.ZarfHost) {
+func (p *GenericPhase) cleanUploadManifest(ctx context.Context, h *cluster.Host) {
 	entries := p.readManifest(h)
 	if len(entries) == 0 {
 		return
@@ -174,7 +212,7 @@ func (p *GenericPhase) cleanUploadManifest(ctx context.Context, h *cluster.ZarfH
 
 	for _, e := range entries {
 		logger.From(ctx).Info("removing uploaded file", "host", h, "category", e.Category, "path", e.Path)
-		if err := h.DeleteFile(e.Path); err != nil {
+		if err := deleteRecordedUpload(ctx, h, e.Path); err != nil {
 			logger.From(ctx).Warn("failed to remove uploaded file", "host", h, "path", e.Path, "error", err)
 		}
 	}

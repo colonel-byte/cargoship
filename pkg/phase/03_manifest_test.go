@@ -15,10 +15,52 @@
 package phase
 
 import (
+	"context"
+	"errors"
+	"io/fs"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 )
+
+// removeFS answers one Remove with the error it is given, and records what it was asked to
+// remove.
+type removeFS struct {
+	remotefs.FS
+
+	err     error
+	removed []string
+}
+
+func (r *removeFS) Remove(path string) error {
+	r.removed = append(r.removed, path)
+	return r.err
+}
+
+// TestDeleteRecordedUploadTreatsAMissingFileAsDone is the noise an uninstall used to make about
+// work it had already done: it removes the engine's data and config directories first, so every
+// file the manifest recorded inside them is gone by the time the manifest is walked, and each one
+// was warned about by path.
+func TestDeleteRecordedUploadTreatsAMissingFileAsDone(t *testing.T) {
+	t.Parallel()
+
+	const path = "/var/lib/rancher/k3s/agent/images/app_v1.tar"
+
+	gone := &removeFS{err: remotefs.PathError("remove", path, fs.ErrNotExist)}
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(gone)
+	require.NoError(t, deleteRecordedUpload(context.Background(), h, path))
+	require.Equal(t, []string{path}, gone.removed, "the removal was not attempted")
+
+	// Every other reason a file would not go is still the caller's to report: a reset that
+	// cannot remove what it uploaded has left the host holding it.
+	denied := errors.New("permission denied")
+	refused := &removeFS{err: remotefs.PathError("remove", path, denied)}
+	h.SetFS(refused)
+	require.ErrorIs(t, deleteRecordedUpload(context.Background(), h, path), denied)
+}
 
 func TestEncodeParseManifestRoundTrip(t *testing.T) {
 	entries := []ManifestEntry{
@@ -125,4 +167,28 @@ func TestDiffManifestIsScopedByCategory(t *testing.T) {
 	require.Equal(t, []ManifestEntry{
 		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/app_v1.tar"},
 	}, diffManifest(oldImages, currentImages))
+}
+
+// TestDiffManifestPrunesWhatAStaleUploadRemoved is the composition removeStaleManifestEntries
+// relies on: the manifest as old, the files it just deleted as current. It is what the upgrade
+// walk caught -- the previous version's engine RPMs were deleted from the host and left in the
+// manifest, which then claimed paths that were not there.
+func TestDiffManifestPrunesWhatAStaleUploadRemoved(t *testing.T) {
+	manifest := []ManifestEntry{
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.36.4.rpm"},
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.37.0.rpm"},
+		{Category: "image", Path: "/var/lib/rancher/rke2/agent/images/app_v1.tar"},
+	}
+	removed := []ManifestEntry{
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.36.4.rpm"},
+	}
+
+	kept := diffManifest(manifest, removed)
+
+	// The version this run installed stays, and so does every other category.
+	require.Equal(t, []ManifestEntry{
+		{Category: "engine", Path: "/var/lib/rancher/rke2/rpm/rke2-common-1.37.0.rpm"},
+		{Category: "image", Path: "/var/lib/rancher/rke2/agent/images/app_v1.tar"},
+	}, kept)
+	require.Equal(t, kept, ParseManifest(encodeManifest(kept)), "what is written back has to read back")
 }

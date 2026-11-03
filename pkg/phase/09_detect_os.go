@@ -23,7 +23,7 @@ package phase
 import (
 	"context"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -49,7 +49,7 @@ func (p *DetectOS) ReadOnly() string {
 
 // Run the phase
 func (p *DetectOS) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.Host) error {
 		l := logger.From(ctx)
 
 		if err := h.ResolveConfigurer(); err != nil {

@@ -47,8 +47,6 @@ const (
 	EngineManifest = "manifest"
 	// EnginePSS string key
 	EnginePSS = "podSecurity"
-	// EngineTLS string key
-	EngineTLS = "tls"
 )
 
 const (
@@ -56,8 +54,6 @@ const (
 	OutputFormatJSON = "json"
 	// OutputFormatYAML yaml output format
 	OutputFormatYAML = "yaml"
-	// OutputFormatTable table output format
-	OutputFormatTable = "table"
 )
 
 const (

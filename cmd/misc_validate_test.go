@@ -53,8 +53,8 @@ func writeYAML(t *testing.T, name, body string) string {
 var valuesSchemaPackageDir = filepath.Join("..", "test", "e2e", "noncluster", "testdata", "values-schema")
 
 const validInventory = `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: demo
 spec:
@@ -66,8 +66,8 @@ spec:
 `
 
 const invalidInventory = `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: demo
 spec:
@@ -89,8 +89,8 @@ func TestValidateAcceptsAGoodInventory(t *testing.T) {
 
 func TestValidateDetectsThePackageKind(t *testing.T) {
 	path := writeYAML(t, "distro.yaml", `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: demo
   version: 0.0.1
@@ -125,7 +125,7 @@ func TestValidateChecksEveryFileBeforeReporting(t *testing.T) {
 	bad2 := filepath.Join(dir, "three.yaml")
 	require.NoError(t, os.WriteFile(bad1, []byte(invalidInventory), 0600))
 	require.NoError(t, os.WriteFile(good, []byte(validInventory), 0600))
-	require.NoError(t, os.WriteFile(bad2, []byte("kind: ZarfCluster\nspec:\n  hosts: {}\n"), 0600))
+	require.NoError(t, os.WriteFile(bad2, []byte("kind: Cluster\nspec:\n  hosts: {}\n"), 0600))
 
 	_, stderr, err := runValidate(t, bad1, good, bad2)
 	require.Error(t, err)
@@ -177,7 +177,7 @@ func TestValidateRejectsPackageFlagForOtherKinds(t *testing.T) {
 
 func TestValidateRejectsPackageFlagForADetectedPackageDocument(t *testing.T) {
 	// --kind was not given, so the mismatch is only visible once the document says what it is.
-	path := writeYAML(t, "distro.yaml", "kind: ZarfDistro\n")
+	path := writeYAML(t, "distro.yaml", "kind: Distro\n")
 
 	_, _, err := runValidate(t, "--package", valuesSchemaPackageDir, path)
 	require.ErrorContains(t, err, "only applies to the inventory schema")
@@ -187,8 +187,8 @@ func TestValidateChecksValuesAgainstAPackage(t *testing.T) {
 	// spec.config.values is untyped in the generated schema because its shape belongs to the
 	// package. Without --package the typo below passes and is only caught at install time.
 	path := writeYAML(t, "inventory.yaml", `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: demo
 spec:

@@ -213,7 +213,7 @@ func fullCommon() common {
 
 func fullHostUpdates() hostUpdates {
 	yes := true
-	return hostUpdates{Hosts: &yes, Firewall: &yes, FAPolicyd: &yes}
+	return hostUpdates{Hosts: &yes, Firewall: &yes}
 }
 
 func fullVerification() verification {
@@ -243,14 +243,13 @@ func fullApplyParams() *applyParams {
 func fullPrepareParams() *prepareParams {
 	concurrency := 4
 	return &prepareParams{
-		common:          fullCommon(),
-		hostUpdates:     fullHostUpdates(),
-		verification:    fullVerification(),
-		Package:         "/srv/staging/rke2.tar.zst",
-		Concurrency:     &concurrency,
-		WorkConcurrency: "50%",
-		Values:          []string{"/srv/staging/values.yaml"},
-		Timeout:         "45m",
+		common:       fullCommon(),
+		hostUpdates:  fullHostUpdates(),
+		verification: fullVerification(),
+		Package:      "/srv/staging/rke2.tar.zst",
+		Concurrency:  &concurrency,
+		Values:       []string{"/srv/staging/values.yaml"},
+		Timeout:      "45m",
 	}
 }
 

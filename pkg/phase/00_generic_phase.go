@@ -39,8 +39,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -55,18 +55,13 @@ type GenericPhase struct {
 	wg      sync.WaitGroup
 }
 
-// GetConfig is an accessor to phase Config
-func (p *GenericPhase) GetConfig() *cluster.ZarfCluster {
-	return p.manager.Config
-}
-
 // GetDistro is an accessor to phase Distro
-func (p *GenericPhase) GetDistro() *distro.ZarfDistro {
+func (p *GenericPhase) GetDistro() *distro.Distro {
 	return p.manager.Distro
 }
 
 // Prepare the phase
-func (p *GenericPhase) Prepare(c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *GenericPhase) Prepare(c *cluster.Cluster, d *distro.Distro) error {
 	p.manager.Config = c
 	p.manager.Distro = d
 	return nil
@@ -77,14 +72,14 @@ func (p *GenericPhase) SetManager(m *Manager) {
 	p.manager = m
 }
 
-func (p *GenericPhase) parallelDo(ctx context.Context, hosts cluster.ZarfHosts, funcs ...func(context.Context, *cluster.ZarfHost) error) error {
+func (p *GenericPhase) parallelDo(ctx context.Context, hosts cluster.Hosts, funcs ...func(context.Context, *cluster.Host) error) error {
 	if p.manager.Concurrency == 0 {
 		return hosts.ParallelEach(ctx, funcs...)
 	}
 	return hosts.BatchedParallelEach(ctx, p.manager.Concurrency, funcs...)
 }
 
-func (p *GenericPhase) parallelDoWithMessage(ctx context.Context, msg string, hosts cluster.ZarfHosts, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
+func (p *GenericPhase) parallelDoWithMessage(ctx context.Context, msg string, hosts cluster.Hosts, funcs ...func(context.Context, *cluster.Host) error) (err error) {
 	cancel, err := p.tickerHelper(ctx, msg, Interval)
 	if err != nil {
 		logger.From(ctx).Warn("got error well setting up ticket", "error", err)
@@ -93,7 +88,7 @@ func (p *GenericPhase) parallelDoWithMessage(ctx context.Context, msg string, ho
 	return p.parallelDo(ctx, hosts, funcs...)
 }
 
-func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.ZarfHosts, funcs ...func(context.Context, *cluster.ZarfHost) error) error {
+func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.Hosts, funcs ...func(context.Context, *cluster.Host) error) error {
 	if p.manager.Concurrency == 0 {
 		return hosts.ParallelEach(ctx, funcs...)
 	}
@@ -108,7 +103,7 @@ func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.ZarfH
 	return hosts.BatchedParallelEach(ctx, batchSize, funcs...)
 }
 
-func (p *GenericPhase) batchedParallelWithMessageInterval(ctx context.Context, msg string, interval time.Duration, hosts cluster.ZarfHosts, batchSize int, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
+func (p *GenericPhase) batchedParallelWithMessageInterval(ctx context.Context, msg string, interval time.Duration, hosts cluster.Hosts, batchSize int, funcs ...func(context.Context, *cluster.Host) error) (err error) {
 	cancel, err := p.tickerHelper(ctx, msg, interval)
 	if err != nil {
 		logger.From(ctx).Warn("got error well setting up ticket", "error", err)
@@ -120,15 +115,15 @@ func (p *GenericPhase) batchedParallelWithMessageInterval(ctx context.Context, m
 	return hosts.BatchedParallelEach(ctx, batchSize, funcs...)
 }
 
-func (p *GenericPhase) batchedParallelWithMessage(ctx context.Context, msg string, hosts cluster.ZarfHosts, batchSize int, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
+func (p *GenericPhase) batchedParallelWithMessage(ctx context.Context, msg string, hosts cluster.Hosts, batchSize int, funcs ...func(context.Context, *cluster.Host) error) (err error) {
 	return p.batchedParallelWithMessageInterval(ctx, msg, Interval, hosts, batchSize, funcs...)
 }
 
 // batchedParallelPerProfileWithMessage groups hosts by profile and runs funcs over every group
 // concurrently, with each group independently respecting its own batch size. A group's batch
-// size comes from its profile's Concurrency override (see ZarfClusterProfiles.ResolveConcurrency),
+// size comes from its profile's Concurrency override (see Profiles.ResolveConcurrency),
 // falling back to fallback for hosts with no profile or a profile that sets no override.
-func (p *GenericPhase) batchedParallelPerProfileWithMessage(ctx context.Context, msg string, hosts cluster.ZarfHosts, fallback string, funcs ...func(context.Context, *cluster.ZarfHost) error) error {
+func (p *GenericPhase) batchedParallelPerProfileWithMessage(ctx context.Context, msg string, hosts cluster.Hosts, fallback string, funcs ...func(context.Context, *cluster.Host) error) error {
 	profiles := p.manager.Config.Spec.Config.Profiles
 	groups := hosts.GroupByProfile()
 
@@ -152,7 +147,7 @@ func (p *GenericPhase) batchedParallelPerProfileWithMessage(ctx context.Context,
 		}
 
 		wg.Add(1)
-		go func(group cluster.ZarfHostGroup, batchSize int, msg string) {
+		go func(group cluster.HostGroup, batchSize int, msg string) {
 			defer wg.Done()
 			if err := p.batchedParallelWithMessage(ctx, msg, group.Hosts, batchSize, funcs...); err != nil {
 				mu.Lock()
@@ -168,12 +163,12 @@ func (p *GenericPhase) batchedParallelPerProfileWithMessage(ctx context.Context,
 }
 
 // Wet is a shorthand for manager.Wet
-func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error {
-	return p.manager.Wet(host, msg, funcs...)
+func (p *GenericPhase) Wet(f errorfunc) error {
+	return p.manager.Wet(f)
 }
 
 // VersionLess if host version is less then the distro version
-func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool {
+func (p *GenericPhase) VersionLess(host *cluster.Host, version string) bool {
 	con, err := semver.NewConstraint(fmt.Sprintf("< %s", strings.ReplaceAll(version, "+", "-")))
 	if err != nil {
 		return false
@@ -186,7 +181,7 @@ func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool 
 }
 
 // VersionGreater if host version is greater then the distro version
-func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool {
+func (p *GenericPhase) VersionGreater(host *cluster.Host, version string) bool {
 	con, err := semver.NewConstraint(fmt.Sprintf("> %s", strings.ReplaceAll(version, "+", "-")))
 	if err != nil {
 		return false
@@ -202,7 +197,7 @@ func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bo
 // behind target. kubeadm's own upgrade path refuses to skip a minor version, and a two-minor jump
 // fails partway through the control plane rather than up front, so this catches it before a real
 // run starts one. UnknownVersion (no engine detected yet, a fresh install) never counts as skew.
-func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool {
+func (p *GenericPhase) VersionSkewTooGreat(host *cluster.Host, target string) bool {
 	if host.Metadata.DistroVersion == UnknownVersion {
 		return false
 	}

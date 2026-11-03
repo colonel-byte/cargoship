@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # syntax=docker/dockerfile:1
-FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS skeleton
+FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS skeleton
 
 ARG UID=65532
 ARG GID=65532
@@ -25,7 +25,7 @@ RUN mkdir -p \
   && chmod 0700 /skeleton/home/nonroot /skeleton/home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /skeleton/home/nonroot /skeleton/workspace
 
-FROM registry1.dso.mil/chainguard/cgr.dev/chainguard/static@sha256:f2787f11adca5eadeeb15c5012b59e4b95d3bdbd792a8d243a7a931ea4e70e63
+FROM cgr.dev/chainguard/static:latest@sha256:fc42af33e643f20d08baf03cddcc1c02ba57052dfb02edb0d79f3fc47bcea8d9
 
 COPY --from=skeleton /skeleton/ /
 

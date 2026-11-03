@@ -32,7 +32,7 @@ import (
 func FuzzEncryptDecryptConfigNoPanic(f *testing.F) {
 	f.Add(string(docWithPlaintext("hunter2")))
 	f.Add(string(docWithPlaintext("")))
-	f.Add("apiVersion: zarf.dev/v1alpha1\nkind: ZarfCluster\n")
+	f.Add("apiVersion: colonel-byte.dev/v1alpha1\nkind: Cluster\n")
 	f.Add("")
 	f.Add("spec:\n  config:\n    registries: not-a-list\n")
 	f.Add("spec:\n  config:\n    registries:\n      - auth: {pass: hunter2}\n")

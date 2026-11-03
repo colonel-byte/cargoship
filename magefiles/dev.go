@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/dnfpins"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/microvmrun"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/osv"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/util"
 	"github.com/magefile/mage/mg"
@@ -132,6 +133,91 @@ func (Dev) DnfPins(ctx context.Context) error {
 	return nil
 }
 
+// VMImage fetches and verifies a base image the VM fleet runs, without starting anything.
+//
+// `-image=all` fetches every guest the fleet knows. They are several hundred megabytes each,
+// so the default is the one a fleet uses unless asked otherwise.
+func (Dev) VMImage(
+	ctx context.Context,
+	// guest to fetch: rocky, ubuntu, or all (default rocky)
+	image *string,
+) error {
+	return microvmrun.Image(ctx, stringOr(image, "rocky"))
+}
+
+// VMUp brings up a local Enterprise Linux VM fleet and writes a ZarfCluster inventory pointing
+// at it, so that the phases a container cannot exercise - SELinux, fapolicyd, firewalld, the
+// *-selinux RPM scriptlets - can be run against a real kernel. See docs/dev/microvm.md.
+//
+// Infra nodes join as workers; what makes them infra is a profile of their own, which the
+// LabelNodes phase turns into a node-role.kubernetes.io/infra label.
+//
+// The fleet is Rocky unless asked otherwise. The two Ubuntu counts are how the branches a
+// single-distribution fleet cannot reach get exercised - the APT upload phase, the ufw
+// backend, and the SELinux and fapolicyd gates correctly doing nothing. Note that rke2 cannot
+// run on an Ubuntu node at all, so a mixed fleet wants `-distro=k3s` or an upstream package.
+func (Dev) VMUp(
+	ctx context.Context,
+	// control-plane nodes (default 1)
+	control *int,
+	// worker nodes (default 2)
+	worker *int,
+	// infra nodes, which join as workers under an infra profile (default 0)
+	infra *int,
+	// Ubuntu control-plane nodes, instead of Rocky (default 0)
+	ubuntuControl *int,
+	// Ubuntu worker nodes, instead of Rocky (default 0)
+	ubuntuWorker *int,
+	// engine the fleet is prepared for, k3s, rke2 or upstream (default k3s)
+	distro *string,
+	// memory per node in MiB (default 4096)
+	memory *int,
+	// vCPUs per node (default 2)
+	cpus *int,
+) error {
+	return microvmrun.Up(ctx, microvmrun.Options{
+		Controllers:       intOr(control, 1),
+		Workers:           intOr(worker, 2),
+		Infra:             intOr(infra, 0),
+		UbuntuControllers: intOr(ubuntuControl, 0),
+		UbuntuWorkers:     intOr(ubuntuWorker, 0),
+		Distro:            stringOr(distro, "k3s"),
+		MemoryMiB:         intOr(memory, 0),
+		CPUs:              intOr(cpus, 0),
+	})
+}
+
+// VMDown tears a VM fleet down and removes its state, leaving the cached base image.
+//
+// The fleet name matters when the e2e suite has been run: CARGOSHIP_E2E_BACKEND=microvm brings
+// up a fleet called "e2e", which dev:vmUp's "dev" fleet does not cover. A run killed before
+// its teardown leaves that one behind, and `-fleet=e2e` is how to remove it.
+func (Dev) VMDown(
+	// fleet to tear down (default dev)
+	fleet *string,
+) error {
+	return microvmrun.Down(stringOr(fleet, ""))
+}
+
+// VMList prints a VM fleet's nodes and whether each is running.
+func (Dev) VMList(
+	// fleet to list (default dev)
+	fleet *string,
+) error {
+	return microvmrun.List(stringOr(fleet, ""))
+}
+
+// VMShell opens a shell on one node of a VM fleet: `mage dev:vmShell kc0`.
+func (Dev) VMShell(
+	ctx context.Context,
+	// node to connect to
+	node string,
+	// fleet the node belongs to (default dev)
+	fleet *string,
+) error {
+	return microvmrun.SSH(ctx, stringOr(fleet, ""), node)
+}
+
 // WriteOSVOverrides writes every override into vendor/.
 func (Dev) WriteOSVOverrides() error {
 	return osv.WriteOverrides()
@@ -140,4 +226,23 @@ func (Dev) WriteOSVOverrides() error {
 // VerifyVendor checks that vendor/ contains all required overrides and no uncovered manifests.
 func (Dev) VerifyVendor() error {
 	return osv.VerifyVendor()
+}
+
+// intOr is the value of an optional mage argument, or def when it was not given. Mage passes
+// an unset optional argument as a nil pointer.
+func intOr(v *int, def int) int {
+	if v == nil {
+		return def
+	}
+	return *v
+}
+
+// stringOr is the string equivalent. An argument given as -distro= with nothing after it
+// arrives as an empty string rather than nil, which is a typo and not a request for the
+// default, so it is left to microvm.Spec.Normalize to reject.
+func stringOr(v *string, def string) string {
+	if v == nil {
+		return def
+	}
+	return *v
 }

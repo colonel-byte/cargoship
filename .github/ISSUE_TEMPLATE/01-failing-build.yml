@@ -1,0 +1,85 @@
+name: Failing build or CI job
+description: A build, test, or workflow that fails - in CI or locally.
+title: "ci: "
+labels:
+  - bug
+  - ci
+body:
+  - type: markdown
+    attributes:
+      value: For a test that fails only sometimes, use the flaky e2e test form instead - an intermittent failure needs a different set of answers.
+  - type: dropdown
+    id: job
+    attributes:
+      label: Which CI job
+      description: The name shown in the checks list, not the workflow filename. Pick `Other` or `Not a CI job - fails locally` when nothing matches.
+      options:
+        - Basic build
+        - Unit tests
+        - E2E cluster
+        - Validate Lint
+        - Validate pre-commit hooks
+        - Test build containers
+        - CodeQL
+        - PR Title Check
+        - Check dependency pins
+        - Check for go mod changes
+        - Other
+        - Not a CI job - fails locally
+    validations:
+      required: true
+  - type: input
+    id: run
+    attributes:
+      label: Link to the failing run
+      description: The URL of the workflow run or the individual check. Leave blank when the failure is local only.
+      placeholder: https://github.com/colonel-byte/cargoship/actions/runs/0000000000
+  - type: input
+    id: command
+    attributes:
+      label: Command or mage target
+      description: What you ran, or what the job runs. The cluster and zarf suites are not run in CI, so a failure there has no run to link.
+      placeholder: go run -mod=vendor ./magefiles/core test:unit
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: The shortest decisive part of the log, not the whole run.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Output of `cargoship version`
+      description: Or the commit the failure reproduces on, when the build never got far enough to produce a binary.
+      placeholder: 1da789cd
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Host OS and architecture of the machine the failure happened on, plus the Go, Docker, and bootloose versions where they are involved.
+      placeholder: |
+        Host OS: Fedora 44, x86_64
+        go version: go1.27.2
+        docker version: 28.1.1
+  - type: dropdown
+    id: reproduces
+    attributes:
+      label: Does it reproduce
+      options:
+        - Every run
+        - Reproduces locally, not always in CI
+        - Reproduces in CI, not locally
+        - Only saw it once
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: The last change you believe worked, a dependency bump you suspect, or a diff that triggers it.

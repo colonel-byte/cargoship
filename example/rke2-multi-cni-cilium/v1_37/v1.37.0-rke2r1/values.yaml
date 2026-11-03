@@ -39,3 +39,7 @@ podSecurity:
     enforce: restricted
     audit: restricted
     warn: restricted
+tools:
+  etcdctl:
+    # Optional debug CLI installed on control-plane hosts.
+    enabled: false

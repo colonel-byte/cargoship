@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/klauspost/compress/gzip"
 	"github.com/klauspost/compress/zstd"
 )
@@ -39,7 +39,7 @@ func imageCompressWriter(format string, w io.Writer) (io.WriteCloser, error) {
 		}
 		return enc, nil
 	default:
-		_, err := distro.ZarfDistroImageConfig{Compression: format}.TarballSuffix()
+		_, err := distro.ImageConfig{Compression: format}.TarballSuffix()
 		return nil, err
 	}
 }

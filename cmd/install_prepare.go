@@ -25,18 +25,18 @@ import (
 	"os"
 
 	"github.com/colonel-byte/cargoship/config/lang"
-	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/action"
+	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/riglogger"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type installPrepareOptions struct {
 	InstallCommon
-	workerCon string
-	hosts     bool
-	firewall  bool
-	fapolicy  bool
+	hosts    bool
+	firewall bool
 }
 
 func newInstallPrepareCommand() *cobra.Command {
@@ -59,27 +59,12 @@ func newInstallPrepareCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
+	registerFlagReceiptPath(cmd, &o.receiptPath)
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
-	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
-
-	val, err := cmd.Flags().GetString(RootLoggingLevel)
-	if err != nil {
-		val = loggingLevelDefault
-	}
-
-	o.logLevel = val
-
-	val, err = cmd.Flags().GetString(RootLoggingFormat)
-	if err != nil {
-		val = string(logger.FormatConsole)
-	}
-
-	o.LogFormat = val
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 
 	markRequired(cmd, InstallConfig)
 
@@ -92,18 +77,32 @@ func newInstallPrepareCommand() *cobra.Command {
 func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	d, err := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
+	// Opened before anything that can fail, so a run that never reaches its phases still leaves
+	// a receipt saying so. runErr is what the receipt records as the outcome, which is why every
+	// return below assigns it rather than returning directly.
+	var (
+		manager      *phase.Manager
+		distroLayout *layout.DistroLayout
+		runErr       error
+	)
+	ctx, finishReceipt, err := startReceipt(ctx, cmd, o.InstallCommon)
 	if err != nil {
 		return err
 	}
+	defer func() { finishReceipt(manager, args[0], distroLayout, runErr) }()
 
-	if err := riglogger.RigLogger(ctx); err != nil {
-		return err
+	d, runErr := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
+	if runErr != nil {
+		return runErr
 	}
 
-	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
-	if err != nil {
-		return err
+	if runErr = riglogger.RigLogger(ctx); runErr != nil {
+		return runErr
+	}
+
+	manager, distroLayout, runErr = initManager(ctx, args[0], o.InstallCommon)
+	if runErr != nil {
+		return runErr
 	}
 	// deletes the temp directory at the end of the apply phases
 	defer func() {
@@ -122,5 +121,6 @@ func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, arg
 		ModifyModules:  true,
 	}
 
-	return action.NewPrepare(opts).Run(ctx)
+	runErr = action.NewPrepare(opts).Run(ctx)
+	return runErr
 }

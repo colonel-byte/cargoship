@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/test"
@@ -67,7 +67,7 @@ var (
 type JoinPhaseSuite struct {
 	phaseWalk
 	// joined is the host the walk added, resolved from the inventory in Test_05.
-	joined *apicluster.ZarfHost
+	joined *apicluster.Host
 }
 
 func (s *JoinPhaseSuite) SetupSuite() {
@@ -103,7 +103,7 @@ func (s *JoinPhaseSuite) Test_00_JoinMachine() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	definition, err := containerSafeDefinition(examplePackage(), s.pkgDir)
+	definition, err := test.ContainerSafeDefinition(examplePackage(), s.pkgDir)
 	s.Require().NoError(err)
 
 	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
@@ -140,21 +140,22 @@ func (s *JoinPhaseSuite) Test_05_Manager() {
 	s.Require().Len(s.harness.engineWorkers(), joinClusterWorkers)
 	s.Require().Len(s.harness.uploadOnly(), uploadOnlyCount)
 
-	s.joined = s.harness.hosts().Find(func(h *apicluster.ZarfHost) bool {
-		return h.Hostname == joinHostname
+	s.joined = s.harness.hosts().Find(func(h *apicluster.Host) bool {
+		return h.Hostname == clusterConfig().joinHostname()
 	})
-	s.Require().NotNilf(s.joined, "the inventory does not name %s, the machine this walk joins", joinHostname)
+	s.Require().NotNilf(s.joined, "the inventory does not name %s, the machine this walk joins", clusterConfig().joinHostname())
 }
 
 // isJoined reports whether host is the machine this walk added.
-func (s *JoinPhaseSuite) isJoined(host *apicluster.ZarfHost) bool {
-	return host.Hostname == joinHostname
+func (s *JoinPhaseSuite) isJoined(host *apicluster.Host) bool {
+	return host.Hostname == clusterConfig().joinHostname()
 }
 
 // Test_ZZ1_ClusterHealthy waits for the joined node to report Ready alongside the nodes the
 // install bootstrapped. Test_62 already waited for the node it started, so this is the check
 // that the cluster is one node larger rather than one node different.
 func (s *JoinPhaseSuite) Test_ZZ1_ClusterHealthy() {
+	s.requireClusterAPI()
 	t := s.T()
 	cs, err := e2e.KubeClient(t)
 	s.Require().NoError(err)

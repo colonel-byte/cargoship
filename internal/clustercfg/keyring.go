@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package clustercfg holds the age/vault key material and the encrypt, decrypt and rekey
+// operations over a cluster configuration document.
 package clustercfg
 
 import (
@@ -22,7 +24,7 @@ import (
 	"strings"
 
 	"filippo.io/age"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 )
 

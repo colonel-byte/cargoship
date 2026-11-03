@@ -24,9 +24,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,9 +55,9 @@ func (p *conditionalPhase) Run(_ context.Context) error {
 }
 
 func TestConditionalPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &conditionalPhase{}
-	m.AddPhase(p)
+	m.SetPhases(Phases{p})
 	require.NoError(t, m.Run(context.Background()))
 	require.False(t, p.runCalled, "run was not called")
 	require.True(t, p.shouldrunCalled, "shouldrun was not called")
@@ -74,7 +75,7 @@ func (p *configPhase) Explanation() string {
 	return "test function"
 }
 
-func (p *configPhase) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *configPhase) Prepare(_ context.Context, c *cluster.Cluster, _ *distro.Distro) error {
 	p.receivedConfig = c != nil
 	return nil
 }
@@ -84,9 +85,9 @@ func (p *configPhase) Run(_ context.Context) error {
 }
 
 func TestConfigPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &configPhase{}
-	m.AddPhase(p)
+	m.SetPhases(Phases{p})
 	require.NoError(t, m.Run(context.Background()))
 	require.True(t, p.receivedConfig, "config was not received")
 }
@@ -130,9 +131,9 @@ func (p *hookedPhase) Run(_ context.Context) error {
 }
 
 func TestHookedPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p := &hookedPhase{}
-	m.AddPhase(p)
+	m.SetPhases(Phases{p})
 	require.Error(t, m.Run(context.Background()))
 	require.True(t, p.beforeCalled, "before hook was not called")
 	require.False(t, p.afterCalled, "after hook should not run on failure")
@@ -140,13 +141,13 @@ func TestHookedPhase(t *testing.T) {
 
 func TestContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	p1 := &hookedPhase{fn: func() error {
 		cancel()
 		return nil
 	}}
 	p2 := &hookedPhase{}
-	m.AddPhase(p1, p2)
+	m.SetPhases(Phases{p1, p2})
 	require.Error(t, m.Run(ctx))
 	require.Contains(t, ctx.Err().Error(), "cancel")
 
@@ -232,11 +233,11 @@ func (p *mutatingPhase) Run(_ context.Context) error {
 // read `if dp, ok := p.(withDryRun); ok && m.DryRun`, so a phase that implemented neither
 // interface fell through to Run and changed the host it was supposed to be reporting on.
 func TestDryRunSkipsUndeclaredPhases(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	ro := &readOnlyPhase{}
 	dry := &dryRunPhase{}
 	mut := &mutatingPhase{}
-	m.AddPhase(ro, dry, mut)
+	m.SetPhases(Phases{ro, dry, mut})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.True(t, ro.runCalled, "the read-only phase should run as itself under a dry run")
@@ -248,11 +249,11 @@ func TestDryRunSkipsUndeclaredPhases(t *testing.T) {
 // TestWetRunRunsEveryPhase pins the other direction: the gate is the only thing the marker
 // changes, so with DryRun off all three phases run normally.
 func TestWetRunRunsEveryPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	ro := &readOnlyPhase{}
 	dry := &dryRunPhase{}
 	mut := &mutatingPhase{}
-	m.AddPhase(ro, dry, mut)
+	m.SetPhases(Phases{ro, dry, mut})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.True(t, ro.runCalled, "read-only run was not called")
@@ -265,10 +266,10 @@ func TestWetRunRunsEveryPhase(t *testing.T) {
 // must not fire, because a hook changes the host by the same route the phase would; and it must
 // not be cleaned up when a later phase fails, because there is nothing to undo.
 func TestDryRunSkipsHooksAndCleanUp(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	skipped := &hookedPhase{}
 	failing := &readOnlyPhase{err: fmt.Errorf("preflight failed")}
-	m.AddPhase(skipped, failing)
+	m.SetPhases(Phases{skipped, failing})
 
 	require.Error(t, m.Run(context.Background()))
 	require.True(t, failing.runCalled, "the read-only phase did not run")
@@ -328,7 +329,7 @@ func (p *unpreparablePhase) Explanation() string {
 	return "test function"
 }
 
-func (p *unpreparablePhase) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *unpreparablePhase) Prepare(_ context.Context, _ *cluster.Cluster, _ *distro.Distro) error {
 	p.prepareCalls++
 	return p.prepareErr
 }
@@ -352,12 +353,12 @@ func (p *readOnlyUnpreparable) ReadOnly() string {
 // the state every skipped phase left behind rather than a preflight result. Failing there made
 // --dry-run unusable against a cluster with nothing installed on it.
 func TestDryRunToleratesPrepareFailureOnSkippedPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	unprepared := &unpreparablePhase{prepareErr: fmt.Errorf("no controllers are running")}
 	// A read-only phase after it, not a mutating one: a mutating phase is skipped under a dry
 	// run whether the run continued or not, so it could not tell the two apart.
 	after := &readOnlyPhase{}
-	m.AddPhase(unprepared, after)
+	m.SetPhases(Phases{unprepared, after})
 
 	require.NoError(t, m.Run(context.Background()), "a skipped phase's Prepare must not fail a dry run")
 	require.Equal(t, 1, unprepared.prepareCalls, "Prepare still runs: it is what filters the list")
@@ -368,10 +369,10 @@ func TestDryRunToleratesPrepareFailureOnSkippedPhase(t *testing.T) {
 // TestDryRunFailsOnPrepareFailureOfReadOnlyPhase is the other half. A read-only phase runs for
 // real under a dry run, so its Prepare failing is the preflight failing and has to stop the run.
 func TestDryRunFailsOnPrepareFailureOfReadOnlyPhase(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
 	unprepared := &readOnlyUnpreparable{unpreparablePhase{prepareErr: fmt.Errorf("host unreachable")}}
 	after := &readOnlyPhase{}
-	m.AddPhase(unprepared, after)
+	m.SetPhases(Phases{unprepared, after})
 
 	require.Error(t, m.Run(context.Background()), "a read-only phase failing to prepare is a failed preflight")
 	require.False(t, after.runCalled, "the run should have stopped at the failure")
@@ -379,10 +380,10 @@ func TestDryRunFailsOnPrepareFailureOfReadOnlyPhase(t *testing.T) {
 
 // TestWetRunFailsOnPrepareFailure keeps the tolerance out of a real run entirely.
 func TestWetRunFailsOnPrepareFailure(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 	unprepared := &unpreparablePhase{prepareErr: fmt.Errorf("no controllers are running")}
 	after := &readOnlyPhase{}
-	m.AddPhase(unprepared, after)
+	m.SetPhases(Phases{unprepared, after})
 
 	require.Error(t, m.Run(context.Background()))
 	require.False(t, after.runCalled)
@@ -442,12 +443,12 @@ func (p *changingPhase) Run(_ context.Context) error {
 // one worth having a test for: a phase filtered out by ShouldRun runs nothing, but it can have
 // finished its work in Prepare, so leaving it out of the result would lose a real change.
 func TestRunResultRecordsEveryDisposition(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
-	m.AddPhase(
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{
 		&changingPhase{title: "ran", shouldRun: true},
 		&conditionalPhase{},
 		&mutatingPhase{},
-	)
+	})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Equal(t, []string{"ran", "mutating phase"}, Titles(m.Result.Ran))
@@ -497,7 +498,7 @@ func TestRunResultChangedComesOnlyFromDeclaredPhases(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+			m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
 			m.SetPhases(tc.phases)
 
 			require.NoError(t, m.Run(context.Background()))
@@ -512,12 +513,12 @@ func TestRunResultChangedComesOnlyFromDeclaredPhases(t *testing.T) {
 // part-way. The phases it got through are the ones that changed the fleet, so they have to be in
 // the result even though Run returned an error.
 func TestRunResultSurvivesAFailure(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
-	m.AddPhase(
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{
 		&changingPhase{title: "first", shouldRun: true, changed: true},
 		&changingPhase{title: "second", shouldRun: true, err: fmt.Errorf("phase failed")},
 		&changingPhase{title: "third", shouldRun: true},
-	)
+	})
 
 	require.Error(t, m.Run(context.Background()))
 	require.Equal(t, []string{"first", "second"}, Titles(m.Result.Ran))
@@ -528,8 +529,8 @@ func TestRunResultSurvivesAFailure(t *testing.T) {
 // so Changed is false and the question worth asking is whether a real run would have: that is
 // Outstanding, and a phase only reaches Planned after its ShouldRun said there was work to do.
 func TestDryRunResultReportsOutstandingWork(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
-	m.AddPhase(&changingPhase{title: "would sync", shouldRun: true})
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
+	m.SetPhases(Phases{&changingPhase{title: "would sync", shouldRun: true}})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Empty(t, Titles(m.Result.Ran))
@@ -541,8 +542,8 @@ func TestDryRunResultReportsOutstandingWork(t *testing.T) {
 // TestDryRunReportsNoOutstandingWorkWhenThereIsNone is the other half: a phase whose ShouldRun
 // found nothing to do is skipped before the dry-run gate, so it is never reported as pending.
 func TestDryRunReportsNoOutstandingWorkWhenThereIsNone(t *testing.T) {
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
-	m.AddPhase(&changingPhase{title: "nothing drifted", shouldRun: false})
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}, DryRun: true}
+	m.SetPhases(Phases{&changingPhase{title: "nothing drifted", shouldRun: false}})
 
 	require.NoError(t, m.Run(context.Background()))
 	require.Empty(t, Titles(m.Result.Planned))
@@ -555,8 +556,8 @@ func TestResultSinkCollectsTheRun(t *testing.T) {
 	ctx, sink := WithResultSink(context.Background())
 	require.False(t, sink.Observed(), "nothing has run yet")
 
-	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
-	m.AddPhase(&changingPhase{title: "ran", shouldRun: true, changed: true})
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{&changingPhase{title: "ran", shouldRun: true, changed: true}})
 	require.NoError(t, m.Run(ctx))
 
 	require.True(t, sink.Observed())
@@ -571,8 +572,322 @@ func TestResultSinkObservesNothingBeforeThePhases(t *testing.T) {
 	ctx, sink := WithResultSink(context.Background())
 
 	m := Manager{}
-	m.AddPhase(&changingPhase{shouldRun: true, changed: true})
+	m.SetPhases(Phases{&changingPhase{shouldRun: true, changed: true}})
 	require.Error(t, m.Run(ctx))
 
 	require.False(t, sink.Observed())
+}
+
+// hostChangingPhase declares which hosts it changed as well as whether it changed anything, so
+// the two halves of the opt-in can be exercised apart: a phase can speak fleet-wide and stay
+// silent per host, which is what every phase in the tree did before HostsChanged existed.
+type hostChangingPhase struct {
+	title     string
+	changed   bool
+	hosts     []HostChange
+	shouldRun bool
+	runFor    time.Duration
+}
+
+func (p *hostChangingPhase) Title() string {
+	if p.title == "" {
+		return "host changing phase"
+	}
+	return p.title
+}
+
+func (p *hostChangingPhase) Explanation() string {
+	return "test function"
+}
+
+func (p *hostChangingPhase) ShouldRun() bool {
+	return p.shouldRun
+}
+
+func (p *hostChangingPhase) Changed() bool {
+	return p.changed
+}
+
+func (p *hostChangingPhase) HostsChanged() []HostChange {
+	return p.hosts
+}
+
+func (p *hostChangingPhase) Run(_ context.Context) error {
+	time.Sleep(p.runFor)
+	return nil
+}
+
+// TestPhaseResultRecordsHostChanges pins that HostsDeclared tracks the interface and not the
+// contents. A phase that implements HostsChanged and returns nothing has declared that it
+// changed no host, which is a different answer from a phase that was never asked.
+func TestPhaseResultRecordsHostChanges(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		phase    Phase
+		declared bool
+		hosts    []HostChange
+	}{
+		{
+			name:     "never asked",
+			phase:    &changingPhase{changed: true},
+			declared: false,
+			hosts:    nil,
+		},
+		{
+			name:     "declared, no host moved",
+			phase:    &hostChangingPhase{},
+			declared: true,
+			hosts:    nil,
+		},
+		{
+			name: "declared, one host moved",
+			phase: &hostChangingPhase{
+				changed: true,
+				hosts: []HostChange{
+					{
+						Host:    "10.0.0.1",
+						Changed: true,
+						Details: []HostChangeDetail{
+							{
+								Path:   "/etc/hosts",
+								Reason: "out of sync",
+							},
+						},
+					},
+				},
+			},
+			declared: true,
+			hosts: []HostChange{
+				{
+					Host:    "10.0.0.1",
+					Changed: true,
+					Details: []HostChangeDetail{
+						{
+							Path:   "/etc/hosts",
+							Reason: "out of sync",
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := phaseResult(tc.phase, 0)
+			require.Equal(t, tc.declared, got.HostsDeclared)
+			require.Equal(t, tc.hosts, got.Hosts)
+		})
+	}
+}
+
+// TestHostsUndeclaredNamesEveryPhaseThatStayedSilent is the per-host counterpart of
+// TestRunResultChangedComesOnlyFromDeclaredPhases. A phase that reports fleet-wide but not per
+// host is still silent per host, and has to be named: a host missing from a summary built on
+// this may simply never have been spoken for.
+func TestHostsUndeclaredNamesEveryPhaseThatStayedSilent(t *testing.T) {
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{
+		&hostChangingPhase{title: "speaks per host", shouldRun: true},
+		&changingPhase{title: "speaks fleet wide", shouldRun: true},
+		&mutatingPhase{},
+	})
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Equal(t, []string{"speaks fleet wide", "mutating phase"}, m.Result.HostsUndeclared())
+	require.Equal(t, []string{"mutating phase"}, m.Result.Undeclared())
+}
+
+// TestHostSummariesRollUpAcrossPhases pins the denominator. Named alone cannot be read -- a host
+// named by one of one reporting phase is fully accounted for and a host named by one of eight is
+// not -- so Reporting counts every phase that declared per host, including the ones that named
+// no host at all.
+func TestHostSummariesRollUpAcrossPhases(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		result RunResult
+		want   []HostSummary
+	}{
+		{
+			name:   "nothing reported",
+			result: RunResult{},
+			want:   nil,
+		},
+		{
+			name: "one phase reported and named nobody",
+			result: RunResult{
+				Ran: []PhaseResult{
+					{
+						Title:         "quiet",
+						HostsDeclared: true,
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "a host that moved in one phase of two stays changed",
+			result: RunResult{
+				Ran: []PhaseResult{
+					{
+						Title:         "first",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: true,
+							},
+							{
+								Host:    "kc02",
+								Changed: false,
+							},
+						},
+					},
+					{
+						Title:         "second",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: false,
+							},
+						},
+					},
+				},
+			},
+			want: []HostSummary{
+				{
+					Host:      "kc01",
+					Changed:   true,
+					Named:     2,
+					Reporting: 2,
+				},
+				{
+					Host:      "kc02",
+					Changed:   false,
+					Named:     1,
+					Reporting: 2,
+				},
+			},
+		},
+		{
+			name: "a phase that never declared adds no denominator",
+			result: RunResult{
+				Ran: []PhaseResult{
+					{
+						Title:         "declared",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: true,
+							},
+						},
+					},
+					{
+						Title:         "silent",
+						HostsDeclared: false,
+					},
+				},
+			},
+			want: []HostSummary{
+				{
+					Host:      "kc01",
+					Changed:   true,
+					Named:     1,
+					Reporting: 1,
+				},
+			},
+		},
+		{
+			name: "planned and skipped phases count too",
+			result: RunResult{
+				Planned: []PhaseResult{
+					{
+						Title:         "planned",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc01",
+								Changed: false,
+							},
+						},
+					},
+				},
+				Skipped: []PhaseResult{
+					{
+						Title:         "skipped",
+						HostsDeclared: true,
+						Hosts: []HostChange{
+							{
+								Host:    "kc02",
+								Changed: true,
+							},
+						},
+					},
+				},
+			},
+			want: []HostSummary{
+				{
+					Host:      "kc01",
+					Changed:   false,
+					Named:     1,
+					Reporting: 2,
+				},
+				{
+					Host:      "kc02",
+					Changed:   true,
+					Named:     1,
+					Reporting: 2,
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, tc.result.HostSummaries())
+		})
+	}
+}
+
+// TestSignalReportsHowMuchChangedIsWorth pins that the vocabulary lives here rather than in the
+// Ansible module, which now aliases it.
+func TestSignalReportsHowMuchChangedIsWorth(t *testing.T) {
+	complete := RunResult{
+		Ran: []PhaseResult{
+			{
+				Title:    "declared",
+				Declared: true,
+			},
+		},
+	}
+	require.Equal(t, SignalComplete, complete.Signal())
+
+	partial := RunResult{
+		Ran: []PhaseResult{
+			{
+				Title:    "declared",
+				Declared: true,
+			},
+			{
+				Title:    "silent",
+				Declared: false,
+			},
+		},
+	}
+	require.Equal(t, SignalPartial, partial.Signal())
+}
+
+// TestRunRecordsPhaseDuration pins that a phase that executed carries a duration and a phase
+// that did not carries zero. The zero is the point: a planned phase took no time because it
+// never ran, and a reader comparing durations should see that rather than a missing field.
+func TestRunRecordsPhaseDuration(t *testing.T) {
+	m := Manager{Config: &cluster.Cluster{Spec: cluster.Spec{}}}
+	m.SetPhases(Phases{
+		&hostChangingPhase{title: "ran", shouldRun: true, runFor: 10 * time.Millisecond},
+		&conditionalPhase{},
+	})
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Len(t, m.Result.Ran, 1)
+	require.GreaterOrEqual(t, m.Result.Ran[0].Duration, 10*time.Millisecond)
+	require.Len(t, m.Result.Skipped, 1)
+	require.Zero(t, m.Result.Skipped[0].Duration)
 }

@@ -15,8 +15,11 @@
 package examples
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/engineconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,6 +74,34 @@ func TestExampleFlavorCoversAndFilter(t *testing.T) {
 	filtered, err := filterFlavorTags(tags, fSpecific)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"v1.35.2+k3s1", "v1.36.0+k3s1"}, filtered)
+}
+
+// TestAboveFloor covers the release floor: a tag on a line older than exampleMinorFloor is
+// dropped wherever it came from, and the order it was given is kept. The floor itself is read
+// from the constant rather than hardcoded here, so raising it does not take a test with it.
+func TestAboveFloor(t *testing.T) {
+	floor, err := engineconfig.TagVersion(strings.Replace(exampleMinorFloor, "_", ".", 1) + ".0")
+	require.NoError(t, err)
+
+	tags := []string{
+		"v1.37.0+k3s1",
+		"v1.35.2+k3s1",
+		"v1.32.13+k3s1",
+	}
+
+	kept, err := aboveFloor(tags)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"v1.37.0+k3s1", "v1.35.2+k3s1"}, kept)
+
+	// A line one below the floor is the case that matters: it is what a still-committed
+	// example tree looks like after the floor moves.
+	below := fmt.Sprintf("v%d.%d.0+k3s1", floor[0], floor[1]-1)
+	kept, err = aboveFloor([]string{below})
+	require.NoError(t, err)
+	assert.Empty(t, kept)
+
+	_, err = aboveFloor([]string{"not-a-tag"})
+	require.Error(t, err)
 }
 
 func TestSortTagsDesc(t *testing.T) {

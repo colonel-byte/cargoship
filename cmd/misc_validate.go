@@ -72,7 +72,7 @@ func newValidateCommand() *cobra.Command {
 
 	// As on `schema`, these matter only when --package names a package that has to be pulled and
 	// verified rather than read off disk.
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 	addBuildFlags(cmd)
 	addRegistryFlags(cmd)
 

@@ -46,9 +46,9 @@ const (
 // the ones in the repository's schema/ directory, so a document served from the binary
 // and the same document fetched from GitHub are interchangeable.
 var fileNames = map[Kind]string{
-	KindInventory: "zarf-v1alpha1-cluster-schema.json",
-	KindPackage:   "zarf-v1alpha1-distro-package-schema.json",
-	KindConfig:    "zarf-config-distro-schema.json",
+	KindInventory: "cluster-v1alpha1-schema.json",
+	KindPackage:   "distro-v1alpha1-schema.json",
+	KindConfig:    "config-distro-schema.json",
 }
 
 // Kinds returns every kind that can be served, sorted, for flag validation and shell

@@ -20,12 +20,12 @@ import (
 	"os"
 	"time"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
-	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/riglogger"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -52,7 +52,7 @@ type phaseHarness struct {
 	// dropped holds the upload-only hosts once dropUploadOnlyHosts has removed them from the
 	// manager. They are kept so close can disconnect them: the Disconnect phase only sees the
 	// hosts still on the manager.
-	dropped apicluster.ZarfHosts
+	dropped apicluster.Hosts
 	// opts are the apply options the phase tests build their phases with.
 	opts phaseHarnessOptions
 }
@@ -123,6 +123,22 @@ func newManager(
 		return nil, nil, fmt.Errorf("failed to load distro package %s: %w", pkgPath, err)
 	}
 
+	// Resolve the package against its values before any phase runs, the way cmd/common.go
+	// does: ApplyValues renders and maps the engine configuration, RenderFiles renders the
+	// files the package marked as templates. Without these the walk installs a flavor whose
+	// engine config still holds raw `{{ ... }}`, which reaches the host as invalid YAML -
+	// rke2-multi-cni-cilium's HelmChartConfig did, and the CNI never installed.
+	values, err := layout.Values(ctx, inventory.Spec.Config.Values)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve the values for %s: %w", pkgPath, err)
+	}
+	if err := layout.ApplyValues(values); err != nil {
+		return nil, nil, fmt.Errorf("failed to apply the values for %s: %w", pkgPath, err)
+	}
+	if err := layout.RenderFiles(ctx, values); err != nil {
+		return nil, nil, fmt.Errorf("failed to render the templated files of %s: %w", pkgPath, err)
+	}
+
 	dis, err := distroModule(layout.Distro.Spec.Type)
 	if err != nil {
 		return nil, nil, err
@@ -139,7 +155,11 @@ func newManager(
 		TempDirectory:     layout.DirPath(),
 		Concurrency:       concurrency,
 		ConcurrentUploads: concurrency,
-		Writer:            os.Stdout,
+		// The resolved values, as cmd/common.go hands them over. Without this every
+		// `when`-gated file is skipped for the whole walk, whatever the inventory sets:
+		// the gate reads manager.Values, and a nil map has no path set.
+		Values: values,
+		Writer: os.Stdout,
 	}
 	if timeout > 0 {
 		manager.SetTimeout(timeout)
@@ -238,34 +258,34 @@ func (h *phaseHarness) close(ctx context.Context) error {
 }
 
 // hosts returns every host in the inventory.
-func (h *phaseHarness) hosts() apicluster.ZarfHosts {
+func (h *phaseHarness) hosts() apicluster.Hosts {
 	return h.manager.Config.Spec.Hosts
 }
 
 // controllers returns the hosts that carry a control-plane role.
-func (h *phaseHarness) controllers() apicluster.ZarfHosts {
-	return h.hosts().Filter(func(host *apicluster.ZarfHost) bool { return host.IsController() })
+func (h *phaseHarness) controllers() apicluster.Hosts {
+	return h.hosts().Filter(func(host *apicluster.Host) bool { return host.IsController() })
 }
 
 // workers returns the hosts that do not carry a control-plane role.
-func (h *phaseHarness) workers() apicluster.ZarfHosts {
-	return h.hosts().Filter(func(host *apicluster.ZarfHost) bool { return !host.IsController() })
+func (h *phaseHarness) workers() apicluster.Hosts {
+	return h.hosts().Filter(func(host *apicluster.Host) bool { return !host.IsController() })
 }
 
 // engineWorkers returns the workers that run the engine, so the upload-only hosts are left
 // out. Before dropUploadOnlyHosts this differs from workers; after it, the two agree.
-func (h *phaseHarness) engineWorkers() apicluster.ZarfHosts {
-	return h.workers().Filter(func(host *apicluster.ZarfHost) bool { return !isUploadOnly(host) })
+func (h *phaseHarness) engineWorkers() apicluster.Hosts {
+	return h.workers().Filter(func(host *apicluster.Host) bool { return !isUploadOnly(host) })
 }
 
 // engineHosts returns the hosts that run the engine, so every host minus the upload-only ones.
 // Before dropUploadOnlyHosts this differs from hosts; after it, the two agree.
-func (h *phaseHarness) engineHosts() apicluster.ZarfHosts {
-	return h.hosts().Filter(func(host *apicluster.ZarfHost) bool { return !isUploadOnly(host) })
+func (h *phaseHarness) engineHosts() apicluster.Hosts {
+	return h.hosts().Filter(func(host *apicluster.Host) bool { return !isUploadOnly(host) })
 }
 
 // uploadOnly returns the hosts that are in the inventory to receive uploads and nothing more.
-func (h *phaseHarness) uploadOnly() apicluster.ZarfHosts {
+func (h *phaseHarness) uploadOnly() apicluster.Hosts {
 	return h.hosts().Filter(isUploadOnly)
 }
 
@@ -277,12 +297,12 @@ func (h *phaseHarness) uploadOnly() apicluster.ZarfHosts {
 // InitializeWorkers claims every non-controller host whose agent is not already running, with
 // no OS gate, so a test that merely declined to assert on the Alpine node would still have
 // watched the phase try to install rke2 on it.
-func (h *phaseHarness) dropUploadOnlyHosts() apicluster.ZarfHosts {
+func (h *phaseHarness) dropUploadOnlyHosts() apicluster.Hosts {
 	dropped := h.uploadOnly()
 	if len(dropped) == 0 {
 		return nil
 	}
-	h.manager.Config.Spec.Hosts = h.hosts().Filter(func(host *apicluster.ZarfHost) bool {
+	h.manager.Config.Spec.Hosts = h.hosts().Filter(func(host *apicluster.Host) bool {
 		return !isUploadOnly(host)
 	})
 	h.dropped = append(h.dropped, dropped...)
@@ -326,7 +346,7 @@ func reconnectHosts(ctx context.Context, manager *phase.Manager) error {
 
 // disconnectAll closes the connections reconnectHosts opened, since the phase that would normally
 // do it has already run.
-func disconnectAll(hosts apicluster.ZarfHosts) {
+func disconnectAll(hosts apicluster.Hosts) {
 	for _, host := range hosts {
 		host.Disconnect()
 	}
@@ -334,7 +354,7 @@ func disconnectAll(hosts apicluster.ZarfHosts) {
 
 // readOnHosts reads path from every host, keyed by host string, so a test can assert on the
 // same file across the whole cluster.
-func readOnHosts(hosts apicluster.ZarfHosts, path string) (map[string]string, error) {
+func readOnHosts(hosts apicluster.Hosts, path string) (map[string]string, error) {
 	out := make(map[string]string, len(hosts))
 	for _, host := range hosts {
 		content, err := host.ReadFile(path)

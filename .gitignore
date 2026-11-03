@@ -20,6 +20,8 @@ dist
 /target/
 cluster-key
 cluster-key.pub
+cluster-key-tofu
+cluster-key-tofu.pub
 
 # Package signing keys. hack/gen-signing-keys.sh writes to a directory you name, so the
 # private halves have no business here -- these patterns are the backstop for naming that
@@ -44,3 +46,5 @@ book/
 # bytecode beside the source.
 __pycache__/
 *.py[cod]
+
+store/

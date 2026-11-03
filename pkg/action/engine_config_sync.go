@@ -20,8 +20,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/pkg/phase"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -53,17 +51,15 @@ type EngineConfigSync struct {
 }
 
 // NewEngineConfigSync an engine-config-sync action object
-func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync {
-	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
+func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error) {
+	d, err := distroModule(opts.Manager.DistroID)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	if opts.Manager.Concurrency < 0 {
 		opts.Manager.Concurrency = 0
 	}
-
-	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
 
 	lockPhase := &phase.Lock{}
 	return &EngineConfigSync{
@@ -102,13 +98,13 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync {
 			},
 			&phase.LabelNodes{
 				Distro:  d,
-				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
+				Enabled: opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
-	}
+	}, nil
 }
 
 // Run the actions

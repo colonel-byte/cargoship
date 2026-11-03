@@ -23,7 +23,7 @@ import (
 	"sort"
 	"strings"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 	blcluster "github.com/k0sproject/bootloose/pkg/cluster"
 	rig "github.com/k0sproject/rig/v2"
@@ -46,15 +46,26 @@ const (
 // from the engine configuration onwards excludes them; see phaseHarness.dropUploadOnlyHosts.
 const uploadOnlyPrefix = "kwa"
 
+// controllerPrefix and workerPrefix are the hostname prefixes the inventory maps to roles.
+// uploadOnlyPrefix begins with workerPrefix, so anything testing these has to test it first.
+//
+// They live here rather than beside the fleet definition because renderClusterInventory uses
+// them, and that is ordinary package code: a constant a non-test file reads cannot sit in a
+// _test.go file, which is what the fleet support does.
+const (
+	controllerPrefix = "kc"
+	workerPrefix     = "kw"
+)
+
 // isUploadOnly reports whether a host is in the inventory only to receive uploads.
-func isUploadOnly(h *apicluster.ZarfHost) bool {
+func isUploadOnly(h *apicluster.Host) bool {
 	return strings.HasPrefix(h.Hostname, uploadOnlyPrefix)
 }
 
 // engineHosts returns the hosts that join the cluster, which is every host that is not
 // upload-only. This is the inventory the CLI-driven steps are given.
-func engineHosts(c apicluster.ZarfCluster) apicluster.ZarfCluster {
-	c.Spec.Hosts = c.Spec.Hosts.Filter(func(h *apicluster.ZarfHost) bool { return !isUploadOnly(h) })
+func engineHosts(c apicluster.Cluster) apicluster.Cluster {
+	c.Spec.Hosts = c.Spec.Hosts.Filter(func(h *apicluster.Host) bool { return !isUploadOnly(h) })
 	return c
 }
 
@@ -62,55 +73,55 @@ func engineHosts(c apicluster.ZarfCluster) apicluster.ZarfCluster {
 // mapping kc*/kw* hostnames to controller/worker roles. The Fedora replicas are named kcf*
 // and kwf*, so the same two prefixes claim them and the OS family never has to be part of
 // the mapping. A machine whose name matches neither prefix is skipped rather than guessed at.
-func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.ZarfCluster, error) {
+func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.Cluster, error) {
 	machines, err := c.Inspect(nil)
 	if err != nil {
-		return apicluster.ZarfCluster{}, fmt.Errorf("failed to inspect bootloose cluster: %w", err)
+		return apicluster.Cluster{}, fmt.Errorf("failed to inspect bootloose cluster: %w", err)
 	}
 
 	var controllers, workers []*blcluster.Machine
 	for _, m := range machines {
 		switch {
-		case strings.HasPrefix(m.Hostname(), "kc"):
+		case strings.HasPrefix(m.Hostname(), controllerPrefix):
 			controllers = append(controllers, m)
-		case strings.HasPrefix(m.Hostname(), "kw"):
+		case strings.HasPrefix(m.Hostname(), workerPrefix):
 			workers = append(workers, m)
 		}
 	}
 	if len(controllers) == 0 {
-		return apicluster.ZarfCluster{}, fmt.Errorf("no controller machines found in bootloose cluster")
+		return apicluster.Cluster{}, fmt.Errorf("no controller machines found in bootloose cluster")
 	}
 	sortByHostname(controllers)
 	sortByHostname(workers)
 
-	hosts := make(apicluster.ZarfHosts, 0, len(controllers)+len(workers))
+	hosts := make(apicluster.Hosts, 0, len(controllers)+len(workers))
 	for _, m := range controllers {
 		host, err := hostFromMachine(m, apicluster.RoleController, keyPath)
 		if err != nil {
-			return apicluster.ZarfCluster{}, err
+			return apicluster.Cluster{}, err
 		}
 		hosts = append(hosts, host)
 	}
 	for _, m := range workers {
 		host, err := hostFromMachine(m, apicluster.RoleWorker, keyPath)
 		if err != nil {
-			return apicluster.ZarfCluster{}, err
+			return apicluster.Cluster{}, err
 		}
 		hosts = append(hosts, host)
 	}
 
 	leaderIP := controllers[0].Status().IP
 	if leaderIP == "" {
-		return apicluster.ZarfCluster{}, fmt.Errorf("could not determine docker-bridge IP for leader controller %s", controllers[0].Hostname())
+		return apicluster.Cluster{}, fmt.Errorf("could not determine docker-bridge IP for leader controller %s", controllers[0].Hostname())
 	}
 
-	return apicluster.ZarfCluster{
-		Kind: "ZarfCluster",
-		Metadata: apicluster.ZarfClusterMetadata{
+	return apicluster.Cluster{
+		Kind: "Cluster",
+		Metadata: apicluster.Metadata{
 			Name: "bootloose-e2e",
 		},
-		Spec: apicluster.ZarfClusterSpec{
-			Config: apicluster.ZarfClusterConfig{
+		Spec: apicluster.Spec{
+			Config: apicluster.Config{
 				LoadBalancer: leaderIP,
 			},
 			Hosts: hosts,
@@ -124,12 +135,12 @@ func sortByHostname(machines []*blcluster.Machine) {
 	})
 }
 
-func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apicluster.ZarfHost, error) {
+func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apicluster.Host, error) {
 	port, err := m.HostPort(sshPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get SSH host port for %s: %w", m.Hostname(), err)
 	}
-	return &apicluster.ZarfHost{
+	return &apicluster.Host{
 		Hostname: m.Hostname(),
 		Role:     role,
 		// The profile doubles as the node-role.kubernetes.io/<profile> label the LabelNodes
@@ -152,7 +163,7 @@ func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apiclu
 
 // writeClusterInventory marshals cluster to YAML (via the same library cargoship uses to
 // parse a ZarfCluster document) and writes it to path.
-func writeClusterInventory(cluster apicluster.ZarfCluster, path string) error {
+func writeClusterInventory(cluster apicluster.Cluster, path string) error {
 	b, err := goyaml.Marshal(cluster)
 	if err != nil {
 		return fmt.Errorf("failed to marshal cluster inventory: %w", err)

@@ -32,11 +32,10 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
+	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/colonel-byte/cargoship/pkg/utils"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
@@ -56,8 +55,6 @@ type InstallCommon struct {
 	// the refusal needs a package version to compare a host against. Reset and kube-config load
 	// none, so the check never fires for them.
 	allowDowngrade bool
-	logLevel       string
-	LogFormat      string
 	// values holds the --values files. They are merged after the cluster config's own
 	// spec.config.values, so the command line wins over the file. Commands that do not
 	// load a package never register the flag and carry the field empty.
@@ -66,22 +63,16 @@ type InstallCommon struct {
 	// commands that load a package through initManager. Commands that do not load a
 	// package (reset, kube-config) embed InstallCommon but never register these flags.
 	packageVerifyFlags
+	// receiptPath is where to write the run receipt, empty when none was asked for. The four
+	// lifecycle commands register it -- apply, prepare, reset, and engine-config-sync --
+	// because those are the ones that run phases against a fleet. kube-config does not: it
+	// reads a kubeconfig off a controller and changes no host, so there is nothing to attest.
+	receiptPath string
 }
 
 var plainHTTP bool
 var insecureSkipTLSVerify bool
 var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
-
-// Distro returns the distro config for a given string
-func Distro(s string) (distrocfg.Distro, error) {
-	ds, err := registry.GetDistroModuleBuilder(s)
-	if err != nil {
-		return nil, err
-	}
-	d := ds().(distrocfg.Distro) //nolint:errcheck
-
-	return d, nil
-}
 
 func defaultRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{
@@ -105,24 +96,30 @@ func getCachePath(ctx context.Context) (string, error) {
 	return config.GetAbsCachePath()
 }
 
-func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt InstallCommon) (*phase.Manager, error) {
+// initManager loads the cluster configuration and the distro package and builds the phase
+// manager from them.
+//
+// It returns the package layout alongside the manager because the run receipt records what the
+// package can prove about itself -- its digest, and whether its signature was checked -- and the
+// layout is the only thing that knows. A caller with no use for it discards it.
+func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*phase.Manager, *layout.DistroLayout, error) {
 	path, err := filepath.Abs(opt.config)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	opt.config = path
 
 	cluster, err := load.ClusterDefinition(ctx, opt.config, load.ClusterOptions{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	logger.From(ctx).Info("using cluster file", "location", opt.config)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	loadOpts := distro.LoadOptions{
@@ -130,12 +127,12 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 		Architecture:         config.CLIArch,
 		Output:               config.CommonOptions.TempDirectory,
 		VerificationStrategy: opt.verify.toStrategy(),
-		VerifyBlobOptions:    opt.buildVerifyBlobOptions(cmd, v),
+		VerifyBlobOptions:    opt.buildVerifyBlobOptions(),
 	}
 
 	distroLayout, err := distro.Load(ctx, distroPath, loadOpts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	logger.From(ctx).Debug("distro information", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
@@ -147,23 +144,23 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 	if len(opt.values) > 0 {
 		fromFlags, err := helmvalues.LoadFiles(ctx, "", "", opt.values)
 		if err != nil {
-			return nil, fmt.Errorf("unable to read the values files given with --%s: %w", InstallValues, err)
+			return nil, nil, fmt.Errorf("unable to read the values files given with --%s: %w", InstallValues, err)
 		}
 		overrides = append(overrides, fromFlags)
 	}
 
 	values, err := distroLayout.Values(ctx, overrides...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// Both of these resolve the package against the values before any phase runs: the
 	// first renders and maps the engine configuration, the second renders the contents of
 	// the files the package marked as templates, in place in the extracted package.
 	if err := distroLayout.ApplyValues(values); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := distroLayout.RenderFiles(ctx, values); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &phase.Manager{
@@ -175,7 +172,7 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 		Concurrency:       opt.concurrency,
 		ConcurrentUploads: opt.concurrency,
 		DryRun:            opt.dryRun,
-	}, nil
+	}, distroLayout, nil
 }
 
 // requireConfirm enforces the --confirm gate for a command that changes the hosts it is pointed at.

@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	rig "github.com/k0sproject/rig/v2"
 	"github.com/k0sproject/rig/v2/protocol/ssh"
 )
@@ -78,8 +78,8 @@ var known = []string{
 	VarProfile,
 }
 
-// hostFromVars builds one ZarfHost from the variables Ansible resolved for it.
-func hostFromVars(a assignment, vars map[string]any) (*cluster.ZarfHost, error) {
+// hostFromVars builds one Host from the variables Ansible resolved for it.
+func hostFromVars(a assignment, vars map[string]any) (*cluster.Host, error) {
 	if err := checkUnknown(a.Host, vars); err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func hostFromVars(a assignment, vars map[string]any) (*cluster.ZarfHost, error) 
 		hostname = given
 	}
 
-	host := &cluster.ZarfHost{
+	host := &cluster.Host{
 		ClientWithConfig: rig.ClientWithConfig{
 			ConnectionConfig: rig.CompositeConfig{SSH: sshCfg},
 		},

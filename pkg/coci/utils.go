@@ -25,15 +25,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"oras.land/oras-go/v2/registry"
 )
-
-// ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, pkg distro.ZarfDistro) (registry.Reference, error) {
-	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
-}
 
 // ReferenceFromMetadataOptions provides extensible options
 type ReferenceFromMetadataOptions struct {
@@ -42,7 +37,7 @@ type ReferenceFromMetadataOptions struct {
 }
 
 // ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
-func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.ZarfDistro, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
+func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
 	// Explicit requirement for version in order to publish
 	if len(pkg.Metadata.Version) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")

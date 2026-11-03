@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/api"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -35,7 +35,7 @@ import (
 
 func TestAnnotationsFromMetadata(t *testing.T) {
 	t.Run("only required fields set", func(t *testing.T) {
-		meta := distro.ZarfDistroMetadata{Name: "rke2", Description: "a distro"}
+		meta := distro.Metadata{Name: "rke2", Description: "a distro"}
 		got := AnnotationsFromMetadata(meta)
 		require.Equal(t, map[string]string{
 			ocispec.AnnotationTitle:       "rke2",
@@ -44,7 +44,7 @@ func TestAnnotationsFromMetadata(t *testing.T) {
 	})
 
 	t.Run("optional fields included when set", func(t *testing.T) {
-		meta := distro.ZarfDistroMetadata{
+		meta := distro.Metadata{
 			Name:          "rke2",
 			Description:   "a distro",
 			URL:           "https://example.com",
@@ -62,7 +62,7 @@ func TestAnnotationsFromMetadata(t *testing.T) {
 	})
 
 	t.Run("explicit annotations take precedence over legacy fields", func(t *testing.T) {
-		meta := distro.ZarfDistroMetadata{
+		meta := distro.Metadata{
 			Name:        "rke2",
 			Vendor:      "acme",
 			Annotations: map[string]string{ocispec.AnnotationVendor: "override"},
@@ -177,7 +177,7 @@ func TestDistroLayoutResolve(t *testing.T) {
 	manifestDesc := ocispec.Descriptor{Digest: godigest.FromString("manifest")}
 	d := &DistroLayout{
 		digest: manifestDesc.Digest.String(),
-		Distro: distro.ZarfDistro{Metadata: distro.ZarfDistroMetadata{Name: "rke2"}},
+		Distro: distro.Distro{Metadata: distro.Metadata{Name: "rke2"}},
 		cache:  &manifestCache{desc: manifestDesc},
 	}
 
@@ -257,8 +257,8 @@ func TestComputeManifestCreatedAnnotation(t *testing.T) {
 	// with the same constant the code under test reads, so that changing the constant
 	// fails here instead of moving both sides together.
 	t.Run("a build timestamp becomes the created annotation", func(t *testing.T) {
-		d := writeManifestablePackage(t, []byte(`apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+		d := writeManifestablePackage(t, []byte(`apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: timestamped
   version: 0.0.1
@@ -293,8 +293,8 @@ build:
 		},
 	} {
 		t.Run("a timestamp "+tt.name+" falls back to the epoch", func(t *testing.T) {
-			d := writeManifestablePackage(t, []byte(`apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+			d := writeManifestablePackage(t, []byte(`apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: untimestamped
   version: 0.0.1

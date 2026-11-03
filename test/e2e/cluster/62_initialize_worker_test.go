@@ -39,7 +39,7 @@ func (s *ApplyPhaseSuite) Test_62_InitializeWorkers() {
 
 		version, err := s.harness.distro.RunningVersion(host)
 		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
-		s.Require().Equalf(s.harness.manager.Distro.Spec.Version, version,
+		s.requireSameVersion(s.harness.manager.Distro.Spec.Version, version,
 			"%s: running an engine version the package did not ship", host)
 	}
 }
@@ -62,7 +62,7 @@ func (s *UpgradePhaseSuite) Test_62_InitializeWorkers() {
 
 		version, err := s.harness.distro.RunningVersion(host)
 		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
-		s.Require().Equalf(installedVersion(), version,
+		s.requireSameVersion(installedVersion(), version,
 			"%s: something upgraded the engine before the upgrade phase ran", host)
 	}
 }
@@ -101,7 +101,7 @@ func (s *JoinPhaseSuite) Test_62_InitializeWorkers() {
 
 		version, err := s.harness.distro.RunningVersion(host)
 		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
-		s.Require().Equalf(s.harness.manager.Distro.Spec.Version, version,
+		s.requireSameVersion(s.harness.manager.Distro.Spec.Version, version,
 			"%s: running an engine version the package did not ship", host)
 	}
 }

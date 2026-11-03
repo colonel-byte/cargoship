@@ -37,6 +37,9 @@ func RenderAll() error {
 		if err := sums.save(); err != nil {
 			fmt.Println("warning: " + err.Error())
 		}
+		if err := committedAssets().save(); err != nil {
+			fmt.Println("warning: " + err.Error())
+		}
 	}()
 
 	for _, spec := range exampleDistros {
@@ -90,6 +93,9 @@ func RenderLine(distro, prefix string) error {
 		if err := sums.save(); err != nil {
 			fmt.Println("warning: " + err.Error())
 		}
+		if err := committedAssets().save(); err != nil {
+			fmt.Println("warning: " + err.Error())
+		}
 	}()
 
 	if distro == "upstream" {
@@ -121,6 +127,15 @@ func RenderLine(distro, prefix string) error {
 	}
 	if err := sortTagsDesc(tags); err != nil {
 		return err
+	}
+	// A backfill names its own line, so asking for one that has aged out is worth saying
+	// rather than quietly rendering nothing.
+	tags, err = aboveFloor(tags)
+	if err != nil {
+		return err
+	}
+	if len(tags) == 0 {
+		return fmt.Errorf("no %s releases on %s at or above the %s floor", distro, prefix, exampleMinorFloor)
 	}
 
 	for _, f := range spec.flavors {

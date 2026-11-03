@@ -63,7 +63,7 @@ func newPackagePullCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().StringVarP(&o.outputDirectory, "output", "o", output, lang.CmdPackageCreateFlagOutput)
-	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
@@ -92,7 +92,7 @@ func (o *packagePullOptions) run(ctx context.Context, args []string) error {
 	packagePath, err := distro.Pull(ctx, srcURL, outputDir, distro.PullOptions{
 		SHASum:               o.shasum,
 		VerificationStrategy: o.verify.toStrategy(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(nil, v),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(),
 		Architecture:         config.CLIArch,
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),

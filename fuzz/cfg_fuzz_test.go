@@ -25,8 +25,8 @@ import (
 // minimalDistroDoc is a package definition with nothing but what Parse needs to succeed: an
 // apiVersion, a kind and the fields Spec requires. It is repeated and mutated by the targets below
 // to build multi-document input.
-const minimalDistroDoc = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+const minimalDistroDoc = `apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: fuzz
 spec:
@@ -46,10 +46,10 @@ func FuzzCfgParseNoPanic(f *testing.F) {
 	f.Add([]byte(""))
 	f.Add([]byte("# just a comment\n"))
 	f.Add([]byte("not yaml: [unterminated"))
-	f.Add([]byte("apiVersion: zarf.dev/v1alpha1\n"))
+	f.Add([]byte("apiVersion: colonel-byte.dev/v1alpha1\n"))
 	f.Add([]byte("apiVersion:\n  - a\n  - b\n"))
 	f.Add([]byte("apiVersion: {a: b}\n"))
-	f.Add([]byte("apiVersion: unknown/v9\nkind: ZarfDistro\n"))
+	f.Add([]byte("apiVersion: unknown/v9\nkind: Distro\n"))
 	f.Add([]byte("- just\n- a\n- list\n"))
 	f.Add([]byte("just a scalar"))
 	f.Add([]byte(minimalDistroDoc + "---\n" + minimalDistroDoc))
@@ -72,7 +72,7 @@ func FuzzCfgParseMultiDocNoPanic(f *testing.F) {
 	f.Add([]byte(minimalDistroDoc))
 	f.Add([]byte(""))
 	f.Add([]byte(minimalDistroDoc + "---\n" + minimalDistroDoc))
-	f.Add([]byte(minimalDistroDoc + "---\napiVersion: unknown/v9\nkind: ZarfDistro\n"))
+	f.Add([]byte(minimalDistroDoc + "---\napiVersion: unknown/v9\nkind: Distro\n"))
 	f.Add([]byte("---\n" + minimalDistroDoc + "---\n---\n"))
 	f.Add([]byte("apiVersion: unknown/v1\n---\napiVersion: unknown/v2\n"))
 	f.Add([]byte(strings.Repeat(minimalDistroDoc+"---\n", 5)))

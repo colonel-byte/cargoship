@@ -37,7 +37,11 @@ type exampleVersion struct {
 	ReplacesKubeProxy bool     // whether to set disable-kube-proxy
 	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
 	CoreImages        []string // the release's own image manifest
-	CNIImages         []string // the flavor's own manifests, concatenated, when it has any
+	CNIImages         []string // the flavor's own manifests, concatenated, for the lists no chart claims
+	// ChartImages maps a chart entry's name to the images it declares under
+	// spec.config.engine.manifest. A chart that is disabled has none of them uploaded, so an
+	// image belongs here rather than in CNIImages whenever a chart owns it.
+	ChartImages map[string][]string
 
 	// Addons is every packaged component this distro/version advertises under `disable:`,
 	// read from the vocabulary mage generate:engineConfig extracts from the engine's own
@@ -58,6 +62,9 @@ type exampleVersion struct {
 	// architecture. It is built here rather than in the templates so that the URL checked
 	// against upstream is the same one the example carries.
 	SelinuxRPM string
+
+	// EtcdVersion is the release tag of etcd for optional debug tooling.
+	EtcdVersion string
 }
 
 // exampleArch is one architecture's share of an example: the files a distro publishes once
@@ -70,11 +77,13 @@ type exampleArch struct {
 	// RKE2 installs from RPMs, plus a release tarball its binaries, scripts and unit files
 	// are extracted from. The tarball is named and addressed here rather than in the
 	// templates so that the URL hashed is the same one the example carries.
-	CommonRPM  string
-	ServerRPM  string
-	AgentRPM   string
-	Tarball    string // rke2.linux-amd64.tar.gz
-	TarballURL string // https://github.com/rancher/rke2/releases/download/<tag>/<tarball>
+	CommonRPM   string
+	ServerRPM   string
+	AgentRPM    string
+	Tarball     string // rke2.linux-amd64.tar.gz
+	TarballURL  string // https://github.com/rancher/rke2/releases/download/<tag>/<tarball>
+	EtcdTarball string // etcd-v3.5.17-linux-amd64.tar.gz
+	EtcdURL     string // https://github.com/etcd-io/etcd/releases/download/<version>/<tarball>
 
 	// k3s installs a single binary, whose digest the release publishes for us.
 	BinaryURL string
@@ -130,12 +139,23 @@ func (v *exampleVersion) fetchImages(repoURL string, spec exampleDistroSpec, f e
 	if v.CoreImages, err = fetchImageList(repoURL, v.TagURL, spec.coreImages); err != nil {
 		return err
 	}
-	for _, asset := range f.imageLists {
-		images, err := fetchImageList(repoURL, v.TagURL, asset)
+	for _, list := range f.imageLists {
+		images, err := fetchImageList(repoURL, v.TagURL, list.asset)
 		if err != nil {
 			return err
 		}
-		v.CNIImages = append(v.CNIImages, images...)
+		if len(list.charts) == 0 {
+			v.CNIImages = append(v.CNIImages, images...)
+			continue
+		}
+		if v.ChartImages == nil {
+			v.ChartImages = map[string][]string{}
+		}
+		for _, image := range images {
+			for _, chart := range list.imageCharts(image) {
+				v.ChartImages[chart] = append(v.ChartImages[chart], image)
+			}
+		}
 	}
 	return nil
 }

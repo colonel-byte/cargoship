@@ -23,12 +23,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/config"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	orascontent "oras.land/oras-go/v2/content"
 )
 
@@ -85,7 +85,7 @@ func TestLayersFromFiles(t *testing.T) {
 	fetcher.addLayer(root, filepath.Join(config.FilesDir, "0", "one.txt"), []byte("one"))
 	// Index 1 has no corresponding layer, so it should be skipped rather than error.
 
-	files := v1alpha1.ZarfFiles{
+	files := v1alpha1.Files{
 		{Target: "/some/one.txt"},
 		{Target: "/some/two.txt"},
 	}

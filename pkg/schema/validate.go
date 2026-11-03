@@ -27,7 +27,11 @@ import (
 // documentKinds maps the kind field a document declares onto the schema that describes it. A
 // cargoship config file has no kind field, which is why it is absent here and has to be named
 // explicitly.
+// The Zarf-prefixed spellings are what these documents declared before the move to
+// colonel-byte.dev. They are still accepted so that an existing document keeps validating.
 var documentKinds = map[string]Kind{
+	"Cluster":     KindInventory,
+	"Distro":      KindPackage,
 	"ZarfCluster": KindInventory,
 	"ZarfDistro":  KindPackage,
 }

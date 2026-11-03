@@ -1,13 +1,13 @@
 ---
-# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/cluster-v1alpha1-schema.json
 #
 # holds two registries so that the whole-file commands have to walk more than one, and
 # leaves the gaps a real configuration has: a registry with a token instead of a password, one with
 # no tls block, and an empty field.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Cluster
 metadata:
   name: test
 spec:

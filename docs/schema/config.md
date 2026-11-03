@@ -4,7 +4,7 @@
 
 holds the values for the `.`, or root, section of the config file
 
-Rendered from `schema/zarf-config-distro-schema.json`.
+Rendered from `schema/config-distro-schema.json`.
 
 <div class="schema-table">
 
@@ -37,32 +37,17 @@ holds the values for the `.age` section of the config file, the age alternative 
 
 </div>
 
-### ApplyOptions
-
-holds the values for the `.distro.apply` section of the config file
-
 ### DistroCreateOptions
 
 holds the values for the `.distro.create` section of the config file
 
 <div class="schema-table">
 
-| Property            | Type                                        | Required | Default | Description                                                                                                                                                                                                                                    |
-| ------------------- | ------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `file_override`     | [FileOverrideMap](#fileoverridemap)         | no       |         | maps a source URL prefix to the location cargoship downloads from<br>instead, for example {"https://rpm.rancher.io": "https://mirror.example.com/rpm-rancher"}.<br>The value may also be a local directory, for builds from pre-staged assets. |
-| `registry_override` | [RegistryOverrideMap](#registryoverridemap) | no       |         | maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {"docker.io": "mirror.example.com"}                                                                                                          |
-
-</div>
-
-### DistroDeployOptions
-
-holds the values for the `.distro.deploy` section of the config file
-
-<div class="schema-table">
-
-| Property  | Type      | Required | Default | Description                                  |
-| --------- | --------- | -------- | ------- | -------------------------------------------- |
-| `retries` | `integer` | no       |         | how many times we will try to push a package |
+| Property            | Type                                        | Required | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `file_override`     | [FileOverrideMap](#fileoverridemap)         | no       |         | maps a source URL prefix to the location cargoship downloads from<br>instead, for example {"https://rpm.rancher.io": "https://mirror.example.com/rpm-rancher"}.<br>The value may also be a local directory, for builds from pre-staged assets.                                                                                                                                                                                                                                                                         |
+| `hauler_store`      | `string`                                    | no       |         | is a hauler store (https://github.com/hauler-dev/hauler) that images and<br>files are resolved from instead of being fetched over the network: either a store<br>directory, or an archive written by `hauler store save`. Content the store does not<br>hold still comes from the source the distro definition declared, so a partial store<br>works. A file is accepted from the store only when the definition declares a shasum<br>for it, since nothing else would verify bytes the definition's author never saw. |
+| `registry_override` | [RegistryOverrideMap](#registryoverridemap) | no       |         | maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {"docker.io": "mirror.example.com"}                                                                                                                                                                                                                                                                                                                                                                                  |
 
 </div>
 
@@ -72,36 +57,26 @@ holds the values for the `.distro` section of the config file
 
 <div class="schema-table">
 
-| Property                         | Type                                          | Required | Default | Description                                                                                                                            |
-| -------------------------------- | --------------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `allow_downgrade`                | `boolean`                                     | no       |         | whether a run continues when a host already runs an engine version newer<br>than the one the package carries                           |
-| `allow_unmanaged_nodes`          | `boolean`                                     | no       |         | whether an apply continues when the cluster holds a node that no host<br>in the config accounts for                                    |
-| `apply`                          | [ApplyOptions](#applyoptions)                 | no       |         | are options used by the apply subcommand                                                                                               |
-| `certificate_identity`           | `string`                                      | no       |         | required identity claim in the signing certificate                                                                                     |
-| `certificate_identity_regexp`    | `string`                                      | no       |         | equired identity claim in the signing certificate, allows usage of regex                                                               |
-| `certificate_oidc_issuer`        | `string`                                      | no       |         | required OIDC issuer claim in the signing certificate                                                                                  |
-| `certificate_oidc_issuer_regexp` | `string`                                      | no       |         | required OIDC issuer claim in the signing certificate, allows usage of regex                                                           |
-| `concurrency`                    | `integer`                                     | no       |         | how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once                                     |
-| `create`                         | [DistroCreateOptions](#distrocreateoptions)   | no       |         | are options used by the create subcommand                                                                                              |
-| `deploy`                         | [DistroDeployOptions](#distrodeployoptions)   | no       |         | are options used by the deploy subcommand                                                                                              |
-| `fapolicyd`                      | `boolean`                                     | no       | `true`  | whether we will update hosts with fapolicyd                                                                                            |
-| `firewall`                       | `boolean`                                     | no       | `true`  | whether we will update the host firewall                                                                                               |
-| `hosts`                          | `boolean`                                     | no       | `true`  | whether we will update the etc host file                                                                                               |
-| `insecure_ignore_tlog`           | `string`                                      | no       |         |                                                                                                                                        |
-| `kubeconfig`                     | `string`                                      | no       |         | path of the kubeconfig file the admin creds are merged into, the standard<br>location -- KUBECONFIG, else ~/.kube/config -- when empty |
-| `label_nodes`                    | `boolean`                                     | no       | `true`  | whether we will check and add the node-role.kubernetes.io/&lt;profile&gt; label on nodes                                               |
-| `oci_concurrency`                | `integer`                                     | no       |         | is how many concurrent oci artifacts that will be pushed at a time                                                                     |
-| `output`                         | `string`                                      | no       |         | the folder that we will create the distro tar balls in                                                                                 |
-| `public_key`                     | `string`                                      | no       |         | path to public key file for validating signed packages                                                                                 |
-| `publish`                        | [DistroPublishOptions](#distropublishoptions) | no       |         | are options used by the publish subcommand                                                                                             |
-| `reset`                          | [ResetOptions](#resetoptions)                 | no       |         | ResetOptions are options used by the reset subcommand                                                                                  |
-| `retry`                          | `integer`                                     | no       |         | number of retries we will try                                                                                                          |
-| `trusted_root`                   | `string`                                      | no       |         | path to a Sigstore TrustedRoot JSON                                                                                                    |
-| `type`                           | `string`                                      | no       |         | of distro we are interacting with One of `rke2`, `k3s`.                                                                                |
-| `update_kubeconfig`              | `boolean`                                     | no       | `true`  | whether we will update a kubeconfig file with the admin creds for the cluster                                                          |
-| `use_signed_timestamps`          | `string`                                      | no       |         | verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.                              |
-| `verify`                         | `string`                                      | no       |         | the Cargoship package signature One of `never`, `if-possible`, `always`.                                                               |
-| `worker_concurrency`             | `string` or `integer`                         | no       |         | number of worker nodes that will be upgraded at once, as a fixed count<br>("5") or a percentage of the batch ("25%")                   |
+| Property                | Type                                          | Required | Default | Description                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------- | --------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allow_downgrade`       | `boolean`                                     | no       |         | whether a run continues when a host already runs an engine version newer<br>than the one the package carries                                                                                                                                                                                                                                                                                   |
+| `allow_unmanaged_nodes` | `boolean`                                     | no       |         | whether an apply continues when the cluster holds a node that no host<br>in the config accounts for                                                                                                                                                                                                                                                                                            |
+| `concurrency`           | `integer`                                     | no       |         | how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once                                                                                                                                                                                                                                                                                             |
+| `create`                | [DistroCreateOptions](#distrocreateoptions)   | no       |         | are options used by the create subcommand                                                                                                                                                                                                                                                                                                                                                      |
+| `firewall`              | `boolean`                                     | no       | `true`  | whether we will update the host firewall                                                                                                                                                                                                                                                                                                                                                       |
+| `hosts`                 | `boolean`                                     | no       | `true`  | whether we will update the etc host file                                                                                                                                                                                                                                                                                                                                                       |
+| `kubeconfig`            | `string`                                      | no       |         | path of the kubeconfig file the admin creds are merged into, the standard<br>location -- KUBECONFIG, else ~/.kube/config -- when empty                                                                                                                                                                                                                                                         |
+| `label_nodes`           | `boolean`                                     | no       | `true`  | whether we will check and add the node-role.kubernetes.io/&lt;profile&gt; label on nodes                                                                                                                                                                                                                                                                                                       |
+| `oci_concurrency`       | `integer`                                     | no       |         | is how many concurrent oci artifacts that will be pushed at a time                                                                                                                                                                                                                                                                                                                             |
+| `output`                | `string`                                      | no       |         | the folder that we will create the distro tar balls in                                                                                                                                                                                                                                                                                                                                         |
+| `public_key`            | `string`                                      | no       |         | path to public key file for validating signed packages                                                                                                                                                                                                                                                                                                                                         |
+| `publish`               | [DistroPublishOptions](#distropublishoptions) | no       |         | are options used by the publish subcommand                                                                                                                                                                                                                                                                                                                                                     |
+| `receipt_path`          | `string`                                      | no       |         | is where the lifecycle commands -- apply, prepare, reset and<br>engine-config-sync -- write the structured JSON record of a run, empty for no receipt.<br>Equivalent to --receipt-path, and templated the same way: {command} expands to the<br>command that ran and {timestamp} to when it started, so one configured value gives<br>every run its own file rather than overwriting the last. |
+| `retry`                 | `integer`                                     | no       |         | how many times an operation is retried before the run fails, including a<br>package push to an OCI registry -- it is what --retries defaults to on publish<br>and sign                                                                                                                                                                                                                         |
+| `type`                  | `string`                                      | no       |         | of distro we are interacting with One of `rke2`, `k3s`.                                                                                                                                                                                                                                                                                                                                        |
+| `update_kubeconfig`     | `boolean`                                     | no       | `true`  | whether we will update a kubeconfig file with the admin creds for the cluster                                                                                                                                                                                                                                                                                                                  |
+| `verify`                | `string`                                      | no       |         | the Cargoship package signature One of `never`, `if-possible`, `always`.                                                                                                                                                                                                                                                                                                                       |
+| `worker_concurrency`    | `string` or `integer`                         | no       |         | number of worker nodes that will be upgraded at once, as a fixed count<br>("5") or a percentage of the batch ("25%")                                                                                                                                                                                                                                                                           |
 
 </div>
 
@@ -111,10 +86,10 @@ holds the values for the `.distro.publish` section of the config file
 
 <div class="schema-table">
 
-| Property               | Type     | Required | Default | Description                                                                                                                                  |
-| ---------------------- | -------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `signing_key`          | `string` | no       |         | is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package                                       |
-| `signing_key_password` | `string` | no       |         | the password for the private key used for signing **Sensitive.** Treat this value as a secret: it is a credential rather than a path to one. |
+| Property               | Type     | Required | Default | Description                                                                                                                                                                                                                                      |
+| ---------------------- | -------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `signing_key`          | `string` | no       |         | is the private key used to sign, or re-sign, the package: a local file path, or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported -- they cannot be reached from an air-gapped management node. |
+| `signing_key_password` | `string` | no       |         | the password for the private key used for signing **Sensitive.** Treat this value as a secret: it is a credential rather than a path to one.                                                                                                     |
 
 </div>
 
@@ -150,7 +125,3 @@ maps a source registry to the registry cargoship uses instead.
 | `registry.k8s.io` | `string` | no       |         |             |
 
 </div>
-
-### ResetOptions
-
-holds the values for the `.distro.reset` section of the config file

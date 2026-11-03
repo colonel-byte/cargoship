@@ -37,23 +37,16 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
 ### Options
 
 ```
-  -a, --architecture string                     Architecture for OCI images and Zarf packages
-      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
-      --certificate-identity-regexp string      Regex variant of --certificate-identity
-      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
-      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
-  -h, --help                                    help for validate
-      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
-      --insecure-skip-tls-verify                Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -k, --key string                              Path to public key file for validating signed packages
-      --kind string                             Name the schema to check against instead of reading the document's 'kind' field. Required for a cargoship config file, which declares no kind.
-      --package string                          Check spec.config.values against a package's own values schema. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema.
-      --plain-http                              Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
-      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
-      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
-      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+  -h, --help                       help for validate
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string                 Path to public key file for validating signed packages
+      --kind string                Name the schema to check against instead of reading the document's 'kind' field. Required for a cargoship config file, which declares no kind.
+      --package string             Check spec.config.values against a package's own values schema. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
+      --verify verifyMode          Verify the Cargoship package signature. (default if-possible)
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands

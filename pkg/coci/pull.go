@@ -28,14 +28,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/coci/layers"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
-	"github.com/defenseunicorns/pkg/oci"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2/content"
@@ -112,8 +112,10 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		return nil, err
 	}
 
-	if len(dis.Spec.Config.ImagesConfig.Images) > 0 {
-		imageLayers, err := LayersFromImages(ctx, root, fetcher, dis.Spec.Config.ImagesConfig.Images)
+	// AllImages, not imageConfig.images: a chart manifest's images are in the package
+	// too, and LayersFromImages fails on a declared image whose blobs it cannot find.
+	if images := dis.Spec.Config.AllImages(); len(images) > 0 {
+		imageLayers, err := LayersFromImages(ctx, root, fetcher, images)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +153,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, include ...layers.LayerType
 }
 
 // LayersFromFiles returns the file oci blob layers referenced by annotation.
-func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.ZarfFiles, folder string) ([]ocispec.Descriptor, error) {
+func LayersFromFiles(ctx context.Context, root *oci.Manifest, files v1alpha1.Files, folder string) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
 	for i, f := range files {

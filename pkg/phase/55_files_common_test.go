@@ -16,20 +16,23 @@ package phase
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/config"
 	hostos "github.com/colonel-byte/cargoship/types/os"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 )
 
 // newDistroFile is a binary-package file for one architecture. An empty arch leaves the selector
 // open, which is how a file that applies to every architecture is written.
-func newDistroFile(target string, arch api.Arch) *v1alpha1.ZarfFile {
-	f := &v1alpha1.ZarfFile{Target: target}
+func newDistroFile(target string, arch api.Arch) *v1alpha1.File {
+	f := &v1alpha1.File{Target: target}
 	f.Selector.Package = "binary"
 	if arch != "" {
 		f.Selector.Arch = api.Arches{arch}
@@ -40,7 +43,7 @@ func newDistroFile(target string, arch api.Arch) *v1alpha1.ZarfFile {
 // newFileUploader builds an UploadFilesCommon over the given package files. TempDirectory is a
 // scratch directory rather than a real package layout: the selection code only joins paths against
 // it, and the chtimes call on a file that is not there logs rather than fails.
-func newFileUploader(t *testing.T, files ...*v1alpha1.ZarfFile) *UploadFilesCommon {
+func newFileUploader(t *testing.T, files ...*v1alpha1.File) *UploadFilesCommon {
 	t.Helper()
 
 	p := &UploadFilesCommon{}
@@ -97,8 +100,8 @@ func TestGetProfileFilesGroupsByTheArchesInTheCluster(t *testing.T) {
 		newDistroFile("/usr/bin/k3s-amd64", api.ArchAMD64),
 		newDistroFile("/usr/bin/k3s-arm64", api.ArchARM64),
 	)
-	p.control = cluster.ZarfHosts{newDetectedHost(t, "amd64")}
-	p.workers = cluster.ZarfHosts{newDetectedHost(t, "arm64"), newDetectedHost(t, "arm64")}
+	p.control = cluster.Hosts{newDetectedHost(t, "amd64")}
+	p.workers = cluster.Hosts{newDetectedHost(t, "arm64"), newDetectedHost(t, "arm64")}
 
 	got := p.getProfileFiles(context.Background(), "binary", cluster.RoleController)
 
@@ -114,7 +117,7 @@ func TestGetProfileFilesSkipsAnArchNoHostRuns(t *testing.T) {
 		newDistroFile("/usr/bin/k3s-amd64", api.ArchAMD64),
 		newDistroFile("/usr/bin/k3s-arm64", api.ArchARM64),
 	)
-	p.control = cluster.ZarfHosts{newDetectedHost(t, "amd64")}
+	p.control = cluster.Hosts{newDetectedHost(t, "amd64")}
 
 	got := p.getProfileFiles(context.Background(), "binary", cluster.RoleController)
 
@@ -124,7 +127,7 @@ func TestGetProfileFilesSkipsAnArchNoHostRuns(t *testing.T) {
 
 func TestFilesForPicksTheHostArchitecture(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{
+	byArch := map[api.Arch][]v1alpha1.File{
 		api.ArchAMD64: {{Name: "k3s-amd64"}},
 		api.ArchARM64: {{Name: "k3s-arm64"}},
 	}
@@ -141,7 +144,7 @@ func TestFilesForPicksTheHostArchitecture(t *testing.T) {
 // the host is running.
 func TestFilesForWithoutAnArchitectureFails(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64"}}}
 
 	got, err := p.filesFor(byArch, newDetectedHost(t, "sparc64"))
 
@@ -163,7 +166,7 @@ func (c *recordingConfigurer) InstallPackage(_ hostos.Host, pkgs ...string) erro
 	return nil
 }
 
-func newInstallHost(t *testing.T, detected string) (*cluster.ZarfHost, *recordingConfigurer) {
+func newInstallHost(t *testing.T, detected string) (*cluster.Host, *recordingConfigurer) {
 	t.Helper()
 
 	cfg := &recordingConfigurer{}
@@ -175,7 +178,7 @@ func newInstallHost(t *testing.T, detected string) (*cluster.ZarfHost, *recordin
 
 func TestInstallPackagesForInstallsTheHostArchitecturePackages(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{
+	byArch := map[api.Arch][]v1alpha1.File{
 		api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}},
 		api.ArchARM64: {{Name: "k3s-arm64", Target: "/tmp/k3s-arm64.rpm"}},
 	}
@@ -190,7 +193,7 @@ func TestInstallPackagesForInstallsTheHostArchitecturePackages(t *testing.T) {
 // about the architecture the package turned out not to carry.
 func TestInstallPackagesForSkipsAHostWithNoPackages(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
 	h, cfg := newInstallHost(t, "arm64")
 
 	require.NoError(t, p.installPackagesFor(context.Background(), byArch, h))
@@ -199,7 +202,7 @@ func TestInstallPackagesForSkipsAHostWithNoPackages(t *testing.T) {
 
 func TestInstallPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
 	h, cfg := newInstallHost(t, "sparc64")
 
 	require.ErrorIs(t, p.installPackagesFor(context.Background(), byArch, h), api.ErrUnknownArch)
@@ -211,7 +214,7 @@ func TestInstallPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 // rather than being marked populated by an OS-specific phase that uploaded nothing to it.
 func TestBlockOtherInstallsIfUploadedLeavesAHostWithNoFilesOpen(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64"}}}
 	h := newDetectedHost(t, "arm64")
 
 	require.NoError(t, p.blockOtherInstallsIfUploaded(byArch)(context.Background(), h))
@@ -221,7 +224,7 @@ func TestBlockOtherInstallsIfUploadedLeavesAHostWithNoFilesOpen(t *testing.T) {
 
 func TestBlockOtherInstallsIfUploadedMarksAHostThatGotFiles(t *testing.T) {
 	p := &UploadFilesCommon{}
-	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	byArch := map[api.Arch][]v1alpha1.File{api.ArchAMD64: {{Name: "k3s-amd64"}}}
 	h := newDetectedHost(t, "amd64")
 
 	require.NoError(t, p.blockOtherInstallsIfUploaded(byArch)(context.Background(), h))
@@ -229,10 +232,235 @@ func TestBlockOtherInstallsIfUploadedMarksAHostThatGotFiles(t *testing.T) {
 	require.True(t, h.Metadata.EngineUploaded)
 }
 
-func fileNames(files []v1alpha1.ZarfFile) []string {
+func fileNames(files []v1alpha1.File) []string {
 	names := make([]string, 0, len(files))
 	for _, f := range files {
 		names = append(names, f.Name)
 	}
 	return names
+}
+
+// TestProfileFilesForArchStagesOnlyBinaries is the regression test for a file left stranded under
+// its staging name. Only phase 59 renames a staged file into place, and it runs for the binary
+// selector alone, so an executable selected by rpm or apt must be uploaded to its real target.
+func TestProfileFilesForArchStagesOnlyBinaries(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		selector string
+		want     string
+	}{
+		{
+			name:     "a binary is staged for phase 59 to rename",
+			selector: config.SelectorBIN,
+			want:     "staged",
+		},
+		{
+			name:     "an rpm selector has no phase that would rename it",
+			selector: config.SelectorRPM,
+			want:     "/usr/local/bin/etcdctl",
+		},
+		{
+			name:     "an apt selector has no phase that would rename it",
+			selector: config.SelectorAPT,
+			want:     "/usr/local/bin/etcdctl",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newDistroFile("/usr/local/bin/etcdctl", api.ArchAMD64)
+			f.Selector.Package = tt.selector
+			f.Executable = true
+
+			p := newFileUploader(t, f)
+			got := p.profileFilesForArch(context.Background(), tt.selector, cluster.RoleController, api.ArchAMD64)
+			require.Len(t, got, 1)
+
+			if tt.want == "staged" {
+				require.NotEqual(t, f.Target, got[0].Target, "a binary is uploaded under a staging name")
+				require.Contains(t, got[0].Target, f.Target+".tmp.")
+				require.Equal(t, f.Target, got[0].OriginalTarget)
+				return
+			}
+			require.Equal(t, tt.want, got[0].Target, "nothing would rename this, so it goes straight to its target")
+		})
+	}
+}
+
+func TestHostProfile(t *testing.T) {
+	controller := &cluster.Host{Role: cluster.RoleController}
+	worker := &cluster.Host{Role: cluster.RoleWorker}
+
+	require.Equal(t, cluster.RoleController, hostProfile(controller))
+	require.Equal(t, cluster.RoleWorker, hostProfile(worker))
+}
+
+func TestProfileFilesForArchEvaluatesWhen(t *testing.T) {
+	fileEnabled := newDistroFile("/usr/bin/etcdctl", api.ArchAMD64)
+	fileEnabled.Selector.When = ".tools.etcdctl.enabled"
+
+	fileOther := newDistroFile("/usr/bin/debugtool", api.ArchAMD64)
+	fileOther.Selector.When = ".tools.debugtool.enabled"
+
+	p := newFileUploader(t, fileEnabled, fileOther, newDistroFile("/usr/bin/always", api.ArchAMD64))
+
+	// A package with no values at all leaves every gated file off.
+	got := p.profileFilesForArch(context.Background(), "binary", cluster.RoleController, api.ArchAMD64)
+	require.Equal(t, []string{"always"}, fileNames(got))
+
+	p.manager.Values = map[string]any{
+		"tools": map[string]any{
+			"etcdctl": map[string]any{
+				"enabled": true,
+			},
+			"debugtool": map[string]any{
+				"enabled": false,
+			},
+		},
+	}
+	got = p.profileFilesForArch(context.Background(), "binary", cluster.RoleController, api.ArchAMD64)
+	require.Equal(t, []string{"etcdctl", "always"}, fileNames(got))
+}
+
+func TestWhenEnabled(t *testing.T) {
+	values := map[string]any{
+		"tools": map[string]any{
+			"on":     true,
+			"off":    false,
+			"spelt":  "true",
+			"count":  0,
+			"nested": map[string]any{"on": true},
+		},
+	}
+
+	for _, tt := range []struct {
+		name string
+		path string
+		want bool
+	}{
+		{
+			name: "no gate at all",
+			path: "",
+			want: true,
+		},
+		{
+			name: "true",
+			path: ".tools.on",
+			want: true,
+		},
+		{
+			name: "false",
+			path: ".tools.off",
+			want: false,
+		},
+		{
+			name: "nested true",
+			path: ".tools.nested.on",
+			want: true,
+		},
+		{
+			name: "a string spelling of true",
+			path: ".tools.spelt",
+			want: true,
+		},
+		{
+			name: "a number is not a boolean",
+			path: ".tools.count",
+			want: false,
+		},
+		{
+			name: "a path the values do not set",
+			path: ".tools.typo",
+			want: false,
+		},
+		{
+			name: "a path through a scalar",
+			path: ".tools.on.deeper",
+			want: false,
+		},
+		{
+			name: "a malformed path",
+			path: "tools.on",
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, whenEnabled(context.Background(), values, tt.path, "etcdctl"))
+		})
+	}
+}
+
+func TestWhenEnabledWithoutValues(t *testing.T) {
+	require.True(t, whenEnabled(context.Background(), nil, "", "always"))
+	require.False(t, whenEnabled(context.Background(), nil, ".tools.on", "gated"))
+}
+
+// manifestFS stands in for a host's filesystem during a stale-upload diff: it records what was
+// removed, reports no manifest on disk, and accepts the rewrite that follows a removal.
+type manifestFS struct {
+	remotefs.FS
+
+	removed []string
+}
+
+func (f *manifestFS) Remove(path string) error {
+	f.removed = append(f.removed, path)
+	return nil
+}
+
+func (f *manifestFS) FileExist(string) bool { return false }
+
+func (f *manifestFS) WriteFile(string, []byte, os.FileMode) error { return nil }
+
+// TestCleanStaleUploadsLeavesASiblingPhasesFilesAlone is the regression test for #942: the RPM
+// phase on a k3s package, which carries no rpm selector at all, deleted the engine binary and
+// both scripts the BIN phase had put on the host -- including the binary the node was running.
+//
+// All three install phases record into the "engine" category, so a phase with nothing to upload
+// has an empty current manifest and reads every one of its sibling's entries as stale. The host
+// it never claimed is not a host whose manifest it may prune.
+func TestCleanStaleUploadsLeavesASiblingPhasesFilesAlone(t *testing.T) {
+	fs := &manifestFS{}
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(fs)
+
+	p := &UploadFilesCommon{
+		priorManifest: map[*cluster.Host][]ManifestEntry{
+			h: {
+				{
+					Category: "engine",
+					Path:     "/usr/local/bin/k3s",
+				},
+			},
+		},
+	}
+
+	require.NoError(t, p.cleanStaleUploads(context.Background(), h))
+	require.Empty(t, fs.removed, "the phase uploaded nothing to this host, so it owns none of its engine files")
+}
+
+// TestCleanStaleUploadsRemovesWhatThisPhaseDropped is the behaviour the guard above must not
+// cost: a phase that did upload still prunes the files a previous version left behind.
+func TestCleanStaleUploadsRemovesWhatThisPhaseDropped(t *testing.T) {
+	fs := &manifestFS{}
+	h := &cluster.Host{Hostname: "worker1"}
+	h.SetFS(fs)
+	h.Metadata.EngineUploaded = true
+	h.Metadata.UploadedFiles = []string{"engine\t/usr/local/bin/k3s"}
+
+	p := &UploadFilesCommon{
+		priorManifest: map[*cluster.Host][]ManifestEntry{
+			h: {
+				{
+					Category: "engine",
+					Path:     "/usr/local/bin/k3s",
+				},
+				{
+					Category: "engine",
+					Path:     "/usr/local/bin/k3s-old",
+				},
+			},
+		},
+	}
+
+	require.NoError(t, p.cleanStaleUploads(context.Background(), h))
+	require.Equal(t, []string{"/usr/local/bin/k3s-old"}, fs.removed)
 }

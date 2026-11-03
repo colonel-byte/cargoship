@@ -24,8 +24,8 @@ import (
 	"context"
 	"slices"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -33,7 +33,7 @@ import (
 type DeleteControllers struct {
 	DeleteCommon
 	NoDrain bool
-	hosts   cluster.ZarfHosts
+	hosts   cluster.Hosts
 }
 
 // Title for the phase
@@ -52,25 +52,25 @@ func (p *DeleteControllers) ShouldRun() bool {
 }
 
 // Prepare the phase
-func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
+	// The refusals DeleteCommon.Prepare returns are the ones that have to stop the run: a subset
+	// with no controller left to drive it, and two controllers removed in one pass. Logging them
+	// and carrying on is how a reset came to report success over a host it had half removed.
 	if err := p.DeleteCommon.Prepare(ctx, c, d); err != nil {
-		logger.From(ctx).Warn("failed when setting up common logic", "error", err)
+		return err
 	}
-	// DeleteCommon.Prepare warns rather than failing when it finds no running controller, so
-	// this is reached with a nil leader, and the filter below reaches the cluster through that
-	// leader. ShouldRun already treats a nil leader as nothing to do; returning here is what
-	// lets it, instead of dereferencing first and panicking.
-	//
-	// A reset with no controller running is an ordinary state: a cluster that was already
-	// reset, or one whose engine is down. A dry run guarantees it, because every phase that
-	// would have started an engine was skipped.
+	// A nil leader with no error is the legitimate case: a whole-cluster reset, or a dry run,
+	// where nothing is deleted through a controller at all. The filter below reaches the cluster
+	// through that leader, and ShouldRun already treats a nil leader as nothing to do, so
+	// returning here is what lets it instead of dereferencing first and panicking.
 	if p.leader == nil {
 		return nil
 	}
 
-	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		err := p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)))
-		if err != nil {
+	candidates := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
+	p.nodeNames = resolveNodeNames(ctx, p.leader, p.Distro, candidates)
+	p.hosts = candidates.Filter(func(h *cluster.Host) bool {
+		if _, inCluster := p.nodeNames[h.String()]; !inCluster {
 			return false
 		}
 		return h.IsController() && h.Hostname != p.leader.Hostname
@@ -93,6 +93,15 @@ func (p *DeleteControllers) Run(ctx context.Context) error {
 		if err != nil {
 			logger.From(ctx).Warn("failed to drain node(s), continuing with removing nodes from cluster", "error", err)
 		}
+	}
+	if err := p.batchedParallelWithMessage(
+		ctx,
+		"releasing cluster membership",
+		p.hosts,
+		1,
+		p.stopEngineBeforeDelete,
+	); err != nil {
+		return err
 	}
 	return p.batchedParallelWithMessage(
 		ctx,

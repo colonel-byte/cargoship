@@ -89,12 +89,6 @@ options:
     type: bool
     required: false
     cli_flag: "--firewall"
-  fapolicyd:
-    description:
-      - "Whether to manage fapolicyd rules on the fleet."
-    type: bool
-    required: false
-    cli_flag: "--fapolicyd"
   label_nodes:
     description:
       - "Whether to apply cargoship's role labels to the cluster nodes."
@@ -155,7 +149,7 @@ options:
   verify:
     description:
       - "When to verify the package signature."
-      - "Only key-based verification is offered. Keyless verification wants network the management node does not have; verify a keyless-signed package with C(cargoship package verify) before the play."
+      - "Verification is key-based. A Cosign key pair is cargoship's only signing method; keyless (Fulcio/OIDC) verification was removed because it needs network an air-gapped management node does not have."
     type: str
     required: false
     choices:

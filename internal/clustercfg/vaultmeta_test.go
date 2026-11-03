@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 )
 
@@ -75,7 +75,7 @@ func TestEncryptConfigRecordsRecipients(t *testing.T) {
 
 	// The record is part of the document an apply reads, so it has to decode into the spec types
 	// rather than only into the YAML parser this package splices with.
-	var dis cluster.ZarfCluster
+	var dis cluster.Cluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}
@@ -401,7 +401,7 @@ func TestRecordedRecipientsReportsAnAbsentRecord(t *testing.T) {
 // than an absent record, so that a caller can say the note is damaged instead of quietly reporting
 // a file that claims nothing.
 func TestRecordedRecipientsReportsAMalformedRecord(t *testing.T) {
-	src := []byte("apiVersion: zarf.dev/v1alpha1\nkind: ZarfCluster\nmetadata:\n  name: test\n  encryption:\n    age:\n      recipients: age1abc\n")
+	src := []byte("apiVersion: colonel-byte.dev/v1alpha1\nkind: Cluster\nmetadata:\n  name: test\n  encryption:\n    age:\n      recipients: age1abc\n")
 
 	if _, _, ok, err := RecordedRecipients(src); err == nil || ok {
 		t.Errorf("RecordedRecipients() = ok %v, err %v, want an error naming the shape", ok, err)

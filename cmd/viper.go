@@ -145,8 +145,7 @@ func initViper() error {
 //
 // Every field listed here is one cargoship opens itself. AgeOpts.Recipients is deliberately absent:
 // it holds public keys, not paths. SigningKey is present even though it may name a Cosign key
-// provider rather than a file (env://, awskms://, openbao://) -- none of those begin with ~, so
-// they pass through untouched.
+// provider rather than a file (env://) -- that does not begin with ~, so it passes through untouched.
 //
 // The `parsePath` calls that seed the tmpdir and cache flags in flag.go cover two of these fields
 // already; they are left in place and are a no-op once this has run.
@@ -155,10 +154,11 @@ func expandHomePaths(cfg *types.DistroConfig) error {
 		&cfg.CachePath,
 		&cfg.TempDirectory,
 		&cfg.DistroOpts.KubeConfig,
+		&cfg.DistroOpts.ReceiptPath,
 		&cfg.DistroOpts.Output,
 		&cfg.DistroOpts.PublicKey,
-		&cfg.DistroOpts.TrustedRoot,
 		&cfg.DistroOpts.PublishOpts.SigningKey,
+		&cfg.DistroOpts.CreateOpts.HaulerStore,
 	}
 	for i := range cfg.AgeOpts.IdentityFiles {
 		paths = append(paths, &cfg.AgeOpts.IdentityFiles[i])
@@ -254,18 +254,14 @@ func setDefaults() {
 	// an env-only key on its own. Confirmed via a standalone reproduction before adding
 	// these -- omitting any of them silently drops that key's env-var support.
 	v.SetDefault(configPath("Architecture"), "")
-	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
 	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
 	v.SetDefault(configPath("DistroOpts", "KubeConfig"), "")
+	v.SetDefault(configPath("DistroOpts", "CreateOpts", "HaulerStore"), "")
+	v.SetDefault(configPath("DistroOpts", "ReceiptPath"), "")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKeyPassword"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateIdentity"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateIdentityRegexp"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuer"), "")
-	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuerRegexp"), "")
-	v.SetDefault(configPath("DistroOpts", "TrustedRoot"), "")
 	v.SetDefault(configPath("DistroOpts", "PublicKey"), "")
 
 	// Registered for the same reason as the keys above: without a default, Unmarshal never learns
@@ -275,17 +271,6 @@ func setDefaults() {
 	v.SetDefault(configPath("AgeOpts", "IdentityFiles"), []string{})
 	v.SetDefault(configPath("AgeOpts", "Recipients"), []string{})
 	v.SetDefault(configPath("AgeOpts", "RecipientsFiles"), []string{})
-}
-
-// GetStringSlice returns a string slice from viper
-// it consistently returns expected results across flags and environment variables
-// https://github.com/spf13/viper/issues/380
-func GetStringSlice(v *viper.Viper, key string) []string {
-	var result []string
-	if err := v.UnmarshalKey(key, &result); err != nil {
-		return nil
-	}
-	return result
 }
 
 type outputFormat string

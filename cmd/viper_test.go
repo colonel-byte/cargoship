@@ -106,14 +106,19 @@ func TestExpandHomePaths(t *testing.T) {
 			Recipients:      []string{"age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"},
 		},
 		DistroOpts: types.DistroOptions{
-			KubeConfig:  "~/.kube/config",
+			KubeConfig: "~/.kube/config",
+			// Expanded even though it carries placeholders: expandReceiptPath runs later,
+			// over the already-expanded path, and neither step touches the other's syntax.
+			ReceiptPath: "~/.cache/cargoship/logs/{command}-{timestamp}.json",
 			Output:      "~/packages",
 			PublicKey:   "~/.cosign/cosign.pub",
-			TrustedRoot: "~/.sigstore/trusted_root.json",
 			PublishOpts: types.DistroPublishOptions{
 				// A cosign key provider rather than a file: it has no leading ~, so it
 				// must survive untouched.
-				SigningKey: "awskms:///alias/cargoship",
+				SigningKey: "env://COSIGN_PRIVATE_KEY",
+			},
+			CreateOpts: types.DistroCreateOptions{
+				HaulerStore: "~/hauls/haul.tar.zst",
 			},
 		},
 	}
@@ -132,11 +137,14 @@ func TestExpandHomePaths(t *testing.T) {
 		},
 		DistroOpts: types.DistroOptions{
 			KubeConfig:  filepath.Join(home, ".kube", "config"),
+			ReceiptPath: filepath.Join(home, ".cache", "cargoship", "logs", "{command}-{timestamp}.json"),
 			Output:      filepath.Join(home, "packages"),
 			PublicKey:   filepath.Join(home, ".cosign", "cosign.pub"),
-			TrustedRoot: filepath.Join(home, ".sigstore", "trusted_root.json"),
 			PublishOpts: types.DistroPublishOptions{
-				SigningKey: "awskms:///alias/cargoship",
+				SigningKey: "env://COSIGN_PRIVATE_KEY",
+			},
+			CreateOpts: types.DistroCreateOptions{
+				HaulerStore: filepath.Join(home, "hauls", "haul.tar.zst"),
 			},
 		},
 	}

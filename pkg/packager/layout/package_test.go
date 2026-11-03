@@ -21,11 +21,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 func TestDigest(t *testing.T) {
@@ -41,13 +41,13 @@ func TestIsSigned(t *testing.T) {
 
 	t.Run("true when metadata says signed", func(t *testing.T) {
 		signed := true
-		d := &DistroLayout{Distro: distro.ZarfDistro{Build: distro.ZarfDistroBuildData{Signed: &signed}}}
+		d := &DistroLayout{Distro: distro.Distro{Build: distro.BuildData{Signed: &signed}}}
 		require.True(t, d.IsSigned())
 	})
 
 	t.Run("false when metadata says not signed", func(t *testing.T) {
 		signed := false
-		d := &DistroLayout{Distro: distro.ZarfDistro{Build: distro.ZarfDistroBuildData{Signed: &signed}}}
+		d := &DistroLayout{Distro: distro.Distro{Build: distro.BuildData{Signed: &signed}}}
 		require.False(t, d.IsSigned())
 	})
 }
@@ -70,7 +70,7 @@ func TestDistroLayoutFiles(t *testing.T) {
 // one data file, and a checksums.txt covering it, with AggregateChecksum set to match. It
 // returns the directory and the ZarfDistro whose AggregateChecksum matches the checksums file,
 // so validateDistroIntegrity succeeds unless the caller mutates the fixture further.
-func writeChecksummedPackage(t *testing.T) (string, distro.ZarfDistro) {
+func writeChecksummedPackage(t *testing.T) (string, distro.Distro) {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -87,8 +87,8 @@ func writeChecksummedPackage(t *testing.T) (string, distro.ZarfDistro) {
 
 	require.NoError(t, os.WriteFile(filepath.Join(dir, config.DistroYAML), []byte("metadata:\n  name: test-package\n"), 0o600))
 
-	dis := distro.ZarfDistro{
-		Metadata: distro.ZarfDistroMetadata{
+	dis := distro.Distro{
+		Metadata: distro.Metadata{
 			Name:              "test-package",
 			Version:           "1.0.0",
 			AggregateChecksum: aggSum,
@@ -190,7 +190,7 @@ func TestLoadFromTarErrors(t *testing.T) {
 
 func TestValues(t *testing.T) {
 	dir := t.TempDir()
-	d := &DistroLayout{dirPath: dir, Distro: distro.ZarfDistro{}}
+	d := &DistroLayout{dirPath: dir, Distro: distro.Distro{}}
 	values, err := d.Values(context.Background())
 	require.NoError(t, err)
 	require.Empty(t, values)
@@ -224,31 +224,6 @@ func TestSignOptionsShouldSign(t *testing.T) {
 			name: "deprecated key reference",
 			opts: SignOptions{
 				SignBlobOptions: signing.SignBlobOptions{KeyRef: "cosign.key"}, //nolint:staticcheck // the deprecated field is what this row covers
-			},
-			want: true,
-		},
-		{
-			name: "fulcio identity token",
-			opts: func() SignOptions {
-				var o SignOptions
-				o.Fulcio.IdentityToken = "a-token"
-				return o
-			}(),
-			want: true,
-		},
-		{
-			name: "hardware security key",
-			opts: func() SignOptions {
-				var o SignOptions
-				o.SecurityKey.Use = true
-				return o
-			}(),
-			want: true,
-		},
-		{
-			name: "keyless with no other material",
-			opts: SignOptions{
-				Keyless: true,
 			},
 			want: true,
 		},

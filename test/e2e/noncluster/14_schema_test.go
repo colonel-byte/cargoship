@@ -49,7 +49,7 @@ func TestCargoshipSchema(t *testing.T) {
 		stdout, _, err := e2e.Cargoship(t, "schema", "inventory")
 		require.NoError(t, err)
 
-		published, err := os.ReadFile(filepath.Join("schema", "zarf-v1alpha1-cluster-schema.json"))
+		published, err := os.ReadFile(filepath.Join("schema", "cluster-v1alpha1-schema.json"))
 		require.NoError(t, err)
 		require.Equal(t, string(published), stdout, "run: mage generate:schema")
 	})
@@ -126,7 +126,7 @@ func schemaValuesNode(t *testing.T, out string) map[string]any {
 	require.NoError(t, json.Unmarshal([]byte(out), &doc))
 
 	cur := doc
-	for _, k := range []string{"$defs", "ZarfClusterConfig", "properties", "values"} {
+	for _, k := range []string{"$defs", "Config", "properties", "values"} {
 		next, ok := cur[k].(map[string]any)
 		require.Truef(t, ok, "expected a map at %q", k)
 		cur = next

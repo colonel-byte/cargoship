@@ -27,8 +27,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/pkg/phase"
-	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -39,8 +37,6 @@ type ApplyOptions struct {
 	// AllowDowngrade continues when a host already runs a version newer than the package,
 	// rather than refusing the run
 	AllowDowngrade bool
-	// NoWait skips waiting for the cluster to be ready
-	NoWait bool
 	// NoDrain skips draining worker nodes
 	NoDrain bool
 	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
@@ -55,6 +51,15 @@ type ApplyOptions struct {
 	// KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
 	// location when empty
 	KubeConfigPath string
+	// NoKubeConfigFile builds the admin credentials without merging them into the operator's
+	// kubeconfig, so that a caller can read them through KubeConfigBytes and nothing on the
+	// machine running the apply is changed.
+	//
+	// It is phrased as the negative for the reason KubeConfigOptions.NoWrite is: the zero value
+	// writes, which is what every caller before this field existed did. The OpenTofu provider is
+	// the caller that sets it -- an apply that merged credentials into ~/.kube/config as a side
+	// effect would be changing a machine the resource does not describe.
+	NoKubeConfigFile bool
 	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool
 	// AllowUnmanagedNodes lets an apply continue when the cluster holds a node no host in the
@@ -68,24 +73,34 @@ type ApplyOptions struct {
 type Apply struct {
 	ApplyOptions
 	Phases phase.Phases
+	// kubeconfig is the phase that builds the admin credentials, retained so KubeConfigBytes can
+	// read what it built.
+	kubeconfig *phase.KubeConfig
 }
 
 // NewApply an apply action object
-func NewApply(opts ApplyOptions) *Apply {
-	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
+func NewApply(opts ApplyOptions) (*Apply, error) {
+	d, err := distroModule(opts.Manager.DistroID)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	if opts.Manager.Concurrency < 0 {
 		opts.Manager.Concurrency = 0
 	}
 
-	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
+	kubeconfig := &phase.KubeConfig{
+		Distro:    d,
+		ClusterID: opts.Manager.Config.Metadata.Name,
+		Enabled:   opts.UpdateKubeConfig,
+		Write:     !opts.NoKubeConfigFile,
+		Path:      opts.KubeConfigPath,
+	}
 
 	lockPhase := &phase.Lock{}
 	return &Apply{
 		ApplyOptions: opts,
+		kubeconfig:   kubeconfig,
 		Phases: phase.Phases{
 			&phase.Connect{},
 
@@ -113,6 +128,7 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
 			&phase.PrepareFapolicy{},
+			&phase.PrepareSelinuxPolicy{},
 			&phase.ModifyHosts{
 				Enabled: opts.ModifyHosts,
 			},
@@ -156,6 +172,10 @@ func NewApply(opts ApplyOptions) *Apply {
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
+			// After the upgrade phases, so a host either of them claimed has already had its
+			// install run; this is only for a host neither acts on. See InstallStagedFiles.
+			&phase.InstallStagedFiles{},
+
 			&phase.EngineConfigSyncController{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
 					Distro:  d,
@@ -169,29 +189,34 @@ func NewApply(opts ApplyOptions) *Apply {
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
-			&phase.KubeConfig{
-				Distro:    d,
-				ClusterID: opts.Manager.Config.Metadata.Name,
-				Enabled:   opts.UpdateKubeConfig,
-				Write:     true,
-				Path:      opts.KubeConfigPath,
-			},
+			kubeconfig,
 			&phase.LabelNodes{
 				Distro:  d,
-				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
+				Enabled: opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
+	}, nil
+}
+
+// KubeConfigBytes is the cluster's admin credentials, serialized, as the run built them.
+//
+// It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase
+// is skipped otherwise and there is nothing to return. What comes back is cluster-admin, so a
+// caller holding it is holding the cluster.
+func (a Apply) KubeConfigBytes() ([]byte, error) {
+	if a.kubeconfig == nil {
+		return nil, phase.ErrNoKubeConfig
 	}
+	return a.kubeconfig.Bytes()
 }
 
 // Run the actions
 func (a Apply) Run(ctx context.Context) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	phase.NoWait = a.NoWait
 	a.Manager.SetPhases(a.Phases)
 
 	if result := a.Manager.Run(ctx); result != nil {

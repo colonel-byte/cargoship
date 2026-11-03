@@ -22,22 +22,23 @@ import (
 
 // forbiddenDeps are packages the CLI must not reach.
 //
-// The OpenTofu provider is a package of this module rather than a module of its own, and what
-// makes that free for the CLI is that the linker never loads a package the import graph does not
-// reach: terraform-plugin-framework and its dependencies are vendored for the provider and end up
-// in no cargoship binary. That is a property of the import graph, not a boundary anything
-// enforces, so one import from a package the CLI already uses would quietly undo it -- and the
-// only symptom would be a larger binary, which no check reads. See
-// docs/agent/choice-tofu-provider-layout.md.
+// The OpenTofu provider used to be a package of this module, and this test is what kept its
+// dependencies out of the binary: the linker never loads a package the import graph does not
+// reach, so terraform-plugin-framework and its tree ended up in no cargoship binary. The provider
+// now lives in colonel-byte/terraform-provider-cargoship and consumes this module as a library,
+// so the two packages it owned are gone from the list.
 //
-// Prefixes rather than exact paths, so a package added under either tree is covered without this
+// The plugin framework stays, and the test with it. What it protects did not leave with the
+// provider: a provider-shaped dependency reaching the CLI costs an air-gapped operator megabytes
+// they carry by hand, and the only symptom is a larger binary, which no check reads. See the
+// size budget in AGENTS.md. A pattern matching nothing is the state this should be in.
+//
+// Prefixes rather than exact paths, so a package added under the tree is covered without this
 // list being updated. One entry per line, because keep-sorted sorts lines: a multi-line struct
 // literal between its markers is reordered into something that does not compile.
 var forbiddenDeps = map[string]string{
 	// keep-sorted start
-	"github.com/colonel-byte/cargoship/cmd/terraform-provider-cargoship": "the provider's own main package",
-	"github.com/colonel-byte/cargoship/internal/tofuprovider":            "the provider's implementation",
-	"github.com/hashicorp/terraform-plugin":                              "the provider's plugin framework and its protocol libraries",
+	"github.com/hashicorp/terraform-plugin": "a plugin framework and its protocol libraries",
 	// keep-sorted end
 }
 

@@ -23,16 +23,19 @@ cargoship COMMAND [flags]
 * [cargoship apply](./cargoship_apply.md)	 - Apply a config file to bootstrap and upgrade a cluster
 * [cargoship create](./cargoship_create.md)	 - Creates a Cargoship Package from a given directory or the current directory
 * [cargoship engine-config-sync](./cargoship_engine-config-sync.md)	 - Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted
+* [cargoship import](./cargoship_import.md)	 - Converts an OCI Image Layout archive into a native Cargoship package
 * [cargoship inventory](./cargoship_inventory.md)	 - Generates a cluster inventory from another source of truth
 * [cargoship kube-config](./cargoship_kube-config.md)	 - Get the admin kube-config for a control-plane node
 * [cargoship prepare](./cargoship_prepare.md)	 - Prepares the nodes, including restarting the node if new kernel modules are enabled
 * [cargoship publish](./cargoship_publish.md)	 - Publish the Cargoship Package to an OCI registry
 * [cargoship pull](./cargoship_pull.md)	 - Pulls a Cargoship package from a remote registry and saves it to the local filesystem
+* [cargoship redact-receipt](./cargoship_redact-receipt.md)	 - Rewrites a run receipt so it can be attached to an issue
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for an engine
 * [cargoship schema](./cargoship_schema.md)	 - Writes out a JSON Schema for one of cargoship's own file formats
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
 * [cargoship validate](./cargoship_validate.md)	 - Checks a cluster inventory, package definition, or config file against its schema
 * [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
+* [cargoship verify](./cargoship_verify.md)	 - Verifies the signature on a Cargoship distro package
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

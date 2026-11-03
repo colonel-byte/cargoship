@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/k0sproject/dig"
@@ -62,11 +62,11 @@ func TestIsContainedPath(t *testing.T) {
 
 // valuesPathDistro builds the minimum distro validateDistroPaths accepts, so a
 // failure can only come from the values paths under test.
-func valuesPathDistro(files []string, schema string) distro.ZarfDistro {
-	d := distro.ZarfDistro{}
+func valuesPathDistro(files []string, schema string) distro.Distro {
+	d := distro.Distro{}
 	d.Metadata.Name = "test"
 	d.Metadata.Version = "1.0.0"
-	d.Spec.Values = distro.ZarfDistroValues{Files: files, Schema: schema}
+	d.Spec.Values = distro.Values{Files: files, Schema: schema}
 	return d
 }
 
@@ -138,7 +138,7 @@ func TestLoadValues(t *testing.T) {
 	write("1-values.yaml", "replicas: 4\n")
 	write("values.schema.json", `{"type":"object","properties":{"replicas":{"type":"integer","maximum":3}}}`)
 
-	vals := distro.ZarfDistroValues{Files: []string{"values/0-values.yaml", "values/1-values.yaml"}}
+	vals := distro.Values{Files: []string{"values/0-values.yaml", "values/1-values.yaml"}}
 	merged, err := LoadValues(context.Background(), dir, vals)
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +174,7 @@ func TestLoadValuesOverrides(t *testing.T) {
 			}
 		}
 	}`)
-	vals := distro.ZarfDistroValues{
+	vals := distro.Values{
 		Files:  []string{"values/0-values.yaml"},
 		Schema: "values/values.schema.json",
 	}
@@ -207,8 +207,8 @@ func TestLoadValuesOverrides(t *testing.T) {
 
 // ciliumLayout builds a layout whose engine configuration carries the cilium
 // manifest values a mapping moves.
-func ciliumLayout(mappings []distro.ZarfDistroValueMapping) *DistroLayout {
-	d := distro.ZarfDistro{}
+func ciliumLayout(mappings []distro.ValueMapping) *DistroLayout {
+	d := distro.Distro{}
 	d.Spec.Values.Mappings = mappings
 	d.Spec.Config.Engine = dig.Mapping{
 		"manifest": dig.Mapping{
@@ -240,7 +240,7 @@ func cilium(t *testing.T, l *DistroLayout) map[string]any {
 }
 
 func TestApplyValues(t *testing.T) {
-	mappings := []distro.ZarfDistroValueMapping{
+	mappings := []distro.ValueMapping{
 		{Source: ".cilium.encryption.enabled", Target: ".manifest.rke2-cilium.encryption.enabled"},
 	}
 
@@ -283,7 +283,7 @@ func TestApplyValues(t *testing.T) {
 	})
 
 	t.Run("a bad target path is an error", func(t *testing.T) {
-		l := ciliumLayout([]distro.ZarfDistroValueMapping{
+		l := ciliumLayout([]distro.ValueMapping{
 			{Source: ".cilium.encryption.enabled", Target: "manifest.rke2-cilium"},
 		})
 		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
@@ -299,8 +299,8 @@ func TestApplyValues(t *testing.T) {
 // renders into a scalar, so a list has to arrive through a mapping.
 func TestApplyValuesProjectsAList(t *testing.T) {
 	layout := func() *DistroLayout {
-		d := distro.ZarfDistro{}
-		d.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+		d := distro.Distro{}
+		d.Spec.Values.Mappings = []distro.ValueMapping{
 			{Source: ".addons.disabled", Target: ".config.disable"},
 		}
 		d.Spec.Config.Engine = dig.Mapping{
@@ -359,8 +359,8 @@ const vsphereCPI = `vCenter:
 
 // mixedLayout builds a layout whose manifest section holds both kinds of chart
 // entry, so a mapping that writes into the structured one has string siblings.
-func mixedLayout(mappings []distro.ZarfDistroValueMapping) *DistroLayout {
-	d := distro.ZarfDistro{}
+func mixedLayout(mappings []distro.ValueMapping) *DistroLayout {
+	d := distro.Distro{}
 	d.Spec.Values.Mappings = mappings
 	d.Spec.Config.Engine = dig.Mapping{
 		"manifest": dig.Mapping{
@@ -374,7 +374,7 @@ func mixedLayout(mappings []distro.ZarfDistroValueMapping) *DistroLayout {
 }
 
 func TestApplyValuesMixedManifest(t *testing.T) {
-	mappings := []distro.ZarfDistroValueMapping{
+	mappings := []distro.ValueMapping{
 		{Source: ".cilium.encryption.enabled", Target: ".manifest.rke2-cilium.encryption.enabled"},
 	}
 	values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
@@ -419,7 +419,7 @@ func TestApplyValuesMixedManifest(t *testing.T) {
 	})
 
 	t.Run("a target inside a string entry is an error", func(t *testing.T) {
-		l := mixedLayout([]distro.ZarfDistroValueMapping{
+		l := mixedLayout([]distro.ValueMapping{
 			{Source: ".cilium.encryption.enabled", Target: `.manifest.rancher-vsphere-cpi.vCenter.host`},
 		})
 		if err := l.ApplyValues(values); err == nil {
@@ -432,7 +432,7 @@ func TestApplyValuesMixedManifest(t *testing.T) {
 // templates rather than mappings: one scalar that stands for a whole value, and
 // one chart entry written as a string so a conditional can decide what it holds.
 func templatedLayout() *DistroLayout {
-	d := distro.ZarfDistro{}
+	d := distro.Distro{}
 	d.Spec.Config.Engine = dig.Mapping{
 		"manifest": dig.Mapping{
 			"rke2-cilium": dig.Mapping{
@@ -505,7 +505,7 @@ func TestApplyValuesRendersTemplates(t *testing.T) {
 	// the text it is.
 	t.Run("a value that looks like a template is not executed", func(t *testing.T) {
 		l := templatedLayout()
-		l.Distro.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+		l.Distro.Spec.Values.Mappings = []distro.ValueMapping{
 			{Source: ".cilium.encryption.type", Target: ".manifest.rke2-cilium.encryption.type"},
 		}
 		values := templateValues(false, false)
@@ -558,12 +558,12 @@ func TestRenderFiles(t *testing.T) {
 	osFile := stageFile(t, root, string(config.OSDir), 0, "motd", "welcome to {{ .Values.registry.address }}\n")
 
 	yes := true
-	d := distro.ZarfDistro{}
-	d.Spec.Config.Files = v1alpha1.ZarfFiles{
+	d := distro.Distro{}
+	d.Spec.Config.Files = v1alpha1.Files{
 		{Target: "/etc/rancher/rke2/registries.yaml", Template: &yes},
 		{Target: "/etc/untouched.yaml"},
 	}
-	d.Spec.Config.OS.Files = v1alpha1.ZarfFiles{{Target: "/etc/motd", Template: &yes}}
+	d.Spec.Config.OS.Files = v1alpha1.Files{{Target: "/etc/motd", Template: &yes}}
 	l := &DistroLayout{Distro: d, dirPath: root}
 
 	values := map[string]any{"registry": map[string]any{"address": "127.0.0.1:31999"}}
@@ -613,11 +613,77 @@ func TestRenderFilesReportsAMissingValue(t *testing.T) {
 	stageFile(t, root, string(config.FilesDir), 0, "registries.yaml", "address: {{ .Values.registry.address }}\n")
 
 	yes := true
-	d := distro.ZarfDistro{}
-	d.Spec.Config.Files = v1alpha1.ZarfFiles{{Target: "/etc/rancher/rke2/registries.yaml", Template: &yes}}
+	d := distro.Distro{}
+	d.Spec.Config.Files = v1alpha1.Files{{Target: "/etc/rancher/rke2/registries.yaml", Template: &yes}}
 	l := &DistroLayout{Distro: d, dirPath: root}
 
 	if err := l.RenderFiles(context.Background(), map[string]any{}); err == nil {
 		t.Fatal("RenderFiles rendered a file whose values are missing")
 	}
+}
+
+// Whether a chart can be switched off is the package author's decision, not a cluster's.
+// A cluster reaches spec.config.engine only through a mapping or a template the package
+// itself declares -- a Cluster's own engine section carries node labels and taints and
+// nothing else -- so a manifest entry with no enabled key, and no mapping onto one, has no
+// route by which an inventory or --values could turn it off.
+//
+// This is asserted rather than left implicit because it is a property of who owns mappings
+// rather than of any check: a future field that let an inventory write engine configuration
+// directly would erode it without failing anything else.
+func TestApplyValuesCannotDisableAChartThePackageDidNotOfferUp(t *testing.T) {
+	enabled := func(t *testing.T, l *DistroLayout) (any, bool) {
+		t.Helper()
+		got, ok, err := helmvalues.GetValuePath(l.Distro.Spec.Config.Engine, ".manifest.rke2-cilium.enabled")
+		if err != nil {
+			t.Fatalf("reading .manifest.rke2-cilium.enabled: %v", err)
+		}
+		return got, ok
+	}
+
+	// A cluster asking for exactly the thing the package never offered.
+	values := map[string]any{
+		"addons":  map[string]any{"cilium": map[string]any{"enabled": false}},
+		"cilium":  map[string]any{"enabled": false},
+		"enabled": false,
+	}
+
+	t.Run("no mapping means no route", func(t *testing.T) {
+		l := ciliumLayout(nil)
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		if got, ok := enabled(t, l); ok {
+			t.Fatalf("an inventory introduced .manifest.rke2-cilium.enabled = %v", got)
+		}
+	})
+
+	t.Run("a mapping onto another key is still no route", func(t *testing.T) {
+		l := ciliumLayout([]distro.ValueMapping{
+			{Source: ".cilium.enabled", Target: ".manifest.rke2-cilium.encryption.enabled"},
+		})
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		if got, ok := enabled(t, l); ok {
+			t.Fatalf("an inventory introduced .manifest.rke2-cilium.enabled = %v", got)
+		}
+		// The mapping it did declare still works, so this is not passing by doing nothing.
+		if enc := cilium(t, l); enc["enabled"] != false {
+			t.Fatalf("encryption.enabled = %v, want the projected false", enc["enabled"])
+		}
+	})
+
+	t.Run("the author opting in is what makes it switchable", func(t *testing.T) {
+		l := ciliumLayout([]distro.ValueMapping{
+			{Source: ".addons.cilium.enabled", Target: ".manifest.rke2-cilium.enabled"},
+		})
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		got, ok := enabled(t, l)
+		if !ok || got != false {
+			t.Fatalf("enabled = %v (present %v), want the projected false", got, ok)
+		}
+	})
 }

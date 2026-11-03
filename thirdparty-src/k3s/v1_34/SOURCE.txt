@@ -1,4 +1,0 @@
-repo:   https://github.com/k3s-io/k3s
-tag:    v1.34.12+k3s1
-commit: 47b4749964eb62628618bedad32eeacfc9eebbae
-files:  pkg/cli/cmds/server.go pkg/cli/cmds/agent.go pkg/cli/cmds/stage.go

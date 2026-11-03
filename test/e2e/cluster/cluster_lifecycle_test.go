@@ -20,12 +20,13 @@ import (
 	"testing"
 	"time"
 
-	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/colonel-byte/cargoship/test"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -55,6 +56,9 @@ var exampleDefinitions = map[string]struct { //nolint:gochecknoglobals
 }{
 	"rke2": {path: "example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1", version: "1.36.4-rke2r1"},
 	"k3s":  {path: "example/k3s-flannel/v1_36/v1.36.4-k3s1", version: "1.36.4-k3s1"},
+	// Upstream kubeadm. Cilium to match the rke2 entry, and the same minor as the other
+	// two so a walk against one distro is comparable to a walk against another.
+	"upstream": {path: "example/upstream-cilium/v1_36/v1.36.5", version: "1.36.5"},
 }
 
 // examplePackage is the distro definition the suite packages and installs.
@@ -69,12 +73,12 @@ func installedVersion() string {
 
 // Test_00_CreatePackage builds the distro package every later step installs. It builds it
 // from a copy of the example definition with the sysctls a container cannot apply removed:
-// see containerSafeDefinition.
+// see test.ContainerSafeDefinition.
 func (s *ApplyPhaseSuite) Test_00_CreatePackage() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	definition, err := containerSafeDefinition(examplePackage(), s.pkgDir)
+	definition, err := test.ContainerSafeDefinition(examplePackage(), s.pkgDir)
 	s.Require().NoError(err)
 
 	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
@@ -106,6 +110,7 @@ func (s *ApplyPhaseSuite) Test_01_Prepare() {
 // the phases the suite just walked produced a working cluster and not only the right files.
 func (s *ApplyPhaseSuite) Test_ZZ1_ClusterHealthy() {
 	s.requireEngine()
+	s.requireClusterAPI()
 	t := s.T()
 	cs, err := e2e.KubeClient(t)
 	s.Require().NoError(err)
@@ -121,14 +126,23 @@ func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
 	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
 	defer cleanup()
 
-	err := action.NewApply(action.ApplyOptions{
+	// LabelNodes follows whether this machine can reach the cluster's API, rather than being
+	// on unconditionally. It is the only option here that talks to Kubernetes from the
+	// management node instead of to a host over SSH, so on a fleet whose API is not routable
+	// from here -- the VM fleet, by construction -- leaving it on would fail this step for a
+	// reason that has nothing to do with whether an apply is idempotent, which is what it is
+	// here to find out. Test_81 covers the labelling itself, and skips for the same reason.
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
-		LabelNodes:       true,
-	}).Run(s.ctx)
+		LabelNodes:       reachesClusterAPI(manager.Config.Spec.Config.LoadBalancer),
+	})
+	s.Require().NoError(err)
+
+	err = apply.Run(s.ctx)
 	s.Require().NoError(err)
 }
 
@@ -152,14 +166,17 @@ func (s *ApplyPhaseSuite) Test_ZZ3_ApplyDryRunConverges() {
 	manager.DryRun = true
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(ctx)
+	})
+	s.Require().NoError(err)
+
+	err = apply.Run(ctx)
 	s.Require().NoError(err)
 
 	planned := len(sink.Result().Planned)
@@ -233,23 +250,30 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 	manager.DryRun = true
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
-		NoWait:           true,
 		NoDrain:          true,
-	}).Run(ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(ctx))
 
 	// The delete and uninstall phases declare no dry-run path, so a dry run has to have reported
 	// them. Finding none reported on a cluster that is up would mean the run decided there was
 	// nothing to tear down.
 	s.Require().NotEmpty(sink.Result().Planned, "a reset dry run over a live cluster reported no phases")
 
-	cs, err := e2e.KubeClient(s.T())
-	s.Require().NoError(err)
-	s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, time.Minute),
-		"a reset dry run took nodes out of the cluster")
+	// The node check needs the API server reachable from here, which it is not on the
+	// microvm backend: the fleet's nodes sit on a private segment and only the leader's
+	// forwarded ports reach the host. Test_ZZ1_ClusterHealthy guards the same call and
+	// this one did not, so a VM run failed here on reachability rather than on anything
+	// the reset did. The phase assertions above still run either way.
+	if reachesClusterAPI(manager.Config.Spec.Config.LoadBalancer) {
+		cs, err := e2e.KubeClient(s.T())
+		s.Require().NoError(err)
+		s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, time.Minute),
+			"a reset dry run took nodes out of the cluster")
+	}
 
 	s.Require().NoError(reconnectHosts(s.ctx, manager))
 	defer disconnectAll(manager.Config.Spec.Hosts)
@@ -267,20 +291,51 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 func (s *ResetSuite) Test_1_Reset() {
 	manager := s.newBareManager(e2e.ClusterConfigPath)
 
-	err := action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
-		NoWait:           true,
 		NoDrain:          true,
-	}).Run(s.ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(s.ctx))
 }
 
-// Test_2_PostReset confirms kube-config can no longer find a running controller once the
-// distro has been torn down, and that it leaves the kubeconfig it cannot refresh in place.
-func (s *ResetSuite) Test_2_PostReset() {
+// Test_2_ResetRemovesWhatItManages asserts the hosts carry none of the engine's paths once the
+// reset has run.
+//
+// `cargoship reset --help` promises "the engine and the data it wrote", and until this existed
+// nothing checked the second half. The uninstall guarded every removal on Host.FileExist,
+// which is `test -f` and therefore false for a directory -- so the data directory, the config
+// directory and /etc/cargoship were all skipped, silently, because nothing was attempted and
+// nothing failed. A reset reported success having left 2.3G in /var/lib/rancher/rke2 and a
+// config.yaml naming the cluster that had just been torn down.
+//
+// The paths come from the distro rather than being written out here, so a distro that starts
+// managing another one is covered without this test being touched.
+func (s *ResetSuite) Test_2_ResetRemovesWhatItManages() {
+	dis, err := distroModule(distroID())
+	s.Require().NoError(err)
+
 	manager := s.newBareManager(e2e.ClusterConfigPath)
-	manager.Config.Spec.Hosts = apicluster.ZarfHosts{manager.Config.Spec.Hosts.Controllers().First()}
+	defer disconnectAll(manager.Config.Spec.Hosts)
+	s.Require().NoError(reconnectHosts(s.ctx, manager), "could not reach the hosts to assert on them")
+
+	paths := append(dis.CleanupPaths(), distrocfg.StateDir) //nolint:gocritic // a fresh slice is wanted here
+	s.Require().NotEmpty(paths, "the distro named no paths, so this would assert nothing")
+
+	for _, host := range manager.Config.Spec.Hosts {
+		for _, path := range paths {
+			_, err := host.Stat(path)
+			s.Require().Errorf(err, "%s: %s survived the reset", host, path)
+		}
+	}
+}
+
+// Test_3_PostReset confirms kube-config can no longer find a running controller once the
+// distro has been torn down, and that it leaves the kubeconfig it cannot refresh in place.
+func (s *ResetSuite) Test_3_PostReset() {
+	manager := s.newBareManager(e2e.ClusterConfigPath)
+	manager.Config.Spec.Hosts = apicluster.Hosts{manager.Config.Spec.Hosts.Controllers().First()}
 
 	// The action fails partway through its phase list, so its own Disconnect phase never
 	// runs and the SSH connection it opened has to be closed here.
@@ -290,7 +345,10 @@ func (s *ResetSuite) Test_2_PostReset() {
 		}
 	}()
 
-	err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager}).Run(s.ctx)
+	kubeConfig, err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager})
+	s.Require().NoError(err)
+
+	err = kubeConfig.Run(s.ctx)
 	s.Require().Error(err)
 
 	_, err = os.Stat(kubeconfigPath)

@@ -1,0 +1,35 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Do not edit; see example/AGENTS.md.
+apiVersion: content.hauler.cattle.io/v1
+kind: Images
+metadata:
+  name: multi-cni-cilium-core
+spec:
+  images:
+    - name: docker.io/rancher/rke2-runtime:v1.36.3-rke2r1
+    - name: docker.io/rancher/hardened-kubernetes:v1.36.3-rke2r1-build20260723
+    - name: docker.io/rancher/hardened-coredns:v1.14.6-build20260722
+    - name: docker.io/rancher/hardened-cluster-autoscaler:v1.10.3-build20260717
+    - name: docker.io/rancher/hardened-dns-node-cache:1.26.8-build20260722
+    - name: docker.io/rancher/hardened-etcd:v3.6.14-k3s1-build20260723
+    - name: docker.io/rancher/hardened-k8s-metrics-server:v0.9.0-build20260722
+    - name: docker.io/rancher/hardened-addon-resizer:1.8.23-build20260717
+    - name: docker.io/rancher/klipper-helm:v0.13.3-build20260727
+    - name: docker.io/rancher/klipper-lb:v0.4.17
+    - name: docker.io/rancher/mirrored-pause:3.10.2
+    - name: docker.io/rancher/rke2-cloud-provider:v1.36.2-0.20260610225606-10b320a3ba51-build20260709
+    - name: docker.io/rancher/hardened-snapshot-controller:v8.6.0-build20260722
+    - name: docker.io/rancher/hardened-traefik:v3.7.8-build20260717

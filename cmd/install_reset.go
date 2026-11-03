@@ -24,18 +24,18 @@ import (
 	"context"
 
 	"github.com/colonel-byte/cargoship/config/lang"
-	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/riglogger"
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type installResetOptions struct {
 	InstallCommon
-	workerCon string
-	distro    string
+	workerCon   string
+	distro      string
+	targetHosts []string
 }
 
 func newInstallResetCommand() *cobra.Command {
@@ -49,7 +49,7 @@ func newInstallResetCommand() *cobra.Command {
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
@@ -58,55 +58,65 @@ func newInstallResetCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.distro, InstallDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagResetDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
+	registerFlagReceiptPath(cmd, &o.receiptPath)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
-
-	val, err := cmd.Flags().GetString(RootLoggingLevel)
-	if err != nil {
-		val = loggingLevelDefault
-	}
-
-	o.logLevel = val
-
-	val, err = cmd.Flags().GetString(RootLoggingFormat)
-	if err != nil {
-		val = string(logger.FormatConsole)
-	}
-
-	o.LogFormat = val
+	cmd.Flags().StringSliceVar(&o.targetHosts, InstallTargetHosts, nil, lang.CmdInstallFlagResetTargetHosts)
 
 	markRequired(cmd, InstallConfig)
 
 	return cmd
 }
 
-func (o *installResetOptions) run(ctx context.Context, _ []string) error {
-	if err := preflightReset(o.config, o.confirm, o.dryRun); err != nil {
-		return err
-	}
-
-	if err := riglogger.RigLogger(ctx); err != nil {
-		return err
-	}
-
-	cluster, err := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
+func (o *installResetOptions) run(ctx context.Context, cmd *cobra.Command, _ []string) error {
+	// Opened before anything that can fail, so a run that never reaches its phases still leaves
+	// a receipt saying so. runErr is what the receipt records as the outcome, which is why every
+	// return below assigns it rather than returning directly.
+	//
+	// Reset loads no package, so it has no layout and the receipt carries no package block.
+	var (
+		manager *phase.Manager
+		runErr  error
+	)
+	ctx, finishReceipt, err := startReceipt(ctx, cmd, o.InstallCommon)
 	if err != nil {
 		return err
 	}
+	defer func() { finishReceipt(manager, "", nil, runErr) }()
+
+	if runErr = preflightReset(o.config, o.confirm, o.dryRun); runErr != nil {
+		return runErr
+	}
+
+	if runErr = riglogger.RigLogger(ctx); runErr != nil {
+		return runErr
+	}
+
+	cluster, runErr := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
+	if runErr != nil {
+		return runErr
+	}
+
+	manager = &phase.Manager{
+		DistroID:          o.distro,
+		Concurrency:       o.concurrency,
+		ConcurrentUploads: o.concurrency,
+		Config:            &cluster,
+		// Reset does not load a package, so it builds its Manager here rather than through
+		// initManager, and this is the only place the flag reaches it.
+		DryRun: o.dryRun,
+	}
 
 	resetOpts := action.ResetOptions{
-		Manager: &phase.Manager{
-			DistroID:          o.distro,
-			Concurrency:       o.concurrency,
-			ConcurrentUploads: o.concurrency,
-			Config:            &cluster,
-			// Reset does not load a package, so it builds its Manager here rather than through
-			// initManager, and this is the only place the flag reaches it.
-			DryRun: o.dryRun,
-		},
+		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
-		NoWait:           true,
+		TargetHosts:      o.targetHosts,
 		NoDrain:          true,
 	}
 
-	return action.NewReset(resetOpts).Run(ctx)
+	reset, runErr := action.NewReset(resetOpts)
+	if runErr != nil {
+		return runErr
+	}
+	runErr = reset.Run(ctx)
+	return runErr
 }

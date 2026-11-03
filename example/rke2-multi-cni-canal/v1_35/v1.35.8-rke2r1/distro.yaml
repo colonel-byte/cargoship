@@ -15,9 +15,9 @@
 # This file is generated in magefiles/templates/rke2-distro.yaml.tmpl, versions may need to updated over time.
 
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfDistro
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/distro-v1alpha1-schema.json
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
 metadata:
   name: rancher-rke2-multi-cni-canal
   version: 1.35.8-rke2r1
@@ -112,6 +112,30 @@ spec:
                   - kube-system
                   - rook-ceph
                   - zarf
+    # Files that are not part of an install method. Phase 50 uploads these to every host the
+    # selector matches, and no later phase renames or installs them, so a tool here is in place
+    # as soon as the upload finishes.
+    files:
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz
+        extractPath: etcd-v3.6.14-linux-amd64/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+        shasum: dba085f02f045d6fc0cd59c533ef2a8dc922ad82418c0e538b194525c715450b
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
+          arch:
+            - amd64
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-arm64.tar.gz
+        extractPath: etcd-v3.6.14-linux-arm64/etcdctl
+        target: /usr/local/bin/etcdctl
+        executable: true
+        shasum: 200f5faebd4b6021388f386bfd5ca74f798c3634e47cf10598ccf4ba28e5b9ae
+        selector:
+          profile: controller
+          when: .tools.etcdctl.enabled
+          arch:
+            - arm64
     os:
       env:
         CRI_CONFIG_FILE: |-
@@ -152,6 +176,19 @@ spec:
         allow perm=any all : dir=/run/k3s/
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
+      selinux:
+        # Applied only to hosts reporting SELinux enforcing; every other host is left alone.
+        #
+        # There are deliberately no fileContexts here. The staged rke2-selinux RPM already ships a
+        # policy module that labels /var/lib/rancher, /var/lib/kubelet and /opt/cni, so a mapping
+        # for those paths would add a local override on top of the policy that owns them - and a
+        # local override wins, which means a package would quietly be deciding the labels RKE2
+        # itself maintains. Add a mapping here for a path the RPM does not cover, such as a
+        # storage mount, rather than for one it does.
+        booleans:
+          # A boolean is the part the RPM cannot do: a policy module can declare one but not set
+          # it persistently. This one lets the kubelet's containers manage their own cgroups.
+          container_manage_cgroup: true
       files:
         # One set of RPMs and one tarball per architecture, each landing at the same target.
         # The selector decides which set a host receives; an entry without an arch selector
@@ -329,6 +366,8 @@ spec:
         - docker.io/rancher/nginx-ingress-controller:v1.14.5-hardened2
         - docker.io/rancher/rke2-cloud-provider:v1.35.8-0.20260817193936-20fc9c33a412-build20260820
         - docker.io/rancher/hardened-snapshot-controller:v8.6.0-build20260819
-        # canal cni and add-on images
+        # canal cni and add-on images. A CNI configured through a chart manifest keeps
+        # its images with that chart instead, so that disabling the chart stops them being
+        # uploaded; these are the ones no chart entry claims.
         - docker.io/rancher/hardened-calico:v3.32.1-build20260827
         - docker.io/rancher/hardened-flannel:v0.28.9-build20260819

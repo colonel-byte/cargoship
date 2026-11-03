@@ -24,45 +24,14 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/url"
-	"os"
 	"strings"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
-
-// ReadYAMLStrict reads a YAML file into a struct, with strict parsing
-func ReadYAMLStrict(path string, destConfig any) error {
-	log, err := logger.New(logger.ConfigDefault())
-	if err != nil {
-		return fmt.Errorf("failed to create logger: %w", err)
-	}
-	log.Debug("Reading YAML", "path", path)
-
-	file, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("failed to open file at %s: %w", path, err)
-	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Warn("failed to close file")
-		}
-	}()
-
-	// First try with strict mode
-	fileBytes, err := io.ReadAll(file)
-	if err != nil {
-		return fmt.Errorf("failed to read file at %s: %w", path, err)
-	}
-
-	return ReadByteStrict(fileBytes, &destConfig)
-}
 
 // ReadByteStrict reads a byte array and tries to place it in the provided "destConfig" object
 func ReadByteStrict(data []byte, destConfig any) error {
@@ -101,15 +70,6 @@ func IdentifySource(src string) (string, error) {
 		return "cluster", nil
 	}
 	return "", fmt.Errorf("unknown source %s", src)
-}
-
-// PrintJSON returns a string representation of a given object
-func PrintJSON(obj any) string {
-	bytes, err := json.MarshalIndent(obj, "", "  ")
-	if err != nil {
-		return ""
-	}
-	return string(bytes)
 }
 
 // RandomString returns a string of hexadecimal characters of a given length that is cryptographically secure, or an error
