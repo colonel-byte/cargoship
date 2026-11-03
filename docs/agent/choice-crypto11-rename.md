@@ -15,11 +15,11 @@ The [Dependabot run of 2026-10-02](https://github.com/colonel-byte/cargoship/act
 
 `github.com/ThalesIgnite/crypto11` 301-redirects to `github.com/eclipse-keypont/crypto11`, so the module proxy still answers for the old path and still serves the full tag list. What it cannot do is serve a tag whose `go.mod` agrees with the path it was requested under:
 
-| Tag             | `module` line in its `go.mod`            |
-| --------------- | ---------------------------------------- |
-| v1.2.5          | `github.com/ThalesIgnite/crypto11`       |
-| v1.3.0          | `github.com/ThalesGroup/crypto11`        |
-| v1.6.8 (latest) | `github.com/eclipse-keypont/crypto11`    |
+| Tag             | `module` line in its `go.mod`         |
+| --------------- | ------------------------------------- |
+| v1.2.5          | `github.com/ThalesIgnite/crypto11`    |
+| v1.3.0          | `github.com/ThalesGroup/crypto11`     |
+| v1.6.8 (latest) | `github.com/eclipse-keypont/crypto11` |
 
 v1.2.5 is the last tag published under the original path. Requiring anything newer under that name produces the error Dependabot reported, which reproduces in four lines in a throwaway module:
 
@@ -82,10 +82,10 @@ The match test treats a directive whose left side carries no version as uncondit
 
 That leaves the two options doing the same thing by different routes:
 
-| Approach        | Dependabot tracks crypto11? | Run stops failing? | Vendor churn |
-| --------------- | --------------------------- | ------------------ | ------------ |
-| `ignore` entry  | No, explicitly              | Yes                | None         |
-| `replace`       | No, silently                | Yes                | ~800 lines   |
+| Approach       | Dependabot tracks crypto11? | Run stops failing? | Vendor churn |
+| -------------- | --------------------------- | ------------------ | ------------ |
+| `ignore` entry | No, explicitly              | Yes                | None         |
+| `replace`      | No, silently                | Yes                | ~800 lines   |
 
 Neither restores automated updates, so the choice is only about which pin goes stale and how loudly. The ignore entry states its own reasoning in a config file someone editing Dependabot behaviour will read. The `replace` skip is invisible unless you already know the parser behaviour above, and it adds a hand-maintained version pin to `go.mod` plus a vendored tree jumping four minor versions, for a package that is compiled out. Given that, the smaller and more legible change won.
 

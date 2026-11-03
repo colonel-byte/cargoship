@@ -72,6 +72,14 @@ func (d Dev) Vendor() error {
 	return d.WriteOSVOverrides()
 }
 
+// CheckTables checks that every Markdown table in the tree is padded the way the style guide
+// in AGENTS.md requires, and prints the expected form of each line that is not. The root
+// AGENTS.md (and CLAUDE.md, the symlink to it) are exempt.
+func (Dev) CheckTables() error {
+	fmt.Println("Checking markdown table padding")
+	return util.CheckRepoMarkdownTables()
+}
+
 // Digest simple returns the digest of an image, mostly for testing
 func (Dev) Digest(ctx context.Context) error {
 	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{

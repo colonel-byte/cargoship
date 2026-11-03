@@ -54,20 +54,20 @@ Each assertion body lives on `phaseWalk`, the embedded type every suite is built
 
 `phase_harness.go` holds everything shared. The pieces a new test is likely to want:
 
-|                                                    |                                                                                                    |
-|----------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| `s.harness.hosts()`                                | every host currently on the manager                                                                |
-| `s.harness.controllers()` / `s.harness.workers()`  | the role split                                                                                     |
-| `s.harness.engineWorkers()`                        | the workers that join the cluster, so `workers()` minus the upload-only hosts                      |
-| `s.harness.uploadOnly()`                           | the hosts that receive uploads and never join                                                      |
-| `s.harness.manager`                                | the live `phase.Manager`, for `Distro`, `DistroID`, `TempDirectory`                                |
-| `s.harness.distro`                                 | the distro module, for phases that take a `Distro` field                                           |
-| `s.harness.dropUploadOnlyHosts()`                  | removes those hosts from the manager; already called once, in `Test_60`                            |
-| `s.harness.carriesFilesFor(selector)`              | whether the package ships OS files for `config.SelectorRPM` / `SelectorAPT` / `SelectorBIN`        |
-| `s.harness.opts`                                   | the apply options the suite runs with (`ModifyHosts`, `ModifyFirewall`, `WorkerConcurrent`, ...)   |
-| `readOnHosts(hosts, path)`                         | reads one path on every host, keyed by host string                                                 |
-| `lockFileContent()`                                | the `hostname-pid` string the lock phase writes                                                    |
-| `ran(p)`                                           | whether the manager executed the phase or skipped it                                               |
+|                                                   |                                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `s.harness.hosts()`                               | every host currently on the manager                                                              |
+| `s.harness.controllers()` / `s.harness.workers()` | the role split                                                                                   |
+| `s.harness.engineWorkers()`                       | the workers that join the cluster, so `workers()` minus the upload-only hosts                    |
+| `s.harness.uploadOnly()`                          | the hosts that receive uploads and never join                                                    |
+| `s.harness.manager`                               | the live `phase.Manager`, for `Distro`, `DistroID`, `TempDirectory`                              |
+| `s.harness.distro`                                | the distro module, for phases that take a `Distro` field                                         |
+| `s.harness.dropUploadOnlyHosts()`                 | removes those hosts from the manager; already called once, in `Test_60`                          |
+| `s.harness.carriesFilesFor(selector)`             | whether the package ships OS files for `config.SelectorRPM` / `SelectorAPT` / `SelectorBIN`      |
+| `s.harness.opts`                                  | the apply options the suite runs with (`ModifyHosts`, `ModifyFirewall`, `WorkerConcurrent`, ...) |
+| `readOnHosts(hosts, path)`                        | reads one path on every host, keyed by host string                                               |
+| `lockFileContent()`                               | the `hostname-pid` string the lock phase writes                                                  |
+| `ran(p)`                                          | whether the manager executed the phase or skipped it                                             |
 
 For anything else, the hosts carry a live `rig` connection: `host.ExecOutput`, `host.ReadFile`, `host.FileExist`, and `host.Configurer` are all available and are how most assertions are written.
 
@@ -186,12 +186,12 @@ func (s *UpgradePhaseSuite) Test_NN_YourPhase() {
 
 Four things the upgrade tests use that the others do not:
 
-| | |
-|---|---|
-| `installedVersion` | the version the apply walk put on the cluster, so what a host should report *before* the upgrade phase runs |
-| `s.harness.manager.Distro.Spec.Version` | the version the upgrade package carries, so what it should report after |
-| `s.harness.engineHosts()` | every host that runs the engine, so `hosts()` minus the upload-only ones -- the upload-only host still reports `phase.UnknownVersion` |
-| `s.requireSchedulable(hosts)` | asserts each host's node is registered and not left cordoned, which is what the drain/uncordon half of an upgrade has to leave behind |
+|                                         |                                                                                                                                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `installedVersion`                      | the version the apply walk put on the cluster, so what a host should report *before* the upgrade phase runs                           |
+| `s.harness.manager.Distro.Spec.Version` | the version the upgrade package carries, so what it should report after                                                               |
+| `s.harness.engineHosts()`               | every host that runs the engine, so `hosts()` minus the upload-only ones -- the upload-only host still reports `phase.UnknownVersion` |
+| `s.requireSchedulable(hosts)`           | asserts each host's node is registered and not left cordoned, which is what the drain/uncordon half of an upgrade has to leave behind |
 
 Assert version routing by calling the phases' own comparison rather than comparing strings:
 

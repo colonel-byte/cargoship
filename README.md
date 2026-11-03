@@ -40,12 +40,12 @@ sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargo
 podman run --rm ghcr.io/colonel-byte/cargoship:latest version
 ```
 
-| Image                                      | Contents                                               |
-| ------------------------------------------ | ------------------------------------------------------ |
-| `ghcr.io/colonel-byte/cargoship`           | The binary on a minimal base                           |
-| `ghcr.io/colonel-byte/cargoship-ubi`       | The binary installed from the `.rpm`, on AlmaLinux 10  |
-| `ghcr.io/colonel-byte/cargoship-deb`       | The binary installed from the `.deb`, on Debian slim   |
-| `ghcr.io/colonel-byte/cargoship-ansible`   | The `.rpm` plus ansible-core, on AlmaLinux 10          |
+| Image                                    | Contents                                              |
+| ---------------------------------------- | ----------------------------------------------------- |
+| `ghcr.io/colonel-byte/cargoship`         | The binary on a minimal base                          |
+| `ghcr.io/colonel-byte/cargoship-ubi`     | The binary installed from the `.rpm`, on AlmaLinux 10 |
+| `ghcr.io/colonel-byte/cargoship-deb`     | The binary installed from the `.deb`, on Debian slim  |
+| `ghcr.io/colonel-byte/cargoship-ansible` | The `.rpm` plus ansible-core, on AlmaLinux 10         |
 
 The `-ubi` name is historical: that image was based on Red Hat UBI and is now built on AlmaLinux 10, but the published image name has not changed.
 

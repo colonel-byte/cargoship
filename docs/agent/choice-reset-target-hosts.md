@@ -16,11 +16,11 @@ Hosts are matched generously -- hostname, private address, or connection address
 
 The natural behaviour in each of these cases is a no-op or a partial teardown that reports success, which is worse than stopping.
 
-| Refused | What would otherwise happen |
-| :------ | :-------------------------- |
-| A `--target-hosts` entry matching no host | Every phase filters down to nothing and the reset reports success having removed nothing. A typo is the ordinary route into this, so it is checked in `NewReset` -- before a single connection is opened -- rather than in a phase |
-| Every running controller targeted, some host kept | Nodes drained and deleted through a controller the same run is about to uninstall, with the outcome depending on the order the hosts happened to be in. Removing all of them is a teardown, and plain `reset` is what does that |
-| More than one running controller targeted in one run | The second removal starts from a membership with a member already stopped, and hangs with the cluster unavailable. One run per controller |
+| Refused                                              | What would otherwise happen                                                                                                                                                                                                        |
+| :--------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A `--target-hosts` entry matching no host            | Every phase filters down to nothing and the reset reports success having removed nothing. A typo is the ordinary route into this, so it is checked in `NewReset` -- before a single connection is opened -- rather than in a phase |
+| Every running controller targeted, some host kept    | Nodes drained and deleted through a controller the same run is about to uninstall, with the outcome depending on the order the hosts happened to be in. Removing all of them is a teardown, and plain `reset` is what does that    |
+| More than one running controller targeted in one run | The second removal starts from a membership with a member already stopped, and hangs with the cluster unavailable. One run per controller                                                                                          |
 
 The second and third are about etcd membership rather than about cargoship, which is why they are refusals and not retries: there is no ordering of the work that makes either safe.
 

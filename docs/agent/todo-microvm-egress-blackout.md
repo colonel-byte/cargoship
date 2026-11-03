@@ -6,10 +6,10 @@ This is a punch list, not a decision record like the `choice-*.md` files beside 
 
 Each node gets two NICs from `test/microvm/vm.go`:
 
-| NIC       | QEMU netdev                                 | Address          | Carries                                              |
-| --------- | ------------------------------------------- | ---------------- | ---------------------------------------------------- |
-| `enp0s3`  | `-netdev user,id=mgmt,hostfwd=...` (SLIRP)  | `10.0.2.15/24`   | egress **and** the inbound SSH every phase runs over |
-| `enp0s4`  | `-netdev socket,id=lan,mcast=...`           | `10.73.193.x/24` | the fleet's own layer 2 segment, no egress           |
+| NIC      | QEMU netdev                                | Address          | Carries                                              |
+| -------- | ------------------------------------------ | ---------------- | ---------------------------------------------------- |
+| `enp0s3` | `-netdev user,id=mgmt,hostfwd=...` (SLIRP) | `10.0.2.15/24`   | egress **and** the inbound SSH every phase runs over |
+| `enp0s4` | `-netdev socket,id=lan,mcast=...`          | `10.73.193.x/24` | the fleet's own layer 2 segment, no egress           |
 
 So the mgmt NIC cannot simply be dropped - that is the SSH. The detail that makes a blackout possible is that SSH arrives from `10.0.2.2`, the SLIRP gateway, which is reachable through the kernel's own `10.0.2.0/24 dev enp0s3 scope link` route rather than through the default route.
 

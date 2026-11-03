@@ -233,16 +233,16 @@ kw1    Ready    <none>               10.73.156.13
 
 The provider takes the same hosts, so a fleet is also how `cargoship_cluster` gets exercised against real machines rather than one container. `mage dev:vmUp` writes a `ZarfCluster` inventory, and every field a `hosts` entry needs is in it:
 
-| Inventory             | `hosts` entry        | For the fleet                                        |
-| --------------------- | -------------------- | ---------------------------------------------------- |
-| `ssh.address`         | `address`            | Always `127.0.0.1` -- the forwards bind loopback     |
-| `ssh.port`            | `port`               | The per-node forwarded SSH port                      |
-| `ssh.user`            | `user`               | `root`                                               |
-| `ssh.keyPath`         | `key_path`           | The fleet key, under `build/microvm/<fleet>/key`     |
-| `hostname`            | `hostname`           | `kc0`, `kw0`, ...                                    |
-| `privateAddress`      | `private_address`    | The node's address on the private segment            |
-| `privateInterface`    | `private_interface`  | `enp0s4`                                             |
-| `role` / `profile`    | `role` / `profile`   | Unchanged                                            |
+| Inventory          | `hosts` entry       | For the fleet                                    |
+| ------------------ | ------------------- | ------------------------------------------------ |
+| `ssh.address`      | `address`           | Always `127.0.0.1` -- the forwards bind loopback |
+| `ssh.port`         | `port`              | The per-node forwarded SSH port                  |
+| `ssh.user`         | `user`              | `root`                                           |
+| `ssh.keyPath`      | `key_path`          | The fleet key, under `build/microvm/<fleet>/key` |
+| `hostname`         | `hostname`          | `kc0`, `kw0`, ...                                |
+| `privateAddress`   | `private_address`   | The node's address on the private segment        |
+| `privateInterface` | `private_interface` | `enp0s4`                                         |
+| `role` / `profile` | `role` / `profile`  | Unchanged                                        |
 
 ```hcl
 resource "cargoship_cluster" "fleet" {

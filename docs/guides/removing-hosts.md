@@ -98,11 +98,11 @@ This section is about `k3s` and `rke2`. On `upstream` there is nothing to do: ku
 
 On k3s and RKE2 there is nothing special about the first controller at runtime either -- it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:
 
-| Points at                                | Removing the first controller                                                                                                                                     |
-| :--------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The kubeconfig Cargoship writes          | Unaffected. Its server is `https://<load_balancer>:6443`, never a node address, so admin access survives any single controller                                    |
-| Workers                                  | Unaffected. They join through `https://<load_balancer>:9345` for the same reason                                                                                  |
-| The other controllers' `config.yaml`     | `server:` names the first controller, written when they joined. A running controller never reads it -- it is the join address, used at startup -- so the cluster keeps working, and the next restart is what would fail |
+| Points at                            | Removing the first controller                                                                                                                                                                                           |
+| :----------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The kubeconfig Cargoship writes      | Unaffected. Its server is `https://<load_balancer>:6443`, never a node address, so admin access survives any single controller                                                                                          |
+| Workers                              | Unaffected. They join through `https://<load_balancer>:9345` for the same reason                                                                                                                                        |
+| The other controllers' `config.yaml` | `server:` names the first controller, written when they joined. A running controller never reads it -- it is the join address, used at startup -- so the cluster keeps working, and the next restart is what would fail |
 
 So the step that makes it safe is re-rendering `config.yaml` on the controllers that stayed, which `cargoship apply` does: it re-elects the first controller from the remaining hosts and writes the new `server:` to every one of them. The engines are not restarted for it, which is the point -- the file is correct again before anything reads it.
 
