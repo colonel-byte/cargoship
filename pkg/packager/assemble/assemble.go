@@ -43,6 +43,7 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
+	"github.com/colonel-byte/cargoship/pkg/haulerstore"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"github.com/colonel-byte/cargoship/pkg/images"
@@ -65,7 +66,10 @@ type AssembleOptions struct {
 	// FileOverrides redirect the file downloads a distro definition declares to an internal
 	// mirror or to a directory of pre-staged assets, the way RegistryOverrides redirects image
 	// pulls. See pkg/fileoverride.
-	FileOverrides  []fileoverride.Override
+	FileOverrides []fileoverride.Override
+	// HaulerStore is an opened hauler store that images and files are resolved from before
+	// the network. It is nil when no store was given.
+	HaulerStore    *haulerstore.Store
 	OCIConcurrency int
 	CachePath      string
 	SkipSBOM       bool
@@ -222,7 +226,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 	}()
 
 	for filesIdx, file := range d.Spec.Config.Files {
-		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, archives)
+		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.HaulerStore, archives)
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage file %d (%s): %w", filesIdx, file, err)
 		}
@@ -231,7 +235,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, archives)
+		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.HaulerStore, archives)
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage os file %d (%s): %w", filesIdx, file, err)
 		}
@@ -255,6 +259,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 	if len(componentImages) > 0 {
 		arches := d.Metadata.Arches()
 		pullOpts := images.PullOptions{
+			Source:                imageSource(opts.HaulerStore),
 			OCIConcurrency:        opts.OCIConcurrency,
 			Arches:                archStrings(arches),
 			RegistryOverrides:     opts.RegistryOverrides,
@@ -481,14 +486,14 @@ func (c *downloadCache) cleanup() error {
 	return err
 }
 
-// fileGrabber stages one file into buildPath. The returned FileSource is non-nil only when an
-// override redirected the file, so the caller records what an override actually did rather than
-// only what was configured.
+// fileGrabber stages one file into buildPath. The returned FileSource is non-nil only when the
+// bytes came from somewhere other than the declared source -- an override, or a content store --
+// so the caller records what actually happened rather than only what was configured.
 //
 // archives may be nil, in which case any archive downloaded here is removed before returning.
 // A caller staging more than one file passes a shared cache so that an archive several files
 // are extracted from is downloaded once; see newDownloadCache.
-func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, archives *downloadCache) (provenance *distro.FileSource, err error) {
+func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, store *haulerstore.Store, archives *downloadCache) (provenance *distro.FileSource, err error) {
 	rel := filepath.Join(resourceType, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 	dst := filepath.Join(buildPath, rel)
 	destinationDir := filepath.Dir(dst)
@@ -528,6 +533,49 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			Resolved: match.Resolved,
 			Override: match.Override.Source,
 			Shasum:   file.Shasum,
+		}
+	}
+
+	// A content store is consulted only when no override matched: an operator who named a
+	// redirect for this file asked for that specific one, and the store should not quietly win
+	// over it. What the store yields is a local file, so the staging below hands off to the
+	// local-source branch and reuses its extraction, verification and permissions unchanged.
+	if !overridden && store != nil {
+		entry, held := store.File(file.Source)
+		switch {
+		case held:
+			// Store content is bytes whoever wrote the distro definition never saw, exactly
+			// like override content, so the same rule applies: without a declared shasum
+			// there is nothing to verify it against and it is refused.
+			if file.Shasum == "" {
+				return nil, fmt.Errorf("%s holds %s, which declares no shasum: refusing to stage it unverified",
+					store.Describe(), file.Source)
+			}
+			staged, err := os.MkdirTemp("", "cargoship-haul-file-")
+			if err != nil {
+				return nil, fmt.Errorf("unable to create a staging directory for %s: %w", file.Source, err)
+			}
+			defer func() {
+				err = errors.Join(err, os.RemoveAll(staged))
+			}()
+			source = filepath.Join(staged, entry.Name)
+			if err := store.Fetch(ctx, entry.Descriptor, source); err != nil {
+				return nil, err
+			}
+			logger.From(ctx).Info("file read from content store",
+				"declared", file.Source, "name", entry.Name, "store", store.Source())
+			provenance = &distro.FileSource{
+				Path:     filepath.ToSlash(rel),
+				Declared: file.Source,
+				Resolved: entry.Name,
+				Store:    store.Source(),
+				Shasum:   file.Shasum,
+			}
+		case helpers.IsURL(file.Source):
+			// Only a remote source is worth reporting as absent: a definition's local paths
+			// are read from the definition directory and were never the store's to hold.
+			logger.From(ctx).Warn("file not held by the content store, falling back to its declared source",
+				"declared", file.Source, "store", store.Source())
 		}
 	}
 
@@ -707,4 +755,18 @@ func getChecksum(dirPath string) (string, string, error) {
 	checksumContent := strings.Join(checksumData, "\n") + "\n"
 	sha := sha256.Sum256([]byte(checksumContent))
 	return checksumContent, hex.EncodeToString(sha[:]), nil
+}
+
+// Compile-time proof that a hauler store is usable as an image source, which is what lets
+// pkg/images stay unaware of hauler.
+var _ images.ImageSource = (*haulerstore.Store)(nil)
+
+// imageSource adapts an optional hauler store to images.PullOptions.Source. A typed nil pointer
+// held in an interface is not itself nil, so the conversion has to be guarded or every image
+// would be looked up in a store that is not there.
+func imageSource(store *haulerstore.Store) images.ImageSource {
+	if store == nil {
+		return nil
+	}
+	return store
 }
