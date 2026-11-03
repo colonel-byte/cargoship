@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c4e865ca.js";
+            window.path_to_searchindex_js = "searchindex-b36abc6f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1fd2e986.js"></script>
+        <script src="toc-c864a24f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -283,6 +283,16 @@ cargoship create .
 # Build from a specific path and output to a custom directory
 cargoship create ./distro-defs -o ./build/
 </code></pre>
+<p>A build normally fetches the images and files a definition declares from the registries and URLs it names. Where that content has already been collected with <a href="https://github.com/hauler-dev/hauler">hauler</a> and carried across the airlock, point the build at the haul instead and nothing is fetched:</p>
+<pre><code class="language-bash"># Build from a hauler store directory, or from an archive written by `hauler store save`
+cargoship create ./distro-defs --hauler-store ./haul.tar.zst
+</code></pre>
+<p>Images and files are matched against the reference hauler recorded for each artifact when it was added, so no mapping has to be written by hand. Anything the store does not hold still comes from its declared source, which makes a partial haul usable. The same setting lives in the config file:</p>
+<pre><code class="language-yaml">distro:
+  create:
+    hauler_store: ~/hauls/haul.tar.zst
+</code></pre>
+<p>See <a href="#building-from-a-hauler-store">Building From a Hauler Store</a> for the collect-and-carry workflow, what a haul must contain, and how this compares with <code>--registry-override</code> and <code>--file-override</code>.</p>
 <h3 id="2-prepare-target-nodes"><a class="header" href="#2-prepare-target-nodes">2. Prepare Target Nodes</a></h3>
 <p>Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, <code>fapolicyd</code> rules, and <code>/etc/hosts</code>) across target machines using your cluster configuration inventory:</p>
 <pre><code class="language-bash">cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
@@ -1417,6 +1427,138 @@ ansible-galaxy collection install colonel_byte-cargoship-0.37.0.tar.gz
 <h2 id="adding-a-backend"><a class="header" href="#adding-a-backend">Adding a backend</a></h2>
 <p>A backend is a <code>firewall.Backend</code> implementation in <code>pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, an <code>Installed</code> that reports whether the firewall is present on the node at all, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
 <p>A backend that is a distribution’s own front end also needs the OS modules for that distribution to return its <code>Name</code> from <code>PreferredFirewall</code>, in <code>types/os/linux</code>. That method is declared on each leaf OS module rather than on a shared base such as <code>EnterpriseLinux</code>, because those modules embed both their base and <code>configurer.Linux</code> at the same depth, which leaves a method promoted from either one ambiguous.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="building-from-a-hauler-store"><a class="header" href="#building-from-a-hauler-store">Building From a Hauler Store</a></h1>
+<p>This guide covers building a distro package from a <a href="https://github.com/hauler-dev/hauler">hauler</a> store: collecting the images and files on a connected machine, carrying the result across the airlock, and building the package on the other side with nothing fetched over the network.</p>
+<p>Hauler is a tool for collecting OCI content - images, files, charts - into a single portable store, and it is what many teams already use to move that content into an air-gapped environment. Cargoship reads such a store directly, so a haul that has already crossed the gap can be handed to <code>create</code> as the build’s content source.</p>
+<p>For the two narrower redirections, see <a href="#registry-override-guide">registry-override</a> and <a href="#file-override-guide">file-override</a>. This guide explains when a haul is the better fit than either, and how the three combine.</p>
+<h2 id="why-a-haul-rather-than-an-override"><a class="header" href="#why-a-haul-rather-than-an-override">Why a Haul Rather Than an Override</a></h2>
+<p>All three mechanisms answer the same question - <em>where should this content come from</em> - at different levels.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mechanism</th><th>What it redirects</th><th>What the operator writes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>--registry-override</code></td><td>Image pulls, by registry prefix</td><td>One <code>SOURCE=TARGET</code> pair per registry</td></tr>
+<tr><td><code>--file-override</code></td><td>File downloads, by URL prefix</td><td>One <code>SOURCE=TARGET</code> pair per URL prefix</td></tr>
+<tr><td><code>--hauler-store</code></td><td>Both images and files, by content</td><td>One path</td></tr>
+</tbody>
+</table>
+</div>
+<p>The overrides describe <em>where to fetch from instead</em>, so they still need something to fetch from: a reachable mirror, a running file server, or a directory of files whose layout mirrors the URLs they replace. A haul is the content itself, and it records what each artifact was collected from, so cargoship matches the definition against it with no mapping written by hand.</p>
+<p>That recorded origin is the whole mechanism. When hauler adds an artifact it stores a <code>hauler.dev/original-ref</code> annotation naming where the artifact came from: a <code>registry/repo:tag</code> for an image, and the source URL for a file. Those are the same strings a distro definition writes in <code>imageConfig.images</code> and in a file’s <code>source</code>, so matching the two is an exact lookup rather than a guess.</p>
+<p>Reach for an override instead when the content is behind an internal mirror that the management node <em>can</em> reach, or when you want one specific file swapped and nothing else. The two work together - see <a href="#combining-a-haul-with-overrides">Combining a Haul With Overrides</a>.</p>
+<h2 id="collecting-the-haul"><a class="header" href="#collecting-the-haul">Collecting the Haul</a></h2>
+<p>On a machine that can reach the upstream registries and URLs, add everything the distro definition declares. <strong>Add files by the same URL the definition names</strong>, because that URL is what the match is made on:</p>
+<pre><code class="language-bash"># The files a definition declares, added by their declared URL
+hauler store add file https://github.com/flannel-io/flannel/releases/download/v0.28.10/kube-flannel.yml
+
+# The images it declares
+hauler store add image registry.k8s.io/kube-apiserver:v1.37.0
+hauler store add image registry.k8s.io/pause:3.10.2
+</code></pre>
+<p>A hauler manifest is the practical way to do this for a real package, rather than one command per artifact:</p>
+<pre><code class="language-bash">hauler store sync --filename hauler-manifest.yaml
+</code></pre>
+<p>Manifests collecting everything a shipped example declares are generated beside its definition as <code>hauler-{images,files}-&lt;arch&gt;.yaml</code> - see <a href="https://github.com/colonel-byte/cargoship/tree/main/example/rke2-multi-cni-cilium"><code>example/rke2-multi-cni-cilium/</code></a> - and <a href="https://github.com/colonel-byte/cargoship/tree/main/hack/hauler"><code>hack/hauler/</code></a> holds a roughly 19 MB subset with a matching definition - useful for checking the mechanism before collecting a whole release.</p>
+<p>Then save the store as a single archive to carry:</p>
+<pre><code class="language-bash">hauler store save --filename haul.tar.zst
+</code></pre>
+<h3 id="adding-a-file-from-a-local-path-does-not-match-a-url"><a class="header" href="#adding-a-file-from-a-local-path-does-not-match-a-url">Adding a File From a Local Path Does Not Match a URL</a></h3>
+<p><code>hauler store add file ./install.sh</code> records the <strong>absolute path on the machine that built the haul</strong> as the artifact’s origin, not a URL. A definition that declares <code>source: https://get.rke2.io/install.sh</code> will not match that entry, and the file falls back to being downloaded.</p>
+<p>So collect files by their declared URL. Where the bytes are only available locally, the mechanism that fits is <code>--file-override</code> pointing at a directory, not a haul.</p>
+<h2 id="building-from-the-haul"><a class="header" href="#building-from-the-haul">Building From the Haul</a></h2>
+<p>On the disconnected side, point <code>create</code> at the store. Both a store directory and an archive work:</p>
+<pre><code class="language-bash"># From an archive written by `hauler store save`
+cargoship create ./distro-defs --hauler-store ./haul.tar.zst
+
+# From a store directory
+cargoship create ./distro-defs --hauler-store ./store
+</code></pre>
+<p>An archive is unpacked into a temporary directory for the build and removed afterwards. A store directory is only ever read - cargoship does not write to it, add the <code>oci-layout</code> marker a live store lacks, or otherwise modify a store you may still be adding to.</p>
+<p>The setting belongs in the config file when a management node always builds from the same haul:</p>
+<pre><code class="language-yaml">distro:
+  create:
+    hauler_store: ~/hauls/haul.tar.zst
+</code></pre>
+<p>A leading <code>~</code> is expanded, which it is not in every tool - see <a href="#config-2">configuration</a> for the rest of the section.</p>
+<p>The log says where each artifact’s bytes came from:</p>
+<pre><code class="language-text">INF resolving package content from a hauler store store=/opt/hauls/haul.tar.zst
+INF file read from content store declared=https://get.rke2.io/install.sh name=install.sh store=/opt/hauls/haul.tar.zst
+INF saving image name=registry.k8s.io/pause:3.10 architecture=amd64 source=hauler store /opt/hauls/haul.tar.zst
+</code></pre>
+<p>The same information is recorded into the built package, under <code>.build.fileSources</code>, so a package discloses which of its files came from a store rather than from the source the definition declared:</p>
+<pre><code class="language-yaml">build:
+  fileSources:
+    - path: files/0/install.sh
+      declared: https://get.rke2.io/install.sh
+      resolved: install.sh
+      store: /opt/hauls/haul.tar.zst
+      shasum: 393bdbce53eb50c8eb97dd513b218518b7d6e7985dc7b889be956e112a711084
+</code></pre>
+<h2 id="a-file-taken-from-a-store-needs-a-declared-shasum"><a class="header" href="#a-file-taken-from-a-store-needs-a-declared-shasum">A File Taken From a Store Needs a Declared Shasum</a></h2>
+<p>A haul holds bytes that whoever wrote the distro definition never saw. The <code>shasum</code> the definition declares for a file is the only thing that proves those bytes are the ones intended, so a file with no declared shasum is <strong>refused</strong> rather than staged unverified:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to stage file 0 (https://get.rke2.io/install.sh):
+    hauler store ./haul.tar.zst holds https://get.rke2.io/install.sh, which declares no shasum:
+    refusing to stage it unverified
+</code></pre>
+<p>This is the same rule <code>--file-override</code> applies, and for the same reason. The fix is to declare the shasum in the definition, not to work around the check.</p>
+<p>Images need no equivalent: an image reference is resolved through its digest, so the content is verified by construction.</p>
+<h2 id="a-partial-haul-still-builds"><a class="header" href="#a-partial-haul-still-builds">A Partial Haul Still Builds</a></h2>
+<p>Content the store does not hold falls back to the source the definition declared, and each miss is reported:</p>
+<pre><code class="language-text">WRN file not held by the content store, falling back to its declared source declared=https://get.k3s.io/k3s
+WRN image not held by the local image source, falling back to its registry image=registry.k8s.io/etcd:3.7.0-0
+</code></pre>
+<p>This makes a haul collected for one package usable for another that overlaps with it, and lets a haul be topped up rather than rebuilt.</p>
+<p>On a management node with no route to those declared sources, the fallback cannot succeed, and <strong>an image that is in neither the haul nor a reachable registry fails the build</strong>:</p>
+<pre><code class="language-text">ERR failed to create distro package: image registry.k8s.io/etcd:3.7.0-0 is not in hauler store
+    ./haul.tar.zst and could not be fetched from its registry: ...
+</code></pre>
+<p>That is deliberate. The alternative - carrying on and producing a package that is quietly missing an image - defers the failure to whoever installs it, which is the worst place to find out.</p>
+<p>So treat the warnings as the thing to read after a build that succeeded. A build that logged a dozen misses and still finished reached the network a dozen times, which on a node that is supposed to be air-gapped is worth knowing.</p>
+<h2 id="combining-a-haul-with-overrides"><a class="header" href="#combining-a-haul-with-overrides">Combining a Haul With Overrides</a></h2>
+<p>All three can be passed together, and they resolve in a fixed order.</p>
+<p>For <strong>files</strong>, an explicit <code>--file-override</code> wins over the haul. An operator who named a redirect for a specific file asked for that one, and a store that happens to also hold it does not silently take precedence.</p>
+<p>For <strong>images</strong>, a <code>--registry-override</code> is applied <em>first</em>, and the haul is then searched for the rewritten reference. So an override that rewrites <code>registry.k8s.io</code> to <code>mirror.example.com</code> means the haul is searched for <code>mirror.example.com/...</code>, which is usually not what a haul collected from upstream holds. Pass the haul without registry overrides unless the haul was itself collected from the mirror.</p>
+<h2 id="serving-a-haul-instead"><a class="header" href="#serving-a-haul-instead">Serving a Haul Instead</a></h2>
+<p>Hauler can also serve a store, and that path needs nothing from this guide - it is the existing override mechanism:</p>
+<pre><code class="language-bash"># On the disconnected side
+hauler store serve registry &amp;      # an OCI registry on :5000
+hauler store serve fileserver &amp;    # a file server on :8080
+
+cargoship create ./distro-defs --plain-http \
+  --registry-override registry.k8s.io=localhost:5000 \
+  --file-override https://get.rke2.io/install.sh=http://localhost:8080/install.sh
+</code></pre>
+<p>This works today and is a reasonable fit when something else on the network also needs the registry. Two things to know if you choose it:</p>
+<ul>
+<li>The file server serves artifacts by <strong>name</strong>, flat, while <code>--file-override</code> appends the remainder of the declared URL’s path to the target. So a prefix override will usually miss, and each file needs its own exact-URL override as above.</li>
+<li><code>--plain-http</code> is required, because both servers are HTTP by default.</li>
+</ul>
+<p><code>--hauler-store</code> exists because that is a lot of typing to restate something the haul already records.</p>
+<h2 id="what-a-haul-carries-that-cargoship-ignores"><a class="header" href="#what-a-haul-carries-that-cargoship-ignores">What a Haul Carries That Cargoship Ignores</a></h2>
+<p>A haul may hold more than a distro package can use. Charts, git repositories and wasm artifacts are skipped: a definition’s charts are declared under <code>.spec.config.engine.manifest</code>, and the images they run are already collected through the definition’s own image list.</p>
+<p>Signatures, attestations and SBOMs attached to an image are also skipped. They share the original reference of the image they describe, so they are identified by what hauler recorded them as and excluded, leaving the image itself to be found.</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Symptom</th><th>Cause</th></tr>
+</thead>
+<tbody>
+<tr><td><code>is not a hauler store</code></td><td>The path has no <code>index.json</code>. Point at the store directory itself, not its parent, or at the archive.</td></tr>
+<tr><td><code>looks like one chunk of a split hauler archive</code></td><td>A <code>--chunk-size</code> haul arrived as <code>haul.tar.zst.001</code> and friends. Rejoin it with <code>hauler store load</code>, then pass the resulting store.</td></tr>
+<tr><td><code>holds no content cargoship can use</code></td><td>Nothing in the index records what it was collected from. The store was not written by a hauler version that sets <code>hauler.dev/original-ref</code>.</td></tr>
+<tr><td>Everything falls back, nothing matches</td><td>The declared sources and the collected references differ. Compare <code>hauler store info</code> against the definition - a file added from a local path is the usual cause.</td></tr>
+<tr><td><code>which declares no shasum</code></td><td>Add the <code>shasum</code> to the file’s entry in the definition.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>hauler store info</code> lists what a store actually holds, which is the first thing to compare against the definition when a match is not made:</p>
+<pre><code class="language-bash">hauler store info --store ./store
+hauler store info --store ./store --output json --type file
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="importing-archives-guide"><a class="header" href="#importing-archives-guide">Importing Archives Guide</a></h1>
 <p>This guide explains how to convert an OCI Image Layout - a Skopeo <code>oci-archive</code> file, or an unpacked layout directory - into a native Cargoship package (<code>.tar.zst</code>) with <code>cargoship import</code>.</p>
@@ -2627,6 +2769,7 @@ $ cargoship create ./distro-defs --reproducible
 <pre><code>  -a, --architecture string         Architecture for OCI images and Zarf packages
   -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
       --file-override strings       Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
+      --hauler-store PATH           PATH of a hauler store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a store directory or an archive written by hauler store save. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it.
   -h, --help                        help for create
       --insecure-skip-tls-verify    Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
@@ -4206,6 +4349,7 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>file_override</code></td><td><a href="#fileoverridemap">FileOverrideMap</a></td><td>no</td><td></td><td>maps a source URL prefix to the location cargoship downloads from<br>instead, for example {“https://rpm.rancher.io”: “https://mirror.example.com/rpm-rancher”}.<br>The value may also be a local directory, for builds from pre-staged assets.</td></tr>
+<tr><td><code>hauler_store</code></td><td><code>string</code></td><td>no</td><td></td><td>is a hauler store (https://github.com/hauler-dev/hauler) that images and<br>files are resolved from instead of being fetched over the network: either a store<br>directory, or an archive written by <code>hauler store save</code>. Content the store does not<br>hold still comes from the source the distro definition declared, so a partial store<br>works. A file is accepted from the store only when the definition declares a shasum<br>for it, since nothing else would verify bytes the definition’s author never saw.</td></tr>
 <tr><td><code>registry_override</code></td><td><a href="#registryoverridemap">RegistryOverrideMap</a></td><td>no</td><td></td><td>maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {“docker.io”: “mirror.example.com”}</td></tr>
 </tbody>
 </table>
@@ -4438,10 +4582,11 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>declared</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the source the distro definition named.</td></tr>
-<tr><td><code>override</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the Source prefix of the override that matched, which is the one that won<br>when several could have.</td></tr>
+<tr><td><code>override</code></td><td><code>string</code></td><td>no</td><td></td><td>is the Source prefix of the override that matched, which is the one that won<br>when several could have. It is empty when the bytes came from a local content store.</td></tr>
 <tr><td><code>path</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where the file was staged inside the package, for example “files/0/k3s”. It<br>identifies the entry even when several files share a declared source.</td></tr>
 <tr><td><code>resolved</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where cargoship read the bytes from instead: a mirror URL, or a path on<br>the build host.</td></tr>
-<tr><td><code>shasum</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the checksum the bytes were verified against. An override is refused for a<br>file that declares none, so this is never empty.</td></tr>
+<tr><td><code>shasum</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the checksum the bytes were verified against. Neither an override nor a<br>content store is accepted for a file that declares none, so this is never empty.</td></tr>
+<tr><td><code>store</code></td><td><code>string</code></td><td>no</td><td></td><td>names the local content store the bytes were read from, such as a hauler store<br>passed to –hauler-store. It is empty when an override or the declared source was used.</td></tr>
 </tbody>
 </table>
 </div>

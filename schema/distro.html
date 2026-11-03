@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c4e865ca.js";
+            window.path_to_searchindex_js = "../searchindex-b36abc6f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1fd2e986.js"></script>
+        <script src="../toc-c864a24f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -319,10 +319,11 @@
 </thead>
 <tbody>
 <tr><td><code>declared</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the source the distro definition named.</td></tr>
-<tr><td><code>override</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the Source prefix of the override that matched, which is the one that won<br>when several could have.</td></tr>
+<tr><td><code>override</code></td><td><code>string</code></td><td>no</td><td></td><td>is the Source prefix of the override that matched, which is the one that won<br>when several could have. It is empty when the bytes came from a local content store.</td></tr>
 <tr><td><code>path</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where the file was staged inside the package, for example “files/0/k3s”. It<br>identifies the entry even when several files share a declared source.</td></tr>
 <tr><td><code>resolved</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where cargoship read the bytes from instead: a mirror URL, or a path on<br>the build host.</td></tr>
-<tr><td><code>shasum</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the checksum the bytes were verified against. An override is refused for a<br>file that declares none, so this is never empty.</td></tr>
+<tr><td><code>shasum</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the checksum the bytes were verified against. Neither an override nor a<br>content store is accepted for a file that declares none, so this is never empty.</td></tr>
+<tr><td><code>store</code></td><td><code>string</code></td><td>no</td><td></td><td>names the local content store the bytes were read from, such as a hauler store<br>passed to –hauler-store. It is empty when an override or the declared source was used.</td></tr>
 </tbody>
 </table>
 </div>
