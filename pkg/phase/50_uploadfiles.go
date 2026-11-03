@@ -26,12 +26,14 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/colonel-byte/cargoship/api"
@@ -67,6 +69,40 @@ type UploadFiles struct {
 	// captured in Prepare so Run can tell which images an upgrade no longer uploads (e.g. an
 	// image tag that was removed from the distro config, or renamed to a new version).
 	priorManifest map[*cluster.Host][]ManifestEntry
+
+	// kept records the image tarballs the sweep left on a host because the host asked it to.
+	// Written from the parallel sweep, so it is guarded; read once, after the run, by Warnings.
+	keptMu sync.Mutex
+	kept   []Warning
+}
+
+// KeepImagesMarker is the file an operator drops in the engine's image directory to stop
+// cargoship from removing image tarballs it did not upload.
+//
+// The directory is cargoship's to manage -- it is populated almost entirely by the upload phase,
+// and a tarball in it that no manifest names is one nothing would ever clean up -- so the sweep
+// removes what it does not recognise. That is the wrong answer for a fleet where something else
+// also puts images there, and this file is how such a host says so. It changes nothing about the
+// images cargoship does own: those are still uploaded, still recorded, and still pruned when the
+// package stops carrying them.
+const KeepImagesMarker = "cargoship-keep-images"
+
+// imageTarBallSuffixes are the filename endings the sweep treats as an image tarball. They are
+// the three ImageConfig.TarballSuffix can produce, rather than only the one this package uses,
+// so a package that switches compression leaves no copy of the old file behind.
+//
+// Anything else in the directory is left alone, which includes the image list files an engine
+// reads alongside the tarballs.
+var imageTarBallSuffixes = []string{".tar", ".tar.gz", ".tar.zst"}
+
+// isImageTarBall reports whether a filename in the image directory is one of ours to sweep.
+func isImageTarBall(name string) bool {
+	for _, suffix := range imageTarBallSuffixes {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 // Title for the phase
@@ -76,13 +112,19 @@ func (p *UploadFiles) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *UploadFiles) Explanation() string {
-	return "Uploads the distro agnostic files to each remote node"
+	return "Uploads the distro agnostic files and image tarballs to each remote node, and removes image tarballs it did not upload unless the image directory carries a " + KeepImagesMarker + " file"
 }
 
-var (
-	tagPrefix = regexp.MustCompile(`:.+$`)
-	nsPrefix  = regexp.MustCompile(`/`)
-)
+// unsafeTarBallChars matches every character an image reference may carry that does not belong
+// in a filename. Each one becomes "_", which keeps the whole reference -- registry port, path and
+// tag or digest -- in the tarball's name, so two tags of one repository, or two images from a
+// registry with a port, do not resolve to the same path.
+var unsafeTarBallChars = regexp.MustCompile(`[^A-Za-z0-9._-]`)
+
+// imageTarBallName returns the filename an image reference's tarball is exported under.
+func imageTarBallName(image, tarSuffix string) string {
+	return unsafeTarBallChars.ReplaceAllLiteralString(image, "_") + tarSuffix
+}
 
 // Prepare the phase
 func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro.Distro) error {
@@ -127,7 +169,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.Cluster, d *distro
 //
 // Each architecture gets its own directory under the tarball dir. The tarball name is derived from
 // the image reference alone, so two architectures of the same image would otherwise be written to
-// the same path, and the exporter opens tarballs for appending.
+// the same path, and the second export would overwrite the first.
 func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, lp layout.Path, arch api.Arch) error {
 	compression := p.manager.Distro.Spec.Config.ImagesConfig.Compression
 	tarSuffix, err := p.manager.Distro.Spec.Config.ImagesConfig.TarballSuffix()
@@ -151,7 +193,7 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, l
 	// a property of the cluster rather than of a host, so it is resolved once here and
 	// the per-arch keying below is unaffected.
 	for _, i := range p.manager.Distro.Spec.Config.EnabledImages() {
-		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), tarSuffix)
+		tarBallName := imageTarBallName(i, tarSuffix)
 		tarballPath := filepath.Join(tarBallDir, tarBallName)
 
 		tagged, err := src.Resolve(ctx, i)
@@ -174,7 +216,9 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, l
 			return fmt.Errorf("failed to parse image reference %s: %w", i, err)
 		}
 
-		writer, err := os.OpenFile(tarballPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		// O_TRUNC, not O_APPEND: appending to a tarball that is already there concatenates a
+		// second archive onto the first rather than replacing it.
+		writer, err := os.OpenFile(tarballPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}
@@ -340,7 +384,81 @@ func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.Host) er
 	old := filterManifestByCategory(p.priorManifest[h], "image")
 	current = filterManifestByCategory(current, "image")
 	p.removeStaleManifestEntries(ctx, h, old, current)
+	p.sweepUnmanagedImages(ctx, h, current)
 	return nil
+}
+
+// sweepUnmanagedImages removes image tarballs in the engine's image directory that this run did
+// not upload and the manifest does not name.
+//
+// The manifest prune above it only reaches what cargoship recorded, which leaves a gap the
+// manifest cannot see: a tarball from a version that predates the manifest, one left by a run
+// that was interrupted between the upload and the manifest write, or one a previous naming
+// scheme wrote under a name nothing resolves any more. Nothing in the manifest would ever
+// remove those, and nobody is watching the disk on an air-gapped host.
+//
+// A host carrying KeepImagesMarker gets the warning instead of the deletion. The images
+// cargoship does own are unaffected either way -- they are pruned by the manifest, above.
+func (p *UploadFiles) sweepUnmanagedImages(ctx context.Context, h *cluster.Host, current []ManifestEntry) {
+	l := logger.From(ctx)
+
+	dir := p.manager.Distro.Spec.Config.ImagesConfig.Path
+	if dir == "" {
+		return
+	}
+
+	entries, err := h.ReadDir(dir)
+	if err != nil {
+		// A host with no image directory has no unmanaged tarballs in it. Swallowed like
+		// recordManifestEntry's failures: this is cleanup, and failing the apply over it would
+		// stop an install that has otherwise worked.
+		l.Debug("could not list the image directory", "host", h, "path", dir, "error", err)
+		return
+	}
+
+	managed := make(map[string]struct{}, len(current))
+	for _, e := range current {
+		managed[e.Path] = struct{}{}
+	}
+
+	marker := path.Join(dir, KeepImagesMarker)
+	keep := h.FileExist(marker)
+
+	for _, e := range entries {
+		if e.IsDir() || !isImageTarBall(e.Name()) {
+			continue
+		}
+		target := path.Join(dir, e.Name())
+		if _, ok := managed[target]; ok {
+			continue
+		}
+
+		if keep {
+			l.Warn("keeping an image tarball cargoship did not upload", "host", h, "path", target, "marker", marker)
+			p.keptMu.Lock()
+			p.kept = append(p.kept, Warning{
+				Host:   h.ConfiguredAddress(),
+				Path:   target,
+				Reason: "kept, unmanaged",
+			})
+			p.keptMu.Unlock()
+			continue
+		}
+
+		l.Info("removing an image tarball cargoship did not upload", "host", h, "path", target)
+		if err := deleteRecordedUpload(ctx, h, target); err != nil {
+			l.Warn("failed to remove an unmanaged image tarball", "host", h, "path", target, "error", err)
+		}
+	}
+}
+
+// Warnings reports the image tarballs the sweep left in place. See warningReporter in
+// 05_manager.go: they are repeated in the run's recap because a line logged during the upload
+// phase is a long way above the prompt by the time a fleet-sized apply finishes.
+func (p *UploadFiles) Warnings() []Warning {
+	p.keptMu.Lock()
+	defer p.keptMu.Unlock()
+	return slices.Clone(p.kept)
 }
 
 func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.Host) error {

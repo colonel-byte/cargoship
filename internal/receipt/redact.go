@@ -63,7 +63,9 @@ func Redact(r Receipt) Receipt {
 			// The name, the load balancer and the config path are not.
 			HostCount: r.Cluster.HostCount,
 		},
-		Outcome: r.Outcome,
+		// Outcome is carried whole except for the warnings, whose host addresses are aliased
+		// below with every other address in the receipt.
+		Outcome: outcomeWithoutWarnings(r.Outcome),
 	}
 
 	if r.Package != nil {
@@ -99,6 +101,17 @@ func Redact(r Receipt) Receipt {
 			Changed:         h.Changed,
 			PhasesNamed:     h.PhasesNamed,
 			PhasesReporting: h.PhasesReporting,
+		})
+	}
+
+	for _, w := range r.Outcome.Warnings {
+		out.Outcome.Warnings = append(out.Outcome.Warnings, Warning{
+			Phase: w.Phase,
+			Host:  aliases[w.Host],
+			// The path and the reason are what a maintainer triages from, the same way they
+			// are kept in a phase's change details.
+			Path:   w.Path,
+			Reason: w.Reason,
 		})
 	}
 
@@ -164,5 +177,19 @@ func hostAliases(r Receipt) map[string]string {
 			assign(h.Host)
 		}
 	}
+	// A host named only by a warning still gets an alias, for the same reason a host named only
+	// by a phase does: an unmapped address falls through as the empty string.
+	for _, w := range r.Outcome.Warnings {
+		assign(w.Host)
+	}
 	return aliases
+}
+
+// outcomeWithoutWarnings copies an outcome, leaving the warnings for the caller to carry over
+// once the host aliases exist. Spelled out rather than mutating a copy so that a field added to
+// Outcome is carried by default and TestRedactedFieldsAreClassified is what catches the
+// exceptions.
+func outcomeWithoutWarnings(o Outcome) Outcome {
+	o.Warnings = nil
+	return o
 }

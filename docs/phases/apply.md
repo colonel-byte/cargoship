@@ -45,7 +45,7 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables, preferring the front end the node's OS ships. It trusts every other node in the cluster along with the engine's pod and service CIDRs, opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section
     - Dry run: reported, not run
 1. Upload files to hosts
-    - Uploads the distro agnostic files to each remote node
+    - Uploads the distro agnostic files and image tarballs to each remote node, and removes image tarballs it did not upload unless the image directory carries a cargoship-keep-images file
     - Dry run: reported, not run
 1. Upload files to hosts -- RPM
     - If the remote node is an Enterprise Linux and the Distro package includes any files for those systems

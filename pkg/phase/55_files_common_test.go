@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -399,6 +400,10 @@ type manifestFS struct {
 	remotefs.FS
 
 	removed []string
+	// entries is what ReadDir reports, and exists which paths FileExist answers for. Both are
+	// empty for a phase whose test never looks at a directory.
+	entries []fs.DirEntry
+	exists  map[string]bool
 }
 
 func (f *manifestFS) Remove(path string) error {
@@ -406,7 +411,9 @@ func (f *manifestFS) Remove(path string) error {
 	return nil
 }
 
-func (f *manifestFS) FileExist(string) bool { return false }
+func (f *manifestFS) FileExist(path string) bool { return f.exists[path] }
+
+func (f *manifestFS) ReadDir(string) ([]fs.DirEntry, error) { return f.entries, nil }
 
 func (f *manifestFS) WriteFile(string, []byte, os.FileMode) error { return nil }
 
