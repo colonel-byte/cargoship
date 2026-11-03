@@ -59,13 +59,13 @@ What the suite requires of it:
 
 ## Environment
 
-| Variable                      | What it does                                                                          |
-| ----------------------------- | ------------------------------------------------------------------------------------- |
-| `CARGOSHIP_E2E_BACKEND`       | `inventory` to select this backend                                                    |
-| `CARGOSHIP_E2E_INVENTORY`     | Path to the `ZarfCluster` document                                                    |
-| `CARGOSHIP_E2E_JOIN_HOST`     | Hostname the join walk should join. Unset skips that walk; see below                  |
-| `CARGOSHIP_E2E_DISTRO`        | `k3s` (default), `rke2` or `upstream`, which engine to install                        |
-| `SSH_KNOWN_HOSTS`             | Set to `""` when your hosts' keys are not in a known-hosts file the test binary reads |
+| Variable                  | What it does                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| `CARGOSHIP_E2E_BACKEND`   | `inventory` to select this backend                                                    |
+| `CARGOSHIP_E2E_INVENTORY` | Path to the `ZarfCluster` document                                                    |
+| `CARGOSHIP_E2E_JOIN_HOST` | Hostname the join walk should join. Unset skips that walk; see below                  |
+| `CARGOSHIP_E2E_DISTRO`    | `k3s` (default), `rke2` or `upstream`, which engine to install                        |
+| `SSH_KNOWN_HOSTS`         | Set to `""` when your hosts' keys are not in a known-hosts file the test binary reads |
 
 ## What runs, and what stands down
 

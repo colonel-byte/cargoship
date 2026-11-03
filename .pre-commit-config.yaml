@@ -104,3 +104,13 @@ repos:
         language: system
         pass_filenames: false
         entry: bash -c "CARGOSHIP_MAGE_DOCS_CHILD=1 CARGOSHIP_CONFIG=hack/config.yaml go run ./magefiles/core generate:document"
+      # Runs over the whole tree, but only when a Markdown file changed: it reports a table a
+      # commit did not touch as readily as one it did, and it has to run after docs-generator
+      # so that a page that generator just rewrote is the one being checked.
+      - id: markdown-table-padding
+        name: check-table-padding
+        language: system
+        pass_filenames: false
+        files: \.md$
+        exclude: vendor/.*
+        entry: go run ./magefiles/core dev:checkTables

@@ -30,11 +30,11 @@ The synthetic package is therefore the price of using zarf's mapping instead of 
 
 Three of the mappings would be easy to get wrong by hand, which is the concrete argument for not doing it by hand:
 
-| v1alpha1 field            | `api` field                | Not a rename because                                                                                           |
-| ------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `mute`                    | `Silent`                   | The sense is preserved but the word inverts in `ActionDefaults`, where `Mute: true` became `Silent: true`      |
-| `template`                | `EnableTemplating`         | `*bool` with a false default collapses to `bool`, through `ShouldTemplate`'s opt-in semantics                  |
-| `wait.cluster.condition`  | `Condition.Expression`     | A string became a struct, and the converter stamps a `Default` of `existence` that the executor never reads    |
+| v1alpha1 field           | `api` field            | Not a rename because                                                                                        |
+| ------------------------ | ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `mute`                   | `Silent`               | The sense is preserved but the word inverts in `ActionDefaults`, where `Mute: true` became `Silent: true`   |
+| `template`               | `EnableTemplating`     | `*bool` with a false default collapses to `bool`, through `ShouldTemplate`'s opt-in semantics               |
+| `wait.cluster.condition` | `Condition.Expression` | A string became a struct, and the converter stamps a `Default` of `existence` that the executor never reads |
 
 `TestToAPIActionSetMapsEveryField` pins all of them. A field that stops crossing is not a build failure -- the action still runs, just without whatever stopped crossing -- so the test is the only thing standing between a dropped `mute` and a package build that starts printing a command's output.
 
@@ -54,11 +54,11 @@ ERR failed to create distro package: unable to run component before action: unab
 
 Not a silently unset variable. zarf ignored the field, so the variable was never set, and cargoship's own renderer -- which errors on a missing key rather than rendering `<no value>` into a shell command -- failed the build on the next action that read it. The three routes a variable can take to a later action, before and after:
 
-| Route                                | v0.86                                       | v0.87                |
-| ------------------------------------ | ------------------------------------------- | -------------------- |
-| `setVariables` list                  | works                                       | works                |
-| `setVariable`, deprecated singular   | variable never set, build fails on the read | works                |
-| A value out of the values file       | works                                       | works                |
+| Route                              | v0.86                                       | v0.87 |
+| ---------------------------------- | ------------------------------------------- | ----- |
+| `setVariables` list                | works                                       | works |
+| `setVariable`, deprecated singular | variable never set, build fails on the read | works |
+| A value out of the values file     | works                                       | works |
 
 So the bump turns a hard failure into a working build for a definition the schema already accepted. That is the right direction, and it is still a behavior change: a package that failed to build now builds, and the file an action writes changes from nothing to a value.
 

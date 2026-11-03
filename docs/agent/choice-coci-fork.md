@@ -14,11 +14,11 @@ So for `zoci` the choice was never reuse-or-fork. It was fork or reimplement, an
 
 Worth recording, because "they fixed the internal import" is going to look like the moment to delete this package, and it is not sufficient on its own. `zoci` reaches the following through three of its imports:
 
-| Via                        | Pulls                                                                                                                      |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `src/pkg/images`           | `docker/cli/cli/command`, `docker/cli/cli/flags`, `moby/moby/client`, `go-containerregistry` (`crane`, `daemon`, `layout`) |
-| `src/pkg/packager/layout`  | `sigstore/cosign/v3/pkg/cosign`                                                                                            |
-| `src/pkg/utils`            | `k8s.io/api`, `k8s.io/apimachinery`, `sigs.k8s.io/yaml`, `go-containerregistry`, `cosign/pkg/oci/remote`                   |
+| Via                       | Pulls                                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `src/pkg/images`          | `docker/cli/cli/command`, `docker/cli/cli/flags`, `moby/moby/client`, `go-containerregistry` (`crane`, `daemon`, `layout`) |
+| `src/pkg/packager/layout` | `sigstore/cosign/v3/pkg/cosign`                                                                                            |
+| `src/pkg/utils`           | `k8s.io/api`, `k8s.io/apimachinery`, `sigs.k8s.io/yaml`, `go-containerregistry`, `cosign/pkg/oci/remote`                   |
 
 That is the Docker CLI, the Moby client, cosign and the Kubernetes API machinery, none of it reachable from an air-gapped management node, arriving to support a package format cargoship does not write. Against the binary budget in [`AGENTS.md`](../../AGENTS.md#the-binary-has-a-size-budget) that is disqualifying on its own, independently of the internal import. No MiB figure is quoted here on purpose: the import closure is the argument, and a number measured against a build that cannot be produced would be fiction.
 
