@@ -45,6 +45,12 @@ spec:
         target: .podSecurity.plugins[0].configuration.defaults.audit
       - source: .podSecurity.defaults.warn
         target: .podSecurity.plugins[0].configuration.defaults.warn
+      - source: .podSecurity.exemptions.usernames
+        target: .podSecurity.plugins[0].configuration.exemptions.usernames
+      - source: .podSecurity.exemptions.runtimeClasses
+        target: .podSecurity.plugins[0].configuration.exemptions.runtimeClasses
+      - source: .podSecurity.exemptions.namespaces
+        target: .podSecurity.plugins[0].configuration.exemptions.namespaces
       # Chart enablement is an ordinary place for a value to land, and mappings are applied
       # before any phase runs -- so by the time the upload phase picks images, a cluster's
       # answer is already in hand.

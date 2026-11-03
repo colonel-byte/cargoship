@@ -23,6 +23,17 @@ podSecurity:
     enforce: restricted
     audit: restricted
     warn: restricted
+  # Who pod security admission does not apply to. Setting one of these in an
+  # inventory replaces the whole list rather than adding to it, so carry the
+  # entries below that the cluster still needs -- kube-system and zarf hold
+  # components that do not run under the restricted profile.
+  exemptions:
+    usernames: []
+    runtimeClasses: []
+    namespaces:
+      - kube-system
+      - rook-ceph
+      - zarf
 tools:
   etcdctl:
     # Optional debug CLI installed on control-plane hosts.
