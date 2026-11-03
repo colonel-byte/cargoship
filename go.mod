@@ -30,7 +30,7 @@ require (
 	github.com/pterm/pterm v0.12.84
 	github.com/sigstore/cosign/v3 v3.1.4
 	github.com/sigstore/protobuf-specs v0.5.2
-	github.com/sigstore/sigstore v1.11.1
+	github.com/sigstore/sigstore v1.11.2
 	github.com/sigstore/sigstore-go v1.4.0
 	github.com/sosedoff/ansible-vault-go v0.2.0
 	github.com/spf13/cobra v1.10.2
@@ -202,7 +202,7 @@ require (
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.6.0 // indirect
 	github.com/sigstore/rekor v1.5.5 // indirect
-	github.com/sigstore/rekor-tiles/v2 v2.4.0 // indirect
+	github.com/sigstore/rekor-tiles/v2 v2.4.1 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.2.0 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect

@@ -998,7 +998,7 @@ github.com/sigstore/rekor/pkg/types/rekord/v0.0.1
 github.com/sigstore/rekor/pkg/util
 github.com/sigstore/rekor/pkg/util/jcs
 github.com/sigstore/rekor/pkg/verify
-# github.com/sigstore/rekor-tiles/v2 v2.4.0
+# github.com/sigstore/rekor-tiles/v2 v2.4.1
 ## explicit; go 1.27.0
 github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry
 github.com/sigstore/rekor-tiles/v2/internal/safeint
@@ -1013,7 +1013,7 @@ github.com/sigstore/rekor-tiles/v2/pkg/verifier/certificate
 github.com/sigstore/rekor-tiles/v2/pkg/verifier/identity
 github.com/sigstore/rekor-tiles/v2/pkg/verifier/publickey
 github.com/sigstore/rekor-tiles/v2/pkg/verify
-# github.com/sigstore/sigstore v1.11.1
+# github.com/sigstore/sigstore v1.11.2
 ## explicit; go 1.27
 github.com/sigstore/sigstore/pkg/cryptoutils
 github.com/sigstore/sigstore/pkg/cryptoutils/goodkey
