@@ -153,7 +153,7 @@ func (Dev) VMImage(
 	return microvmrun.Image(ctx, stringOr(image, "rocky"))
 }
 
-// VMUp brings up a local Enterprise Linux VM fleet and writes a ZarfCluster inventory pointing
+// VMUp brings up a local Enterprise Linux VM fleet and writes a Cluster inventory pointing
 // at it, so that the phases a container cannot exercise - SELinux, fapolicyd, firewalld, the
 // *-selinux RPM scriptlets - can be run against a real kernel. See docs/dev/microvm.md.
 //

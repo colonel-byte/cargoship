@@ -64,7 +64,7 @@ The public key is not a secret. Commit it, publish it, put it in a ticket.
 
 ### Recipients: the Keys That Encrypt
 
-Three flags name recipients, and all three are repeatable:
+Two flags name recipients, and both are repeatable:
 
 ```
 --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p

@@ -10,7 +10,7 @@ An apply catches this instead of walking past it. Right after it gathers facts, 
 
 ```
 the cluster holds nodes the config does not: add the host back to the config,
-run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to
+run `cargoship reset` against it, or pass --allow-unmanaged-nodes to
 apply anyway: worker3 (worker)
 ```
 

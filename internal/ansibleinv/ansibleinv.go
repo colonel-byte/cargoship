@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package ansibleinv translates an Ansible inventory into the ZarfCluster document cargoship
+// Package ansibleinv translates an Ansible inventory into the Cluster document cargoship
 // installs from. Ansible resolves the inventory -- group membership, group_vars, host_vars,
 // dynamic inventory plugins, and everything else its own precedence rules cover -- and hands
 // the result here already merged. Nothing in this package parses an inventory file, because
@@ -54,7 +54,7 @@ type Input struct {
 }
 
 // ClusterMeta is everything the generated document needs that no host carries: the parts of a
-// ZarfCluster that describe the cluster rather than a node.
+// Cluster that describe the cluster rather than a node.
 type ClusterMeta struct {
 	// Name sets metadata.name, which cargoship uses as the kubeconfig context name.
 	Name string `json:"name"`
@@ -68,7 +68,7 @@ type ClusterMeta struct {
 	Values map[string]any `json:"values,omitempty"`
 }
 
-// Translate builds a ZarfCluster from a resolved Ansible inventory.
+// Translate builds a Cluster from a resolved Ansible inventory.
 //
 // Host order in the result is load-bearing: ConfigureEngine makes the first controller the
 // leader, so the leader is the first host of the first group listed under RoleGroups

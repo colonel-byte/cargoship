@@ -39,7 +39,7 @@ const sshUser = "root"
 // cloud-init matches on.
 const lanInterface = "enp0s4"
 
-// Inventory renders a ZarfCluster inventory for a fleet.
+// Inventory renders a Cluster inventory for a fleet.
 //
 // PrivateAddress and PrivateInterface are both set explicitly, which the bootloose equivalent
 // does not do. They have to be: a node's default route is on the slirp management interface,
@@ -100,7 +100,7 @@ func hostFromNode(n Node, keyPath string) *apicluster.Host {
 }
 
 // writeInventory marshals the fleet's inventory to its directory, with the same library
-// cargoship parses a ZarfCluster with.
+// cargoship parses a Cluster with.
 func writeInventory(f Fleet) error {
 	b, err := goyaml.Marshal(Inventory(f))
 	if err != nil {

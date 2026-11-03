@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestZarfClusterProfilesResolveConcurrency(t *testing.T) {
+func TestClusterProfilesResolveConcurrency(t *testing.T) {
 	t.Run("empty falls back", func(t *testing.T) {
 		p := Profiles{}
 		v, err := p.ResolveConcurrency(10, "5")
@@ -119,7 +119,7 @@ func TestParseConcurrency(t *testing.T) {
 	})
 }
 
-func TestZarfClusterRegistriesValidate(t *testing.T) {
+func TestClusterRegistriesValidate(t *testing.T) {
 	cases := map[string]struct {
 		registry Registries
 		wantErr  string
@@ -255,7 +255,7 @@ func TestZarfClusterRegistriesValidate(t *testing.T) {
 	}
 }
 
-func TestZarfClusterRegistryTLSValidate(t *testing.T) {
+func TestClusterRegistryTLSValidate(t *testing.T) {
 	const caPEM = `-----BEGIN CERTIFICATE-----
 dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
 -----END CERTIFICATE-----
@@ -303,7 +303,7 @@ dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
 
 // A proxy address is completed to https when it was written without a scheme, and left alone
 // when it already carries one.
-func TestZarfClusterRegistriesMirrorEndpoint(t *testing.T) {
+func TestClusterRegistriesMirrorEndpoint(t *testing.T) {
 	cases := map[string]string{
 		"":                                "",
 		"mirror.example.com":              "https://mirror.example.com",
@@ -324,7 +324,7 @@ func TestZarfClusterRegistriesMirrorEndpoint(t *testing.T) {
 // An engine matches its per-registry configuration on the host alone, so a proxy address with a
 // scheme or a path comes back reduced to host[:port]. Without a proxy, the registry itself is
 // the host the credentials belong to.
-func TestZarfClusterRegistriesConfigHost(t *testing.T) {
+func TestClusterRegistriesConfigHost(t *testing.T) {
 	cases := map[string]string{
 		"":                                   "docker.io",
 		"mirror.example.com":                 "mirror.example.com",

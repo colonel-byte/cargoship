@@ -1,5 +1,8 @@
 # Why crypto11 is ignored by Dependabot rather than pointed at its new home
 
+> **Superseded.** `github.com/ThalesIgnite/crypto11` has left the module graph entirely - it is absent from `go.mod`, `go.sum` and `vendor/`, removed with the dependency trim in [#847](https://github.com/colonel-byte/cargoship/pull/847), which forked `pkg/signing` off zarf's and stopped linking cosign's CLI command structs. The import chain described below no longer exists, and the cosign version named is behind. What survives is the `.github/dependabot.yaml` ignore entry, kept deliberately dormant: the failure it prevents takes out the whole daily run rather than one pull request, and the comment there says so. Read the rest as the record of why that entry is phrased the way it is, not as a description of the current tree.
+
+
 `github.com/ThalesIgnite/crypto11` is pinned at v1.2.5 and will stay there. The upstream repository has been renamed twice and every tag after v1.2.5 declares a different module path, so Dependabot cannot update it and fails its entire daily run trying. `.github/dependabot.yaml` ignores the dependency outright. This document records why the obvious fix - a `replace` directive pointing at the renamed module - was built, tested, and rejected anyway, and why the thing this dependency looks like it affects is not actually in the shipped binary.
 
 ## What forced it

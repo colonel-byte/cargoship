@@ -14,22 +14,20 @@ build(deps): bump github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding 
 
 `PR Title Check` failed four times on that pull request across three head commits, because every `synchronize` re-lints a title that has not changed. It passed at 20:53 on the same commit it had failed on at 19:50 - an `edited` event, which is a person renaming the pull request. Four other commits on `main` carry the same `/.../` elision made by hand: [#660](https://github.com/colonel-byte/cargoship/pull/660), [#649](https://github.com/colonel-byte/cargoship/pull/649), [#639](https://github.com/colonel-byte/cargoship/pull/639) and [#638](https://github.com/colonel-byte/cargoship/pull/638).
 
-Ten of the 451 modules in `go.mod` overflow the cap, and they are not a random ten - they are the transitive trees that bump most often, which is why this came up five times in three weeks. Lengths below are for a 7-character version pair such as `1.13.19`, the worst case; the otel bump in #660 measured 115 rather than 117 because its versions are a character shorter.
+Six of the 260 modules in `go.mod` overflow the cap, and they are not a random six - they are the transitive trees that bump most often, which is why this came up five times in three weeks. Lengths below are for a 7-character version pair such as `1.13.19`, the worst case; the otel bump in #660 measured 115 rather than 117 because its versions are a character shorter.
 
-| Title length | Module                                                                        |
-| ------------ | ----------------------------------------------------------------------------- |
-| 117          | `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` |
-| 113          | `github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider`     |
-| 107          | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`           |
-| 106          | `github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal`            |
-| 105          | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`             |
-| 104          | `github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys`              |
-| 104          | `github.com/AliyunContainerService/ack-ram-tool/pkg/ecsmetadata`              |
-| 103          | `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`               |
-| 103          | `github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding`               |
-| 101          | `github.com/aws/aws-sdk-go-v2/service/internal/presigned-url`                 |
+The set was wider when this was written: it held ten modules, topped by `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` at 117, and included the Azure keyvault, Aliyun and aws-sdk-go-v2 trees. Those left the graph with the dependency trim in [#847](https://github.com/colonel-byte/cargoship/pull/847), which is the first of the two exit conditions below coming half true.
 
-None of them is a direct dependency. All ten arrive through the vendored cosign, Azure and otel trees, so there is no import to rewrite and no module to drop: the names are what they are.
+| Title length | Module                                                              |
+| ------------ | ------------------------------------------------------------------- |
+| 107          | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` |
+| 107          | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` |
+| 105          | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`   |
+| 105          | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`   |
+| 101          | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`       |
+| 101          | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`       |
+
+None of them is a direct dependency. All six arrive through the vendored otel tree, so there is no import to rewrite and no module to drop: the names are what they are.
 
 ## Grouping lengthens the title it was supposed to shorten
 
@@ -65,4 +63,4 @@ commitlint resolves an `extends` entry relative to the config file's own locatio
 
 ## When this entry can go away
 
-Raise the floor rather than delete the file: this stops mattering only if every one of the ten modules leaves the graph, which means cosign, the Azure keyvault SDK and the otel exporters all leaving it. More likely the file outlives the problem quietly. If `@commitlint/config-conventional` ever gains a rule that needs to differ between the two configs, that is the point to revisit whether a shared JS base is worth the resolution it would buy.
+Raise the floor rather than delete the file: this stops mattering only if every one of the six remaining modules leaves the graph, which now means the otel exporters alone - the Azure keyvault SDK and the cosign cloud trees have already gone. More likely the file outlives the problem quietly. If `@commitlint/config-conventional` ever gains a rule that needs to differ between the two configs, that is the point to revisit whether a shared JS base is worth the resolution it would buy.

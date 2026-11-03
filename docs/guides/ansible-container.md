@@ -76,13 +76,13 @@ docker run --rm \
   -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
   ghcr.io/colonel-byte/cargoship-ansible:v0.37.0 \
-  zarf tools kubectl get nodes
+  cargoship version
 ```
 <!-- x-release-please-end-version -->
 
-It is the shorter way to a one-off check, and it costs the container's network namespace, which a run that also opens SSH connections to a fleet should not give up lightly. The port is whatever `docker port k3d-zarf-serverlb 6443` reports, and it is reassigned every time the cluster is recreated. `zarf tools kubectl` is the smoke test to reach for because the image has no `kubectl` of its own.
+It is the shorter way to a one-off check, and it costs the container's network namespace, which a run that also opens SSH connections to a fleet should not give up lightly. The port is whatever `docker port k3d-zarf-serverlb 6443` reports, and it is reassigned every time the cluster is recreated. The image carries no Kubernetes client at all - it is `ansible-core`, `bash-completion` and the cargoship RPM - so `cargoship version` is as far as a check from inside goes, and anything that queries the cluster has to run from the host against `k3d kubeconfig get`.
 
-Either way the kubeconfig is mounted read-only -- zarf reads it and writes nothing back -- and it has to be readable by UID 65532, which is what the `chmod 0644` on the copy is for. A mounted *directory* has to be traversable by that UID too, so a playbook tree under a `0700` directory arrives as a `/workspace` the container cannot open, and `ansible-playbook` reports a playbook it could not find rather than a permission error.
+Either way the kubeconfig is mounted read-only -- cargoship reads it and writes nothing back -- and it has to be readable by UID 65532, which is what the `chmod 0644` on the copy is for. A mounted *directory* has to be traversable by that UID too, so a playbook tree under a `0700` directory arrives as a `/workspace` the container cannot open, and `ansible-playbook` reports a playbook it could not find rather than a permission error.
 
 None of this applies to a real fleet. A cluster cargoship installed is reached over the network like any other host, and `cargoship_kube_config` -- or an apply's `update_kubeconfig`, above -- is what puts its credentials where a later task can find them.
 
@@ -158,7 +158,7 @@ Cargoship verifies host keys against `~/.ssh/known_hosts` -- `/home/nonroot/.ssh
 
 Two ways out, in order of preference. Mount a `known_hosts` file writable, as above, so the first run records what it saw and every later run verifies against it. Or point `SSH_KNOWN_HOSTS` at a file you seeded beforehand; a read-only mount is fine here, but only because every key is already in it -- cargoship still has to be able to append when one is not, and a read-only file fails that write.
 
-Setting `SSH_KNOWN_HOSTS=/dev/null` disables host key verification entirely. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.
+Setting `SSH_KNOWN_HOSTS=""` disables host key verification entirely. An empty value is the switch; `/dev/null` is not the same thing, because it reads as a trust source that happens to hold no keys, which refuses every host rather than accepting it. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.
 
 ## SSH Agents Work, With the Socket Mounted
 
@@ -181,7 +181,7 @@ An agent is the better arrangement when the key is protected by a passphrase, si
 
 ## Encrypting the Generated Inventory on Disk
 
-When `inventory_path` is set to keep the generated ZarfCluster document across runs, that file normally holds decrypted registry passwords in plaintext with `0600` permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:
+When `inventory_path` is set to keep the generated Cluster document across runs, that file normally holds decrypted registry passwords in plaintext with `0600` permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:
 
 ```yaml
 - name: Install cluster

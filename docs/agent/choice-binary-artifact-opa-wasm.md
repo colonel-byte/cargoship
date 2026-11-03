@@ -1,5 +1,10 @@
 # Why Binary-Artifacts and two Pinned-Dependencies findings stay annotated, not fixed
 
+> **The Binary-Artifacts half is superseded.** `github.com/open-policy-agent/opa` is no longer a dependency - it is absent from `go.mod` and `vendor/modules.txt`, `go list -deps ./cmd/cargoship` does not reach it, and `vendor/github.com/open-policy-agent/opa/internal/compiler/wasm/opa/opa.wasm` does not exist. The finding this document explains is gone, along with the `cosign verify` -> `cosign/pkg/cosign/rego` import chain that pulled it in; the dependency trim in [#847](https://github.com/colonel-byte/cargoship/pull/847) took it. The two Pinned-Dependencies findings below are unaffected and still accurate.
+>
+> `.github/scorecard.yml` still carries the prose annotation naming `opa.wasm`. It is now describing nothing, but removing it changes what that check measures, so it is left for a deliberate decision rather than folded into a documentation edit.
+
+
 [OpenSSF Scorecard's](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship) Binary-Artifacts check scores 9/10 for one finding:
 
 ```

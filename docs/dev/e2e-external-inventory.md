@@ -1,6 +1,6 @@
 # Running the cluster suite against your own fleet
 
-The cluster phase suite normally provisions the hosts it tests: bootloose containers by default, or local virtual machines with `CARGOSHIP_E2E_BACKEND=microvm`. The third backend provisions nothing. Point it at a `ZarfCluster` document naming hosts that already exist and it runs the same phase assertions against them.
+The cluster phase suite normally provisions the hosts it tests: bootloose containers by default, or local virtual machines with `CARGOSHIP_E2E_BACKEND=microvm`. The third backend provisions nothing. Point it at a `Cluster` document naming hosts that already exist and it runs the same phase assertions against them.
 
 ```sh
 CARGOSHIP_E2E_BACKEND=inventory \
@@ -16,7 +16,7 @@ That is what makes the suite usable as an acceptance test for an environment car
 
 ## The document
 
-The same `ZarfCluster` document `cargoship apply --config` takes. It is read through the loader the CLI uses, so anything cargoship accepts is accepted here and anything it rejects fails before a host is touched.
+The same `Cluster` document `cargoship apply --config` takes. It is read through the loader the CLI uses, so anything cargoship accepts is accepted here and anything it rejects fails before a host is touched.
 
 ```yaml
 apiVersion: colonel-byte.dev/v1alpha1
@@ -62,7 +62,7 @@ What the suite requires of it:
 | Variable                  | What it does                                                                          |
 | ------------------------- | ------------------------------------------------------------------------------------- |
 | `CARGOSHIP_E2E_BACKEND`   | `inventory` to select this backend                                                    |
-| `CARGOSHIP_E2E_INVENTORY` | Path to the `ZarfCluster` document                                                    |
+| `CARGOSHIP_E2E_INVENTORY` | Path to the `Cluster` document                                                        |
 | `CARGOSHIP_E2E_JOIN_HOST` | Hostname the join walk should join. Unset skips that walk; see below                  |
 | `CARGOSHIP_E2E_DISTRO`    | `k3s` (default), `rke2` or `upstream`, which engine to install                        |
 | `SSH_KNOWN_HOSTS`         | Set to `""` when your hosts' keys are not in a known-hosts file the test binary reads |

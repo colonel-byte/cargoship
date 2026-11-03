@@ -68,7 +68,7 @@ A parameter the module does not know is an error naming it. A parameter left uns
 
 ## Signature verification
 
-`public_key` and `verify` are the package signature parameters, and they are the key-based ones only. Keyless verification identifies a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have. Verify a keyless-signed package with `cargoship package verify` before the play, where the flags and their exclusions are all available.
+`public_key` and `verify` are the package signature parameters, and a Cosign key pair is the only signing method there is. Keyless verification identified a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have, so it was removed along with cloud KMS key references - see [Signing Packages](signing-packages.md). To verify outside a play, `cargoship verify` takes the same key with `--key`.
 
 ## Key material
 

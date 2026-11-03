@@ -6,7 +6,7 @@ Translates an Ansible inventory into a cluster inventory
 
 ### Synopsis
 
-Translates an inventory Ansible has already resolved into a ZarfCluster document, deriving each host's role from the Ansible groups it belongs to.
+Translates an inventory Ansible has already resolved into a Cluster document, deriving each host's role from the Ansible groups it belongs to.
 
 This does not read an Ansible inventory file. Ansible resolves the inventory -- group membership, group_vars, host_vars, dynamic inventory plugins, and the precedence rules over all of them -- and this reads the resolved result: a JSON document holding 'groups', 'hostvars', an optional 'roleGroups' mapping, and the cluster-wide settings an Ansible inventory has no way to carry. The cargoship Ansible collection produces that document; write it by hand to reproduce a translation outside a playbook run.
 

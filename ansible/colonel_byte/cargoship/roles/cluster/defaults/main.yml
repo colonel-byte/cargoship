@@ -15,7 +15,7 @@ cargoship_cluster: {}
 # does not name its groups controller and worker. Left empty, the default mapping applies.
 cargoship_role_groups: {}
 
-# Where to write the generated ZarfCluster document. A private temporary file when empty, removed
+# Where to write the generated Cluster document. A private temporary file when empty, removed
 # after a run that succeeded.
 cargoship_inventory_path: ""
 

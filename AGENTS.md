@@ -10,7 +10,7 @@ It runs from a management node, not on the hosts it manages: cargoship opens the
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cmd/`                            | Cobra commands, and `cmd/cargoship`, the released binary's `main`. The root `main.go` is a `go run .` convenience; see its package comment                                                                                                   |
 | `pkg/`                            | Packages usable from anywhere in the module                                                                                                                                                                                                  |
-| `internal/`                       | Go packages private to this module - `ansiblemod`, `ansibleinv`, `clustercfg`, `cfg`, `dns`, `heartbeat`, `logging`                                                                                                                          |
+| `internal/`                       | Go packages private to this module - `ansiblemod`, `ansibleinv`, `clustercfg`, `cfg`, `dns`, `heartbeat`, `logging`, `receipt`                                                                                                               |
 | `fuzz/`                           | Fuzz targets - see [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                                                                                                                                                        |
 | `config/lang/`                    | User-facing command strings - see [`config/lang/AGENTS.md`](config/lang/AGENTS.md)                                                                                                                                                           |
 | `test/`                           | The shared e2e harness - the fleet bring-up in `microvm/`, and the helpers in the root `test` package. Importable, because the provider's suite consumes it from another module                                                              |
@@ -38,7 +38,7 @@ Several directories carry their own `AGENTS.md` with rules specific to that dire
 | [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                     | Don't name two `Fuzz*` functions where one is a prefix of the other                                                 |
 | [`magefiles/AGENTS.md`](magefiles/AGENTS.md)                                           | Mage target layout and structure rules; how pinned versions, digests, and checksums are kept current                |
 
-`CLAUDE.md` in the repository root is a symlink to this file, so a Claude Code session started there loads these rules without being asked. That covers the root and nothing else: the directory-specific files in the table above are not symlinked, so a session whose working directory is `docs/`, `test/`, `test/e2e/`, `fuzz/`, `example/`, `config/lang/`, or `ansible/` starts with none of their rules in context. The root is where a session normally starts, so this is usually moot - but do not treat "nothing was loaded for me" as "there are no rules here", and do not grep a rules file for the one thing you thought to ask about. Open the closest `AGENTS.md` and read it before writing anything in that directory.
+`CLAUDE.md` in the repository root is a symlink to this file, so a Claude Code session started there loads these rules without being asked. That covers the root and nothing else: the directory-specific files in the table above are not symlinked, so a session whose working directory is any of the ten in the table above - `docs/`, `.github/`, `test/`, `test/e2e/`, `example/`, `ansible/`, `ansible/colonel_byte/cargoship/`, `config/lang/`, `fuzz/`, or `magefiles/` - starts with none of their rules in context. The root is where a session normally starts, so this is usually moot - but do not treat "nothing was loaded for me" as "there are no rules here", and do not grep a rules file for the one thing you thought to ask about. Open the closest `AGENTS.md` and read it before writing anything in that directory.
 
 ## Building and testing
 
@@ -148,6 +148,36 @@ Two things make this worth a rule rather than a habit:
 
 - **the stale copy is usually upstream of several generated files**, so what looks like one wrong line in `docs/` is one wrong line in a Go string plus four regenerated pages, and a reader who corrects the page by hand loses the fix on the next `generate:document`. Chase the wording back to the string that produced it before reporting where it lives.
 - **a vendored string can be the source.** Several flag descriptions come from `vendor/github.com/zarf-dev/zarf/src/config/lang`, which describes zarf's capabilities rather than cargoship's. Where cargoship's behaviour has diverged, the fix is a constant in `config/lang/` and nothing else - see the `--signing-key` strings for the pattern.
+
+## A doc's claims are checkable, so check them
+
+The section above is about wording that has gone stale. This one is about the harder case: a document that is confidently, verifiably wrong, because the thing it describes no longer exists. A dead reference reads exactly like a live one. `mdbook build` does not fail on a dead relative link, `go vet` never opens a Markdown file, and no test asserts that a path, symbol, flag, or module named in prose is still in the tree - so these survive indefinitely, and the longer they survive the more authoritative they look.
+
+The cost is not spread evenly. A wrong count in an internal design note costs a reader a minute of confusion. A command printed in `docs/guides/` that cannot run costs an operator an afternoon, because they will assume they typed it wrong before they assume the guide is wrong. Weight the checking accordingly.
+
+So when a change touches something a document describes, check what that document says about it. Each of these is one command, and each has produced a real defect here:
+
+| Failure mode                                   | How to check it                                                                                                                                                     |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A path, file, or directory that moved or went  | `ls`/`find` the path as written                                                                                                                                     |
+| A Go symbol that was renamed or unexported     | `grep -rn --include='*.go' '<name>' . `, or `go doc`. An unexported-to-exported rename is the easy one to miss                                                      |
+| A module asserted to be present or absent      | `grep -n '<module>' go.mod vendor/modules.txt`, and `go list -deps ./cmd/cargoship` for whether it is linked                                                        |
+| A mage target that does not exist              | `go run ./magefiles/core -l`                                                                                                                                        |
+| A command or flag that does not exist          | `grep -rn '<flag>' cmd/ config/lang/`. Check the command's `Use:` line, not your memory of the command tree                                                         |
+| A config key with no backing field             | It must be in all of `types/config.go`, `cmd/viper.go`, and `cargoship-config.yaml`                                                                                 |
+| A quoted error or log string                   | `grep -rn '<fragment>'` for the literal. Quoting these from memory is how `cargoship install reset` got printed in a guide for an error that says `cargoship reset` |
+| A relative link between pages                  | `ls` the target. Nothing in the build catches a dead one                                                                                                            |
+| A count, version, or pin given as current fact | Read the thing being counted. A number that was measured once and never re-measured is the default state of every count in this tree                                |
+
+### Flag it, and say whether it should be removed rather than fixed
+
+Report what you find the way the section above says: name the file, the line, and what is actually true, and leave the decision with the operator rather than quietly widening the change. The one thing to add is a recommendation on **removal**, because that is the call a reader cannot make for themselves and the one that is easy to get wrong in both directions.
+
+- **A dead reference inside a live document** is a fix: correct it, or delete the sentence if what it pointed at is gone and nothing replaced it. An orphaned heading with no body, left behind when its content was removed, is the same case.
+- **A document whose entire subject was removed** is not a deletion. `docs/agent/choice-*.md` are constraints rather than history, and the reasoning in one usually still explains something that is still here - a `dependabot.yaml` ignore entry, a `.github/scorecard.yml` annotation, the shape of a package. Mark it superseded, name the change that superseded it, and leave the argument in place. Deleting it loses the answer to "why is this odd thing still configured".
+- **A configuration entry a removed document justified** is a separate question with its own blast radius, and it is not yours to fold into a documentation change. A stale Scorecard annotation or Dependabot ignore is doing nothing, but removing it changes what CI measures. Flag it and let the operator decide.
+
+One sweep found roughly sixty of these at once, almost all traceable to five changes that landed correctly in the code and were never swept out of the prose: a dependency trim, the OpenTofu provider's move to its own repository, the second Ansible collection's move to its own repository, an API group rename, and a handful of symbol renames. That is the pattern to expect. When a change removes a module, moves a package out of the tree, or renames a type, the documentation sweep is part of it - and `grep -rn '<old-name>' --include='*.md' .` is the whole technique.
 
 ## A new flag belongs in the config file too
 

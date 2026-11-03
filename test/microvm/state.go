@@ -84,7 +84,7 @@ func (f Fleet) Node(name string) (Node, error) {
 	return Node{}, fmt.Errorf("no node %q in fleet %s; it has %s", name, f.Name, strings.Join(names, ", "))
 }
 
-// InventoryPath is where Up writes the fleet's ZarfCluster inventory.
+// InventoryPath is where Up writes the fleet's Cluster inventory.
 func (f Fleet) InventoryPath() string {
 	return filepath.Join(f.Dir, "inventory.yaml")
 }

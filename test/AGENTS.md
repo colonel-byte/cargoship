@@ -6,11 +6,11 @@ Fixtures are covered separately, in [`e2e/AGENTS.md`](e2e/AGENTS.md).
 
 ## The three backends
 
-| Backend               | What provides the hosts                                     | Target                                      |
-| --------------------- | ----------------------------------------------------------- | ------------------------------------------- |
-| `bootloose` (default) | privileged containers, several OS families                  | `mage test:endToEndCluster`                 |
-| `microvm`             | Rocky 10 qemu VMs on this machine, one distribution         | `mage test:endToEndClusterVM`               |
-| `inventory`           | hosts that already exist, named by a `ZarfCluster` document | `mage test:endToEndClusterInventory <path>` |
+| Backend               | What provides the hosts                                 | Target                                      |
+| --------------------- | ------------------------------------------------------- | ------------------------------------------- |
+| `bootloose` (default) | privileged containers, several OS families              | `mage test:endToEndCluster`                 |
+| `microvm`             | Rocky 10 qemu VMs on this machine, one distribution     | `mage test:endToEndClusterVM`               |
+| `inventory`           | hosts that already exist, named by a `Cluster` document | `mage test:endToEndClusterInventory <path>` |
 
 `provision` in `backend_support_test.go` is the only place they differ. Everything downstream of the inventory it returns is identical, which is the point: a phase assertion cannot tell which backend it is running against, and should not.
 

@@ -87,10 +87,10 @@ func (Test) EndToEndClusterVM() error {
 }
 
 // EndToEndClusterInventory runs the cluster suite against hosts that already exist, named by
-// the ZarfCluster document at the given path. Nothing is provisioned and nothing is torn down:
+// the Cluster document at the given path. Nothing is provisioned and nothing is torn down:
 // it changes those hosts and does not change them back. See docs/dev/e2e-external-inventory.md.
 func (Test) EndToEndClusterInventory(
-	// path to a ZarfCluster document naming the hosts to run against
+	// path to a Cluster document naming the hosts to run against
 	inventory string,
 ) error {
 	if err := os.Setenv("CARGOSHIP_E2E_BACKEND", "inventory"); err != nil {

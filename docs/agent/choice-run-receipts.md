@@ -4,19 +4,19 @@
 
 ## Host records are an allowlist, never a denylist
 
-`internal/receipt.Host` copies in a fixed set of fields by name, and nothing anywhere marshals `cluster.ZarfHost` into a receipt.
+`internal/receipt.Host` copies in a fixed set of fields by name, and nothing anywhere marshals `cluster.Host` into a receipt.
 
-That looks like needless transcription -- the host object already has every field, and a `json:"-"` tag on the ones that must not appear would be less code. It is deliberate. `ZarfHost` embeds a live `rig.ClientWithConfig` and a `Metadata` struct full of connection state, and a receipt built by excluding what must not appear leaks the next field somebody adds to either. An allowlist fails closed: a new fact is absent from receipts until a person adds it to `Host`, which is the safe direction to be wrong in.
+That looks like needless transcription -- the host object already has every field, and a `json:"-"` tag on the ones that must not appear would be less code. It is deliberate. `cluster.Host` embeds a live `rig.ClientWithConfig` and a `Metadata` struct full of connection state, and a receipt built by excluding what must not appear leaks the next field somebody adds to either. An allowlist fails closed: a new fact is absent from receipts until a person adds it to `Host`, which is the safe direction to be wrong in.
 
 `TestHostFieldsAreAnAllowlist` pins the field set so that adding one fails the build until it is classified. The precedent is the OpenTofu provider's `factsOf`, which does the same thing for the provider's attributes and for the same reason; it moved to [colonel-byte/terraform-provider-cargoship](https://github.com/colonel-byte/terraform-provider-cargoship).
 
-If you are adding a host fact to a receipt, add it to `Host` and update that test. Do not reach for reflection over `ZarfHost`.
+If you are adding a host fact to a receipt, add it to `Host` and update that test. Do not reach for reflection over `cluster.Host`.
 
 ## Diffs exist only where a phase already read the file
 
 Four phases carry a real unified diff -- `25_modify_hosts_file`, `24_prepare_selinux_policy`, `70_engine_config_sync_common` and `89_reconfigure_survivors`. Four do not: `20_prepare_host` (sysctl), `22_prepare_fapolicyd`, `23_prepare_kernel_modules`, and the engine `config.yaml` written through `types/distrocfg`.
 
-The split is not an unfinished job. It is exactly the line between phases that fetch the prior content anyway and phases that do not. `driftedFiles` in the sync phase holds the host's copy and the desired copy in the same scope, so a diff there costs nothing. The other four write without reading, and `ZarfHost.FileChanged` compares by sha256 without ever pulling the remote file down -- so adding a diff to them means a new `ReadFile` per file per host, every run, on every host in the fleet. On a large fleet that is a real cost paid by every operator to benefit the few who read a diff.
+The split is not an unfinished job. It is exactly the line between phases that fetch the prior content anyway and phases that do not. `driftedFiles` in the sync phase holds the host's copy and the desired copy in the same scope, so a diff there costs nothing. The other four write without reading, and `cluster.Host.FileChanged` compares by sha256 without ever pulling the remote file down -- so adding a diff to them means a new `ReadFile` per file per host, every run, on every host in the fleet. On a large fleet that is a real cost paid by every operator to benefit the few who read a diff.
 
 Those phases still report *that* they changed a host, with the file path and a reason. Only the body is missing. `HostChangeDetail.Diff` is documented to mean "not compared" when empty, never "no difference".
 

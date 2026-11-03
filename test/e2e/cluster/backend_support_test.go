@@ -59,7 +59,7 @@ const (
 	backendInventory = "inventory"
 )
 
-// inventoryEnvVar names the ZarfCluster document backendInventory runs against.
+// inventoryEnvVar names the Cluster document backendInventory runs against.
 //
 // This is the backend for hosts cargoship does not create: a fleet on AWS, vSphere, Proxmox,
 // bare metal, anything already reachable over SSH. The suite provisions nothing, tears nothing
@@ -270,7 +270,7 @@ func carriesFamily(f fleetSpec, family string) bool {
 	return false
 }
 
-// readInventory loads the operator's ZarfCluster document.
+// readInventory loads the operator's Cluster document.
 //
 // It goes through the same loader the CLI uses rather than a plain unmarshal, so that a
 // document this backend accepts is one cargoship accepts: the inventory the suite is handed
@@ -278,7 +278,7 @@ func carriesFamily(f fleetSpec, family string) bool {
 func readInventory() (apicluster.Cluster, error) {
 	path := os.Getenv(inventoryEnvVar)
 	if path == "" {
-		return apicluster.Cluster{}, fmt.Errorf("%s=%s needs %s set to a ZarfCluster document",
+		return apicluster.Cluster{}, fmt.Errorf("%s=%s needs %s set to a Cluster document",
 			backendEnvVar, backendInventory, inventoryEnvVar)
 	}
 

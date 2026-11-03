@@ -68,23 +68,27 @@ Instead those tests compute what the hosts report -- how many have SELinux enabl
 
 Twenty-odd ordered, stateful tests mean one broken early phase produces twenty downstream failures that say nothing. `TearDownTest` records the failure and `SetupTest` skips the rest, so the output names one phase. Teardown of the containers is unaffected -- `TestMain` deletes the bootloose cluster regardless -- so this costs nothing but the coverage that was already lost.
 
-## Nine nodes across two OS families
+## Two OS families, and why the node count has moved
 
-The cluster was six usable nodes on one Ubuntu image (with three further machines provisioned and never wired into the inventory). It is now nine: three controllers and six workers, each role split between Ubuntu and Fedora.
+The cluster was six usable nodes on one Ubuntu image (with three further machines provisioned and never wired into the inventory). Splitting each role between Ubuntu and Fedora took it to nine: three controllers and six workers.
+
+**It is five now, and the OS mix is what survived.** `k3sOS`, the fleet a full walk provisions, is one Ubuntu controller, two Ubuntu workers and two Fedora workers. The three-controller topology went because its embedded etcd raft quorum timed out on a hosted runner under the CPU contention of ten nested node containers; a single-controller k3s cluster has a SQLite datastore and no quorum to time out. `stageOS`, which `Test.EndToEndClusterStage` provisions, is the wider one: one controller and one worker per family, plus the Alpine upload-only host.
 
 The OS mix is the substantive part. The apply phase list routes on OS family in at least five places -- the RPM and APT upload phases, SELinux, fapolicyd, and the firewall backend -- and on a single-family cluster the branch that does not match is never taken. Worse, the gate assertions described above *pass* in that case, so the suite reports coverage it does not have. With both families present, `Test_57_RPMUploadFiles` and `Test_58_APTUploadFiles` each assert a real split: the family they claim keeps what was staged, the family they do not comes back byte-identical.
 
 To keep that from silently regressing, `Test_09_DetectOS` asserts that every family the bootloose config provisions is present, and that each host's detected `os-release` ID matches the image its machine was built from. If someone collapses the cluster back to one image, the failure names that cause rather than showing up as a phase test that quietly stopped covering a branch.
 
-Nine nodes rather than six also puts more than one batch through the worker concurrency path: the initialize phases batch workers at `WorkerConcurrent`, which the suite sets to `5`, and six workers is the first count that makes that a real batching decision.
+Nine nodes rather than six also put more than one batch through the worker concurrency path: the initialize phases batch workers at `WorkerConcurrent`, which the suite sets to `5`, and six workers was the first count that made that a real batching decision. The four workers `k3sOS` provisions no longer cross that threshold, so the batching path is not covered by the full walk as it stands.
 
 Both images are the project's own: `ghcr.io/colonel-byte/bootloose/ubuntu-26` and `ghcr.io/colonel-byte/bootloose/fedora-44`. The Fedora replicas are named `kcf*` and `kwf*` so that the inventory's existing `kc`/`kw` prefix mapping claims them without the OS family entering the mapping at all.
 
-## A tenth machine that receives uploads and never joins
+## A machine that receives uploads and never joins
 
 Two of the three upload phases are reached by an OS-family filter. The third, `phase/59_bin_install.go`, is what a host gets when neither of the other two claims it -- which on an all-Ubuntu, all-Fedora cluster meant every host, because rke2 ships as neither an RPM nor a deb. So the phase was being exercised as the path every host happens to take, not as the fallback it is written to be, and nothing in the suite would have noticed if the two family filters had started claiming hosts they should not.
 
-The cluster therefore also provisions one `ghcr.io/colonel-byte/bootloose/alpine-3.23` machine. Alpine is neither Enterprise Linux nor Debian, so `utils.FilterEnterpriseLinux` and `utils.FilterDebianLinux` both decline it and it reaches the BIN phase as the only host that had nowhere else to go. `Test_59_BINUploadFiles` asserts against it by name.
+`stageOS` therefore also provisions one `ghcr.io/colonel-byte/bootloose/alpine-3.23` machine. Alpine is neither Enterprise Linux nor Debian, so `utils.FilterEnterpriseLinux` and `utils.FilterDebianLinux` both decline it and it reaches the BIN phase as the only host that had nowhere else to go.
+
+`k3sOS` leaves it out, because the stage job already covers that fallback and the full walk pays for every machine in bring-up time. `Test_59_BINUploadFiles` is therefore conditional on `uploadOnlyCount > 0` rather than asserting against the host by name, which is the difference between a fleet that has no upload-only host by design and one that lost it by accident.
 
 It cannot run the engine: rke2 links against glibc and Alpine is musl. Three things follow from that, and each had an alternative.
 
@@ -126,9 +130,9 @@ On a fresh install `phase/66_upgrade_controller.go` and `phase/67_upgrade_worker
 
 `UpgradePhaseSuite` closes that. It builds a second package from `exampleUpgradeDefinitions` -- `example/rke2-multi-cni-cilium/v1_37/v1.37.0-rke2r1` for rke2, `example/k3s-flannel/v1_37/v1.37.0-k3s1` for k3s -- and walks the phases against the cluster the walks before it left running. Both maps are keyed by `distroID()`, so `CARGOSHIP_E2E_DISTRO` picks the install target and the upgrade target together.
 
-**The target is the next minor line.** The install walk takes `v1.36.4`, which is already the newest patch in its own minor, so there is no next patch to upgrade to and the smallest real upgrade the examples offer is `v1.37.0`. That makes the walk a minor-line upgrade: it moves the engine tarball, the RPM URLs and the image tags, and it can move the bundled CNI as well, so a failure here has more places to come from than a patch bump would. The upgrade phases route on `VersionLess`, so what matters to every phase under test is only that the packaged version compares greater than the installed one.
+**The target is the next minor line.** The install walk takes `v1.36.4` for rke2 and k3s, which was the newest patch in its own minor when this was written, so there was no next patch to upgrade to and the smallest real upgrade the examples offer is `v1.37.0`. That makes the walk a minor-line upgrade: it moves the engine tarball, the RPM URLs and the image tags, and it can move the bundled CNI as well, so a failure here has more places to come from than a patch bump would. The upgrade phases route on `VersionLess`, so what matters to every phase under test is only that the packaged version compares greater than the installed one.
 
-This was a patch-revision upgrade within `v1_35` when the suite was written, chosen so the walk moved nothing but the engine. It is a minor-line upgrade now because the examples moved on; if the version floor rises again and a newer patch appears inside the installed minor, prefer it.
+This was a patch-revision upgrade within `v1_35` when the suite was written, chosen so the walk moved nothing but the engine. It is a minor-line upgrade now because the examples moved on; if the version floor rises again and a newer patch appears inside the installed minor, prefer it. **That condition is now met and unacted on:** `v1.36.5` exists for all three flavors, so a patch-revision upgrade from the installed `v1.36.4` is available and would be the smaller walk.
 
 **It starts at `GatherFactsDistro`, not at `Connect`.** Connect, DetectOS, GatherFacts and ValidateHosts do the same work against the same hosts they did during the install, and the apply walk already asserts each of them one phase at a time. Repeating that costs runtime and adds no assertion that could fail differently, so they run as a single `Test_01_Reconnect` step whose only job is to hand the rest of the walk a connected inventory. From `Test_12_GatherFactsDistro` on, every phase gets its own method, because from there on every phase behaves differently than it did on the install.
 

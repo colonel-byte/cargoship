@@ -2,7 +2,7 @@
 
 ## Keeping `docs/workflows/` in sync
 
-Every file under [`workflows/`](workflows/) has a matching high-level explanation under [`docs/workflows/`](../docs/workflows/), named after the workflow file with a `.md` extension. The index is [`docs/SUMMARY.md`](../docs/SUMMARY.md), which `mage generate:document` writes from what is on disk - there is no hand-written index to keep in step. When you add, remove, or meaningfully change a workflow's triggers, jobs, or behavior, update its doc in the same pull request:
+Every file under [`workflows/`](workflows/) has a matching high-level explanation under [`docs/workflows/`](../docs/workflows/), named after the workflow file with its `.yaml` extension replaced by `.md` (`workflows/e2e.yaml` -> `docs/workflows/e2e.md`). The index is [`docs/SUMMARY.md`](../docs/SUMMARY.md), which `mage generate:document` writes from what is on disk - there is no hand-written index to keep in step. When you add, remove, or meaningfully change a workflow's triggers, jobs, or behavior, update its doc in the same pull request:
 
 - New workflow: add `docs/workflows/<name>.md`, then run `go run ./magefiles/core generate:document` so the chapter appears in `docs/SUMMARY.md`.
 - Removed workflow: delete the doc and regenerate.

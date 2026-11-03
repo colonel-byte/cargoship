@@ -1,6 +1,6 @@
 # Why onCreate actions go through zarf's package converter
 
-`runCreateActions` in [`pkg/packager/assemble/actions.go`](../golang/pkg/packager/assemble.md) hands each action to zarf, and since zarf v0.87.0 that means converting it first. The conversion is one function, `toAPIActionSet`, and it does something that looks wasteful: it wraps a single action set in a throwaway `ZarfPackage` carrying one unnamed component, runs `convert.PackageFromV1alpha1` over the whole thing, and reads the converted action set back out of `Components[0]`. This document records why that is the shape, and the behavior change it brought with it, because both look like accidents from the code alone.
+`runCreateActions` in [`pkg/packager/assemble/actions.go`](../../pkg/packager/assemble/actions.go) hands each action to zarf, and since zarf v0.87.0 that means converting it first. The conversion is one function, `toAPIActionSet`, and it does something that looks wasteful: it wraps a single action set in a throwaway `ZarfPackage` carrying one unnamed component, runs `convert.PackageFromV1alpha1` over the whole thing, and reads the converted action set back out of `Components[0]`. This document records why that is the shape, and the behavior change it brought with it, because both look like accidents from the code alone.
 
 ## What forced it
 
@@ -16,7 +16,7 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 
 The v1alpha1 types still exist, so nothing in cargoship stopped compiling for lack of a type. What broke is the handoff: cargoship holds v1alpha1 actions and `Run` now takes `api.Action`.
 
-cargoship holds v1alpha1 actions because its own package schema embeds them. `Actions.OnCreate` in [`api/colonel-byte.dev/v1alpha1/distro/spec.go`](../golang/api/colonel-byte.dev/v1alpha1/distro.md) is a `zarf.ZarfComponentActionSet`, which is what puts `mute`, `maxRetries`, `setVariable` and the rest into `schema/distro-v1alpha1-schema.json`. Retyping that field onto `api.Action` would convert the problem into a schema change -- `mute` becomes `silent`, `maxRetries` becomes `retries`, `wait.cluster.condition` stops being a string -- and every `distro.yaml` an operator has written would need rewriting. A dependency bump is not where that happens.
+cargoship holds v1alpha1 actions because its own package schema embeds them. `Actions.OnCreate` in [`api/colonel-byte.dev/v1alpha1/distro/spec.go`](../../api/colonel-byte.dev/v1alpha1/distro/spec.go) is a `zarf.ZarfComponentActionSet`, which is what puts `mute`, `maxRetries`, `setVariable` and the rest into `schema/distro-v1alpha1-schema.json`. Retyping that field onto `api.Action` would convert the problem into a schema change -- `mute` becomes `silent`, `maxRetries` becomes `retries`, `wait.cluster.condition` stops being a string -- and every `distro.yaml` an operator has written would need rewriting. A dependency bump is not where that happens.
 
 So the conversion has to live at the call site, and it has to be the same conversion zarf performs on a package it loaded itself. Anything else means cargoship's actions behave differently from zarf's for the same YAML.
 

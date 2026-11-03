@@ -26,14 +26,17 @@ This completes every target - the same list `mage -autocomplete` prints - and ev
 
 ## mage: positional arguments
 
-Two targets take arguments mage has no way to know about:
+Three targets take arguments mage has no way to know about, and the overlay completes two of them:
 
 ```console
 mage generate:exampleLine <distro> <minor>
 mage generate:latestTag <distro> <minor>
+mage dev:vmShell <node>          # not completed; see below
 ```
 
-Both arguments are readable off the tree: `<distro>` is a directory under `thirdparty-src/`, and `<minor>` is a directory under `thirdparty-src/<distro>/` with the underscore written as a dot (`v1_36` on disk, `v1.36` on the command line). Deriving them keeps completion correct as release lines are added and dropped, which a hardcoded list does not.
+Both arguments of the first two are readable off the tree: `<distro>` is a directory under `thirdparty-src/`, and `<minor>` is a directory under `thirdparty-src/<distro>/` with the underscore written as a dot (`v1_36` on disk, `v1.36` on the command line). Deriving them keeps completion correct as release lines are added and dropped, which a hardcoded list does not.
+
+`dev:vmShell` is left alone on purpose. Its `<node>` is a node of a running fleet rather than anything in the checkout, so there is nothing to derive it from without talking to libvirt - which would put a polkit prompt behind pressing Tab. `mage dev:vmList` prints the names instead.
 
 Three things worth knowing before installing any of these:
 

@@ -90,11 +90,12 @@ type hostUpdates struct {
 
 // verification is the package signature surface the modules expose.
 //
-// Only the key-based flags are here. Keyless verification identifies a signer against a Fulcio
-// root and a transparency log, which wants network the management node this runs on does not
-// have; and its flags are mutually exclusive with each other in ways cobra enforces and a
-// hand-written module would have to restate. An operator who needs keyless verification runs
-// `cargoship package verify` before the play.
+// A cosign key pair is the only signing method there is, so these are the only flags to
+// expose. Keyless verification identified a signer against a Fulcio root and a transparency
+// log, which wants network the management node this runs on does not have, and it was removed
+// along with cloud KMS key references. If you want it back, say so on
+// https://github.com/colonel-byte/cargoship/issues/848. To verify outside a play, run
+// `cargoship verify` with the same key.
 type verification struct {
 	PublicKey string `json:"public_key"`
 	Verify    string `json:"verify"`

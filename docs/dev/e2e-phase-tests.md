@@ -21,7 +21,7 @@ Steps that are not phases -- creating the package, `prepare`, the health check -
 
 ## Adding a phase
 
-Take the new phase's file number for both the test file and the method. Nothing else is renumbered: inserting `phase/23_something.go` gives you `23_something_test.go` containing `Test_23_Something`, and it lands between `Test_22_PrepareFapolicy` and `Test_25_ModifyHosts` on its own.
+Take the new phase's file number for both the test file and the method. Nothing else is renumbered: inserting `phase/27_something.go` gives you `27_something_test.go` containing `Test_27_Something`, and it lands after `Test_26_ConfigureFirewall` on its own. Note that a phase need not have a test file at all - `pkg/phase/23_prepare_kernel_modules.go` has none, which is why `Test_24_PrepareSelinuxPolicy` is what currently follows `Test_22_PrepareFapolicy`.
 
 If a phase is renumbered in `pkg/phase`, rename its test file and its method to match, and check that its new number still puts it after everything it depends on -- the number is the ordering, so a phase that moves in the source moves here too.
 
@@ -287,7 +287,7 @@ $ CARGOSHIP_E2E_BACKEND=microvm go test -mod=vendor -count=1 -v -timeout=60m ./t
 
 It needs KVM, and a bring-up costs a minute or two against a container's seconds. It is also one distribution, so it covers none of the family routing the container fleet's Ubuntu, Fedora and Alpine mix exists for -- run both, not one instead of the other. See [microvm](microvm.md) for the fleet itself and [choice-microvm-backend](../agent/choice-microvm-backend.md) for the reasoning.
 
-**Run against a fleet the suite did not create.** `CARGOSHIP_E2E_BACKEND=inventory` with `CARGOSHIP_E2E_INVENTORY` pointing at a `ZarfCluster` document runs every phase against hosts that already exist, wherever they are. The assertions that are about a fleet this suite chose -- the declared OS per host, the OS mix, the per-family upload guards, the join walk -- stand down and say so; everything else asserts as usual. See [e2e-external-inventory](e2e-external-inventory.md), including the warning that it changes those hosts and does not change them back.
+**Run against a fleet the suite did not create.** `CARGOSHIP_E2E_BACKEND=inventory` with `CARGOSHIP_E2E_INVENTORY` pointing at a `Cluster` document runs every phase against hosts that already exist, wherever they are. The assertions that are about a fleet this suite chose -- the declared OS per host, the OS mix, the per-family upload guards, the join walk -- stand down and say so; everything else asserts as usual. See [e2e-external-inventory](e2e-external-inventory.md), including the warning that it changes those hosts and does not change them back.
 
 **Walk the suite against rke2 instead of k3s.** `CARGOSHIP_E2E_DISTRO=rke2` switches which distro every step installs, and which package `cluster_lifecycle_test.go` builds. The default is `k3s`. A phase that branches on the engine needs a run each way:
 

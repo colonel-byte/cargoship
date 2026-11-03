@@ -45,7 +45,7 @@ argument_specs:
         type: str
         default: ""
         description:
-          - "Where to write the generated ZarfCluster document."
+          - "Where to write the generated Cluster document."
           - "A private temporary file when empty, removed after a run that succeeded."
       cargoship_age_recipients:
         type: list

@@ -62,7 +62,7 @@ type Detail struct {
 	// Module is the action that ran, so a failure in a playbook that loops over several says
 	// which one.
 	Module string `json:"module,omitempty"`
-	// InventoryPath is the generated ZarfCluster document. It is the file cargoship was
+	// InventoryPath is the generated Cluster document. It is the file cargoship was
 	// actually given, which is the thing to look at when a translation is wrong.
 	InventoryPath string `json:"inventoryPath,omitempty"`
 	// InventoryKept says whether that file still exists. A run that fails keeps it; a run that
