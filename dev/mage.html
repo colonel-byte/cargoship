@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b36abc6f.js";
+            window.path_to_searchindex_js = "../searchindex-4bc9daa6.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-c864a24f.js"></script>
+        <script src="../toc-b36b5188.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -216,6 +216,7 @@ mage                                     # same as `mage build:all` -- it is the
 <li><code>Vendor</code> - Runs <code>Tidy</code>, then <code>go mod vendor</code>, then <code>WriteOSVOverrides</code>. Use this rather than a bare <code>go mod vendor</code> after changing dependencies: <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> are updated in one step, and the generated <code>osv-scanner.toml</code> files that <code>go mod vendor</code> deletes are put back.</li>
 <li><code>WriteOSVOverrides</code> - Writes those generated <code>osv-scanner.toml</code> files into <code>vendor/</code>. <code>Vendor</code> calls it, so run it on its own only to repair a tree that was vendored some other way - usually a Dependabot branch, since Dependabot re-vendors without going through mage.</li>
 <li><code>VerifyVendor</code> - Checks that every declared override is present and still matches the generator, and that <code>vendor/</code> holds no non-Go dependency manifest without an entry covering it. <code>.github/workflows/check-go-mod.yaml</code> runs it on every pull request. <a href="../agent/choice-osv-vendor-overrides.html">Why vendor/ carries four generated osv-scanner.toml files</a> explains what the files are for.</li>
+<li><code>CheckTables</code> - Checks that every Markdown table in the tree is padded to its column widths, the way the style guide in <code>AGENTS.md</code> requires, and prints the expected form of each line that is not. It reads tracked <code>*.md</code> files outside <code>vendor/</code>, skips tables inside fenced code blocks (several <code>AGENTS.md</code> files show deliberately unpadded tables as examples), and exits non-zero when anything is misaligned. The root <code>AGENTS.md</code>, and <code>CLAUDE.md</code> which symlinks to it, are exempt.</li>
 <li><code>Digest</code> - Resolves <code>docker.io/library/alpine:latest</code> through the host’s Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.</li>
 <li><code>DnfPins</code> - Queries the AlmaLinux 10 RPM repository metadata over HTTP to find the newest available versions of the packages installed in the container images (<code>ansible-core</code> and <code>bash-completion</code>), then updates <code>containers/ansible/Dockerfile</code> and <code>containers/ubi/Dockerfile</code> (via <code>ARG</code> defaults) and <code>.goreleaser.yaml</code> (via <code>build_args</code>). A package is queried only while an image installs it: <code>shadow-utils</code> was dropped when the ubi image stopped installing it, because a pin nothing consumes makes this target fail looking for an <code>ARG</code> that is not there. <code>TestUpdatersMatchTheRepositoryFiles</code> holds the updaters against the real files for that reason.</li>
 </ul>
@@ -226,6 +227,7 @@ mage dev:digest                 # print the alpine:latest digest, to check regis
 mage dev:writeOSVOverrides      # write every osv-scanner.toml override into vendor/
 mage dev:verifyVendor           # check those overrides are present, current, and complete
 mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf package pins
+mage dev:checkTables            # check every markdown table is padded to its column widths
 </code></pre>
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>

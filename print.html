@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b36abc6f.js";
+            window.path_to_searchindex_js = "searchindex-4bc9daa6.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-c864a24f.js"></script>
+        <script src="toc-b36b5188.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -264,7 +264,7 @@ cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:latest
 <li><strong>Validation:</strong> Verify that host nodes meet the prerequisites, and stop if the cluster holds a node the config does not.</li>
 <li><strong>Lock:</strong> Take an exclusive host lock, held for the rest of the run, so a second cargoship cannot change the same hosts.</li>
 <li><strong>Prepare:</strong> Install OS packages, configure sysctl and environment, SELinux and <code>fapolicyd</code> rules, <code>/etc/hosts</code>, and the node firewall.</li>
-<li><strong>Upload:</strong> Securely transfer package binaries, RPMs or DEBs, configuration templates, and OCI images to the nodes, then import the images.</li>
+<li><strong>Upload:</strong> Securely transfer package binaries, RPMs or DEBs, configuration templates, and OCI images to the nodes, then import the images. Image tarballs the package no longer carries are removed from the nodes in the same pass – see <a href="#image-tarballs-on-a-node">Image Tarballs on a Node</a>.</li>
 <li><strong>Bootstrap / Upgrade:</strong> Render the engine config, initialize control-plane nodes, apply bundled manifests, join workers, and upgrade any node already running an older version.</li>
 <li><strong>Engine Config Sync:</strong> Reconcile registry, audit, and pod-security config on any node whose config drifted.</li>
 <li><strong>Kubeconfig Retrieval and Labelling:</strong> Fetch the generated admin credentials and label nodes with their profile group.</li>
@@ -301,6 +301,11 @@ cargoship create ./distro-defs --hauler-store ./haul.tar.zst
 <p>Bootstrap a new cluster or upgrade an existing one from the compiled package:</p>
 <pre><code class="language-bash">cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 </code></pre>
+<p>An apply reconciles the node’s image directory as well as filling it: a tarball the package has stopped carrying – including the older tag of an image a version bump replaced – is deleted from every node, and so is a tarball sitting there that no cargoship run recorded. On a node where something other than cargoship also stages images, keep those by creating a marker file in the image directory, which leaves the package’s own images reconciled as normal:</p>
+<pre><code class="language-bash"># on the node: keep image tarballs cargoship did not upload, and warn about them every run
+sudo touch /var/lib/rancher/k3s/agent/images/cargoship-keep-images
+</code></pre>
+<p><a href="#image-tarballs-on-a-node">Image Tarballs on a Node</a> covers the naming, both cleanups, and how a kept file is reported.</p>
 <h3 id="4-fetch-the-kubeconfig"><a class="header" href="#4-fetch-the-kubeconfig">4. Fetch the Kubeconfig</a></h3>
 <p>Retrieve the admin <code>kubeconfig</code> securely from the primary controller:</p>
 <pre><code class="language-bash">cargoship kube-config --config ./cargoship-config.yaml
@@ -373,7 +378,7 @@ cargoship apply ./build/cargoship-distro-amd64.tar.zst \
 # Strip everything that identifies the fleet, ready to attach to a bug report
 cargoship redact-receipt ./receipt.json -o ./share.json
 </code></pre>
-<p>The receipt carries the invocation and the cargoship that ran it, the package’s digests and signature status, the cluster inventory, and the phase-by-phase ledger with per-host change reasons and diffs. <code>redact-receipt</code> renumbers the hosts <code>host-01</code>, <code>host-02</code>, drops the diff bodies – an engine configuration diff carries join tokens – and removes the cluster name, operator and command line, leaving what a maintainer triages from.</p>
+<p>The receipt carries the invocation and the cargoship that ran it, the package’s digests and signature status, the cluster inventory, the phase-by-phase ledger with per-host change reasons and diffs, and any warnings the run raised under <code>outcome.warnings</code> – a successful run that left something on a host worth looking at says so there. <code>redact-receipt</code> renumbers the hosts <code>host-01</code>, <code>host-02</code>, drops the diff bodies – an engine configuration diff carries join tokens – and removes the cluster name, operator and command line, leaving what a maintainer triages from.</p>
 <p>A fleet that keeps an audit trail sets the path once in the config file instead, under <code>.distro.receipt_path</code>, where <code>apply</code>, <code>prepare</code>, <code>reset</code> and <code>engine-config-sync</code> all pick it up:</p>
 <pre><code class="language-yaml">distro:
   # {command} and {timestamp} expand per run, so each receipt lands in its own file
@@ -408,7 +413,7 @@ metadata:
   name: fleet-cluster
 </code></pre>
 <p>The corresponding JSON schemas are automatically generated from Go structs into <code>schema/</code>, and <code>cargoship schema</code> writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; <code>cargoship validate</code> checks a file against the right one without an editor.</p>
-<p>An inventory authoring guide is available in <a href="#inventory-configuration-guide">Setting up an inventory</a>.</p>
+<p>An inventory authoring guide is available in <a href="#inventory-configuration-guide">Setting up an inventory</a>, and the full set of guides – image tarballs, file and registry overrides, credential encryption, multi-architecture packages, firewalls – is under <a href="guides"><code>docs/guides/</code></a>.</p>
 <h3 id="the-zarfdev-group-is-deprecated"><a class="header" href="#the-zarfdev-group-is-deprecated">The <code>zarf.dev</code> group is deprecated</a></h3>
 <p>These documents used to declare <code>apiVersion: zarf.dev/v1alpha1</code> with <code>kind: ZarfCluster</code> and <code>kind: ZarfDistro</code>. That group belongs to the upstream Zarf project, which defines its own kinds under it, so cargoship moved to a group it owns.</p>
 <p>Both spellings are accepted, in any combination, and a document using the old one needs no change today:</p>
@@ -1559,6 +1564,84 @@ cargoship create ./distro-defs --plain-http \
 <pre><code class="language-bash">hauler store info --store ./store
 hauler store info --store ./store --output json --type file
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="image-tarballs-on-a-node"><a class="header" href="#image-tarballs-on-a-node">Image Tarballs on a Node</a></h1>
+<p>This guide explains what Cargoship puts in a node’s image directory, what it removes from that directory and when, and how to tell it to leave files it did not put there alone.</p>
+<p>It matters because the directory is not Cargoship’s alone to reason about. An air-gapped node’s disk is finite, nobody is watching it, and an image tarball is tens or hundreds of mebibytes. A directory that only ever grows is a cluster that stops scheduling pods some months after the last person touched it.</p>
+<h2 id="what-ends-up-in-the-directory"><a class="header" href="#what-ends-up-in-the-directory">What ends up in the directory</a></h2>
+<p>A package carries its container images, and <code>apply</code> exports one tarball per image and uploads it to the path the package declares in <code>.spec.config.imageConfig.path</code> – <code>/var/lib/rancher/k3s/agent/images</code> for the k3s examples, <code>/var/lib/rancher/rke2/agent/images</code> for the rke2 ones. The engine imports them from there on start-up, which is what makes the node able to run pods with no registry to pull from.</p>
+<p>Each tarball is named after the image reference it holds, with the characters a filename cannot carry replaced by <code>_</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Image in the package</th><th>Tarball on the node</th></tr>
+</thead>
+<tbody>
+<tr><td><code>docker.io/rancher/mirrored-pause:3.10.2</code></td><td><code>docker.io_rancher_mirrored-pause_3.10.2.tar</code></td></tr>
+<tr><td><code>registry.example.com:5000/acme/api:1.4.0</code></td><td><code>registry.example.com_5000_acme_api_1.4.0.tar</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The tag is part of the name, so two versions of one image are two files rather than one file written twice. The suffix follows <code>.spec.config.imageConfig.compression</code>: <code>.tar</code>, <code>.tar.gz</code> or <code>.tar.zst</code>.</p>
+<p>Every file an upload phase puts on a node is also recorded in that node’s upload manifest, at <code>/var/lib/cargoship/manifest.txt</code>, one <code>category&lt;tab&gt;path</code> line per file. The manifest is how a later run knows what it is responsible for, and it is worth reading when a node looks wrong:</p>
+<pre><code class="language-bash">ssh node-01 sudo cat /var/lib/cargoship/manifest.txt
+</code></pre>
+<h2 id="what-a-later-apply-removes"><a class="header" href="#what-a-later-apply-removes">What a later apply removes</a></h2>
+<p>Two different cleanups run during the upload phase, and the difference between them is whether the manifest knows about the file.</p>
+<p><strong>Images the manifest names are reconciled against the package.</strong> Every tarball the previous run recorded and this run did not upload again is deleted, and its manifest line with it. So:</p>
+<ul>
+<li>an <strong>image added</strong> to the package is uploaded; nothing is removed</li>
+<li>an <strong>image removed</strong> from the package has its tarball deleted from every node</li>
+<li>an <strong>image retagged</strong> – the usual case, a version bump – is both: the new tag is uploaded and the tag it replaces is deleted</li>
+</ul>
+<p>This is scoped to images. The engine binaries, RPMs and DEBs that later phases upload are reconciled by those phases, against their own manifest categories.</p>
+<p><strong>Tarballs the manifest does not name are swept.</strong> A tarball in the image directory that no manifest line accounts for is removed too. These exist: a file left by a Cargoship old enough to predate the manifest, a run interrupted between the upload and the manifest write, a tarball written under a naming scheme that no longer resolves. Nothing in the reconcile above would ever reach them, because the manifest is the only record of what is managed.</p>
+<p>The sweep is narrow on purpose. It considers only files ending <code>.tar</code>, <code>.tar.gz</code> or <code>.tar.zst</code> – the three a package can produce, so a package that changes compression leaves no copy of the old file behind. Anything else in the directory is left where it is, including the image <strong>list</strong> files an engine reads alongside the tarballs.</p>
+<p>The first <code>apply</code> after upgrading to a Cargoship that names tarballs with their tag therefore cleans up after the old naming by itself, on every node, with no reset and nothing to delete by hand.</p>
+<h2 id="keeping-tarballs-cargoship-did-not-upload"><a class="header" href="#keeping-tarballs-cargoship-did-not-upload">Keeping tarballs Cargoship did not upload</a></h2>
+<p>A fleet where something other than Cargoship also puts images in that directory – an appliance image staged by hand, a vendor’s tarball dropped in by another tool – needs the sweep turned off for those nodes. Create a file called <code>cargoship-keep-images</code> in the image directory:</p>
+<pre><code class="language-bash">sudo touch /var/lib/rancher/k3s/agent/images/cargoship-keep-images
+</code></pre>
+<p>Its contents are never read; its presence is the whole signal. It belongs on the nodes that need it rather than in the config file or on the command line, because which nodes those are is a property of the fleet, not of one invocation – set it once and every later <code>apply</code> from any management node honours it.</p>
+<p><strong>It does not freeze the images Cargoship owns.</strong> Those are still uploaded, still recorded, and still reconciled against the package exactly as above; a marker that stopped that would be a marker that silently prevents upgrades from taking effect. It changes one thing: a tarball the manifest does not name is kept instead of deleted.</p>
+<h2 id="how-you-find-out-that-files-were-kept"><a class="header" href="#how-you-find-out-that-files-were-kept">How you find out that files were kept</a></h2>
+<p>Every kept tarball is reported, three times over, because a marker that outlives whatever needed it looks exactly like a marker nobody meant to leave.</p>
+<p><strong>While the phase runs</strong>, once per file:</p>
+<pre><code>WRN keeping an image tarball cargoship did not upload host=10.0.0.11 \
+    path=/var/lib/rancher/k3s/agent/images/vendor-appliance.tar \
+    marker=/var/lib/rancher/k3s/agent/images/cargoship-keep-images
+</code></pre>
+<p><strong>At the end of the run</strong>, repeated in the recap, because on a fleet of any size the line above is a long way up the scrollback by the time the apply finishes:</p>
+<pre><code>INF finished in duration=4m12s
+WRN run finished with warnings count=3
+WRN warning phase=Upload files to hosts host=10.0.0.11 \
+    path=/var/lib/rancher/k3s/agent/images/vendor-appliance.tar reason=kept, unmanaged
+</code></pre>
+<p><strong>In the run receipt</strong>, if the run was given one with <code>--receipt-path</code> or <code>.distro.receipt_path</code>, under <code>outcome.warnings</code>:</p>
+<pre><code class="language-json">{
+  "outcome": {
+    "succeeded": true,
+    "changed": true,
+    "warnings": [
+      {
+        "phase": "Upload files to hosts",
+        "host": "10.0.0.11",
+        "path": "/var/lib/rancher/k3s/agent/images/vendor-appliance.tar",
+        "reason": "kept, unmanaged"
+      }
+    ]
+  }
+}
+</code></pre>
+<p>The run still succeeds – nothing failed, and <code>succeeded</code> stays <code>true</code>. The warnings say what the success left behind. <code>redact-receipt</code> keeps them, with the host renumbered to its alias like everywhere else in the document, so they survive into a receipt you can attach to a bug report.</p>
+<h2 id="reading-an-unexpected-deletion"><a class="header" href="#reading-an-unexpected-deletion">Reading an unexpected deletion</a></h2>
+<p>If a tarball you wanted is gone, the question is which of the two cleanups took it, and the manifest answers it.</p>
+<ol>
+<li><strong>Was it ever in the manifest?</strong> If not, the sweep removed it, and <code>cargoship-keep-images</code> is the fix.</li>
+<li><strong>Is it in the manifest, and not in the package?</strong> Then the reconcile removed it, which is what should happen – the package no longer carries that image. Check <code>.spec.config.imageConfig.images</code> and the chart manifests the package enables, since a disabled chart’s images are deliberately left out of the upload.</li>
+<li><strong>Was the node ever applied with this package?</strong> A node that joined later has only what the apply that reached it uploaded.</li>
+</ol>
+<p>A <code>--dry-run</code> apply removes nothing at all: the upload phase does not run under one, so neither cleanup happens.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="importing-archives-guide"><a class="header" href="#importing-archives-guide">Importing Archives Guide</a></h1>
 <p>This guide explains how to convert an OCI Image Layout - a Skopeo <code>oci-archive</code> file, or an unpacked layout directory - into a native Cargoship package (<code>.tar.zst</code>) with <code>cargoship import</code>.</p>
@@ -5393,7 +5476,7 @@ $ cargoship version -o json
 </li>
 <li>Upload files to hosts
 <ul>
-<li>Uploads the distro agnostic files to each remote node</li>
+<li>Uploads the distro agnostic files and image tarballs to each remote node, and removes image tarballs it did not upload unless the image directory carries a cargoship-keep-images file</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
@@ -6841,6 +6924,7 @@ mage                                     # same as `mage build:all` -- it is the
 <li><code>Vendor</code> - Runs <code>Tidy</code>, then <code>go mod vendor</code>, then <code>WriteOSVOverrides</code>. Use this rather than a bare <code>go mod vendor</code> after changing dependencies: <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> are updated in one step, and the generated <code>osv-scanner.toml</code> files that <code>go mod vendor</code> deletes are put back.</li>
 <li><code>WriteOSVOverrides</code> - Writes those generated <code>osv-scanner.toml</code> files into <code>vendor/</code>. <code>Vendor</code> calls it, so run it on its own only to repair a tree that was vendored some other way - usually a Dependabot branch, since Dependabot re-vendors without going through mage.</li>
 <li><code>VerifyVendor</code> - Checks that every declared override is present and still matches the generator, and that <code>vendor/</code> holds no non-Go dependency manifest without an entry covering it. <code>.github/workflows/check-go-mod.yaml</code> runs it on every pull request. <a href="#why-vendor-carries-four-generated-osv-scannertoml-files">Why vendor/ carries four generated osv-scanner.toml files</a> explains what the files are for.</li>
+<li><code>CheckTables</code> - Checks that every Markdown table in the tree is padded to its column widths, the way the style guide in <code>AGENTS.md</code> requires, and prints the expected form of each line that is not. It reads tracked <code>*.md</code> files outside <code>vendor/</code>, skips tables inside fenced code blocks (several <code>AGENTS.md</code> files show deliberately unpadded tables as examples), and exits non-zero when anything is misaligned. The root <code>AGENTS.md</code>, and <code>CLAUDE.md</code> which symlinks to it, are exempt.</li>
 <li><code>Digest</code> - Resolves <code>docker.io/library/alpine:latest</code> through the host’s Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.</li>
 <li><code>DnfPins</code> - Queries the AlmaLinux 10 RPM repository metadata over HTTP to find the newest available versions of the packages installed in the container images (<code>ansible-core</code> and <code>bash-completion</code>), then updates <code>containers/ansible/Dockerfile</code> and <code>containers/ubi/Dockerfile</code> (via <code>ARG</code> defaults) and <code>.goreleaser.yaml</code> (via <code>build_args</code>). A package is queried only while an image installs it: <code>shadow-utils</code> was dropped when the ubi image stopped installing it, because a pin nothing consumes makes this target fail looking for an <code>ARG</code> that is not there. <code>TestUpdatersMatchTheRepositoryFiles</code> holds the updaters against the real files for that reason.</li>
 </ul>
@@ -6851,6 +6935,7 @@ mage dev:digest                 # print the alpine:latest digest, to check regis
 mage dev:writeOSVOverrides      # write every osv-scanner.toml override into vendor/
 mage dev:verifyVendor           # check those overrides are present, current, and complete
 mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf package pins
+mage dev:checkTables            # check every markdown table is padded to its column widths
 </code></pre>
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
@@ -8340,6 +8425,58 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p><strong>One tarball per architecture.</strong> This was the design alternative rejected at the level of the whole feature. It solves the tag collision by never having two platforms in one package, at the cost of an operator holding several tarballs for one cluster and choosing between them per node, which is precisely the problem a fat package exists to remove.</p>
 <h2 id="what-it-means-for-publishing"><a class="header" href="#what-it-means-for-publishing">What it means for publishing</a></h2>
 <p>Publishing a package to a registry needed no changes. <code>LayersFromImages</code> in <code>pkg/coci/pull.go</code> reads <code>images/index.json</code>, finds the entry annotated with the image reference, and already dispatches on media type: <code>layersFromIndexChildren</code> walks an index entry and recurses, and the layer list is deduplicated before it is returned. A published multi-arch package therefore shares blobs in the registry the same way it shares them on disk.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-an-image-tarballs-name-carries-the-images-tag"><a class="header" href="#why-an-image-tarballs-name-carries-the-images-tag">Why an image tarball’s name carries the image’s tag</a></h1>
+<p><code>phase/50_uploadfiles.go</code> exports one tarball per image in the package and uploads it to the engine’s image directory. The filename comes from the image reference, and for most of this repository’s history it came from the reference with the tag cut off: <code>docker.io/rancher/mirrored-pause:3.10</code> was uploaded as <code>docker.io_rancher_mirrored-pause.tar</code>.</p>
+<p>That was deliberate, and the reason was never written down, which is why this file exists. A name with no tag in it is a stable path across versions, so an upgrade overwrote the tarball it superseded instead of adding a second one beside it. Nothing accumulated in the image directory, and nothing had to clean up after a version bump.</p>
+<p>It is no longer how the name is built. <code>imageTarBallName</code> now keeps the whole reference and replaces only the characters a filename may not carry, so the same image is uploaded as <code>docker.io_rancher_mirrored-pause_3.10.tar</code>.</p>
+<h2 id="what-was-wrong-with-dropping-the-tag"><a class="header" href="#what-was-wrong-with-dropping-the-tag">What was wrong with dropping the tag</a></h2>
+<p>Cutting the tag off made the name ambiguous, and two references that are not the same image could produce one path:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>In the package</th><th>Filename both resolved to</th></tr>
+</thead>
+<tbody>
+<tr><td><code>pause:3.9</code> and <code>pause:3.10</code></td><td><code>pause.tar</code></td></tr>
+<tr><td><code>registry:5000/foo:1.0</code> and <code>registry:5000/bar:2.0</code></td><td><code>registry.tar</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The second row is the worse one and is not about tags at all: the expression stripped everything from the <strong>first</strong> colon, which in a reference carrying a registry port is the port. Every image from a registry with a port in its hostname collapsed onto a single filename.</p>
+<p>What happened then depended on how the exporter opened the file, and neither answer was acceptable. It opened for appending, so the second export concatenated a second archive onto the first and the host was sent a file that was not an image tarball. Opening it with <code>O_TRUNC</code> instead – which it now is, for separate reasons, see the comment at the call – would have silently discarded every colliding image but the last. A collision has to be impossible rather than handled, and the only way to get there is for the name to keep everything that distinguishes one reference from another.</p>
+<h2 id="what-replaces-the-property-that-was-lost"><a class="header" href="#what-replaces-the-property-that-was-lost">What replaces the property that was lost</a></h2>
+<p>The old name was doing real work: it is what kept superseded images from piling up on a host. A tagged name does not overwrite anything, so on its own it would leave every image an upgrade replaced sitting in the engine’s image directory forever, on an air-gapped host whose disk nobody is watching.</p>
+<p><strong>The prune is what replaces it, and it already existed.</strong> <code>UploadFiles.cleanStaleUploads</code> reads each host’s upload manifest as it was before the run touched it, scopes it to the <code>image</code> category, and deletes every entry the run did not upload again. So:</p>
+<ul>
+<li>an <strong>image added</strong> to the package is a new entry and prunes nothing</li>
+<li>an <strong>image removed</strong> from the package is in the prior manifest and not in this run’s uploads, so its tarball is deleted and its entry dropped</li>
+<li>a <strong>tag bumped</strong> is both at once – the new path is uploaded, the old path is pruned – which is the case the old naming handled by overwriting</li>
+</ul>
+<p>The scoping to one category is not incidental: the engine install phases record into <code>engine</code> and run after this one, so a prune comparing the whole manifest would read their files as stale and delete the binary the node is running. That is <a href="https://github.com/colonel-byte/cargoship/issues/942">#942</a>, and <code>TestCleanStaleUploadsLeavesASiblingPhasesFilesAlone</code> is its regression test.</p>
+<p>The first apply after this change therefore cleans up after the old naming by itself. A host carrying <code>mirrored-pause.tar</code> from a previous install has that path in its manifest and no longer in the uploads, so it is pruned in the same pass that uploads <code>mirrored-pause_3.10.tar</code>. No reset is needed, and nothing has to be deleted by hand.</p>
+<h2 id="the-gap-the-manifest-cannot-see-and-the-sweep-that-closes-it"><a class="header" href="#the-gap-the-manifest-cannot-see-and-the-sweep-that-closes-it">The gap the manifest cannot see, and the sweep that closes it</a></h2>
+<p>The prune reaches what the manifest names, which leaves a gap: a tarball in the image directory that no manifest records. One left by a version that predates the manifest, one left by a run interrupted between the upload and the manifest write, one written under a naming scheme nothing resolves any more. Nothing in the manifest would ever remove those, and nobody is watching the disk on an air-gapped host.</p>
+<p><code>sweepUnmanagedImages</code> closes it, and the reasoning is about who owns the directory. The engine reads that directory and cargoship populates it: in practice everything in it arrived through the upload phase, so a tarball in it that the manifest does not name is not somebody else’s file, it is one of ours that lost its record. So the sweep removes it.</p>
+<p>It is scoped two ways, because “remove what we do not recognise” is a sentence worth being careful with:</p>
+<ul>
+<li><strong>only the three tarball suffixes</strong> <code>.tar</code>, <code>.tar.gz</code> and <code>.tar.zst</code> – every ending <code>ImageConfig.TarballSuffix</code> can produce, so a package that switches compression leaves no copy of the old file behind, and anything else in the directory is left alone. The image <strong>list</strong> files an engine reads alongside the tarballs are not tarballs and are not touched.</li>
+<li><strong>only what this run did not upload.</strong> The images cargoship owns are managed by the manifest prune above, not by the sweep.</li>
+</ul>
+<h2 id="the-escape-hatch-and-why-it-warns"><a class="header" href="#the-escape-hatch-and-why-it-warns">The escape hatch, and why it warns</a></h2>
+<p>A fleet where something other than cargoship also puts images in that directory needs the sweep off, and <code>KeepImagesMarker</code> – a file named <code>cargoship-keep-images</code> in the image directory – is how such a host says so. It is a file on the host rather than a flag or a config key on purpose: the hosts that need it are a property of the fleet, not of the invocation, and an operator who sets it once should not have to remember it on every apply from every management node.</p>
+<p>It applies only to tarballs cargoship does not own. The images in the package are still uploaded, still recorded, and still pruned when the package stops carrying them – a marker that froze those would be a marker that silently stops upgrades from taking effect.</p>
+<p><strong>And it warns, every run, for every file.</strong> A marker left behind after whatever needed it is gone is indistinguishable from a marker nobody meant to leave, and the failure mode is a disk filling up over months with nothing in any log to explain it. So each kept tarball is logged where it happens, and then repeated in the run’s recap through <code>warningReporter</code> – which is also how it reaches the run receipt, under <code>outcome.warnings</code>. The recap exists because a line logged during the upload phase is thousands of lines above the prompt by the time a fleet-sized apply finishes.</p>
+<p><code>requireNoOrphanImages</code> in the cluster e2e suite asserts every walk leaves nothing in the directory the manifest has lost track of, and <code>Test_50c_UploadSweep</code> plants a tarball cargoship did not upload to check both halves against real hosts: removed without the marker, kept and warned about with it.</p>
+<h2 id="keeping-this-true"><a class="header" href="#keeping-this-true">Keeping this true</a></h2>
+<p>Five tests hold the halves together, and a change to any of them should fail one:</p>
+<ul>
+<li><code>TestImageTarBallName</code> pins the name, including the two collision pairs above.</li>
+<li><code>TestCleanStaleUploadsPrunesImagesThisRunDidNotUpload</code> pins the prune, over an added image, a removed one and a bumped tag.</li>
+<li><code>Test_50b_UploadRoundTrip</code> in the cluster suite re-runs the upload phase against hosts it already staged and asserts nothing changed, locally or on the host, which is what proves a re-export is reproducible rather than merely idempotent-looking.</li>
+<li><code>TestSweepUnmanagedImages</code> pins the sweep and the marker, including the files it must not touch.</li>
+<li><code>Test_50c_UploadSweep</code> plants an unmanaged tarball on every host in the walk and checks it is removed, then checks the marker keeps it and that keeping it warns.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-googlego-containerregistry-and-not-distributiondistribution-for-the-in-memory-test-registry"><a class="header" href="#why-googlego-containerregistry-and-not-distributiondistribution-for-the-in-memory-test-registry">Why google/go-containerregistry and not distribution/distribution for the in-memory test registry</a></h1>
 <p>Cargoship’s e2e suite needs a real OCI registry to publish/pull against without a network dependency or a live registry container. <code>test/registry.go</code> provides <code>test.SetupInMemoryRegistry(t)</code>, which starts one in-process on a random localhost port and tears it down via <code>t.Cleanup</code>.</p>
