@@ -6,9 +6,8 @@ The `noncluster` e2e suite drives the **built `cargoship` binary** as a subproce
 
 ```
 test/e2e/noncluster/        misc + package command groups: version, sha256sum, the vault and age suites, ssh, create,
-                            publish, pull, sign, verify, schema, validate, the Ansible module, and the zarf info modules
+                            publish, pull, sign, verify, schema, validate, import, the hauler store, and the Ansible module
 test/e2e/cluster/           the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
-test/e2e/tofu/              the OpenTofu provider: a three-machine bootloose cluster installed, reduced and destroyed through the real `tofu` CLI -- see [e2e-tofu-tests](e2e-tofu-tests.md)
 test/common.go              the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/container_package.go   copies a shipped example definition and strips the sysctls a container cannot apply, for the suites that build a package and install it
 test/bootstrap.go           TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
@@ -16,6 +15,8 @@ test/registry.go            in-process OCI registry used by the publish/pull/sig
 test/kube.go                kubernetes helpers for the suites that read a cluster back
 test/e2e/AGENTS.md          the fixture rule: test documents live in testdata/, not in Go string constants
 ```
+
+The OpenTofu provider's own walk is not here: it moved to [`colonel-byte/terraform-provider-cargoship`](https://github.com/colonel-byte/terraform-provider-cargoship) with the provider, and consumes the harness above from this module - see [`choice-tofu-provider-removal`](../agent/choice-tofu-provider-removal.md).
 
 The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The `noncluster` package starts no containers and makes no network calls: it needs nothing but the binary. The `cluster` package needs Docker and takes tens of minutes, and needs no binary; everything below is about `noncluster`, and [e2e-phase-tests](e2e-phase-tests.md) covers the cluster suite and how to extend it when a phase is added.
 
@@ -68,7 +69,7 @@ $ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires
 
 *   **`CARGOSHIP_E2E_VM_MEMORY`** - with `CARGOSHIP_E2E_BACKEND=microvm`, the per-node memory in MiB. The suite brings its fleet up at the size the join walk needs rather than the size the apply walk uses, so the default of 4096 asks for 16GiB at once and the bring-up refuses rather than letting the OOM killer choose which process dies. A value that is not a positive number is ignored; see [microvm](microvm.md).
 
-*   **`CARGOSHIP_E2E_INVENTORY`** - with `CARGOSHIP_E2E_BACKEND=inventory`, the path to a `ZarfCluster` document naming hosts that already exist. The suite provisions nothing and tears nothing down, which is how the phase assertions are run against a fleet on EC2, vSphere, Proxmox or bare metal. It changes those hosts and does not change them back; see [e2e-external-inventory](e2e-external-inventory.md).
+*   **`CARGOSHIP_E2E_INVENTORY`** - with `CARGOSHIP_E2E_BACKEND=inventory`, the path to a `Cluster` document naming hosts that already exist. The suite provisions nothing and tears nothing down, which is how the phase assertions are run against a fleet on EC2, vSphere, Proxmox or bare metal. It changes those hosts and does not change them back; see [e2e-external-inventory](e2e-external-inventory.md).
 
 *   **`CARGOSHIP_E2E_KEEP_REGISTRY_LOG`** - set to any non-empty value to keep the in-memory registry's request log for passing tests as well as failing ones. See "Artifacts and logs" below.
 *   **`CARGOSHIP_CONFIG`** - the config file the binary loads. `TestCargoshipCreateExample` sets it (to `test/e2e/cargoship-config.yaml`), and the Ansible module suite's "reports a broken config file as a module failure" case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.

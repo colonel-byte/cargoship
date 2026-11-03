@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package microvm brings a fleet of Enterprise Linux virtual machines up and down on the
-// developer's own machine, under plain qemu, and renders a ZarfCluster inventory pointing at
+// developer's own machine, under plain qemu, and renders a Cluster inventory pointing at
 // them. It exists because the phases that route on OS family cannot be exercised against a
 // container: pkg/phase/21_prepare_selinux.go gates on getenforce reporting Enforcing, which no
 // container reports, and that phase is fatal on failure -- so the one branch that can stop an

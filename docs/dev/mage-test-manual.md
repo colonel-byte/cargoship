@@ -90,13 +90,27 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UP
 
 No CI job runs this; it is the only way to cover the upgrade phases.
 
-## `Test.CleanZarfClusters`
+## `Test.EndToEndClusterVM`
 
 ```console
-$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2>/dev/null; done
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    CARGOSHIP_E2E_BACKEND=microvm CARGOSHIP_E2E_DISTRO=rke2 \
+    go test -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 ```
 
-The cleanup `EndToEndZarf` runs before it starts, exposed on its own. The cluster names are `K3dClusters` in `magefiles/pkg/testrunner/testrunner.go`. A cluster that is not there is not an error.
+The same package as `EndToEndCluster`, against local virtual machines. No bootloose cleanup runs, because there are no containers to clean. `CARGOSHIP_E2E_DISTRO=rke2` is the target's own default rather than the suite's: the shipped k3s examples declare `selinux: true` and ship `k3s-selinux` with `selector.package: binary`, so the RPM is staged and never installed, the policy module is absent on a host that has SELinux, and the agent does not start. Setting `CARGOSHIP_E2E_DISTRO` yourself still wins. Needs KVM; see [microvm](microvm.md).
+
+## `Test.EndToEndClusterInventory`
+
+```console
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    CARGOSHIP_E2E_BACKEND=inventory CARGOSHIP_E2E_INVENTORY=./cluster.yaml \
+    go test -timeout=2h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
+```
+
+Against hosts that already exist, named by the cluster document the inventory path points at. Nothing is provisioned and nothing is torn down: it changes those hosts and does not change them back. See [e2e-external-inventory](e2e-external-inventory.md).
 
 ## `Test.CleanCluster`
 
@@ -109,10 +123,10 @@ No test runs; this is only the cleanup step the two cluster targets run before t
 ## `Test.Unit`
 
 ```console
-$ go test -count=1 $(go list ./... | grep -v '^github.com/colonel-byte/cargoship/test/')
+$ go test -count=1 $(go list ./... | grep -v '^github.com/colonel-byte/cargoship/test/e2e/')
 ```
 
-Every package except the e2e suites under `test/`, which have runners of their own. The target builds the list with `go list` rather than hardcoding it, so a new package is covered the moment it exists. No binary, no Docker, no temp-dir env vars.
+Every package except the e2e suites under `test/e2e/`, which have runners of their own. Note the prefix: `test/` also holds the shared harness - the root `test` package and `test/microvm` - whose unit tests need no fleet and belong here, and excluding all of `test/` dropped them silently, which reads as a green unit job rather than as missing coverage. The target builds the list with `go list` rather than hardcoding it, so a new package is covered the moment it exists. No binary, no Docker, no temp-dir env vars.
 
 ## `Test.Fuzz`
 

@@ -249,7 +249,7 @@ const (
 	// CmdInventoryFromAnsibleShort inventory from-ansible short
 	CmdInventoryFromAnsibleShort = "Translates an Ansible inventory into a cluster inventory"
 	// CmdInventoryFromAnsibleLong inventory from-ansible long
-	CmdInventoryFromAnsibleLong = "Translates an inventory Ansible has already resolved into a ZarfCluster document, deriving each host's role from the Ansible groups it belongs to.\n\n" +
+	CmdInventoryFromAnsibleLong = "Translates an inventory Ansible has already resolved into a Cluster document, deriving each host's role from the Ansible groups it belongs to.\n\n" +
 		"This does not read an Ansible inventory file. Ansible resolves the inventory -- group membership, group_vars, host_vars, dynamic inventory plugins, and the precedence rules over all of them -- and this reads the resolved result: a JSON document holding 'groups', 'hostvars', an optional 'roleGroups' mapping, and the cluster-wide settings an Ansible inventory has no way to carry. The cargoship Ansible collection produces that document; write it by hand to reproduce a translation outside a playbook run.\n\n" +
 		"By default the Ansible group named 'controller' supplies the control-plane nodes and the group named 'worker' supplies the rest. Set 'roleGroups' to map cargoship's roles onto the group names the inventory actually uses. A host in none of the mapped groups is left out, so a play's inventory may carry hosts that are not part of the cluster; a host in groups mapped to two different roles is an error.\n\n" +
 		"Host order is not cosmetic. Controllers are written first, and the first controller in the document becomes the cluster leader.\n\n" +

@@ -44,7 +44,7 @@ notes:
 options:
   inventory:
     description:
-      - "The resolved Ansible inventory the module translates into a ZarfCluster document: C(groups), C(hostvars), and a C(cluster) block."
+      - "The resolved Ansible inventory the module translates into a Cluster document: C(groups), C(hostvars), and a C(cluster) block."
       - "The action plugin fills C(groups) and C(hostvars) in from the play, so a task normally sets only C(cluster)."
       - "Renders no flag of its own. The translated document is passed to the command as C(--config)."
     type: dict
@@ -81,7 +81,7 @@ options:
     cli_flag: "--work-concurrency"
   inventory_path:
     description:
-      - "Where to write the generated ZarfCluster document. A private temporary file when unset, removed after a run that succeeded."
+      - "Where to write the generated Cluster document. A private temporary file when unset, removed after a run that succeeded."
       - "A run that fails leaves the document on disk either way, because it is the first thing to look at when a failure reads like the wrong cluster."
     type: str
     required: false

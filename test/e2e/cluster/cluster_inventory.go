@@ -69,7 +69,7 @@ func engineHosts(c apicluster.Cluster) apicluster.Cluster {
 	return c
 }
 
-// renderClusterInventory builds a ZarfCluster inventory from the live bootloose machines,
+// renderClusterInventory builds a Cluster inventory from the live bootloose machines,
 // mapping kc*/kw* hostnames to controller/worker roles. The Fedora replicas are named kcf*
 // and kwf*, so the same two prefixes claim them and the OS family never has to be part of
 // the mapping. A machine whose name matches neither prefix is skipped rather than guessed at.
@@ -162,7 +162,7 @@ func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apiclu
 }
 
 // writeClusterInventory marshals cluster to YAML (via the same library cargoship uses to
-// parse a ZarfCluster document) and writes it to path.
+// parse a Cluster document) and writes it to path.
 func writeClusterInventory(cluster apicluster.Cluster, path string) error {
 	b, err := goyaml.Marshal(cluster)
 	if err != nil {

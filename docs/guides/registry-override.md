@@ -146,10 +146,10 @@ That matters on upgrade. Cargoship 0.21 changed how `registries.yaml` is written
 
 ### Encrypting the Credential
 
-Use `cargoship vault-encrypt` to produce the encrypted value. It reads the plaintext from an argument, from stdin, or -- if stdin is a terminal -- prompts for it with hidden input so the secret is never echoed or left in shell history:
+Use `cargoship vault encrypt` to produce the encrypted value. It reads the plaintext from an argument, from stdin, or -- if stdin is a terminal -- prompts for it with hidden input so the secret is never echoed or left in shell history:
 
 ```
-cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+cargoship vault encrypt --vault-password-file ./vault-pass.txt
 Value to encrypt:
 $ANSIBLE_VAULT;1.1;AES256
 62306432326630316632646366363136303161316635343463306637643137646336363634363338

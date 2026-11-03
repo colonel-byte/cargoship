@@ -35,8 +35,11 @@ import (
 // beside the artifact, no Fulcio certificate, no transparency log lookup and no
 // timestamp authority. Nothing here reaches the network.
 //
-// It is deliberately not a replacement for CosignVerifyBlobWithOptions, which still
-// covers the certificate and keyless paths. See docs/agent/choice-signing-fork.md.
+// It is the only verification path there is. The certificate and keyless paths were
+// removed because each of them has to reach a cloud endpoint, and
+// CosignVerifyBlobWithOptions is now the options-struct wrapper that delegates here rather
+// than an alternative to it. See docs/agent/choice-signing-fork.md, and
+// https://github.com/colonel-byte/cargoship/issues/848 to argue for keyless returning.
 func VerifyBlobWithKey(publicKeyPath, bundlePath, blobPath string) (err error) {
 	pubBytes, err := readKeyMaterial(publicKeyPath)
 	if err != nil {

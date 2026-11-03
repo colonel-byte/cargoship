@@ -1,6 +1,6 @@
 # A local VM fleet
 
-`mage dev:vmUp` brings up a fleet of Rocky 10 virtual machines on your own machine and writes a `ZarfCluster` inventory pointing at them, so that `cargoship prepare` and `cargoship apply` can be run against hosts with a real kernel. `mage dev:vmDown` takes it away again.
+`mage dev:vmUp` brings up a fleet of Rocky 10 virtual machines on your own machine and writes a `Cluster` inventory pointing at them, so that `cargoship prepare` and `cargoship apply` can be run against hosts with a real kernel. `mage dev:vmDown` takes it away again.
 
 It exists for the phases the [cluster e2e suite](e2e-tests.md) cannot reach. Those nodes are containers, and a container reports no SELinux, runs no fapolicyd and has no firewall of its own, so [`pkg/phase/21_prepare_selinux.go`](https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go) and its neighbours correctly do nothing there. Testing a change to any of them means a virtual machine. [choice-microvm-backend](../agent/choice-microvm-backend.md) records why this is plain qemu rather than Firecracker or libvirt.
 
@@ -231,7 +231,7 @@ kw1    Ready    <none>               10.73.156.13
 
 ## Driving the OpenTofu provider at a fleet
 
-The provider takes the same hosts, so a fleet is also how `cargoship_cluster` gets exercised against real machines rather than one container. `mage dev:vmUp` writes a `ZarfCluster` inventory, and every field a `hosts` entry needs is in it:
+The provider takes the same hosts, so a fleet is also how `cargoship_cluster` gets exercised against real machines rather than one container. `mage dev:vmUp` writes a `Cluster` inventory, and every field a `hosts` entry needs is in it:
 
 | Inventory          | `hosts` entry       | For the fleet                                    |
 | ------------------ | ------------------- | ------------------------------------------------ |
@@ -286,7 +286,7 @@ Four things to get right, each of which is a property of the fleet rather than o
 
 The `hosts` key orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader. Keying the map by the fleet's own hostnames keeps that in step with how `mage dev:vmUp` numbers them.
 
-Bring the fleet up, generate the block from the inventory, and `tofu apply`. A removal is the other half: set a host's `state = "absent"` and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work [e2e-external-inventory](e2e-external-inventory.md) drives through the CLI. [tofu-provider](tofu-provider.md) covers building and running the provider itself.
+Bring the fleet up, generate the block from the inventory, and `tofu apply`. A removal is the other half: set a host's `state = "absent"` and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work [e2e-external-inventory](e2e-external-inventory.md) drives through the CLI. [tofu-provider](https://github.com/colonel-byte/terraform-provider-cargoship/blob/main/docs/dev/tofu-provider.md) in the provider's own repository covers building and running it.
 
 ## The shipped k3s packages, and what is still unproven
 

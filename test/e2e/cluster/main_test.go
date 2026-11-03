@@ -442,7 +442,7 @@ func setup(spec fleetSpec) (*blcluster.Cluster, error) {
 	return cluster, detachHostsFile(cluster)
 }
 
-// bootlooseInventory renders the live bootloose machines as a ZarfCluster inventory.
+// bootlooseInventory renders the live bootloose machines as a Cluster inventory.
 //
 // The key path is resolved here rather than in renderClusterInventory because it is a property
 // of how bootloose was asked to provision the cluster -- it generates the pair at that path on

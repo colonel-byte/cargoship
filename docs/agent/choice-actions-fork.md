@@ -1,6 +1,6 @@
 # Why `pkg/packager/actions` is a fork, and why a create-time cluster wait now fails
 
-cargoship runs the `onCreate` actions in a distro package through zarf's action executor. `runCreateActions` in [`pkg/packager/assemble/actions.go`](../golang/pkg/packager/assemble.md) renders each action with cargoship's template engine and then hands it to `actions.Run`, which owns everything that makes an action an action: shells, retries, timeouts, output capture, `setVariables` and `setValues`. Only the rendering was ever cargoship's - see [`choice-v1alpha1-action-conversion.md`](choice-v1alpha1-action-conversion.md) for why the conversion into zarf's normalized types happens at the call site.
+cargoship runs the `onCreate` actions in a distro package through zarf's action executor. `runCreateActions` in [`pkg/packager/assemble/actions.go`](../../pkg/packager/assemble/actions.go) renders each action with cargoship's template engine and then hands it to `actions.Run`, which owns everything that makes an action an action: shells, retries, timeouts, output capture, `setVariables` and `setValues`. Only the rendering was ever cargoship's - see [`choice-v1alpha1-action-conversion.md`](choice-v1alpha1-action-conversion.md) for why the conversion into zarf's normalized types happens at the call site.
 
 The executor is now a fork. The reason is one import.
 

@@ -30,19 +30,19 @@ The consequence is that a mapping keyed only on `kc` and `kw` claims an infra no
 
 The group is created last, after the plain workers, so that asking for infra nodes does not renumber the hosts ahead of them -- a fleet brought up with none is addressed exactly as it was before the group existed.
 
-## `internal/`, not `magefiles/pkg/`
+## `test/microvm/`, not `magefiles/pkg/`
 
-[`magefiles/AGENTS.md`](../../magefiles/AGENTS.md) puts implementation logic under `magefiles/pkg/`, and this package is deliberately not there. It has two consumers -- the `Dev` mage targets and the e2e cluster suite -- and a test suite importing out of `magefiles/` would invert the dependency. `internal/` is what the root [`CLAUDE.md`](../../CLAUDE.md) names for packages private to the module, and the mage targets stay thin wrappers over it, which is what that rule is protecting.
+[`magefiles/AGENTS.md`](../../magefiles/AGENTS.md) puts implementation logic under `magefiles/pkg/`, and this package is deliberately not there. It has two consumers -- the `Dev` mage targets and the e2e cluster suite -- and a test suite importing out of `magefiles/` would invert the dependency. It began under `internal/` and moved to `test/microvm/` in [#920](https://github.com/colonel-byte/cargoship/pull/920), because the OpenTofu provider's suite consumes the harness from another module and `internal/` cannot be imported across one; see [`choice-tofu-provider-removal.md`](choice-tofu-provider-removal.md). Either way the mage targets stay thin wrappers over it, which is what that rule is protecting.
 
 Fleet state lives under `build/microvm/` rather than `TMPDIR`. An overlay reaches a quarter of a gigabyte after one boot and one dnf transaction, and `TMPDIR` is routinely a tmpfs here -- the repository's own `.envrc` points it at one. `build/` is already the scratch directory, gitignored and on real storage. Note that `dev:clean` does not touch it -- that target removes built binaries, and removing a live fleet's directory out from under it would orphan the qemu processes holding its overlays. `dev:vmDown` is what takes a fleet away.
 
-## Rocky only, and why that does not retire the bootloose cluster
+## Rocky by default, and why that does not retire the bootloose cluster
 
-The fleet runs one distribution. [`choice-phase-e2e-tests`](choice-phase-e2e-tests.md) argues that the OS *mix* is the substantive part of the bootloose cluster -- apply routes on OS family in at least five places, and on a single-family cluster the branch that does not match is never taken while the gate assertions still pass, so the suite reports coverage it does not have. That argument applies to this fleet exactly as written.
+The fleet ran one distribution when this was written, and Rocky is still the default. [`choice-phase-e2e-tests`](choice-phase-e2e-tests.md) argues that the OS *mix* is the substantive part of the bootloose cluster -- apply routes on OS family in at least five places, and on a single-family cluster the branch that does not match is never taken while the gate assertions still pass, so the suite reports coverage it does not have. That argument applies to this fleet exactly as written.
 
 So the VM backend is additional coverage, not a replacement. It is the only way to run the Enterprise Linux branch against something that actually has SELinux, fapolicyd and firewalld; the bootloose matrix remains the only thing that covers routing between families, and the Alpine upload-only node remains the only host belonging to neither. `CARGOSHIP_E2E_BACKEND` selects between them and defaults to bootloose.
 
-Adding a second guest image is a later change and a cheap one -- the image is one pinned URL and digest in `test/microvm/image.go`. It was left out of the first version because one distribution with SELinux enforcing closes the gap that motivated the package, and a second would double the bring-up cost of every run before anything had been learned from the first.
+Adding a second guest image was left to a later change, because one distribution with SELinux enforcing closes the gap that motivated the package, and a second would double the bring-up cost of every run before anything had been learned from the first. That change has since landed: `ubuntuImage` in `test/microvm/image.go` is the opt-in second guest, selected per fleet with the `UbuntuControllers` and `UbuntuWorkers` counts, and it is what reaches the APT upload phase, the ufw backend, and the SELinux and fapolicyd gates correctly doing nothing. It stays opt-in and off by default for the bring-up cost reason above, and rke2 cannot run on an Ubuntu node at all, so a mixed fleet wants `-distro=k3s` or an upstream package.
 
 ## Two qemu details that each cost a boot to find
 

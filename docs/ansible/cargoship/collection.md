@@ -26,5 +26,3 @@ Reach for a module directly when you need control the role does not give you. Th
 Every `module_*.md` and `role_*.md` page here is generated from the collection itself -- a role's interface from its `meta/argument_specs.yml`, a module's from the `DOCUMENTATION` and `EXAMPLES` blocks in its action plugin -- by `mage generate:document`. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.
 
 This page, [modules.md](modules.md), and [roles.md](roles.md) are written by hand. See `ansible/colonel_byte/cargoship/AGENTS.md` for the contract.
-
-## The other collection here

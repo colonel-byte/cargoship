@@ -235,7 +235,7 @@ cargoship import ./my-package.tar -o ./build/
 
 `import` reads an OCI Image Layout, as a `.tar` or as an unpacked directory; see [Importing Archives](docs/guides/importing-archives.md) for the other tools that write one, and why a `docker-archive` cannot carry a package.
 
-A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see [#848](https://github.com/colonel-byte/cargoship/issues/848). The commands that load a package - `apply`, `prepare`, `engine-config-sync`, `publish`, `pull`, `validate`, `schema` - verify as part of loading, gated on `--verify=never|if-possible|always`. `verify` does nothing but check the signature, which is what makes it the one to run before a playbook.
+A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see [#848](https://github.com/colonel-byte/cargoship/issues/848). The commands that load a package - `apply`, `prepare`, `engine-config-sync`, `publish`, `pull`, `import`, `validate`, `schema` - verify as part of loading, gated on `--verify=never|if-possible|always`. `verify` does nothing but check the signature, which is what makes it the one to run before a playbook.
 
 ### 8. Encrypt Credentials in a Config File
 

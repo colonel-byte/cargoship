@@ -4,7 +4,7 @@ This document explains what lives under `thirdparty-src/` and why it's handled d
 
 ## What it is
 
-`thirdparty-src/<distro>/<version>/` holds raw, unmodified source files pulled from an upstream repo at an exact tag - e.g. `thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}`, pulled from k3s-io/k3s at tag `v1.35.3+k3s1`. `version` is truncated to the minor version (`v1_35`, not the full `v1.35.3-k3s1` patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. The `zz_` prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under `pkg/engineconfig/gen`.
+`thirdparty-src/<distro>/<version>/` holds raw, unmodified source files pulled from an upstream repo at an exact tag - e.g. `thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go,zz_stage.go}`, pulled from k3s-io/k3s at the tag its `SOURCE.txt` records. `version` is truncated to the minor version (`v1_35`, not the full `v1.35.3-k3s1` patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. The `zz_` prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under `pkg/engineconfig/gen`.
 
 Three repos are pulled, one per `<distro>` directory, listed in `thirdparty-src/pins.json`:
 
@@ -26,7 +26,7 @@ Because these files reference packages (`github.com/urfave/cli/v2`, `github.com/
 
 `thirdparty-src/go.mod` declares a separate, empty module so the Go toolchain treats `thirdparty-src/` as outside the main module boundary. `go build ./...`/`go vet` from the repo root no longer descend into it. IDEs still open a second module context for it, which can surface unresolved-import diagnostics on the files themselves; the workspace's `.vscode/settings.json` sets `gopls.directoryFilters` to `-thirdparty-src` to stop gopls from loading that module at all.
 
-The module boundary is not honoured by every tool. CodeQL's Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above - mis-resolving some of them (`github.com/k3s-io/k3s` to `v1.21.9`, whose `go.mod` declares its path as `github.com/rancher/k3s`), running `go mod tidy -e`, and downloading modules this repository deliberately does not depend on. CodeQL's `paths-ignore` cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. `.github/workflows/codeql.yaml` therefore uses `build-mode: manual` and spells the package list out - `./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/... .` - rather than `./...`, which keeps the toolchain inside the main module. Anything else added to CI that walks for `go.mod` files needs the same treatment.
+The module boundary is not honoured by every tool. CodeQL's Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above - mis-resolving some of them (`github.com/k3s-io/k3s` to `v1.21.9`, whose `go.mod` declares its path as `github.com/rancher/k3s`), running `go mod tidy -e`, and downloading modules this repository deliberately does not depend on. CodeQL's `paths-ignore` cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. `.github/workflows/codeql.yaml` therefore uses `build-mode: manual` and spells the package list out - `./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./test/microvm/... ./types/... .` - rather than `./...`, which keeps the toolchain inside the main module. Anything else added to CI that walks for `go.mod` files needs the same treatment.
 
 ## Layout
 
@@ -93,7 +93,7 @@ var (
       "name": "k3s",
       "repo": "https://github.com/k3s-io/k3s",
       "files": ["pkg/cli/cmds/server.go", "pkg/cli/cmds/agent.go", "pkg/cli/cmds/stage.go"],
-      "tags": ["v1.36.4+k3s1", "v1.35.8+k3s1"]
+      "tags": ["v1.37.1+k3s1", "v1.36.5+k3s1", "v1.35.9+k3s1"]
     },
     {
       "name": "rke2",
@@ -105,13 +105,22 @@ var (
         "pkg/cli/cmds/k3sopts.go",
         "pkg/cli/types.go"
       ],
-      "tags": ["v1.36.3+rke2r1", "v1.35.7+rke2r1"]
+      "tags": ["v1.37.1+rke2r1", "v1.36.5+rke2r1", "v1.35.9+rke2r1"]
+    },
+    {
+      "name": "upstream",
+      "repo": "https://github.com/kubernetes/kubernetes",
+      "files": [
+        "cmd/kubeadm/app/constants/constants.go",
+        "cmd/kubeadm/app/apis/kubeadm/v1beta4/types.go"
+      ],
+      "tags": ["v1.37.2", "v1.36.6", "v1.35.10"]
     }
   ]
 }
 ```
 
-There is no destination path in the manifest: it is derived from `name` plus the tag's major.minor, so `k3s` at `v1.35.8+k3s1` always lands in `thirdparty-src/k3s/v1_35/`. That keeps the truncation rule described above from drifting out of sync with the tag it was truncated from. A tag that does not start with `vMAJOR.MINOR.PATCH` is rejected rather than guessed at.
+There is no destination path in the manifest: it is derived from `name` plus the tag's major.minor, so `k3s` at `v1.35.9+k3s1` always lands in `thirdparty-src/k3s/v1_35/`. That keeps the truncation rule described above from drifting out of sync with the tag it was truncated from. A tag that does not start with `vMAJOR.MINOR.PATCH` is rejected rather than guessed at.
 
 `mage generate:pullEngineSource` reads the manifest and, for each pinned tag, clones `repo`@`tag` to a throwaway temp directory, copies out `files` verbatim into the derived directory (prefixed `zz_`), and writes `SOURCE.txt` recording the repo, tag, and resolved commit for traceability. It never runs `go get` or touches this repo's module graph.
 

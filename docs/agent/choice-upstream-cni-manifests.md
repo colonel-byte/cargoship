@@ -24,7 +24,7 @@ The URL names a version rather than using `releases/latest/download`. An alias s
 
 Cilium stopped publishing an applyable manifest around v1.10; `install/kubernetes/quick-install.yaml` 404s. What exists is the Helm chart. Cargoship has no Helm dependency and the apply phase takes `kubectl apply -f` paths, so the manifest is produced at generate time with `helm template` and committed.
 
-**Rendered once per chart version, not once per example.** It lands in `example/upstream-cilium/cni/cilium-<chart>.yaml` and every version directory refers to it as `../../cni/…`, the way k3s examples share `example/k3s/core/`. Nineteen committed copies of a 65 KB manifest would otherwise say the same thing nineteen times.
+**Rendered once per chart version, not once per example.** It lands in `example/upstream-cilium/cni/cilium-<chart>.yaml` and every version directory refers to it as `../../cni/…`, the way k3s examples share `example/k3s/core/`. One committed copy of a 65 KB manifest per version directory would otherwise say the same thing twenty-one times.
 
 **The render is skipped while the file exists.** This is what keeps `helm` out of the loop that keeps the examples current: only a chart pin bump produces a path that is not already in the repository, so `mage generate:examples` on a committed tree never shells out to helm, and `refresh-examples.yaml` -- which runs weekly and never touches the pin -- needs nothing but the Go toolchain. The cost of a new pinned tool falls on whoever moves the pin, locally.
 

@@ -9,8 +9,8 @@ It also has to stay out of `src/test/`. OpenSSF Scorecard's file walker discards
 One file per concern: 49 targets across 24 target files. The shared scaffolding:
 
 ```
-fuzz/main_test.go                    package documentation and TestMain
-fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
+fuzz/main_test.go                    package documentation
+fuzz/keyring_test.go                 TestMain, and the shared keyrings it builds once, one per format
 fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per target
 fuzz/AGENTS.md                       the naming rule: no target name may be a prefix of another
 ```
@@ -26,7 +26,7 @@ vault_meta_fuzz_test.go              the recipients recorded in a document's vau
 keymaterial_fuzz_test.go             AgeRecipientsIn, ResolveKeyring, RekeyTarget
 parse_recipients_fuzz_test.go        age recipient lines and recipient lists
 cfg_fuzz_test.go                     cfg.Parse and cfg.ParseMultiDoc over arbitrary document bytes
-clustercfg_parse_fuzz_test.go        the cluster inventory parser
+cluster_parse_fuzz_test.go           the cluster inventory parser
 schema_decode_fuzz_test.go           schema decoding
 url_and_config_fuzz_test.go          ExtractBasePathFromURL and ReadByteStrict over a distro config
 dns_fuzz_test.go                     ParseServiceURL and IsLocalhost
