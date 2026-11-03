@@ -45,6 +45,12 @@ spec:
       # names under addons.disabled become the engine's own disable list.
       - source: .addons.disabled
         target: .config.disable
+      - source: .podSecurity.exemptions.usernames
+        target: .podSecurity.plugins[0].configuration.exemptions.usernames
+      - source: .podSecurity.exemptions.runtimeClasses
+        target: .podSecurity.plugins[0].configuration.exemptions.runtimeClasses
+      - source: .podSecurity.exemptions.namespaces
+        target: .podSecurity.plugins[0].configuration.exemptions.namespaces
   config:
     engine:
       config:
