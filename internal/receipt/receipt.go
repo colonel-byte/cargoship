@@ -37,7 +37,7 @@ import (
 // it: these are kept for audit, parsed by things cargoship knows nothing about, and read back
 // after an upgrade. Bump the minor for a field added, the major for a field removed or given a
 // new meaning.
-const SchemaVersion = "1.0"
+const SchemaVersion = "1.1"
 
 // Receipt is the record of one cargoship run.
 type Receipt struct {
@@ -196,6 +196,26 @@ type Outcome struct {
 	// with nothing behind it.
 	ChangedUndeclared []string `json:"changedUndeclared,omitempty"`
 	HostsUndeclared   []string `json:"hostsUndeclared,omitempty"`
+	// Warnings are what the phases decided that an operator may want to undo. A run can
+	// succeed with warnings, so this is reported next to the outcome rather than inside it:
+	// Succeeded stays true and the warnings say what the success cost.
+	Warnings []Warning `json:"warnings,omitempty"`
+}
+
+// Warning is one thing a phase decided that an operator may want to know about.
+//
+// The case this exists for is phase 50 keeping image tarballs it does not own, because the host
+// carries the marker file that asks it to. Nothing failed, so there is no error to record, and
+// without this the only trace is a log line from the middle of the run.
+type Warning struct {
+	Phase string `json:"phase"`
+	// Host is the address of the host this is about, absent for a warning about the run
+	// itself. A redacted receipt carries its alias, the same one the phase ledger uses.
+	Host string `json:"host,omitempty"`
+	// Path is the file this is about, absolute as the host sees it.
+	Path string `json:"path,omitempty"`
+	// Reason is why, in the vocabulary the phases log: "kept, unmanaged".
+	Reason string `json:"reason,omitempty"`
 }
 
 // Dry-run classifications, as a receipt reports them.
