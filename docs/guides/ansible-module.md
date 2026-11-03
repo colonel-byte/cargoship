@@ -30,7 +30,7 @@ The task runs on the management node -- `connection: local` when the Ansible con
 
 ## Installing the collection
 
-The modules live in the `colonel_byte.cargoship` collection. The RPM and deb packages install it to `/usr/share/ansible/collections`, which is on ansible-core's default collections path, so on a management node that installed cargoship from a package there is nothing further to do.
+The modules live in the `colonel_byte.cargoship` collection, which is packaged apart from the binary as `ansible-collection-colonel-byte-cargoship`. The RPM, deb and apk of that package install the collection to `/usr/share/ansible/collections`, which is on ansible-core's default collections path, so on a management node that installed it there is nothing further to do. It depends on `cargoship` and on `ansible-core` 2.15 or newer, so installing it alone pulls in the binary its module files point at.
 
 Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built `colonel_byte-cargoship-<version>.tar.gz` and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.
 

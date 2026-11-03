@@ -70,3 +70,25 @@ jobs:
         with:
           distribution: goreleaser
           args: release --snapshot --clean --skip=sign,sbom
+
+      # ansible-collection-colonel-byte-cargoship is noarch, and the dockers_v2 pipe selects an
+      # image's context artifacts by goos and goarch, so a goarch of "all" reaches no build
+      # context and no image can install it. This is the check that would otherwise live in the
+      # cargoship-ansible image: that the two packages install together, that dnf resolves the
+      # collection package's dependency on the binary one, and that the collection lands where
+      # ansible-core already looks for it. A throwaway container is cheaper than an image build.
+      - name: Install the packages together and find the collection
+        run: |
+          # Read the base off containers/ansible/Dockerfile rather than naming it again here:
+          # Dependabot's docker ecosystem bumps that FROM line and does not look inside a
+          # workflow run step, so a second pin would be one nothing owns.
+          base=$(awk '/^FROM /{print $2; exit}' containers/ansible/Dockerfile)
+          docker run --rm --volume "${PWD}/dist:/dist:ro" "${base}" \
+            bash -euo pipefail -c '
+              dnf install -y --nodocs ansible-core
+              dnf install -y /dist/cargoship_*_linux_amd64.rpm \
+                /dist/ansible-collection-colonel-byte-cargoship_*_linux_all.rpm
+              cargoship version
+              ansible-galaxy collection list | grep colonel_byte.cargoship
+              test -x /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_apply
+            '

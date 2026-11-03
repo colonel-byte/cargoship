@@ -30,10 +30,16 @@ install -m 0755 cargoship /usr/local/bin/cargoship
 
 ### Linux packages
 
-Releases also carry `.rpm`, `.deb`, and `.apk` packages. Each installs the binary, shell completions for bash, fish and zsh, and the `colonel_byte.cargoship` Ansible collection onto ansible-core's default collection path:
+Releases also carry `.rpm`, `.deb`, and `.apk` packages. `cargoship` installs the binary and shell completions for bash, fish and zsh:
 
 ```bash
 sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
+```
+
+The `colonel_byte.cargoship` Ansible collection is a package of its own, `ansible-collection-colonel-byte-cargoship`. It is `noarch`, it depends on `cargoship` and on `ansible-core` 2.15 or newer, and it installs the collection onto ansible-core's default collection path. A management node that drives the fleet from playbooks wants both; one that only runs the CLI needs neither it nor an ansible-core to go with it:
+
+```bash
+sudo dnf install ./cargoship_*_linux_amd64.rpm ./ansible-collection-colonel-byte-cargoship_*_linux_all.rpm
 ```
 
 ### Container images
@@ -47,7 +53,7 @@ podman run --rm ghcr.io/colonel-byte/cargoship:latest version
 | `ghcr.io/colonel-byte/cargoship`           | The binary on a minimal base                           |
 | `ghcr.io/colonel-byte/cargoship-ubi`       | The binary installed from the `.rpm`, on AlmaLinux 10  |
 | `ghcr.io/colonel-byte/cargoship-deb`       | The binary installed from the `.deb`, on Debian slim   |
-| `ghcr.io/colonel-byte/cargoship-ansible`   | The `.rpm` plus ansible-core, on AlmaLinux 10          |
+| `ghcr.io/colonel-byte/cargoship-ansible`   | The `.rpm`, the collection, and ansible-core           |
 
 The `-ubi` name is historical: that image was based on Red Hat UBI and is now built on AlmaLinux 10, but the published image name has not changed.
 
