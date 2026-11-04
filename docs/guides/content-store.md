@@ -119,6 +119,8 @@ A zarf package carries a single `metadata.architecture`, so one package holds on
 
 - **Without `--architecture`, a multi-architecture definition built against a single-architecture store silently produces a package missing the other architecture.** The store is consulted per image reference rather than per platform, so it answers for both architectures and supplies only the one it has. The package is written, is named as a multi-architecture package, and holds one architecture's image layers. This is tracked as [#1012](https://github.com/colonel-byte/cargoship/issues/1012); until it is fixed, pass `--architecture` whenever the store covers fewer architectures than the definition declares.
 
+The generated examples follow this: `example/rke2-cilium-vsphere` is the flavor that ships zarf definitions, because it is amd64-only and so cannot want a second package. The multi-architecture flavors ship hauler manifests instead.
+
 ## Building From the Store
 
 On the disconnected side, point `create` at the store. An archive or a directory works for either format:

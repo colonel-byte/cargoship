@@ -245,6 +245,36 @@
     ],
     "sha256": "8c8373e8fb301d4a272671eb64bf957ddfb19c87afbcad0fc294dfb29ff8c1be"
   },
+  "etcd-v3.6.12-linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.12/etcd-v3.6.12-linux-amd64.tar.gz"
+    ],
+    "sha256": "d2564bb50b58e52fbaf3bde4a9561a1d04e20cdc761f795580e4d615d5d41355"
+  },
+  "etcd-v3.6.14-linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz"
+    ],
+    "sha256": "ffe840ff9295808e88cce2794a18a5ac87f12a5203c8314d0bf6aa119b41bac5"
+  },
+  "etcd-v3.6.6-linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.6/etcd-v3.6.6-linux-amd64.tar.gz"
+    ],
+    "sha256": "887afaa4a99f22d802ccdfbe65730a5e79aa5c9ce2c8799c67e9d804c50ecedb"
+  },
+  "etcd-v3.6.7-linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz"
+    ],
+    "sha256": "cf8af880c5a01ee5363cefa14a3e0cb7e5308dcf4ed17a6973099c9a7aee5a9a"
+  },
+  "etcd-v3.7.1-linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/etcd-io/etcd/releases/download/v3.7.1/etcd-v3.7.1-linux-amd64.tar.gz"
+    ],
+    "sha256": "e8cd3fa8064c98137c5dbd78b76f969417ace84efb83c481041d7a52ffdd8fb9"
+  },
   "k3s-selinux-1.6-1.el9.noarch.rpm": {
     "urls": [
       "https://rpm.rancher.io/k3s/latest/common/centos/9/noarch/k3s-selinux-1.6-1.el9.noarch.rpm"
@@ -7368,6 +7398,12 @@
       "https://rpm.rancher.io/rke2/latest/1.37/centos/9/x86_64/rke2-server-1.37.1~rke2r1-0.el9.x86_64.rpm"
     ],
     "sha256": "f3c53b08d0ee26ac7edc97021409d9484c73db5153779070f84967e21b04f2ce"
+  },
+  "rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "dfcfa35690705021339176391fb5c4bee5d15b2505e68c201a5302c257429bad"
   },
   "v1.32.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
