@@ -180,12 +180,12 @@ func TestOpenStoreDirectory(t *testing.T) {
 	}
 	defer s.Close() //nolint:errcheck
 
-	file, ok := s.File(testFileURL)
+	name, ok := s.File(testFileURL)
 	if !ok {
 		t.Fatalf("File(%q) not found", testFileURL)
 	}
-	if file.Name != "install.sh" {
-		t.Errorf("file name %q, want install.sh", file.Name)
+	if name != "install.sh" {
+		t.Errorf("file name %q, want install.sh", name)
 	}
 	if !s.HasImage(testImageRef) {
 		t.Errorf("HasImage(%q) false, want true", testImageRef)
@@ -261,12 +261,12 @@ func TestImageConfigWithTitledLayerIsAFile(t *testing.T) {
 	}
 	defer s.Close() //nolint:errcheck
 
-	file, ok := s.File("https://get.rke2.io/rke2.linux-amd64")
+	name, ok := s.File("https://get.rke2.io/rke2.linux-amd64")
 	if !ok {
 		t.Fatal("artifact with an image config and a titled layer was not indexed as a file")
 	}
-	if file.Name != "rke2.linux-amd64" {
-		t.Errorf("file name %q, want rke2.linux-amd64", file.Name)
+	if name != "rke2.linux-amd64" {
+		t.Errorf("file name %q, want rke2.linux-amd64", name)
 	}
 }
 
@@ -277,12 +277,11 @@ func TestFetchWritesContent(t *testing.T) {
 	}
 	defer s.Close() //nolint:errcheck
 
-	file, ok := s.File(testFileURL)
-	if !ok {
+	if _, ok := s.File(testFileURL); !ok {
 		t.Fatalf("File(%q) not found", testFileURL)
 	}
 	dst := filepath.Join(t.TempDir(), "out")
-	if err := s.Fetch(context.Background(), file.Descriptor, dst); err != nil {
+	if err := s.Fetch(context.Background(), testFileURL, dst); err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
 	got, err := os.ReadFile(dst)
@@ -406,9 +405,12 @@ func TestOpenArchive(t *testing.T) {
 	for _, e := range entries {
 		sources = append(sources, filepath.Join(dir, e.Name()))
 	}
-	// A saved haul carries the marker a live store lacks.
+	// A saved haul carries the marker a live store lacks. Written out here rather than taken
+	// from the reader, so that this exercises a real archive rather than whatever the reader
+	// would have served itself.
 	marker := filepath.Join(dir, ocispec.ImageLayoutFile)
-	if err := os.WriteFile(marker, layoutMarker, 0o644); err != nil {
+	markerContent := []byte(`{"imageLayoutVersion":"` + ocispec.ImageLayoutVersion + `"}`)
+	if err := os.WriteFile(marker, markerContent, 0o644); err != nil {
 		t.Fatalf("writing layout marker: %v", err)
 	}
 	sources = append(sources, marker)
@@ -463,8 +465,8 @@ func TestRealHaul(t *testing.T) {
 	if len(s.images) == 0 && len(s.files) == 0 {
 		t.Fatal("no content indexed")
 	}
-	for ref, file := range s.files {
-		t.Logf("file %s -> %s", ref, file.Name)
+	for ref, entry := range s.files {
+		t.Logf("file %s -> %s", ref, entry.name)
 	}
 	for ref, desc := range s.images {
 		t.Logf("image %s -> %s (%s)", ref, desc.Digest, desc.MediaType)

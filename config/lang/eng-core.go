@@ -115,7 +115,10 @@ const (
 	CmdInstallKubeConfigPath = "Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config."
 	// CmdInstallUpdateKubeConfig install flag update kubeconfig
 	CmdInstallUpdateKubeConfig = "Whether to write the admin creds for this cluster to a kubeconfig file at all."
-	// CmdPackageCreateFlagHaulerStore create flag hauler store
+	// CmdPackageCreateFlagContentStore create flag content store
+	CmdPackageCreateFlagContentStore = "`PATH` of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it."
+	// CmdPackageCreateFlagHaulerStore create flag hauler store. Deprecated: superseded by
+	// CmdPackageCreateFlagContentStore, and kept only for the deprecated --hauler-store flag.
 	CmdPackageCreateFlagHaulerStore = "`PATH` of a hauler store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a store directory or an archive written by hauler store save. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it."
 	// CmdPackageCreateFlagFileOverride create flag file override
 	CmdPackageCreateFlagFileOverride = "Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror."

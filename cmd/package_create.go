@@ -56,6 +56,7 @@ type packageCreateOptions struct {
 	signingKeyPath     string
 	signingKeyPassword string
 	tag                string
+	contentStore       string
 	haulerStore        string
 }
 
@@ -94,13 +95,23 @@ func newPackageCreateCommand() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().StringSliceVar(&o.fileOverrides, "file-override", fileOverrideDefaults, lang.CmdPackageCreateFlagFileOverride)
-	cmd.Flags().StringVar(&o.haulerStore, "hauler-store", resolvedConfig.DistroOpts.CreateOpts.HaulerStore, lang.CmdPackageCreateFlagHaulerStore)
+	cmd.Flags().StringVar(&o.contentStore, "content-store", resolvedConfig.DistroOpts.CreateOpts.ContentStore, lang.CmdPackageCreateFlagContentStore)
+	// Reading the deprecated key is the whole job of the deprecated flag: an operator who set
+	// hauler_store in a config file keeps getting it until they rename it.
+	cmd.Flags().StringVar(&o.haulerStore, "hauler-store", resolvedConfig.DistroOpts.CreateOpts.HaulerStore, lang.CmdPackageCreateFlagHaulerStore) //nolint:staticcheck // SA1019: deprecated on purpose
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackageFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageCreateFlagSigningKeyPassword)
 	cmd.Flags().StringVar(&o.tag, PackageTag, "", lang.CmdPackageCreateFlagTag)
+
+	// --content-store reads a hauler store as well as a zarf package, so --hauler-store is the
+	// same flag under a name that is now too narrow. MarkDeprecated hides it from the help and
+	// warns when it is used, while leaving every existing invocation working.
+	if err := cmd.Flags().MarkDeprecated("hauler-store", "use --content-store, which reads a hauler store or a zarf package"); err != nil {
+		logger.From(cmd.Context()).Debug("unable to mark --hauler-store deprecated", "error", err)
+	}
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
@@ -170,6 +181,16 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 	l.Debug("parsed file overrides", "overrides", fileOverrides)
 
+	// The deprecated flag and the deprecated config key both feed the same setting, so the new
+	// spelling wins outright rather than the two being merged or refused: an operator mid-rename
+	// has both set, and the one they just typed is the one they meant.
+	contentStore := o.contentStore
+	if contentStore == "" && o.haulerStore != "" {
+		l.Warn("hauler_store is deprecated; set content_store instead, which reads a hauler store or a zarf package",
+			"store", o.haulerStore)
+		contentStore = o.haulerStore
+	}
+
 	opt := distro.CreateOptions{
 		Architecture:       config.CLIArch,
 		CachePath:          cachePath,
@@ -177,7 +198,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		OCIConcurrency:     o.ociConcurrency,
 		RegistryOverrides:  registryOverrides,
 		FileOverrides:      fileOverrides,
-		HaulerStore:        o.haulerStore,
+		ContentStore:       contentStore,
 		RemoteOptions:      defaultRemoteOptions(),
 		Reproducible:       o.reproducible,
 		SigningKeyPath:     o.signingKeyPath,

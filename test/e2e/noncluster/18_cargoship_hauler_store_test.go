@@ -35,6 +35,11 @@ import (
 // TestCargoshipCreateFromHaulerStore builds a package with --hauler-store and checks the
 // images came out of the store rather than the registry.
 //
+// --hauler-store is deprecated in favour of --content-store, which reads a hauler store as well
+// as a zarf package, so this doubles as the proof that the old flag still builds and that it
+// says it is deprecated. An operator who never sees the warning has no way to learn the flag is
+// going away.
+//
 // The store is assembled here rather than by the hauler CLI, which the suite cannot assume is
 // installed: hauler writes a plain OCI Image Layout whose index entries carry the annotations
 // recording what each artifact was collected from, and that is what is reproduced below. The
@@ -65,10 +70,12 @@ func TestCargoshipCreateFromHaulerStore(t *testing.T) {
 	// The log is the only place the build says which source it used, and a silent fallback to
 	// the registry would otherwise look exactly like a success.
 	output := stdout + stderr
-	require.Contains(t, output, "resolving package content from a hauler store")
+	require.Contains(t, output, "resolving package content from a local content store")
 	require.Contains(t, output, "source=hauler store")
 	require.NotContains(t, output, "not held by the local image source",
 		"every declared image is in the store, so nothing should have fallen back to the registry")
+	require.Contains(t, strings.ToLower(output), "deprecated",
+		"--hauler-store built the package but never said it is deprecated")
 
 	pkg := requireSinglePackage(t, outDir)
 	requireHaulImagesInPackage(t, pkg, addr)

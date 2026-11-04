@@ -56,11 +56,15 @@ distro:
   #   file_override:
   #     https://get.k3s.io: /srv/staged/k3s
   #     https://rpm.rancher.io: https://mirror.example.com/rpm-rancher
-  #   Build from a hauler store instead of the network: a store directory, or an archive
-  #   written by `hauler store save`. Images and files are matched against what hauler
-  #   recorded each artifact was collected from, and anything the store does not hold
-  #   still comes from its declared source. A file is taken from the store only when the
-  #   distro definition declares a shasum for it.
+  #   Build from a local content store instead of the network: a hauler store, as either a
+  #   store directory or an archive written by `hauler store save`, or a built zarf package.
+  #   Which format it is is read from the store, not from the path. Images and files are
+  #   matched against what the store recorded each artifact was collected from, and anything
+  #   the store does not hold still comes from its declared source. A file is taken from the
+  #   store only when the distro definition declares a shasum for it.
+  #   content_store: ~/hauls/haul.tar.zst
+  #   Deprecated: the former name for content_store, reading a hauler store and nothing else.
+  #   Still honoured when content_store is unset.
   #   hauler_store: ~/hauls/haul.tar.zst
   # publish:
   #   The private key create, publish and sign use. A file path, or env://ENV_VAR to

@@ -322,7 +322,7 @@
           "type": "string"
         },
         "store": {
-          "description": "names the local content store the bytes were read from, such as a hauler store\npassed to --hauler-store. It is empty when an override or the declared source was used.",
+          "description": "names the local content store the bytes were read from -- a hauler store or a zarf\npackage passed to --content-store. It is empty when an override or the declared source\nwas used.",
           "type": "string"
         }
       },

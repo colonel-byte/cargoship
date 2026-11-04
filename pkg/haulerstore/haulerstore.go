@@ -30,14 +30,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"oras.land/oras-go/v2"
 	orasoci "oras.land/oras-go/v2/content/oci"
+
+	"github.com/colonel-byte/cargoship/pkg/contentstore"
 )
 
 // Hauler's index annotations. OriginalRef is the only one cargoship matches on; the other two
@@ -73,15 +72,14 @@ var fileConfigMediaTypes = map[string]bool{
 	"application/vnd.content.hauler.file.http.config.v1+json":      true,
 }
 
-// chunkSuffix matches the trailing part number hauler gives the pieces of a chunked haul.
-var chunkSuffix = regexp.MustCompile(`\.\d{3}$`)
-
-// File is a file artifact held in the store.
-type File struct {
-	// Descriptor is the content layer, not the manifest.
-	Descriptor ocispec.Descriptor
-	// Name is the layer's title annotation -- the filename hauler recorded.
-	Name string
+// file is a file artifact held in the store. It is internal to the reader: a caller asks for a
+// file by the source a distro definition declared and gets bytes, not a descriptor, because the
+// other content stores hold files that have no descriptor to hand back.
+type file struct {
+	// descriptor is the content layer, not the manifest.
+	descriptor ocispec.Descriptor
+	// name is the layer's title annotation -- the filename hauler recorded.
+	name string
 }
 
 // Store is an opened hauler store. Close removes anything Open unpacked, so every Store must
@@ -94,38 +92,35 @@ type Store struct {
 	tempDir string
 	store   *orasoci.ReadOnlyStore
 	images  map[string]ocispec.Descriptor
-	files   map[string]File
+	files   map[string]file
 }
 
 // Open reads the hauler store at path, which may be a store directory or an archive written by
 // `hauler store save`. An archive is unpacked into a temporary directory owned by the returned
 // Store.
 func Open(ctx context.Context, path string) (*Store, error) {
-	info, err := os.Stat(path)
+	layoutDir, tempDir, err := contentstore.Unpack(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read hauler store %q: %w", path, err)
+		return nil, err
 	}
-
-	s := &Store{source: path}
-	layoutDir := path
-	if !info.IsDir() {
-		// A chunked haul is only meaningful as a set, and reassembling one is hauler's job.
-		// Saying so beats failing inside the decompressor on a truncated stream.
-		if chunkSuffix.MatchString(path) {
-			return nil, fmt.Errorf("%s looks like one chunk of a split hauler archive; rejoin it with `hauler store load` and pass the resulting store", path)
-		}
-		layoutDir, err = os.MkdirTemp("", "cargoship-haul-")
-		if err != nil {
-			return nil, fmt.Errorf("unable to create a temporary directory for %s: %w", path, err)
-		}
-		s.tempDir = layoutDir
-		if err := archive.Decompress(ctx, path, layoutDir, archive.DecompressOpts{}); err != nil {
-			return nil, errors.Join(fmt.Errorf("failed to decompress hauler archive %s: %w", path, err), s.Close())
-		}
+	s, err := OpenDir(ctx, layoutDir, path)
+	if err != nil {
+		return nil, errors.Join(err, os.RemoveAll(tempDir))
 	}
+	s.tempDir = tempDir
+	return s, nil
+}
 
-	if err := s.load(ctx, layoutDir); err != nil {
-		return nil, errors.Join(err, s.Close())
+// OpenDir reads an already-unpacked hauler store at dir, naming it in messages and recorded
+// provenance as source. The caller keeps ownership of dir: the returned Store's Close does not
+// remove it.
+//
+// This is the entry point for a caller that has unpacked a bundle itself in order to work out
+// which format it is -- see openContentStore in pkg/distro.
+func OpenDir(ctx context.Context, dir, source string) (*Store, error) {
+	s := &Store{source: source}
+	if err := s.load(ctx, dir); err != nil {
+		return nil, err
 	}
 	return s, nil
 }
@@ -141,53 +136,36 @@ func (s *Store) load(ctx context.Context, dir string) error {
 		return fmt.Errorf("unmarshaling the index of %s: %w", s.source, err)
 	}
 
-	// NewFromFS over a layoutFS, rather than orasoci.New: a live hauler store carries no oci-layout marker
-	// (hauler only writes one into an archive), and New would create it -- writing to a store
-	// cargoship was asked only to read.
-	s.store, err = orasoci.NewFromFS(ctx, layoutFS{os.DirFS(dir)})
+	// NewFromFS over contentstore.LayoutFS, rather than orasoci.New: a live hauler store carries
+	// no oci-layout marker (hauler only writes one into an archive), and New would create it --
+	// writing to a store cargoship was asked only to read.
+	s.store, err = orasoci.NewFromFS(ctx, contentstore.LayoutFS(os.DirFS(dir)))
 	if err != nil {
 		return fmt.Errorf("opening the OCI layout of %s: %w", s.source, err)
 	}
 
 	s.images = map[string]ocispec.Descriptor{}
-	s.files = map[string]File{}
+	s.files = map[string]file{}
 	for _, desc := range index.Manifests {
 		ref := desc.Annotations[AnnotationOriginalRef]
 		if ref == "" || isAttached(desc) {
 			continue
 		}
-		file, isFile, err := s.classify(ctx, desc)
+		entry, isFile, err := s.classify(ctx, desc)
 		if err != nil {
 			return err
 		}
 		if isFile {
-			s.files[ref] = file
+			s.files[ref] = entry
 			continue
 		}
-		s.images[canonicalImageRef(ref)] = desc
+		s.images[contentstore.CanonicalImageRef(ref)] = desc
 	}
 
 	if len(s.images) == 0 && len(s.files) == 0 {
 		return fmt.Errorf("%s holds no content cargoship can use: no entry carries a %s annotation, which is how hauler records what an artifact came from", s.source, AnnotationOriginalRef)
 	}
 	return nil
-}
-
-// canonicalImageRef puts an image reference into the one spelling two equal references share,
-// so the store is indexed and searched by the same key.
-//
-// Hauler records what it collected under the registry's canonical host: an image added as
-// docker.io/rancher/pause:3.10 comes back as index.docker.io/rancher/pause:3.10, which is the
-// same image under a name a distro definition does not use. The same split applies to an
-// official image, where docker.io/nginx, nginx and docker.io/library/nginx are one reference
-// written three ways. A reference that will not parse is keyed as it was written -- it would
-// not have matched anything anyway, and failing the lookup beats failing the open.
-func canonicalImageRef(ref string) string {
-	parsed, err := name.ParseReference(ref)
-	if err != nil {
-		return ref
-	}
-	return parsed.Name()
 }
 
 // isAttached reports whether desc describes other content -- a signature, attestation, SBOM or
@@ -206,19 +184,19 @@ func isAttached(desc ocispec.Descriptor) bool {
 // artifacts too. The manifest's config media type can, with one carve-out hauler itself
 // implements -- some artifacts are stored under an OCI image config but hold file content,
 // which a layer title gives away.
-func (s *Store) classify(ctx context.Context, desc ocispec.Descriptor) (File, bool, error) {
+func (s *Store) classify(ctx context.Context, desc ocispec.Descriptor) (file, bool, error) {
 	// An index is always a multi-architecture image; there is no file artifact shaped as one.
 	if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == mediaTypeDockerManifestList {
-		return File{}, false, nil
+		return file{}, false, nil
 	}
 
 	manifestBytes, err := s.fetchAll(ctx, desc)
 	if err != nil {
-		return File{}, false, fmt.Errorf("reading manifest %s from %s: %w", desc.Digest, s.source, err)
+		return file{}, false, fmt.Errorf("reading manifest %s from %s: %w", desc.Digest, s.source, err)
 	}
 	var manifest ocispec.Manifest
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
-		return File{}, false, fmt.Errorf("unmarshaling manifest %s from %s: %w", desc.Digest, s.source, err)
+		return file{}, false, fmt.Errorf("unmarshaling manifest %s from %s: %w", desc.Digest, s.source, err)
 	}
 
 	if fileConfigMediaTypes[manifest.Config.MediaType] {
@@ -232,19 +210,19 @@ func (s *Store) classify(ctx context.Context, desc ocispec.Descriptor) (File, bo
 			return fileLayer(manifest)
 		}
 	}
-	return File{}, false, nil
+	return file{}, false, nil
 }
 
 // fileLayer picks the single content layer out of a file artifact's manifest.
-func fileLayer(manifest ocispec.Manifest) (File, bool, error) {
+func fileLayer(manifest ocispec.Manifest) (file, bool, error) {
 	for _, layer := range manifest.Layers {
 		if title := layer.Annotations[ocispec.AnnotationTitle]; title != "" {
-			return File{Descriptor: layer, Name: title}, true, nil
+			return file{descriptor: layer, name: title}, true, nil
 		}
 	}
 	// A file artifact with no titled layer has no name to restore it under, so there is
 	// nothing useful to return; treating it as an image would be worse.
-	return File{}, false, errors.New("hauler file artifact carries no titled layer")
+	return file{}, false, errors.New("hauler file artifact carries no titled layer")
 }
 
 // mediaTypeDockerManifestList is the Docker spelling of an image index, which is what hauler
@@ -254,15 +232,15 @@ const mediaTypeDockerManifestList = "application/vnd.docker.distribution.manifes
 // HasImage reports whether the store holds the image ref, spelled as a distro definition
 // spells it.
 func (s *Store) HasImage(ref string) bool {
-	_, ok := s.images[canonicalImageRef(ref)]
+	_, ok := s.images[contentstore.CanonicalImageRef(ref)]
 	return ok
 }
 
-// File returns the file artifact the store recorded as coming from src, which is a URL or an
-// absolute path as it appeared in a distro definition.
-func (s *Store) File(src string) (File, bool) {
+// File reports whether the store holds the file it recorded as coming from src -- a URL or an
+// absolute path as it appeared in a distro definition -- and the name hauler recorded it under.
+func (s *Store) File(src string) (string, bool) {
 	f, ok := s.files[src]
-	return f, ok
+	return f.name, ok
 }
 
 // Source is the path the store was opened from, for messages and provenance.
@@ -275,24 +253,28 @@ func (s *Store) Describe() string {
 	return "hauler store " + s.source
 }
 
-// Fetch writes the content of desc to dst, creating it.
-func (s *Store) Fetch(ctx context.Context, desc ocispec.Descriptor, dst string) (err error) {
-	rc, err := s.store.Fetch(ctx, desc)
+// Fetch writes the file the store recorded as coming from src to dst, creating it.
+func (s *Store) Fetch(ctx context.Context, src, dst string) (err error) {
+	f, ok := s.files[src]
+	if !ok {
+		return fmt.Errorf("%s does not hold the file %s", s.source, src)
+	}
+	rc, err := s.store.Fetch(ctx, f.descriptor)
 	if err != nil {
-		return fmt.Errorf("fetching %s from %s: %w", desc.Digest, s.source, err)
+		return fmt.Errorf("fetching %s from %s: %w", f.descriptor.Digest, s.source, err)
 	}
 	defer func() {
 		err = errors.Join(err, rc.Close())
 	}()
 
-	f, err := os.Create(dst)
+	out, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("creating %s: %w", dst, err)
 	}
-	if _, err := io.Copy(f, rc); err != nil {
-		return errors.Join(fmt.Errorf("writing %s: %w", dst, err), f.Close())
+	if _, err := io.Copy(out, rc); err != nil {
+		return errors.Join(fmt.Errorf("writing %s: %w", dst, err), out.Close())
 	}
-	return f.Close()
+	return out.Close()
 }
 
 // fetchAll reads a descriptor's bytes into memory. Only manifests are read this way.
@@ -343,7 +325,7 @@ func (t *target) Exists(ctx context.Context, desc ocispec.Descriptor) (bool, err
 }
 
 func (t *target) Resolve(_ context.Context, reference string) (ocispec.Descriptor, error) {
-	desc, ok := t.images[canonicalImageRef(reference)]
+	desc, ok := t.images[contentstore.CanonicalImageRef(reference)]
 	if !ok {
 		return ocispec.Descriptor{}, fmt.Errorf("%s does not hold the image %s", t.source, reference)
 	}

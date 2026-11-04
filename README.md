@@ -139,22 +139,25 @@ cargoship create .
 cargoship create ./distro-defs -o ./build/
 ```
 
-A build normally fetches the images and files a definition declares from the registries and URLs it names. Where that content has already been collected with [hauler](https://github.com/hauler-dev/hauler) and carried across the airlock, point the build at the haul instead and nothing is fetched:
+A build normally fetches the images and files a definition declares from the registries and URLs it names. Where that content has already been collected with [hauler](https://github.com/hauler-dev/hauler) or [zarf](https://github.com/zarf-dev/zarf) and carried across the airlock, point the build at that store instead and nothing is fetched:
 
 ```bash
-# Build from a hauler store directory, or from an archive written by `hauler store save`
-cargoship create ./distro-defs --hauler-store ./haul.tar.zst
+# A hauler store directory, or an archive written by `hauler store save`
+cargoship create ./distro-defs --content-store ./haul.tar.zst
+
+# A built zarf package
+cargoship create ./distro-defs --content-store ./zarf-package-rke2-content-amd64.tar.zst
 ```
 
-Images and files are matched against the reference hauler recorded for each artifact when it was added, so no mapping has to be written by hand. Anything the store does not hold still comes from its declared source, which makes a partial haul usable. The same setting lives in the config file:
+Which format the store is comes from what it holds, not from what it is called. Images and files are matched against the reference each tool recorded for the artifact when it was collected, so no mapping has to be written by hand. Anything the store does not hold still comes from its declared source, which makes a partial store usable. A zarf package covers one architecture, so pass `--architecture` when building a multi-architecture definition from one. The same setting lives in the config file:
 
 ```yaml
 distro:
   create:
-    hauler_store: ~/hauls/haul.tar.zst
+    content_store: ~/hauls/haul.tar.zst
 ```
 
-See [Building From a Hauler Store](docs/guides/hauler-store.md) for the collect-and-carry workflow, what a haul must contain, and how this compares with `--registry-override` and `--file-override`.
+See [Building From a Local Content Store](docs/guides/content-store.md) for the collect-and-carry workflow, what each format must contain, and how this compares with `--registry-override` and `--file-override`.
 
 ### 2. Prepare Target Nodes
 
