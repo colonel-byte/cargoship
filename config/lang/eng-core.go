@@ -34,6 +34,29 @@ const (
 	// CmdDistroPublishLong publish long
 	CmdDistroPublishLong = "Pushes a built package to an OCI registry, where 'cargoship apply' and 'cargoship pull' can read it by reference instead of by path. The package is uploaded as OCI artifacts, so any registry that stores them will hold it, and --oci-concurrency sets how many layers move at once.\n\n" +
 		"The signature a package already carries is published with it. Passing --signing-key re-signs the package under a different key on the way out, which is how one built and signed in a development environment is re-signed for a production registry."
+	// CmdPackageMirrorShort mirror short
+	CmdPackageMirrorShort = "Publish a built package's images and files to an OCI registry"
+	// CmdPackageMirrorLong mirror long
+	CmdPackageMirrorLong = "Pushes what a package carries -- its images, and the files it stages -- into a registry as individually pullable content, so the mirror a fleet is already pointed at holds what its nodes will ask for.\n\n" +
+		"This is not 'cargoship publish'. That uploads the package as one artifact, to be pulled back as a package. This unpacks it: each image is pushed under the same repository path and tag it had upstream with only the registry host swapped, because that is exactly what a node asks a mirror for once cargoship has written the mirror into its containerd configuration. An image the package carries for several architectures is pushed as an index, so the registry holds every architecture the package did.\n\n" +
+		"Each file is pushed as a single-layer OCI artifact named after the file and tagged with a digest of the source URL the definition declared, which keeps two releases of the same filename apart.\n\n" +
+		"Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give --config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation."
+	// CmdPackageMirrorExample mirror example
+	CmdPackageMirrorExample = "\n" +
+		"# Mirror everything the package carries into a registry:\n" +
+		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://harbor.internal\n\n" +
+		"# Mirror under a repository prefix, which most hosted registries require:\n" +
+		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://harbor.internal/cargoship\n\n" +
+		"# Mirror into the proxy the cluster configuration already declares:\n" +
+		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --config ./cluster.yaml\n\n" +
+		"# Mirror only the images, over plain HTTP:\n" +
+		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:5000 --images --plain-http\n"
+	// CmdPackageMirrorFlagConfig mirror flag config
+	CmdPackageMirrorFlagConfig = "`PATH` of a cluster configuration to read the destination registry from, in place of naming one as an argument. The address is taken from the single entry under spec.config.registries that declares a proxy URL, which is the mirror cargoship configures each host to pull through."
+	// CmdPackageMirrorFlagImages mirror flag images
+	CmdPackageMirrorFlagImages = "Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given."
+	// CmdPackageMirrorFlagFiles mirror flag files
+	CmdPackageMirrorFlagFiles = "Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given."
 	// CmdPackagePullShort pull short
 	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and saves it to the local filesystem"
 	// CmdPackagePullLong pull long
