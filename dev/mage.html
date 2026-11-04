@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2dec8fb1.js";
+            window.path_to_searchindex_js = "../searchindex-b57189f9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b36b5188.js"></script>
+        <script src="../toc-b565ef75.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -338,7 +338,7 @@ mage generate:examples
 <li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), and <code>schema/</code> (JSON schema reflection and docs).</li>
 <li><strong><code>pkg/testrunner/</code>:</strong> Test runner implementations for e2e suites and fuzz corpus replay.</li>
 <li><strong><code>pkg/util/</code>:</strong> Shared helpers for aligned table formatting, git commit resolution, and clean build tasks.</li>
-<li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code>, <code>k3s-distro.yaml.tmpl</code>, and <code>upstream-distro.yaml.tmpl</code> (rendered once per CNI flavor), plus the per-distro values templates a flavor ships beside its <code>distro.yaml</code> (<code>rke2/values.yaml.tmpl</code>, <code>rke2/values.schema.json.tmpl</code>, and the <code>k3s/</code> equivalents), and the hauler manifest templates a flavor that sets <code>haulerManifests</code> renders (<code>rke2/hauler-files-{amd64,arm64}.yaml.tmpl</code> and <code>rke2/hauler-images-{core,rke2-cilium}.yaml.tmpl</code>, rendered by <code>magefiles/pkg/gen/examples/hauler.go</code>).</li>
+<li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code>, <code>k3s-distro.yaml.tmpl</code>, and <code>upstream-distro.yaml.tmpl</code> (rendered once per CNI flavor), plus the per-distro values templates a flavor ships beside its <code>distro.yaml</code> (<code>rke2/values.yaml.tmpl</code>, <code>rke2/values.schema.json.tmpl</code>, and the <code>k3s/</code> equivalents), and the content-collection manifest templates a flavor renders for each format it asks for - <code>rke2/hauler-files-{amd64,arm64}.yaml.tmpl</code> and <code>rke2/hauler-images-{core,rke2-cilium}.yaml.tmpl</code> for a flavor that sets <code>haulerManifests</code>, <code>rke2/zarf-{amd64,arm64}.yaml.tmpl</code> for one that sets <code>zarfPackages</code>, all rendered by <code>magefiles/pkg/gen/examples/content.go</code>.</li>
 </ul>
 <hr>
 <h2 id="managed-outputs"><a class="header" href="#managed-outputs">Managed Outputs</a></h2>
@@ -364,7 +364,7 @@ mage generate:examples
 <tr><td style="text-align: left"><code>thirdparty-src/&lt;distro&gt;/&lt;minor&gt;/*</code></td><td style="text-align: left">Raw pinned upstream k3s/RKE2 source</td><td style="text-align: left"><code>Generate.PullEngineSource</code> / <code>Generate.LatestTag</code></td></tr>
 <tr><td style="text-align: left"><code>thirdparty-src/pins.json</code></td><td style="text-align: left">Pinned upstream tags</td><td style="text-align: left"><code>Generate.LatestTag</code> / <code>Generate.UpdatePins</code></td></tr>
 <tr><td style="text-align: left"><code>example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/*/distro.yaml</code></td><td style="text-align: left">Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line</td><td style="text-align: left"><code>Generate.Examples</code></td></tr>
-<tr><td style="text-align: left"><code>example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/*/values.yaml</code></td><td style="text-align: left">Values file, values schema, and hauler manifests beside each rendered <code>distro.yaml</code></td><td style="text-align: left"><code>Generate.Examples</code></td></tr>
+<tr><td style="text-align: left"><code>example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/*/values.yaml</code></td><td style="text-align: left">Values file, values schema, and content-collection manifests beside each rendered <code>distro.yaml</code></td><td style="text-align: left"><code>Generate.Examples</code></td></tr>
 <tr><td style="text-align: left"><code>example/shasums.json</code></td><td style="text-align: left">Cached sha256 of every remote file the examples hash</td><td style="text-align: left"><code>Generate.Examples</code> / <code>Generate.ExampleLine</code></td></tr>
 <tr><td style="text-align: left"><code>&lt;zarf_cache&gt;/examples/*</code></td><td style="text-align: left">Cached release text assets (image lists), not committed</td><td style="text-align: left"><code>Generate.Examples</code> / <code>Generate.ExampleLine</code></td></tr>
 <tr><td style="text-align: left"><code>containers/ansible/Dockerfile</code></td><td style="text-align: left">Base image package pins for ansible-core and bash-completion</td><td style="text-align: left"><code>Dev.DnfPins</code></td></tr>

@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2dec8fb1.js";
+            window.path_to_searchindex_js = "searchindex-b57189f9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b36b5188.js"></script>
+        <script src="toc-b565ef75.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -285,16 +285,19 @@ cargoship create .
 # Build from a specific path and output to a custom directory
 cargoship create ./distro-defs -o ./build/
 </code></pre>
-<p>A build normally fetches the images and files a definition declares from the registries and URLs it names. Where that content has already been collected with <a href="https://github.com/hauler-dev/hauler">hauler</a> and carried across the airlock, point the build at the haul instead and nothing is fetched:</p>
-<pre><code class="language-bash"># Build from a hauler store directory, or from an archive written by `hauler store save`
-cargoship create ./distro-defs --hauler-store ./haul.tar.zst
+<p>A build normally fetches the images and files a definition declares from the registries and URLs it names. Where that content has already been collected with <a href="https://github.com/hauler-dev/hauler">hauler</a> or <a href="https://github.com/zarf-dev/zarf">zarf</a> and carried across the airlock, point the build at that store instead and nothing is fetched:</p>
+<pre><code class="language-bash"># A hauler store directory, or an archive written by `hauler store save`
+cargoship create ./distro-defs --content-store ./haul.tar.zst
+
+# A built zarf package
+cargoship create ./distro-defs --content-store ./zarf-package-rke2-content-amd64.tar.zst
 </code></pre>
-<p>Images and files are matched against the reference hauler recorded for each artifact when it was added, so no mapping has to be written by hand. Anything the store does not hold still comes from its declared source, which makes a partial haul usable. The same setting lives in the config file:</p>
+<p>Which format the store is comes from what it holds, not from what it is called. Images and files are matched against the reference each tool recorded for the artifact when it was collected, so no mapping has to be written by hand. Anything the store does not hold still comes from its declared source, which makes a partial store usable. A zarf package covers one architecture, so pass <code>--architecture</code> when building a multi-architecture definition from one. The same setting lives in the config file:</p>
 <pre><code class="language-yaml">distro:
   create:
-    hauler_store: ~/hauls/haul.tar.zst
+    content_store: ~/hauls/haul.tar.zst
 </code></pre>
-<p>See <a href="guides/hauler-store.html">Building From a Hauler Store</a> for the collect-and-carry workflow, what a haul must contain, and how this compares with <code>--registry-override</code> and <code>--file-override</code>.</p>
+<p>See <a href="guides/content-store.html">Building From a Local Content Store</a> for the collect-and-carry workflow, what each format must contain, and how this compares with <code>--registry-override</code> and <code>--file-override</code>.</p>
 <h3 id="2-prepare-target-nodes"><a class="header" href="#2-prepare-target-nodes">2. Prepare Target Nodes</a></h3>
 <p>Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, <code>fapolicyd</code> rules, and <code>/etc/hosts</code>) across target machines using your cluster configuration inventory:</p>
 <pre><code class="language-bash">cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
