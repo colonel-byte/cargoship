@@ -116,14 +116,14 @@ records where one file in the package was actually read from, for a file whose d
 
 <div class="schema-table">
 
-| Property   | Type     | Required | Default | Description                                                                                                                                                               |
-| ---------- | -------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `declared` | `string` | yes      |         | is the source the distro definition named.                                                                                                                                |
-| `override` | `string` | no       |         | is the Source prefix of the override that matched, which is the one that won<br>when several could have. It is empty when the bytes came from a local content store.      |
-| `path`     | `string` | yes      |         | is where the file was staged inside the package, for example "files/0/k3s". It<br>identifies the entry even when several files share a declared source.                   |
-| `resolved` | `string` | yes      |         | is where cargoship read the bytes from instead: a mirror URL, or a path on<br>the build host.                                                                             |
-| `shasum`   | `string` | yes      |         | is the checksum the bytes were verified against. Neither an override nor a<br>content store is accepted for a file that declares none, so this is never empty.            |
-| `store`    | `string` | no       |         | names the local content store the bytes were read from, such as a hauler store<br>passed to --hauler-store. It is empty when an override or the declared source was used. |
+| Property   | Type     | Required | Default | Description                                                                                                                                                                               |
+| ---------- | -------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `declared` | `string` | yes      |         | is the source the distro definition named.                                                                                                                                                |
+| `override` | `string` | no       |         | is the Source prefix of the override that matched, which is the one that won<br>when several could have. It is empty when the bytes came from a local content store.                      |
+| `path`     | `string` | yes      |         | is where the file was staged inside the package, for example "files/0/k3s". It<br>identifies the entry even when several files share a declared source.                                   |
+| `resolved` | `string` | yes      |         | is where cargoship read the bytes from instead: a mirror URL, or a path on<br>the build host.                                                                                             |
+| `shasum`   | `string` | yes      |         | is the checksum the bytes were verified against. Neither an override nor a<br>content store is accepted for a file that declares none, so this is never empty.                            |
+| `store`    | `string` | no       |         | names the local content store the bytes were read from -- a hauler store or a zarf<br>package passed to --content-store. It is empty when an override or the declared source<br>was used. |
 
 </div>
 

@@ -158,7 +158,10 @@ func expandHomePaths(cfg *types.DistroConfig) error {
 		&cfg.DistroOpts.Output,
 		&cfg.DistroOpts.PublicKey,
 		&cfg.DistroOpts.PublishOpts.SigningKey,
-		&cfg.DistroOpts.CreateOpts.HaulerStore,
+		&cfg.DistroOpts.CreateOpts.ContentStore,
+		// The deprecated key is still honoured when content_store is unset, so a leading ~ in
+		// it still has to be expanded.
+		&cfg.DistroOpts.CreateOpts.HaulerStore, //nolint:staticcheck // SA1019: deprecated on purpose
 	}
 	for i := range cfg.AgeOpts.IdentityFiles {
 		paths = append(paths, &cfg.AgeOpts.IdentityFiles[i])
@@ -256,6 +259,7 @@ func setDefaults() {
 	v.SetDefault(configPath("Architecture"), "")
 	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
 	v.SetDefault(configPath("DistroOpts", "KubeConfig"), "")
+	v.SetDefault(configPath("DistroOpts", "CreateOpts", "ContentStore"), "")
 	v.SetDefault(configPath("DistroOpts", "CreateOpts", "HaulerStore"), "")
 	v.SetDefault(configPath("DistroOpts", "ReceiptPath"), "")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")

@@ -51,12 +51,20 @@
         "^x-": {}
       },
       "properties": {
+        "content_store": {
+          "description": "is a local content bundle that images and files are resolved from instead\nof being fetched over the network: a hauler store (https://github.com/hauler-dev/hauler)\nas either a store directory or an archive written by `hauler store save`, or a built\nzarf package (https://github.com/zarf-dev/zarf). Which format it is is read from the\nbundle itself, not from the path. Content the store does not hold still comes from the\nsource the distro definition declared, so a partial store works. A file is accepted\nfrom the store only when the definition declares a shasum for it, since nothing else\nwould verify bytes the definition's author never saw. Honoured by `cargoship create`.",
+          "examples": [
+            "/opt/hauls/haul.tar.zst",
+            "~/packages/zarf-package-foo-amd64.tar.zst"
+          ],
+          "type": "string"
+        },
         "file_override": {
           "$ref": "#/$defs/FileOverrideMap",
           "description": "maps a source URL prefix to the location cargoship downloads from\ninstead, for example {\"https://rpm.rancher.io\": \"https://mirror.example.com/rpm-rancher\"}.\nThe value may also be a local directory, for builds from pre-staged assets."
         },
         "hauler_store": {
-          "description": "is a hauler store (https://github.com/hauler-dev/hauler) that images and\nfiles are resolved from instead of being fetched over the network: either a store\ndirectory, or an archive written by `hauler store save`. Content the store does not\nhold still comes from the source the distro definition declared, so a partial store\nworks. A file is accepted from the store only when the definition declares a shasum\nfor it, since nothing else would verify bytes the definition's author never saw.",
+          "description": "is the former spelling of ContentStore, which reads a hauler store and\nnothing else.\n\nDeprecated: set content_store instead, which reads the same hauler stores plus zarf\npackages. This key is still honoured when content_store is unset.",
           "examples": [
             "/opt/hauls/haul.tar.zst",
             "~/hauls/rke2/store"
