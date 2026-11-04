@@ -173,7 +173,7 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`pkg/gen/`:** Generator implementations: `completion/` (shell completion scripts), `docs/` (Cobra command docs and mdBook pages), `engineconfig/` (k3s/RKE2 source pins and struct codegen), `examples/` (Rancher and upstream distro examples), and `schema/` (JSON schema reflection and docs).
 *   **`pkg/testrunner/`:** Test runner implementations for e2e suites and fuzz corpus replay.
 *   **`pkg/util/`:** Shared helpers for aligned table formatting, git commit resolution, and clean build tasks.
-*   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl`, `k3s-distro.yaml.tmpl`, and `upstream-distro.yaml.tmpl` (rendered once per CNI flavor), plus the per-distro values templates a flavor ships beside its `distro.yaml` (`rke2/values.yaml.tmpl`, `rke2/values.schema.json.tmpl`, and the `k3s/` equivalents), and the hauler manifest templates a flavor that sets `haulerManifests` renders (`rke2/hauler-files-{amd64,arm64}.yaml.tmpl` and `rke2/hauler-images-{core,rke2-cilium}.yaml.tmpl`, rendered by `magefiles/pkg/gen/examples/hauler.go`).
+*   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl`, `k3s-distro.yaml.tmpl`, and `upstream-distro.yaml.tmpl` (rendered once per CNI flavor), plus the per-distro values templates a flavor ships beside its `distro.yaml` (`rke2/values.yaml.tmpl`, `rke2/values.schema.json.tmpl`, and the `k3s/` equivalents), and the content-collection manifest templates a flavor renders for each format it asks for - `rke2/hauler-files-{amd64,arm64}.yaml.tmpl` and `rke2/hauler-images-{core,rke2-cilium}.yaml.tmpl` for a flavor that sets `haulerManifests`, `rke2/zarf-{amd64,arm64}.yaml.tmpl` for one that sets `zarfPackages`, all rendered by `magefiles/pkg/gen/examples/content.go`.
 
 ---
 
@@ -181,29 +181,29 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 
 Running various Mage tasks maintains and updates the following filesystem artifacts:
 
-| Output Directory / File                        | Description                                                                                 | Target                                             |
-| :--------------------------------------------- | :------------------------------------------------------------------------------------------ | :------------------------------------------------- |
-| `build/cargoship_*`                            | Compiled release binaries                                                                   | `Build.All`                                        |
-| `docs/commands/*`                              | Auto-generated CLI documentation                                                            | `Generate.Document`                                |
-| `docs/phases/*`                                | Auto-generated cluster phase descriptors                                                    | `Generate.Document`                                |
-| `docs/schema/*`                                | Auto-generated schema field reference, from the same struct reflection as `schema/*.json`   | `Generate.Document`                                |
-| `docs/ansible/<collection>/module_*.md`        | Auto-generated Ansible module reference, from the action plugins                            | `Generate.Document`                                |
-| `docs/ansible/<collection>/role_*.md`          | Auto-generated Ansible role reference, from each role's `meta/argument_specs.yml`           | `Generate.Document`                                |
-| `docs/index.md`                                | The root `README.md`, with its links rebased onto `docs/` for the book                      | `Generate.Document`                                |
-| `docs/security.md`                             | `.github/SECURITY.md`, with its links rebased onto `docs/` for the book                     | `Generate.Document`                                |
-| `docs/SUMMARY.md`                              | Compiled table of contents for mdBook                                                       | `Generate.Document`                                |
-| `schema/*.json`                                | JSON schemas for YAML validations                                                           | `Generate.Schema`                                  |
-| `hack/completion/*`                            | Shell completion scripts for bash, zsh, fish, and powershell                                | `Generate.Completion`                              |
-| `pkg/engineconfig/gen/*`                       | Typed engine `config.yaml` structs per distro/version                                       | `Generate.EngineConfig`                            |
-| `thirdparty-src/<distro>/<minor>/*`            | Raw pinned upstream k3s/RKE2 source                                                         | `Generate.PullEngineSource` / `Generate.LatestTag` |
-| `thirdparty-src/pins.json`                     | Pinned upstream tags                                                                        | `Generate.LatestTag` / `Generate.UpdatePins`       |
-| `example/<distro>-<cni>/<minor>/*/distro.yaml` | Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line | `Generate.Examples`                                |
-| `example/<distro>-<cni>/<minor>/*/values.yaml` | Values file, values schema, and hauler manifests beside each rendered `distro.yaml`         | `Generate.Examples`                                |
-| `example/shasums.json`                         | Cached sha256 of every remote file the examples hash                                        | `Generate.Examples` / `Generate.ExampleLine`       |
-| `<zarf_cache>/examples/*`                      | Cached release text assets (image lists), not committed                                     | `Generate.Examples` / `Generate.ExampleLine`       |
-| `containers/ansible/Dockerfile`                | Base image package pins for ansible-core and bash-completion                                | `Dev.DnfPins`                                      |
-| `containers/ubi/Dockerfile`                    | Base image package pin for bash-completion                                                  | `Dev.DnfPins`                                      |
-| `.goreleaser.yaml`                             | Build args pinning container package versions                                               | `Dev.DnfPins`                                      |
+| Output Directory / File                        | Description                                                                                     | Target                                             |
+| :--------------------------------------------- | :---------------------------------------------------------------------------------------------- | :------------------------------------------------- |
+| `build/cargoship_*`                            | Compiled release binaries                                                                       | `Build.All`                                        |
+| `docs/commands/*`                              | Auto-generated CLI documentation                                                                | `Generate.Document`                                |
+| `docs/phases/*`                                | Auto-generated cluster phase descriptors                                                        | `Generate.Document`                                |
+| `docs/schema/*`                                | Auto-generated schema field reference, from the same struct reflection as `schema/*.json`       | `Generate.Document`                                |
+| `docs/ansible/<collection>/module_*.md`        | Auto-generated Ansible module reference, from the action plugins                                | `Generate.Document`                                |
+| `docs/ansible/<collection>/role_*.md`          | Auto-generated Ansible role reference, from each role's `meta/argument_specs.yml`               | `Generate.Document`                                |
+| `docs/index.md`                                | The root `README.md`, with its links rebased onto `docs/` for the book                          | `Generate.Document`                                |
+| `docs/security.md`                             | `.github/SECURITY.md`, with its links rebased onto `docs/` for the book                         | `Generate.Document`                                |
+| `docs/SUMMARY.md`                              | Compiled table of contents for mdBook                                                           | `Generate.Document`                                |
+| `schema/*.json`                                | JSON schemas for YAML validations                                                               | `Generate.Schema`                                  |
+| `hack/completion/*`                            | Shell completion scripts for bash, zsh, fish, and powershell                                    | `Generate.Completion`                              |
+| `pkg/engineconfig/gen/*`                       | Typed engine `config.yaml` structs per distro/version                                           | `Generate.EngineConfig`                            |
+| `thirdparty-src/<distro>/<minor>/*`            | Raw pinned upstream k3s/RKE2 source                                                             | `Generate.PullEngineSource` / `Generate.LatestTag` |
+| `thirdparty-src/pins.json`                     | Pinned upstream tags                                                                            | `Generate.LatestTag` / `Generate.UpdatePins`       |
+| `example/<distro>-<cni>/<minor>/*/distro.yaml` | Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line     | `Generate.Examples`                                |
+| `example/<distro>-<cni>/<minor>/*/values.yaml` | Values file, values schema, and content-collection manifests beside each rendered `distro.yaml` | `Generate.Examples`                                |
+| `example/shasums.json`                         | Cached sha256 of every remote file the examples hash                                            | `Generate.Examples` / `Generate.ExampleLine`       |
+| `<zarf_cache>/examples/*`                      | Cached release text assets (image lists), not committed                                         | `Generate.Examples` / `Generate.ExampleLine`       |
+| `containers/ansible/Dockerfile`                | Base image package pins for ansible-core and bash-completion                                    | `Dev.DnfPins`                                      |
+| `containers/ubi/Dockerfile`                    | Base image package pin for bash-completion                                                      | `Dev.DnfPins`                                      |
+| `.goreleaser.yaml`                             | Build args pinning container package versions                                                   | `Dev.DnfPins`                                      |
 
 ---
 

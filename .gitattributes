@@ -28,6 +28,7 @@ example/*/**/values.yaml linguist-generated
 example/*/**/values.schema.json linguist-generated
 example/*/**/hauler-images-*.yaml linguist-generated
 example/*/**/hauler-files-*.yaml linguist-generated
+example/*/**/zarf-*.yaml linguist-generated
 example/*/cni/*.yaml linguist-generated
 example/shasums.json linguist-generated
 example/assets.json linguist-generated
