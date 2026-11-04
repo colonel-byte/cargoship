@@ -71,8 +71,17 @@ type CreateOptions struct {
 	types.RemoteOptions
 }
 
-// Create used to create a distro package
-func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (string, error) {
+// Build assembles a distro package and returns its layout without archiving it.
+//
+// It is the half of Create that produces the package; Create is Build plus the archive step.
+// Splitting them is what lets a caller about to consume the package in this same process --
+// `cargoship dev apply` -- skip compressing a multi-gigabyte layout and decompressing the
+// same bytes straight back again.
+//
+// The caller owns the returned layout and must Cleanup it. That is the one thing to get right
+// when reaching for this rather than Create, which cleans up the layout itself because the
+// archive is the only thing meant to outlive it.
+func Build(ctx context.Context, distroPath string, opts CreateOptions) (*layout.DistroLayout, error) {
 	loadOpts := load.DefinitionOptions{
 		CachePath:     opts.CachePath,
 		Architecture:  opts.Architecture,
@@ -80,7 +89,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	}
 	distro, err := load.DistroDefinition(ctx, distroPath, loadOpts)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if opts.Tag != "" {
 		distro.Metadata.Version = opts.Tag
@@ -88,7 +97,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 
 	disPath, err := layout.ResolveDistroPath(distroPath)
 	if err != nil {
-		return "", fmt.Errorf("unable to access package path %q: %w", distroPath, err)
+		return nil, fmt.Errorf("unable to access package path %q: %w", distroPath, err)
 	}
 
 	// The store is opened once for the whole build and closed with it, because opening an
@@ -97,12 +106,14 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	if opts.ContentStore != "" {
 		opened, closeStore, err := openContentStore(ctx, opts.ContentStore)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		store = opened
-		// Create's results are unnamed, so a deferred assignment to err would be discarded.
+		// Build's results are unnamed, so a deferred assignment to err would be discarded.
 		// Closing only removes the directory an archive was unpacked into, so a failure is
-		// reported rather than returned.
+		// reported rather than returned. Closing when Build returns rather than when Create
+		// does is safe: everything the store held has already been staged into the layout by
+		// the time AssembleDistro returns, and the archive step never reads it.
 		defer func() {
 			if cerr := closeStore(); cerr != nil {
 				logger.From(ctx).Warn("failed to remove the unpacked content store", "error", cerr)
@@ -126,7 +137,13 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	}
 
 	logger.From(ctx).Debug("assembling distro", "baseDir", disPath.BaseDir)
-	distroLayout, err := assemble.AssembleDistro(ctx, distro, disPath.BaseDir, assembleOpt)
+	return assemble.AssembleDistro(ctx, distro, disPath.BaseDir, assembleOpt)
+}
+
+// Create builds a distro package, writes it to output as an archive, and returns the path to
+// that archive.
+func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (_ string, err error) {
+	distroLayout, err := Build(ctx, distroPath, opts)
 	if err != nil {
 		return "", err
 	}

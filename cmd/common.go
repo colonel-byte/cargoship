@@ -29,6 +29,7 @@ import (
 	"regexp"
 	"time"
 
+	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
@@ -103,19 +104,10 @@ func getCachePath(ctx context.Context) (string, error) {
 // package can prove about itself -- its digest, and whether its signature was checked -- and the
 // layout is the only thing that knows. A caller with no use for it discards it.
 func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*phase.Manager, *layout.DistroLayout, error) {
-	path, err := filepath.Abs(opt.config)
+	cluster, err := initCluster(ctx, opt)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	opt.config = path
-
-	cluster, err := load.ClusterDefinition(ctx, opt.config, load.ClusterOptions{})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	logger.From(ctx).Info("using cluster file", "location", opt.config)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -135,6 +127,41 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 		return nil, nil, err
 	}
 
+	manager, err := managerFromLayout(ctx, cluster, distroLayout, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+	return manager, distroLayout, nil
+}
+
+// initCluster resolves --config and reads the cluster inventory from it.
+//
+// It runs before the package is loaded, which is deliberate: a malformed inventory should be
+// reported before a multi-gigabyte package is read, not after.
+func initCluster(ctx context.Context, opt InstallCommon) (clusterapi.Cluster, error) {
+	path, err := filepath.Abs(opt.config)
+	if err != nil {
+		return clusterapi.Cluster{}, err
+	}
+
+	cluster, err := load.ClusterDefinition(ctx, path, load.ClusterOptions{})
+	if err != nil {
+		return clusterapi.Cluster{}, err
+	}
+
+	logger.From(ctx).Info("using cluster file", "location", path)
+	return cluster, nil
+}
+
+// managerFromLayout resolves a package layout against the cluster inventory and builds the phase
+// manager from the pair.
+//
+// It is split out of initManager so that a caller holding a layout it just built, rather than one
+// it loaded from a package, reaches the same resolution: `cargoship dev apply` assembles a
+// definition in process and brings the layout straight here. Everything below this point is
+// identical either way, which is the point -- a dev loop that resolved values differently from a
+// real apply would be worse than no dev loop.
+func managerFromLayout(ctx context.Context, cluster clusterapi.Cluster, distroLayout *layout.DistroLayout, opt InstallCommon) (*phase.Manager, error) {
 	logger.From(ctx).Debug("distro information", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
 
 	// The cluster file overrides the values the package was built with, --values
@@ -144,23 +171,23 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 	if len(opt.values) > 0 {
 		fromFlags, err := helmvalues.LoadFiles(ctx, "", "", opt.values)
 		if err != nil {
-			return nil, nil, fmt.Errorf("unable to read the values files given with --%s: %w", InstallValues, err)
+			return nil, fmt.Errorf("unable to read the values files given with --%s: %w", InstallValues, err)
 		}
 		overrides = append(overrides, fromFlags)
 	}
 
 	values, err := distroLayout.Values(ctx, overrides...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	// Both of these resolve the package against the values before any phase runs: the
 	// first renders and maps the engine configuration, the second renders the contents of
 	// the files the package marked as templates, in place in the extracted package.
 	if err := distroLayout.ApplyValues(values); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if err := distroLayout.RenderFiles(ctx, values); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	return &phase.Manager{
@@ -172,7 +199,7 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 		Concurrency:       opt.concurrency,
 		ConcurrentUploads: opt.concurrency,
 		DryRun:            opt.dryRun,
-	}, distroLayout, nil
+	}, nil
 }
 
 // requireConfirm enforces the --confirm gate for a command that changes the hosts it is pointed at.
@@ -240,6 +267,33 @@ func preflightInstall(packageSource, configPath string, confirm, dryRun bool) (t
 	}
 	if err := checkPackageSource(packageSource); err != nil {
 		return 0, err
+	}
+	d, err := time.ParseDuration(Timeout)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse --%s %q: %w", RootTimeout, Timeout, err)
+	}
+	if err := requireConfirm(confirm, dryRun); err != nil {
+		return 0, err
+	}
+	return d, nil
+}
+
+// preflightDevApply is preflightInstall for a command given a distro definition to build rather
+// than a package to load, so the source check is the one distro.Build will make rather than
+// checkPackageSource, which rejects a directory.
+func preflightDevApply(distroPath, configPath string, confirm, dryRun bool) (time.Duration, error) {
+	if err := checkClusterConfig(configPath); err != nil {
+		return 0, err
+	}
+	disPath, err := layout.ResolveDistroPath(distroPath)
+	if err != nil {
+		return 0, err
+	}
+	// ResolveDistroPath only stats what it was given, so a directory with no distro.yaml in it
+	// resolves fine and fails much later. Stat the manifest here, where the error still names
+	// the path the operator typed.
+	if _, err := os.Stat(disPath.ManifestFile); err != nil {
+		return 0, fmt.Errorf("unable to read the distro definition: %w", err)
 	}
 	d, err := time.ParseDuration(Timeout)
 	if err != nil {
