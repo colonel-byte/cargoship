@@ -66,10 +66,22 @@ var attachedKinds = map[string]bool{
 const attachedKindPrefix = "dev.hauler/referrers/"
 
 // The config media types hauler gives a file artifact, one per source it was added from.
+const (
+	// MediaTypeFileConfigLocal is what hauler records for a file added from a local path.
+	MediaTypeFileConfigLocal = "application/vnd.content.hauler.file.local.config.v1+json"
+	// MediaTypeFileConfigDirectory is what hauler records for a file added from a directory.
+	MediaTypeFileConfigDirectory = "application/vnd.content.hauler.file.directory.config.v1+json"
+	// MediaTypeFileConfigHTTP is what hauler records for a file added from a URL. It is also
+	// what cargoship writes when it mirrors a package's files to a registry, so that what the
+	// mirror holds is a shape this reader and hauler's own tooling both already understand.
+	MediaTypeFileConfigHTTP = "application/vnd.content.hauler.file.http.config.v1+json"
+)
+
+// fileConfigMediaTypes is the set above, for classifying a manifest on the way in.
 var fileConfigMediaTypes = map[string]bool{
-	"application/vnd.content.hauler.file.local.config.v1+json":     true,
-	"application/vnd.content.hauler.file.directory.config.v1+json": true,
-	"application/vnd.content.hauler.file.http.config.v1+json":      true,
+	MediaTypeFileConfigLocal:     true,
+	MediaTypeFileConfigDirectory: true,
+	MediaTypeFileConfigHTTP:      true,
 }
 
 // file is a file artifact held in the store. It is internal to the reader: a caller asks for a
