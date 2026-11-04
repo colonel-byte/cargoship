@@ -29,9 +29,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/colonel-byte/cargoship/pkg/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/credentials"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
@@ -150,4 +153,52 @@ func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) 
 	}
 	totalSize += manifest.Config.Size
 	return totalSize
+}
+
+// NewRegistryClient builds the ORAS auth client every registry operation shares, and
+// pre-authenticates it against each host it is about to be used with.
+//
+// The pre-authentication is synchronous and that is the point: some credential helpers open a
+// browser, and doing this concurrently opens one tab per image from a host while authenticating
+// in any one of them fails to propagate to the others. Pinging each host once here puts the
+// credentials in the client's cache before any concurrent work starts.
+//
+// A ping failure is deliberately ignored. A host may be a stand-in that never answers -- the
+// faked registry behind the docker fallback is one -- and the operation that follows is the
+// honest place for a connection error to surface.
+//
+// It is exported because a mirror pushes files alongside images, and both halves have to
+// authenticate to the target the same way or a credentialled registry takes one and refuses
+// the other.
+func NewRegistryClient(ctx context.Context, hosts []string, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*auth.Client, error) {
+	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get credentials: %w", err)
+	}
+	transport, err := orasTransport(insecureSkipTLSVerify, responseHeaderTimeout)
+	if err != nil {
+		return nil, err
+	}
+	client := &auth.Client{
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Cache:      auth.NewCache(),
+		Credential: credentials.Credential(credStore),
+	}
+
+	if credStore.IsAuthConfigured() {
+		for _, host := range helpers.Unique(hosts) {
+			reg, err := remote.NewRegistry(host)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create registry: %w", err)
+			}
+			reg.Client = client
+			_ = reg.Ping(ctx) //nolint: errcheck
+		}
+	}
+
+	logger.From(ctx).Debug("gathering credentials from default Docker config file",
+		"credentialsConfigured", credStore.IsAuthConfigured())
+	return client, nil
 }
