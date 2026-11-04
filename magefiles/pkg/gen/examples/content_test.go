@@ -60,7 +60,7 @@ func TestHaulerName(t *testing.T) {
 
 // The architecture-independent policy RPM has to be in every architecture's manifest, or
 // collecting one architecture is not enough to build it.
-func TestHaulerFilesIncludesArchIndependentAndDeduplicates(t *testing.T) {
+func TestContentFilesIncludesArchIndependentAndDeduplicates(t *testing.T) {
 	v := exampleVersion{
 		SelinuxRPM: "https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm",
 		Arches: []exampleArch{{
@@ -73,7 +73,7 @@ func TestHaulerFilesIncludesArchIndependentAndDeduplicates(t *testing.T) {
 		}},
 	}
 
-	got := v.HaulerFiles("amd64")
+	got := v.ContentFiles("amd64")
 	want := []string{
 		v.SelinuxRPM,
 		"https://example.com/common.rpm",
@@ -83,33 +83,33 @@ func TestHaulerFilesIncludesArchIndependentAndDeduplicates(t *testing.T) {
 		"https://example.com/etcd.tar.gz",
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("HaulerFiles(amd64) = %v, want %v", got, want)
+		t.Errorf("ContentFiles(amd64) = %v, want %v", got, want)
 	}
 }
 
 // A distro that installs from one binary leaves every rke2 field empty, and a URL named twice
 // is one artifact in the store.
-func TestHaulerFilesSkipsEmptyAndRepeatedURLs(t *testing.T) {
+func TestContentFilesSkipsEmptyAndRepeatedURLs(t *testing.T) {
 	v := exampleVersion{Arches: []exampleArch{{
 		Arch:       "arm64",
 		BinaryURL:  "https://example.com/k3s-arm64",
 		TarballURL: "https://example.com/k3s-arm64",
 	}}}
 
-	got := v.HaulerFiles("arm64")
+	got := v.ContentFiles("arm64")
 	want := []string{"https://example.com/k3s-arm64"}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("HaulerFiles(arm64) = %v, want %v", got, want)
+		t.Errorf("ContentFiles(arm64) = %v, want %v", got, want)
 	}
 }
 
 // An architecture the version does not target has no files and no arch, which is what lets a
 // per-architecture template be skipped rather than rendered empty.
-func TestHaulerFilesAndArchForAnUntargetedArchitecture(t *testing.T) {
+func TestContentFilesAndArchForAnUntargetedArchitecture(t *testing.T) {
 	v := exampleVersion{Arches: []exampleArch{{Arch: "amd64", CommonRPM: "https://example.com/common.rpm"}}}
 
-	if got := v.HaulerFiles("arm64"); got != nil {
-		t.Errorf("HaulerFiles(arm64) = %v, want nil", got)
+	if got := v.ContentFiles("arm64"); got != nil {
+		t.Errorf("ContentFiles(arm64) = %v, want nil", got)
 	}
 	if got := v.ArchByName("arm64"); got != nil {
 		t.Errorf("ArchByName(arm64) = %v, want nil", got)
@@ -165,8 +165,8 @@ func TestHaulerManifestsSkipWhatAFlavorDoesNotHave(t *testing.T) {
 	t.Chdir(filepath.Join("..", "..", "..", ".."))
 
 	dir := t.TempDir()
-	spec := exampleDistroSpec{name: "rke2", haulerTemplates: exampleRKE2Hauler}
-	f := exampleFlavor{dir: "example/test", haulerManifests: true}
+	spec := exampleDistroSpec{name: "rke2", haulerTemplates: exampleRKE2Hauler, zarfTemplates: exampleRKE2Zarf}
+	f := exampleFlavor{dir: "example/test", haulerManifests: true, zarfPackages: true}
 	v := exampleVersion{
 		Name:       "test-flavor",
 		CoreImages: []string{"docker.io/rancher/mirrored-pause:3.10.2"},
@@ -174,8 +174,8 @@ func TestHaulerManifestsSkipWhatAFlavorDoesNotHave(t *testing.T) {
 		Arches:     []exampleArch{{Arch: "amd64", CommonRPM: "https://example.com/common.rpm"}},
 	}
 
-	if err := writeExampleHaulerManifests(dir, spec, f, v); err != nil {
-		t.Fatalf("writeExampleHaulerManifests: %v", err)
+	if err := writeExampleContentManifests(dir, spec, f, v, &exampleShasums{sums: map[string]exampleShasum{}}); err != nil {
+		t.Fatalf("writeExampleContentManifests: %v", err)
 	}
 
 	for _, name := range []string{"hauler-images-core.yaml", "hauler-files-amd64.yaml"} {

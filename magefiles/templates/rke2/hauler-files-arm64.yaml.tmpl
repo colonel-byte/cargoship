@@ -20,7 +20,7 @@ metadata:
   name: {{ $.Name }}-files-arm64
 spec:
   files:
-{{- range $url := $.HaulerFiles "arm64" }}
+{{- range $url := $.ContentFiles "arm64" }}
     - path: {{ $url }}
 {{- with haulerName $url }}
       name: {{ . }}

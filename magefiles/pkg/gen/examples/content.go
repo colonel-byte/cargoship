@@ -35,20 +35,25 @@ func (v exampleVersion) ArchByName(name string) *exampleArch {
 	return nil
 }
 
-// HaulerFiles is every file URL one architecture installs, deduplicated and in a stable order:
-// what a hauler manifest has to collect for a build to need no network. An architecture this
+// ContentFiles is every file URL one architecture installs, deduplicated and in a stable order:
+// what a content manifest has to collect for a build to need no network. An architecture this
 // version does not target has none.
 //
 // The URLs come from the same fields the distro.yaml template writes its `source` values from,
-// which is the point -- cargoship matches a file in a store by the URL hauler recorded it as
-// having come from, so a list rebuilt here instead would be one upstream change away from
-// matching nothing. A field a distro does not use is empty and skipped, so this covers k3s's
-// single binary as well as rke2's RPMs and tarballs.
+// which is the point -- cargoship matches a file in a content store by the URL the collecting
+// tool recorded it as having come from, so a list rebuilt here instead would be one upstream
+// change away from matching nothing. A field a distro does not use is empty and skipped, so
+// this covers k3s's single binary as well as rke2's RPMs and tarballs.
+//
+// Each URL is collected whole, with no notion of extracting from it. A distro definition that
+// declares an extractPath expects the archive, and both store formats hold what they were
+// given, so a manifest that extracted on the operator's behalf would hand cargoship bytes it
+// would then try to extract a second time.
 //
 // The architecture-independent policy RPM is included for every architecture. Collecting one
 // architecture has to be enough to build it, and leaving a file out of both is the failure
 // nobody notices until an install.
-func (v exampleVersion) HaulerFiles(name string) []string {
+func (v exampleVersion) ContentFiles(name string) []string {
 	arch := v.ArchByName(name)
 	if arch == nil {
 		return nil
@@ -76,6 +81,16 @@ func (v exampleVersion) HaulerFiles(name string) []string {
 	return files
 }
 
+// base is the template's base function: the last segment of a URL, which is the filename an
+// artifact is collected under. Unlike haulerName it rewrites nothing -- a zarf package stores a
+// file at a path rather than under an OCI tag, so the characters hauler cannot take are fine.
+func base(url string) string {
+	if i := strings.LastIndex(url, "/"); i >= 0 {
+		return url[i+1:]
+	}
+	return url
+}
+
 // haulerName is the template's haulerName function: the name a hauler manifest has to give an
 // artifact, or "" when the one hauler would derive itself is already usable.
 //
@@ -100,14 +115,23 @@ func haulerName(url string) string {
 	return safe
 }
 
-// writeExampleHaulerManifests renders a flavor's hauler manifests beside its distro.yaml, one
-// per template, under the template's own name without the .tmpl -- the same rule the values
-// templates follow.
+// writeExampleContentManifests renders a flavor's content-collection manifests beside its
+// distro.yaml, one per template, under the template's own name without the .tmpl -- the same
+// rule the values templates follow. Two formats are rendered, for the two a build can read
+// back through --content-store: hauler manifests, and zarf package definitions.
 //
-// There is a template per manifest, rather than one template emitting several, because each
-// file is a thing an operator names on a `hauler store sync` command line: one architecture's
-// images, one chart's images, one architecture's files. A file that has to be split before it
-// can be used is not worth generating whole.
+// There is a template per output, rather than one template emitting several, because each file
+// is a thing an operator names on a command line. How far that splits differs by format, and
+// the difference is not cosmetic:
+//
+//   - hauler manifests split as far as is useful, because `hauler store sync` merges any number
+//     of them into one store: one architecture's images, one chart's images, one architecture's
+//     files.
+//   - a zarf definition does not split past the architecture, because each one builds a separate
+//     package and --content-store takes one path. Images and files that were split across two
+//     definitions would build two packages, only one of which a build could be pointed at.
+//
+// A file that has to be split before it can be used is not worth generating whole.
 //
 // A template that renders no manifest is not written. Each one guards its own body -- on the
 // architecture being targeted, or on the chart declaring any images -- so a flavor that does
@@ -115,17 +139,36 @@ func haulerName(url string) string {
 // a manifest. That is what keeps a single-architecture flavor from getting an arm64 file, and
 // an rke2 flavor that is not cilium from getting a cilium one. The alternative, an empty
 // `images:` list, is a manifest hauler accepts and collects nothing from.
-func writeExampleHaulerManifests(dir string, spec exampleDistroSpec, f exampleFlavor, v exampleVersion) error {
-	if !f.haulerManifests {
-		return nil
-	}
-	if len(spec.haulerTemplates) == 0 {
-		return fmt.Errorf("%s asks for hauler manifests and %s declares no templates to render", f.dir, spec.name)
+func writeExampleContentManifests(dir string, spec exampleDistroSpec, f exampleFlavor, v exampleVersion, sums *exampleShasums) error {
+	formats := []struct {
+		name      string
+		wanted    bool
+		templates []string
+	}{
+		{name: "hauler manifests", wanted: f.haulerManifests, templates: spec.haulerTemplates},
+		{name: "zarf package definitions", wanted: f.zarfPackages, templates: spec.zarfTemplates},
 	}
 
-	for _, path := range spec.haulerTemplates {
+	templates := make([]string, 0, len(spec.haulerTemplates)+len(spec.zarfTemplates))
+	for _, format := range formats {
+		if !format.wanted {
+			continue
+		}
+		// A flavor asking a distro for a format the distro has no templates for is a wiring
+		// mistake rather than a flavor with nothing to collect, so it fails rather than
+		// quietly writing nothing.
+		if len(format.templates) == 0 {
+			return fmt.Errorf("%s asks for %s and %s declares no templates to render", f.dir, format.name, spec.name)
+		}
+		templates = append(templates, format.templates...)
+	}
+	if len(templates) == 0 {
+		return nil
+	}
+
+	for _, path := range templates {
 		tmpl, err := template.New(filepath.Base(path)).
-			Funcs(template.FuncMap{"haulerName": haulerName}).
+			Funcs(template.FuncMap{"haulerName": haulerName, "base": base, "sha256": sums.get}).
 			ParseFiles(path)
 		if err != nil {
 			return fmt.Errorf("parsing %s: %w", path, err)
@@ -147,7 +190,8 @@ func writeExampleHaulerManifests(dir string, spec exampleDistroSpec, f exampleFl
 
 // declaresManifest reports whether rendered output holds a manifest rather than only the
 // comments a guarded template leaves behind. An apiVersion at the start of a line is the one
-// thing every manifest has and no comment does.
+// thing every output has and no comment does -- a hauler manifest and a zarf definition both
+// declare one.
 func declaresManifest(rendered []byte) bool {
 	return bytes.HasPrefix(rendered, []byte("apiVersion:")) ||
 		bytes.Contains(rendered, []byte("\napiVersion:"))

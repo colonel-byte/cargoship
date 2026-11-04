@@ -9,6 +9,7 @@ Almost everything under `example/` is generated. Regenerate it with mage; do not
 | `example/<distro>-<flavor>/<minor>/<version>/distro.yaml`                                                | `Generate.Examples` / `Generate.ExampleLine`, from `magefiles/templates/<distro>-distro.yaml.tmpl`                                                                                                                     |
 | `example/<distro>-<flavor>/<minor>/<version>/values.yaml`, `values.schema.json`                          | the same targets, from `magefiles/templates/<distro>/*.tmpl`                                                                                                                                                           |
 | `example/<distro>-<flavor>/<minor>/<version>/hauler-files-<arch>.yaml`, `hauler-images-<component>.yaml` | `Generate.Examples`, from `magefiles/templates/<distro>/hauler-*.yaml.tmpl`, once per architecture for the files manifests and once per image group for the images manifests, for a flavor that sets `haulerManifests` |
+| `example/<distro>-<flavor>/<minor>/<version>/zarf-<arch>.yaml`                                           | `Generate.Examples`, from `magefiles/templates/<distro>/zarf-*.yaml.tmpl`, once per architecture, for a flavor that sets `zarfPackages`                                                                                |
 | `example/shasums.json`                                                                                   | the same targets - a cache of the digests of the files the examples install                                                                                                                                            |
 | `example/assets.json`                                                                                    | the same targets - a cache of the image manifest each release publishes (URL -> image list)                                                                                                                            |
 | `example/upstream-<cni>/<minor>/<version>/distro.yaml`                                                   | `Generate.Examples`, from `magefiles/templates/upstream-distro.yaml.tmpl`, once per CNI flavor                                                                                                                         |
@@ -96,3 +97,14 @@ Example definitions are published to GHCR under `ghcr.io/colonel-byte/cargoship-
 To guarantee a consistent package image:
 - Pull using the immutable, precise tag: `<version>-publish-example-<short git commit>` (e.g. `v1.36.4+k3s1-publish-example-35c2a83`), which pins the exact commit the package was generated and published from.
 - Or build the example package locally from source using `cargoship create <example dir>`.
+
+## Content-collection manifests, and why the two formats differ in shape
+
+A flavor can ask for either or both of the two formats `cargoship create --content-store` reads back, and they are gated separately - `haulerManifests` and `zarfPackages` in [`magefiles/pkg/gen/examples/distros.go`](../magefiles/pkg/gen/examples/distros.go). No flavor currently sets both: `example/rke2-multi-cni-cilium` renders the hauler manifests and `example/rke2-cilium-vsphere` the zarf definitions, so each format is exercised on its own and neither generator can come to depend on the other being on.
+
+The shapes are not parallel, and the reason is the tool rather than taste:
+
+- **Hauler splits as far as is useful**, because `hauler store sync` merges any number of manifests into one store: one architecture's files, one chart's images, the release's own images. An operator collects the subset they want.
+- **A zarf definition does not split past the architecture.** Each one builds a separate package, and `--content-store` takes one path, so images and files split across two definitions would build two packages only one of which a build could be pointed at.
+
+That is also why the zarf definitions are rendered for `example/rke2-cilium-vsphere` rather than for a multi-architecture flavor. A zarf package carries a single `metadata.architecture`, so a flavor targeting two architectures needs two packages and cannot be satisfied from one `--content-store`; vSphere is the one flavor that structurally cannot want a second architecture, because rke2 publishes an arm64 twin of every image list it ships except that one. See [content-store](../docs/guides/content-store.md#a-zarf-package-covers-one-architecture).

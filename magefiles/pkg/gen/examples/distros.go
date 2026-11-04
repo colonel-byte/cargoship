@@ -63,11 +63,17 @@ type exampleDistroSpec struct {
 	template string
 	flavors  []exampleFlavor
 
-	// haulerTemplates are the hauler manifest templates rendered, once per architecture, for
-	// a flavor that sets haulerManifests. Per distro rather than per flavor because what a
-	// release publishes to install from is a property of the distro: rke2 has RPMs and a
-	// tarball, k3s has one binary.
+	// haulerTemplates and zarfTemplates are the content-collection manifest templates
+	// rendered for a flavor that asks for that format -- the two a build can read back
+	// through --content-store. Per distro rather than per flavor because what a release
+	// publishes to install from is a property of the distro: rke2 has RPMs and a tarball,
+	// k3s has one binary.
+	//
+	// They are two lists rather than one because the formats are chosen per flavor and not
+	// together: an operator who standardised on one has no use for the other, and generating
+	// both everywhere doubles what a reviewer reads for examples nobody collects that way.
 	haulerTemplates []string
+	zarfTemplates   []string
 
 	// coreImages is the release's own image manifest: everything the distro ships before a
 	// flavor adds its CNI's images. RKE2 splits the two, k3s publishes one combined list.
@@ -99,14 +105,20 @@ var (
 		"magefiles/templates/rke2/values.yaml.tmpl",
 		"magefiles/templates/rke2/values.schema.json.tmpl",
 	}
-	// exampleRKE2Hauler are the hauler manifests an rke2 flavor renders when it asks for them,
-	// one template per manifest. Each guards its own body, so a template describing something
-	// a flavor does not have writes no file -- see writeExampleHaulerManifests.
+	// exampleRKE2Hauler and exampleRKE2Zarf are the content-collection manifests an rke2
+	// flavor renders when it asks for that format, one template per output. Each guards its
+	// own body, so a template describing something a flavor does not have writes no file --
+	// see writeExampleContentManifests, which also explains why the zarf definitions split
+	// only by architecture while the hauler manifests split further.
 	exampleRKE2Hauler = []string{
 		"magefiles/templates/rke2/hauler-images-core.yaml.tmpl",
 		"magefiles/templates/rke2/hauler-images-rke2-cilium.yaml.tmpl",
 		"magefiles/templates/rke2/hauler-files-amd64.yaml.tmpl",
 		"magefiles/templates/rke2/hauler-files-arm64.yaml.tmpl",
+	}
+	exampleRKE2Zarf = []string{
+		"magefiles/templates/rke2/zarf-amd64.yaml.tmpl",
+		"magefiles/templates/rke2/zarf-arm64.yaml.tmpl",
 	}
 	exampleK3sValues = []string{
 		"magefiles/templates/k3s/values.yaml.tmpl",
@@ -120,8 +132,10 @@ var exampleDistros = []exampleDistroSpec{
 		name:       "rke2",
 		template:   "magefiles/templates/rke2-distro.yaml.tmpl",
 		coreImages: "rke2-images-core.linux-amd64.txt",
-		// Rendered only for a flavor that sets haulerManifests; see writeExampleHaulerManifests.
+		// Each rendered only for a flavor that asks for that format; see
+		// writeExampleContentManifests.
 		haulerTemplates: exampleRKE2Hauler,
+		zarfTemplates:   exampleRKE2Zarf,
 		flavors: []exampleFlavor{
 			{
 				cni:               "cilium",
@@ -153,6 +167,16 @@ var exampleDistros = []exampleDistroSpec{
 				replacesKubeProxy: true,
 				cloudProvider:     "rancher-vsphere",
 				values:            exampleRKE2Values,
+				// The zarf definitions go here rather than on a multi-architecture flavor,
+				// and the arm64 note below is why: a zarf package carries a single
+				// metadata.architecture, so a flavor targeting two architectures needs two
+				// packages and `--content-store` takes one path. This flavor is the one that
+				// structurally cannot want a second, so its generated definition is complete
+				// as it stands. See docs/guides/content-store.md.
+				//
+				// It is also the flavor that asks for no hauler manifests, which makes it the
+				// proof that the two formats are gated independently.
+				zarfPackages: true,
 				// amd64 only, and deliberately: this is the one flavor that cannot be
 				// multi-architecture. rke2 publishes an arm64 twin of every image list it
 				// ships -- canal, cilium, core, flannel, multus, ingress-nginx -- except
