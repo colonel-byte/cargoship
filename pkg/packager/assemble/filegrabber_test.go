@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
@@ -71,7 +72,7 @@ func TestFileGrabberRemoteOverride(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -103,7 +104,7 @@ func TestFileGrabberLocalOverride(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -130,7 +131,7 @@ func TestFileGrabberRefusesOverrideWithoutShasum(t *testing.T) {
 		Target: "/usr/local/bin/k3s",
 	}
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
 	require.ErrorContains(t, err, "declares no shasum")
 }
 
@@ -150,7 +151,7 @@ func TestFileGrabberChecksumMismatchLeavesNothingBehind(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
 	require.Error(t, err)
 
 	_, statErr := os.Stat(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -172,7 +173,7 @@ func TestFileGrabberUnmatchedSourceIsUntouched(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
 	require.NoError(t, err)
 	require.Nil(t, provenance, "a file no override touched must record nothing, so packages built without overrides are unchanged")
 
@@ -194,7 +195,7 @@ func TestFileGrabberLocalSourceStillResolvesAgainstDistroPath(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -225,7 +226,7 @@ func TestFileGrabberExtractPathChecksExtractedFileShasum(t *testing.T) {
 		Shasum:      extractedHex,
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
 	require.NoError(t, err)
 	require.NotNil(t, provenance)
 	require.Equal(t, extractedHex, provenance.Shasum)
@@ -259,10 +260,7 @@ func TestFileGrabberExtractPathReusesCachedArchive(t *testing.T) {
 	), &downloadCount)
 
 	buildPath := t.TempDir()
-	archives := newDownloadCache()
-	t.Cleanup(func() {
-		require.NoError(t, archives.cleanup())
-	})
+	isolateCacheDirectory(t)
 
 	file1 := v1alpha1.File{
 		Source:      srv.URL + "/archive.tar.gz",
@@ -277,10 +275,10 @@ func TestFileGrabberExtractPathReusesCachedArchive(t *testing.T) {
 		Shasum:      file2Hex,
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file1, nil, nil, archives)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file1, nil, nil)
 	require.NoError(t, err)
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, file2, nil, nil, archives)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, file2, nil, nil)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, downloadCount, "archive must be downloaded exactly once across both extractions")
@@ -339,35 +337,37 @@ func serveBytes(t *testing.T, body []byte, requests *int) *httptest.Server {
 	return srv
 }
 
-// isolateTempDirectory points utils.MakeTempDir at a directory this test owns, so a test can
-// see exactly which temp directories staging a file left behind.
-func isolateTempDirectory(t *testing.T) string {
+// isolateCacheDirectory points the shared file cache at a directory of this test's own and
+// returns the files/ subdirectory inside it, where a cached archive lands. Without this a test
+// that stages an extractPath file would write into the running user's real cache.
+func isolateCacheDirectory(t *testing.T) string {
 	t.Helper()
 
 	dir := t.TempDir()
-	previous := config.CommonOptions.TempDirectory
-	config.CommonOptions.TempDirectory = dir
+	previous := config.CommonOptions.CachePath
+	config.CommonOptions.CachePath = dir
 	t.Cleanup(func() {
-		config.CommonOptions.TempDirectory = previous
+		config.CommonOptions.CachePath = previous
 	})
 
-	return dir
+	return filepath.Join(dir, "files")
 }
 
-// TestFileGrabberExtractPathWithoutCacheRemovesArchive confirms a caller that passes no cache
-// has the downloaded archive cleaned up before fileGrabber returns, rather than left in the
-// temp directory for the rest of the process.
-func TestFileGrabberExtractPathWithoutCacheRemovesArchive(t *testing.T) {
+// TestFileGrabberExtractPathCachesArchiveAcrossBuilds confirms the archive an extractPath file
+// came out of is kept in the shared cache and reused by a later, entirely separate build. This
+// is the behaviour the per-build cache it replaced could not have: an archive declares no digest
+// of its own, so nothing used to key it, and every build re-downloaded every one.
+func TestFileGrabberExtractPathCachesArchiveAcrossBuilds(t *testing.T) {
 	content := "extracted binary\n"
 	sum := sha256.Sum256([]byte(content))
 
+	var downloadCount int
 	srv := serveBytes(t, tarGz(t, tarGzEntry{
 		name:    "bin/rke2",
 		content: content,
-	}), nil)
+	}), &downloadCount)
 
-	tempRoot := isolateTempDirectory(t)
-	buildPath := t.TempDir()
+	cacheFiles := isolateCacheDirectory(t)
 
 	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
@@ -376,24 +376,36 @@ func TestFileGrabberExtractPathWithoutCacheRemovesArchive(t *testing.T) {
 		Shasum:      hex.EncodeToString(sum[:]),
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil, nil)
-	require.NoError(t, err)
+	// Two builds, each with its own build directory, as two invocations of create would have.
+	for _, buildPath := range []string{t.TempDir(), t.TempDir()} {
+		_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil)
+		require.NoError(t, err)
 
-	left, err := os.ReadDir(tempRoot)
+		got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "rke2"))
+		require.NoError(t, err)
+		require.Equal(t, content, string(got))
+	}
+
+	require.Equal(t, 1, downloadCount, "the second build must extract from the cached archive rather than download it again")
+
+	cached, err := os.ReadDir(cacheFiles)
 	require.NoError(t, err)
-	require.Empty(t, left, "downloaded archive must not outlive a fileGrabber call that was given no cache")
+	require.Len(t, cached, 1, "the archive must be left in the shared cache for the next build")
+	require.True(t, strings.HasPrefix(cached[0].Name(), "url-"),
+		"a URL-keyed entry must be distinguishable from the shasum-keyed entries beside it, got %q", cached[0].Name())
 }
 
-// TestFileGrabberExtractPathFailedDownloadRemovesArchive confirms a failed download leaves
-// nothing behind either, including in the shared cache directory.
-func TestFileGrabberExtractPathFailedDownloadRemovesArchive(t *testing.T) {
+// TestFileGrabberExtractPathFailedDownloadCachesNothing confirms a failed download leaves no
+// entry in the shared cache. It matters more now that the cache outlives the build: an entry is
+// served on its name alone, so a truncated or empty one would be handed to every later build as
+// though it were the archive.
+func TestFileGrabberExtractPathFailedDownloadCachesNothing(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	t.Cleanup(srv.Close)
 
-	tempRoot := isolateTempDirectory(t)
-	archives := newDownloadCache()
+	cacheFiles := isolateCacheDirectory(t)
 
 	file := v1alpha1.File{
 		Source:      srv.URL + "/rke2.tar.gz",
@@ -401,13 +413,15 @@ func TestFileGrabberExtractPathFailedDownloadRemovesArchive(t *testing.T) {
 		Target:      "/usr/local/bin/rke2",
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, nil, archives)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, nil)
 	require.Error(t, err)
 
-	require.NoError(t, archives.cleanup())
-	left, err := os.ReadDir(tempRoot)
-	require.NoError(t, err)
-	require.Empty(t, left, "a failed download must not leave a temp directory behind")
+	left, err := os.ReadDir(cacheFiles)
+	if err != nil {
+		require.ErrorIs(t, err, os.ErrNotExist)
+		return
+	}
+	require.Empty(t, left, "a failed download must leave nothing in the cache for a later build to find")
 }
 
 // TestFileGrabberExtractPathArchivesSharingABaseName confirms two different URLs whose paths
@@ -428,10 +442,7 @@ func TestFileGrabberExtractPathArchivesSharingABaseName(t *testing.T) {
 	}), nil)
 
 	buildPath := t.TempDir()
-	archives := newDownloadCache()
-	t.Cleanup(func() {
-		require.NoError(t, archives.cleanup())
-	})
+	isolateCacheDirectory(t)
 
 	first := v1alpha1.File{
 		Source:      firstSrv.URL + "/archive.tar.gz",
@@ -453,11 +464,11 @@ func TestFileGrabberExtractPathArchivesSharingABaseName(t *testing.T) {
 	firstAgain := first
 	firstAgain.Target = "/usr/local/bin/first-again"
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, first, nil, nil, archives)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, first, nil, nil)
 	require.NoError(t, err)
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, second, nil, nil, archives)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, second, nil, nil)
 	require.NoError(t, err)
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 2, firstAgain, nil, nil, archives)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 2, firstAgain, nil, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "first"))
@@ -471,46 +482,6 @@ func TestFileGrabberExtractPathArchivesSharingABaseName(t *testing.T) {
 	got, err = os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "2", "first-again"))
 	require.NoError(t, err)
 	require.Equal(t, firstContent, string(got))
-}
-
-// TestDownloadCacheCleanupRemovesCachedArchives confirms the cache a whole assemble shares is
-// emptied by cleanup, which is the only thing that removes the archives it kept.
-func TestDownloadCacheCleanupRemovesCachedArchives(t *testing.T) {
-	content := "cached binary\n"
-	sum := sha256.Sum256([]byte(content))
-
-	srv := serveBytes(t, tarGz(t, tarGzEntry{
-		name:    "bin/rke2",
-		content: content,
-	}), nil)
-
-	tempRoot := isolateTempDirectory(t)
-	archives := newDownloadCache()
-
-	file := v1alpha1.File{
-		Source:      srv.URL + "/rke2.tar.gz",
-		ExtractPath: "bin/rke2",
-		Target:      "/usr/local/bin/rke2",
-		Shasum:      hex.EncodeToString(sum[:]),
-	}
-
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, nil, archives)
-	require.NoError(t, err)
-
-	left, err := os.ReadDir(tempRoot)
-	require.NoError(t, err)
-	require.Len(t, left, 1, "a cached archive must survive the call that downloaded it")
-
-	require.NoError(t, archives.cleanup())
-	left, err = os.ReadDir(tempRoot)
-	require.NoError(t, err)
-	require.Empty(t, left)
-
-	// cleanup is called from a defer, so it has to tolerate a cache that already ran it and
-	// one that never downloaded anything at all.
-	require.NoError(t, archives.cleanup())
-	require.NoError(t, newDownloadCache().cleanup())
-	require.NoError(t, (*downloadCache)(nil).cleanup())
 }
 
 // haulWithFile writes a hauler store holding one file artifact recorded as having come from
@@ -574,7 +545,7 @@ func TestFileGrabberFromHaulerStore(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -602,7 +573,7 @@ func TestFileGrabberHaulerStoreRefusesFileWithoutShasum(t *testing.T) {
 		Target: "/usr/local/bin/k3s",
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "shasum")
 }
@@ -624,7 +595,7 @@ func TestFileGrabberOverrideBeatsHaulerStore(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, store, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, store)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -647,7 +618,7 @@ func TestFileGrabberFallsBackWhenStoreLacksTheFile(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store)
 	require.NoError(t, err)
 	require.Nil(t, provenance, "a file read from its declared source reports no redirection")
 

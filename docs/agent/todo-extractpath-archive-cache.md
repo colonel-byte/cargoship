@@ -1,5 +1,7 @@
 # TODO: persist archives fetched for an `extractPath` file
 
+> **Superseded.** The cache described below exists: `utils.CachedArchive` keys an `extractPath` archive on a digest of its resolved URL and stores it under `<cache>/files` with a `url-` prefix, and the per-build `downloadCache` this document analyses has been deleted along with it. The second of the two shapes in [What to do about it](#what-to-do-about-it) is what landed; the first -- letting a `files` entry declare the archive's own digest -- is still open and is still the stronger option. The reasoning here is kept because it is the record of *why* the archive has no digest to key on, which the code comment points back to.
+
 This is a punch list, not a decision record like the `choice-*.md` files beside it. Every walk of the cluster suite builds its own package, each `distro.yaml` names an `etcd` release to pull `etcdctl` out of, and none of those archives is ever cached between runs - so a cluster walk downloads them again every time and a momentary DNS failure fails the walk at the package build. That accounted for three failed runs out of five in one session, at `Test_00_UpgradePackage` and `Test_00_JoinMachine`, neither of which has anything to do with the phases under test.
 
 ## Why they are not cached
