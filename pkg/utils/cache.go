@@ -19,11 +19,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -196,4 +199,277 @@ func ResolveCachePath(cachePath string) (string, error) {
 		return "", fmt.Errorf("unable to determine cache directory: %w", err)
 	}
 	return filepath.Join(cacheDir, CacheDir), nil
+}
+
+// Cache subdirectories holding content a build can fetch again. The names are duplicated here
+// rather than imported: cacheImagesSubdir is coci/layers.ImageCacheDirectory and
+// cacheExamplesSubdir is the examples generator's asset cache, and importing either package from
+// here would invert the dependency.
+const (
+	cacheImagesSubdir   = "images"
+	cacheExamplesSubdir = "examples"
+)
+
+// CacheAreaKind says whether a cache directory's entries can be removed individually.
+type CacheAreaKind int
+
+const (
+	// CacheAreaFlat holds independently-keyed entries, each complete on its own, so any
+	// subset can be removed and the rest still serve hits.
+	CacheAreaFlat CacheAreaKind = iota
+	// CacheAreaLayout holds an OCI image layout: an index naming blobs. Removing part of it
+	// leaves the index pointing at blobs that are gone, so it goes all at once or not at all.
+	CacheAreaLayout
+	// CacheAreaRecord holds records of runs rather than fetched content. Nothing regenerates
+	// one, so pruning never touches it.
+	CacheAreaRecord
+)
+
+// CacheArea describes one subdirectory of the cache root.
+type CacheArea struct {
+	Name string
+	Kind CacheAreaKind
+	Path string
+	// Size is the total bytes beneath Path, and Entries the number of top-level entries.
+	Size    int64
+	Entries int
+}
+
+// cacheAreaKinds classifies the subdirectories cargoship writes under the cache root. A directory
+// found there and not named here is reported by CacheUsage and never pruned, which is the safe
+// default for one this version does not know about.
+var cacheAreaKinds = map[string]CacheAreaKind{
+	cacheFilesSubdir:    CacheAreaFlat,
+	cacheExamplesSubdir: CacheAreaFlat,
+	cacheImagesSubdir:   CacheAreaLayout,
+	"logs":              CacheAreaRecord,
+	"e2e-logs":          CacheAreaRecord,
+	// microvm holds the VM base images the local dev fleet boots. They are fetched by
+	// `mage dev:vmImage` rather than by a package build, and re-fetching one is a multi-
+	// gigabyte download, so it is left to that tooling rather than pruned from here.
+	"microvm": CacheAreaRecord,
+}
+
+// CacheUsage reports every subdirectory under the cache root with its size, so an operator can
+// see what is there before removing any of it.
+func CacheUsage(cachePath string) ([]CacheArea, error) {
+	root, err := ResolveCachePath(cachePath)
+	if err != nil {
+		return nil, err
+	}
+
+	listing, err := os.ReadDir(root)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("unable to read the cache directory: %w", err)
+	}
+
+	dirs := make([]CacheArea, 0, len(listing))
+	for _, entry := range listing {
+		if !entry.IsDir() {
+			continue
+		}
+		path := filepath.Join(root, entry.Name())
+		size, count, err := dirUsage(path)
+		if err != nil {
+			return nil, err
+		}
+		kind, known := cacheAreaKinds[entry.Name()]
+		if !known {
+			kind = CacheAreaRecord
+		}
+		dirs = append(dirs, CacheArea{
+			Name:    entry.Name(),
+			Kind:    kind,
+			Path:    path,
+			Size:    size,
+			Entries: count,
+		})
+	}
+	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })
+	return dirs, nil
+}
+
+// PruneOptions control what CacheUsage's results PruneCache removes.
+type PruneOptions struct {
+	// OlderThan keeps any entry modified within this window. Zero removes everything
+	// prunable, which is the only way an image layout is removed -- see CacheAreaLayout.
+	OlderThan time.Duration
+	// DryRun reports what would be removed without removing it.
+	DryRun bool
+}
+
+// Pruned is what PruneCache removed, or would have removed under DryRun.
+type Pruned struct {
+	Dirs    []CacheArea
+	Size    int64
+	Entries int
+	// SkippedLayouts names the image layouts left alone because OlderThan was set.
+	SkippedLayouts []string
+}
+
+// PruneCache removes cached content from the cache root and reports what went.
+//
+// An age window prunes the flat caches entry by entry, which is what makes the command usable
+// rather than nuclear: the working set of a definition under active edit stays, and the versions
+// it has stopped naming go. An image layout cannot be pruned that way without breaking its index,
+// so it is removed only by a full prune and is otherwise reported as skipped. Records -- the run
+// logs, and the dev fleet's base images -- are never touched.
+func PruneCache(ctx context.Context, cachePath string, opts PruneOptions) (Pruned, error) {
+	l := logger.From(ctx)
+
+	dirs, err := CacheUsage(cachePath)
+	if err != nil {
+		return Pruned{}, err
+	}
+
+	var result Pruned
+	cutoff := time.Now().Add(-opts.OlderThan)
+
+	for _, dir := range dirs {
+		switch dir.Kind {
+		case CacheAreaRecord:
+			continue
+		case CacheAreaLayout:
+			if opts.OlderThan > 0 {
+				result.SkippedLayouts = append(result.SkippedLayouts, dir.Name)
+				continue
+			}
+			if !opts.DryRun {
+				if err := os.RemoveAll(dir.Path); err != nil {
+					return result, fmt.Errorf("unable to remove %s: %w", dir.Path, err)
+				}
+			}
+			l.Debug("pruning cache directory", "path", dir.Path, "bytes", dir.Size, "dryRun", opts.DryRun)
+			result.Dirs = append(result.Dirs, dir)
+			result.Size += dir.Size
+			result.Entries += dir.Entries
+		case CacheAreaFlat:
+			pruned, err := pruneFlatDir(ctx, dir, cutoff, opts)
+			if err != nil {
+				return result, err
+			}
+			if pruned.Entries == 0 {
+				continue
+			}
+			result.Dirs = append(result.Dirs, pruned)
+			result.Size += pruned.Size
+			result.Entries += pruned.Entries
+		}
+	}
+
+	return result, nil
+}
+
+// pruneFlatDir removes the top-level entries of a flat cache directory that fall outside the age
+// window, and reports what went. An entry is kept on a stat failure rather than removed: the
+// point of the window is to keep what might still be wanted.
+func pruneFlatDir(ctx context.Context, dir CacheArea, cutoff time.Time, opts PruneOptions) (CacheArea, error) {
+	l := logger.From(ctx)
+
+	listing, err := os.ReadDir(dir.Path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return CacheArea{Name: dir.Name, Kind: dir.Kind, Path: dir.Path}, nil
+		}
+		return CacheArea{}, fmt.Errorf("unable to read %s: %w", dir.Path, err)
+	}
+
+	out := CacheArea{Name: dir.Name, Kind: dir.Kind, Path: dir.Path}
+	for _, entry := range listing {
+		path := filepath.Join(dir.Path, entry.Name())
+		if opts.OlderThan > 0 {
+			info, err := entry.Info()
+			if err != nil {
+				l.Debug("unable to stat cache entry, keeping it", "path", path, "error", err)
+				continue
+			}
+			if info.ModTime().After(cutoff) {
+				continue
+			}
+		}
+		size, count, err := dirUsage(path)
+		if err != nil {
+			return CacheArea{}, err
+		}
+		if !opts.DryRun {
+			if err := os.RemoveAll(path); err != nil {
+				return CacheArea{}, fmt.Errorf("unable to remove %s: %w", path, err)
+			}
+		}
+		out.Size += size
+		// A file counts as one entry; a directory counts as the one entry that was removed.
+		if count == 0 {
+			count = 1
+		}
+		out.Entries += count
+	}
+	return out, nil
+}
+
+// dirUsage returns the total bytes beneath path and the number of top-level entries in it. A
+// plain file is one entry of its own size.
+func dirUsage(path string) (int64, int, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, 0, nil
+		}
+		return 0, 0, fmt.Errorf("unable to stat %s: %w", path, err)
+	}
+	if !info.IsDir() {
+		return info.Size(), 1, nil
+	}
+
+	var total int64
+	err = filepath.WalkDir(path, func(_ string, d fs.DirEntry, err error) error {
+		if err != nil {
+			// A cache entry removed by something else mid-walk is not an error worth
+			// failing a prune over.
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		fi, err := d.Info()
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		total += fi.Size()
+		return nil
+	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("unable to measure %s: %w", path, err)
+	}
+
+	listing, err := os.ReadDir(path)
+	if err != nil {
+		return 0, 0, fmt.Errorf("unable to read %s: %w", path, err)
+	}
+	return total, len(listing), nil
+}
+
+// HumanBytes formats a byte count in the MiB-style units the rest of this project reports sizes
+// in, so a prune's output can be compared with the binary size budget and with du.
+func HumanBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	value := float64(n)
+	for _, suffix := range []string{"KiB", "MiB", "GiB", "TiB"} {
+		value /= unit
+		if value < unit {
+			return fmt.Sprintf("%.2f %s", value, suffix)
+		}
+	}
+	return fmt.Sprintf("%.2f PiB", value/unit)
 }

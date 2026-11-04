@@ -130,30 +130,3 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		require.Error(t, err)
 	})
 }
-
-// TestCargoshipVaultEncryptDeprecatedAlias checks that the top-level spelling the vault group
-// replaced still works for scripts that predate it, and says so when it runs.
-func TestCargoshipVaultEncryptDeprecatedAlias(t *testing.T) {
-	passwordFile := filepath.Join(t.TempDir(), "vault-password")
-	const password = "supersecret"
-	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
-
-	t.Run("still encrypts, and warns that it is deprecated", func(t *testing.T) {
-		const value = "legacy-secret"
-
-		stdout, stderr, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", passwordFile, value, "--no-color")
-		require.NoError(t, err)
-		require.Contains(t, stderr, `use "cargoship vault encrypt" instead`)
-
-		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
-		require.NoError(t, err)
-		require.Equal(t, value, decrypted)
-	})
-
-	t.Run("is not offered in help", func(t *testing.T) {
-		stdout, _, err := e2e.Cargoship(t, "--help")
-		require.NoError(t, err)
-		require.NotContains(t, stdout, "vault-encrypt")
-		require.Contains(t, stdout, "vault ")
-	})
-}

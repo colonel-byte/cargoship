@@ -175,16 +175,16 @@ $ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
 
 	// CmdSha256SumExample sha256sum example
 	CmdSha256SumExample = `# Checksum a local file
-$ cargoship sha256sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
+$ cargoship dev sha256sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 
 # Checksum a remote file, downloading it first
-$ cargoship sha256sum https://example.com/artifact.tar.gz
+$ cargoship dev sha256sum https://example.com/artifact.tar.gz
 
 # Checksum one file inside an archive, for use with a component's files.extractPath
-$ cargoship sha256sum ./artifact.tar.gz --extract-path ./bin/tool
+$ cargoship dev sha256sum ./artifact.tar.gz --extract-path ./bin/tool
 
 # Same thing, using the shorter alias
-$ cargoship sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst`
+$ cargoship dev sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst`
 
 	// CmdVaultEncryptExample vault encrypt example
 	CmdVaultEncryptExample = `# Encrypt a registry password for a config file's user/pass/token field
@@ -376,9 +376,9 @@ $ cargoship version -o json`
 	// CmdRedactReceiptExample redact-receipt example
 	CmdRedactReceiptExample = `
 # Print a shareable copy of a run receipt
-$ cargoship redact-receipt ./apply-20260928-143000.json
+$ cargoship dev redact-receipt ./apply-20260928-143000.json
 
 # Write one to a file, ready to attach to an issue
-$ cargoship redact-receipt ./apply-20260928-143000.json -o ./share.json
+$ cargoship dev redact-receipt ./apply-20260928-143000.json -o ./share.json
 `
 )
