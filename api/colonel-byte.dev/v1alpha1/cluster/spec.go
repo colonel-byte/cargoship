@@ -439,6 +439,10 @@ type RegistryAuth struct {
 // endpointSchemeRegex matches a URL that already names a scheme, e.g. "https://" or "http://".
 var endpointSchemeRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.\-]*://`)
 
+// numericGroupRefRegex matches a numbered capture-group reference in a regular expression
+// replacement, in either the bare "$1" or the braced "${1}" form.
+var numericGroupRefRegex = regexp.MustCompile(`\$(\d+)|\$\{(\d+)\}`)
+
 // RegistryProxy redirects pulls for a registry to a different URL.
 type RegistryProxy struct {
 	// URL is the registry address the engine pulls from instead of the original registry.
@@ -500,11 +504,24 @@ func (p *RegistryProxy) Validate(name RegistryName) error {
 	// A rewrite is a Go regular expression the engine compiles on the node. One that does not
 	// compile there fails the pull rather than the parse, which is a long way from here.
 	for pattern, replacement := range p.Rewrite {
-		if _, err := regexp.Compile(pattern); err != nil {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
 			return fmt.Errorf("registry %q: proxy.rewrite pattern %q is not a valid regular expression: %w", name, pattern, err)
 		}
 		if replacement == "" {
 			return fmt.Errorf("registry %q: proxy.rewrite pattern %q has an empty replacement", name, pattern)
+		}
+		// The engine replaces the matched span with the replacement expanded as a template, so a
+		// reference to a group the pattern never captures expands to nothing and the rewritten
+		// image name silently loses that piece. "$$" is an escaped literal dollar, so strip those
+		// first rather than reading the second "$" as the start of a reference.
+		// shortcut: numbered references only, so a "${name}" naming a group the pattern lacks is
+		// not caught; widen to re.SubexpNames() if named groups start being used here.
+		for _, match := range numericGroupRefRegex.FindAllStringSubmatch(strings.ReplaceAll(replacement, "$$", ""), -1) {
+			ref := match[1] + match[2]
+			if n, err := strconv.Atoi(ref); err == nil && n > re.NumSubexp() {
+				return fmt.Errorf("registry %q: proxy.rewrite replacement %q for pattern %q references group $%d, but the pattern captures %d", name, replacement, pattern, n, re.NumSubexp())
+			}
 		}
 	}
 	return nil
