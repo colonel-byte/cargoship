@@ -158,6 +158,57 @@ func TestDeclaresManifest(t *testing.T) {
 	}
 }
 
+// trimRegistry drops only the manifest's own registry, because an image published elsewhere has
+// to stay qualified for hauler to leave it alone -- hauler fills the hauler.dev/registry
+// annotation in for unqualified names only, verified against hauler 2.1.2.
+func TestTrimRegistry(t *testing.T) {
+	tests := []struct {
+		name     string
+		registry string
+		image    string
+		want     string
+	}{
+		{
+			name:     "the manifest's own registry is dropped",
+			registry: "docker.io",
+			image:    "docker.io/rancher/mirrored-pause:3.10.2",
+			want:     "rancher/mirrored-pause:3.10.2",
+		},
+		{
+			name:     "an image under another registry stays qualified",
+			registry: "docker.io",
+			image:    "registry.k8s.io/pause:3.10.2",
+			want:     "registry.k8s.io/pause:3.10.2",
+		},
+		{
+			name:     "a digest reference is trimmed like a tag",
+			registry: "docker.io",
+			image:    "docker.io/rancher/mirrored-pause@sha256:412c4a72",
+			want:     "rancher/mirrored-pause@sha256:412c4a72",
+		},
+		{
+			name:     "an already unqualified image is left alone",
+			registry: "docker.io",
+			image:    "rancher/mirrored-pause:3.10.2",
+			want:     "rancher/mirrored-pause:3.10.2",
+		},
+		{
+			name:     "a registry that is only a prefix of the host is not a match",
+			registry: "docker.io",
+			image:    "docker.io.evil.example.com/rancher/mirrored-pause:3.10.2",
+			want:     "docker.io.evil.example.com/rancher/mirrored-pause:3.10.2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := trimRegistry(tt.registry, tt.image); got != tt.want {
+				t.Errorf("trimRegistry(%q, %q) = %q, want %q", tt.registry, tt.image, got, tt.want)
+			}
+		})
+	}
+}
+
 // A flavor whose definition declares no rke2-cilium chart, and only one architecture, must get
 // neither a cilium manifest nor an arm64 one -- the templates guard their own bodies.
 func TestHaulerManifestsSkipWhatAFlavorDoesNotHave(t *testing.T) {

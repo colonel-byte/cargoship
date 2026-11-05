@@ -214,6 +214,42 @@ For **files**, an explicit `--file-override` wins over the store. An operator wh
 
 For **images**, a `--registry-override` is applied *first*, and the store is then searched for the rewritten reference. So an override that rewrites `registry.k8s.io` to `mirror.example.com` means the store is searched for `mirror.example.com/...`, which is usually not what a store collected from upstream holds. Pass the store without registry overrides unless the store was itself collected from the mirror.
 
+### Collecting a Haul From a Mirror
+
+The generated `hauler-images-*.yaml` beside each example declare their images unqualified, under a document-wide `hauler.dev/registry` annotation:
+
+```yaml
+metadata:
+  annotations:
+    hauler.dev/registry: docker.io
+spec:
+  images:
+    - name: rancher/rke2-runtime:v1.37.0-rke2r1
+```
+
+Pointing that one line at a mirror redirects every image in the document, so collecting a release from an internal registry needs no per-image editing. Hauler supplies the annotation's registry for unqualified names only, so an image that is already qualified under some other registry stays where it is and the annotation does not touch it.
+
+What the annotation cannot do is preserve the upstream identity. `hauler.dev/original-ref` is hauler's record of what it actually fetched, so a haul collected through the annotation records `mirror.example.com/rancher/...` and not `docker.io/rancher/...`. That is the `unless` case the section above names: the store *was* collected from the mirror, so the build has to look its images up under the same name.
+
+```yaml
+# cargoship-config.yaml
+registry_override:
+  docker.io: mirror.example.com
+```
+
+The config file is the right half of this rather than `--registry-override`, because which mirror a management node reaches is a standing answer for the whole fleet rather than a decision about one invocation. Either form works, and a flag replaces the config file's mappings rather than merging with them.
+
+Two things this does not solve:
+
+- **The mirror has to carry the same repository paths.** The annotation replaces the registry host and nothing else, so a mirror serving `mirror.example.com/rke2-runtime` rather than `mirror.example.com/rancher/rke2-runtime` still needs an entry per image.
+- **Hauler's `rewrite` is not a way around the first point.** A per-image `rewrite` moves `io.containerd.image.name`, which cargoship does not match on, and leaves `original-ref` as the fetch source; the document-level `hauler.dev/rewrite` annotation had no effect at all when tried against hauler 2.1.2, in either the bare-host or the full-reference form.
+
+Check what a haul recorded rather than assuming, since a mismatch here shows up as a store miss per image rather than as an error:
+
+```bash
+hauler store info --store ./store --output json --type image
+```
+
 ## Serving a Haul Instead
 
 Hauler can also serve a store, and that path needs nothing from this guide - it is the existing override mechanism:

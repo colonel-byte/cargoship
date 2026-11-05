@@ -13,15 +13,24 @@
 # limitations under the License.
 #
 # Do not edit; see example/AGENTS.md.
+{{- $registry := "docker.io" }}
+# yaml-language-server: $schema=../../../../schema/hauler-manifest.json
 apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:
   name: {{ .Name }}-core
+  annotations:
+    # The registry every image below is collected from. Hauler supplies it for the unqualified
+    # names in this document, so pointing this at a mirror that carries the same repository
+    # paths redirects the whole document -- and `cargoship create --registry-override
+    # docker.io=<mirror>` then looks the collected images up under the reference the mirror
+    # recorded. See docs/guides/content-store.md.
+    hauler.dev/registry: {{ $registry }}
 spec:
   images:
 {{- range .CoreImages }}
-    - name: {{ . }}
+    - name: {{ trimRegistry $registry . }}
 {{- end }}
 {{- range .CNIImages }}
-    - name: {{ . }}
+    - name: {{ trimRegistry $registry . }}
 {{- end }}

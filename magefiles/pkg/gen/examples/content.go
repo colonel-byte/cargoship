@@ -115,6 +115,19 @@ func haulerName(url string) string {
 	return safe
 }
 
+// trimRegistry is the template's trimRegistry function: an image reference with the manifest's
+// own registry host dropped, so the document's hauler.dev/registry annotation is what supplies
+// it. Hauler fills that annotation in for unqualified names only, so an image left qualified is
+// an image the annotation cannot redirect -- and an operator collecting from a mirror would be
+// editing every line rather than one.
+//
+// Only the manifest's own host is trimmed. A reference under any other registry is returned
+// untouched and stays qualified, which is what hauler needs to leave it alone: the annotation
+// would otherwise silently repoint an image that is not published there.
+func trimRegistry(registry, image string) string {
+	return strings.TrimPrefix(image, registry+"/")
+}
+
 // writeExampleContentManifests renders a flavor's content-collection manifests beside its
 // distro.yaml, one per template, under the template's own name without the .tmpl -- the same
 // rule the values templates follow. Two formats are rendered, for the two a build can read
@@ -168,7 +181,7 @@ func writeExampleContentManifests(dir string, spec exampleDistroSpec, f exampleF
 
 	for _, path := range templates {
 		tmpl, err := template.New(filepath.Base(path)).
-			Funcs(template.FuncMap{"haulerName": haulerName, "base": base, "sha256": sums.get}).
+			Funcs(template.FuncMap{"haulerName": haulerName, "base": base, "sha256": sums.get, "trimRegistry": trimRegistry}).
 			ParseFiles(path)
 		if err != nil {
 			return fmt.Errorf("parsing %s: %w", path, err)
