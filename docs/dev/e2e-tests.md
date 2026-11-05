@@ -5,7 +5,7 @@ The `noncluster` e2e suite drives the **built `cargoship` binary** as a subproce
 ## Layout
 
 ```
-test/e2e/noncluster/        misc + package command groups: version, sha256sum, the vault and age suites, ssh, create,
+test/e2e/noncluster/        misc + package command groups: version, dev sha256sum, the vault and age suites, ssh, create,
                             publish, pull, sign, verify, schema, validate, import, the content store, and the Ansible module
 test/e2e/cluster/           the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
 test/common.go              the CargoE2ETest harness (e2e.Cargoship) shared by the suites

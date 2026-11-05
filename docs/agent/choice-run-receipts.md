@@ -1,6 +1,6 @@
 # Choice: what a run receipt records, and what it refuses to
 
-`cargoship apply --receipt-path` writes a structured record of a run, and `cargoship redact-receipt` projects it into something safe to attach to a public issue. Five decisions in that design look like oversights from the code alone. They are not.
+`cargoship apply --receipt-path` writes a structured record of a run, and `cargoship dev redact-receipt` projects it into something safe to attach to a public issue. Five decisions in that design look like oversights from the code alone. They are not.
 
 ## Host records are an allowlist, never a denylist
 

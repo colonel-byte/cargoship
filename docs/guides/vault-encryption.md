@@ -316,6 +316,5 @@ Cargoship writes a plain block scalar with no tag, and its `-path` and `-file` c
 
 ## Notes
 
-* `cargoship vault-encrypt` is the old spelling of `cargoship vault encrypt`. It still works and still prints a deprecation notice. Use the `vault` group instead.
 * A failed command never touches the file. The rewrite goes to a temporary file alongside the original and is renamed over it, so an interruption cannot leave a half-written configuration.
 * The file's mode is preserved across a rewrite.

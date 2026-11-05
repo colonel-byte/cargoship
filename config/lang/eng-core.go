@@ -144,8 +144,6 @@ const (
 	CmdVaultShort = "Encrypts and decrypts cluster configuration values with Ansible Vault or age"
 	// CmdVaultLong vault long
 	CmdVaultLong = "Groups the commands that read and write encrypted values for a cluster configuration, in either of the two formats cargoship supports: Ansible Vault, keyed by a shared password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable, and age, keyed by public keys given via --age-recipient and read back with --age-identity-file. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time. Which format a value is in is read from the value itself, so one configuration can hold both, and moving between them is 'cargoship vault rekey'. The group is still called vault because renaming it would break every script that calls it."
-	// CmdVaultEncryptDeprecated deprecation notice for the top-level vault-encrypt spelling
-	CmdVaultEncryptDeprecated = `use "cargoship vault encrypt" instead.`
 	// CmdVaultEncryptShort vault encrypt short
 	CmdVaultEncryptShort = "Encrypts a value with Ansible Vault or age, for use in a registry's user/pass/token fields"
 	// CmdVaultEncryptLong vault encrypt long
@@ -199,7 +197,7 @@ const (
 	// CmdVaultRekeyLong vault rekey long
 	CmdVaultRekeyLong = "Re-wraps every encrypted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- under the key named by --new-vault-password-file or by --age-recipient, leaving comments, key order, and the rest of the document untouched. Naming age recipients while reading with the vault password is how a configuration moves from Ansible Vault to age; naming neither re-wraps the values under the key they already carry, which gives every one of them fresh ciphertext without changing the key. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the keys given, and the command stops without touching FILE if one is not, because a configuration encrypted under two keys is one no single key can read back."
 	// CmdInstallFlagReceiptPath flag description
-	CmdInstallFlagReceiptPath = "Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket."
+	CmdInstallFlagReceiptPath = "Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket."
 	// CmdRedactReceiptShort redact-receipt short
 	CmdRedactReceiptShort = "Rewrites a run receipt so it can be attached to an issue"
 	// CmdRedactReceiptLong redact-receipt long
@@ -245,6 +243,31 @@ const (
 	// CmdSchemaFlagPackage flag description
 	CmdSchemaFlagPackage = "Graft a package's own values schema onto spec.config.values. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
 
+	// CmdCleanCacheShort clean-cache short
+	CmdCleanCacheShort = "Reports what the shared cache holds, and removes it"
+	// CmdCleanCacheLong clean-cache long
+	CmdCleanCacheLong = "Reports every area of the shared cache with its size, then removes the content a build can fetch again. Nothing else reclaims it: the cache has no size limit and no expiry, so it grows for as long as definitions name new versions.\n\n" +
+		"What is removed is content, not record. The downloaded files and the archives extracted from them, the image blobs, and the examples generator's assets all come back on the next run that wants them, at the cost of fetching them again. The run logs and the local dev fleet's base images are left alone: nothing regenerates a log, and a fleet image is a multi-gigabyte download owned by 'mage dev:vmImage' rather than by a package build.\n\n" +
+		"Pass --older-than to keep the working set and drop what a definition has stopped naming, which is usually what is wanted on a machine still in use. Note that it cannot prune an image layout: that area is an index over shared blobs, so removing some of them by age would leave the index naming blobs that are gone. It is reported as skipped, and comes out whole when --older-than is not given.\n\n" +
+		"An entry's age is when it was written, not when it was last used, so a long-lived entry still in use can fall outside the window and be fetched again. This changes nothing but the time the next build takes.\n\n" +
+		"Nothing here touches a cluster or a host. Use --dry-run to see what would go."
+	// CmdCleanCacheExample clean-cache example
+	CmdCleanCacheExample = "\n" +
+		"# Report what the cache holds and what would be removed, removing nothing\n" +
+		"$ cargoship dev clean-cache --dry-run\n\n" +
+		"# Remove every fetchable thing in it\n" +
+		"$ cargoship dev clean-cache\n\n" +
+		"# Keep anything fetched in the last fortnight\n" +
+		"$ cargoship dev clean-cache --older-than 336h\n"
+	// CmdCleanCacheFlagOlderThan clean-cache flag older-than
+	CmdCleanCacheFlagOlderThan = "Only remove entries written longer ago than this, as a Go duration such as 336h. Omit it to remove every fetchable area, which is also the only way an image layout is removed. Measured from when an entry was written rather than when it was last read."
+	// CmdCleanCacheFlagDryRun clean-cache flag dry-run
+	CmdCleanCacheFlagDryRun = "Report what would be removed without removing it."
+	// CmdDevShort dev short
+	CmdDevShort = "Commands for working on a definition or on cargoship itself"
+	// CmdDevLong dev long
+	CmdDevLong = "Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. None of them builds a package or installs one: they report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.\n\n" +
+		"They are grouped rather than sitting at the root because the root is the operator's surface -- create, apply, prepare, reset -- and a command that is only ever reached for while editing a definition or filing a bug does not belong in that list."
 	// CmdInventoryShort inventory short
 	CmdInventoryShort = "Generates a cluster inventory from another source of truth"
 	// CmdInventoryLong inventory long

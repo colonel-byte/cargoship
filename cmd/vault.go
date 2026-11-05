@@ -39,14 +39,3 @@ func newVaultCommand() *cobra.Command {
 
 	return cmd
 }
-
-// newDeprecatedVaultEncryptCommand keeps the top-level "vault-encrypt" spelling working for
-// anyone whose scripts predate the vault group. Cobra prints the deprecation notice, and leaves a
-// deprecated command out of both its help output and the generated documentation, so nothing
-// points newcomers at it.
-func newDeprecatedVaultEncryptCommand() *cobra.Command {
-	cmd := newVaultEncryptCommand()
-	cmd.Use = "vault-encrypt [VALUE]"
-	cmd.Deprecated = lang.CmdVaultEncryptDeprecated
-	return cmd
-}

@@ -159,6 +159,21 @@ distro:
 
 See [Building From a Local Content Store](docs/guides/content-store.md) for the collect-and-carry workflow, what each format must contain, and how this compares with `--registry-override` and `--file-override`.
 
+A build caches what it fetches under `~/.cache/cargoship`, so a rebuild of the same definition reaches the network for little or nothing. Nothing expires that cache -- it has no size limit and grows for as long as definitions name new versions -- so `clean-cache` is what reclaims it:
+
+```bash
+# report every area with its size and what would go, removing nothing
+cargoship dev clean-cache --dry-run
+
+# keep anything fetched in the last fortnight, drop the rest
+cargoship dev clean-cache --older-than 336h
+
+# remove every fetchable area
+cargoship dev clean-cache
+```
+
+Run logs and the local dev fleet's images are never removed, and neither is an area this version does not recognise. An age window cannot prune the image layout, which is an index over shared blobs; it is reported as skipped and comes out whole when `--older-than` is omitted.
+
 ### 2. Prepare Target Nodes
 
 Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, `fapolicyd` rules, and `/etc/hosts`) across target machines using your cluster configuration inventory:
@@ -272,7 +287,7 @@ cargoship validate ./cargoship-config.yaml
 cargoship schema inventory -o ./inventory.schema.json
 
 # Checksum a file, or one file inside an archive
-cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
+cargoship dev sha256sum ./build/cargoship-distro-amd64.tar.zst
 ```
 
 ### 10. Record a Run for Audit
@@ -285,7 +300,7 @@ cargoship apply ./build/cargoship-distro-amd64.tar.zst \
   --receipt-path /var/log/cargoship/receipts/apply-20260928-143000.json
 
 # Strip everything that identifies the fleet, ready to attach to a bug report
-cargoship redact-receipt ./receipt.json -o ./share.json
+cargoship dev redact-receipt ./receipt.json -o ./share.json
 ```
 
 The receipt carries the invocation and the cargoship that ran it, the package's digests and signature status, the cluster inventory, the phase-by-phase ledger with per-host change reasons and diffs, and any warnings the run raised under `outcome.warnings` -- a successful run that left something on a host worth looking at says so there. `redact-receipt` renumbers the hosts `host-01`, `host-02`, drops the diff bodies -- an engine configuration diff carries join tokens -- and removes the cluster name, operator and command line, leaving what a maintainer triages from.
