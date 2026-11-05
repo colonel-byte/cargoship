@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-faa35e45.js";
+            window.path_to_searchindex_js = "searchindex-31c83a25.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-7d57cb55.js"></script>
+        <script src="toc-b8270bf1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -357,7 +357,23 @@ cargoship import ./my-package.tar -o ./build/
 </code></pre>
 <p><code>import</code> reads an OCI Image Layout, as a <code>.tar</code> or as an unpacked directory; see <a href="guides/importing-archives.html">Importing Archives</a> for the other tools that write one, and why a <code>docker-archive</code> cannot carry a package.</p>
 <p>A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see <a href="https://github.com/colonel-byte/cargoship/issues/848">#848</a>. The commands that load a package - <code>apply</code>, <code>prepare</code>, <code>engine-config-sync</code>, <code>publish</code>, <code>pull</code>, <code>import</code>, <code>validate</code>, <code>schema</code> - verify as part of loading, gated on <code>--verify=never|if-possible|always</code>. <code>verify</code> does nothing but check the signature, which is what makes it the one to run before a playbook.</p>
-<h3 id="8-encrypt-credentials-in-a-config-file"><a class="header" href="#8-encrypt-credentials-in-a-config-file">8. Encrypt Credentials in a Config File</a></h3>
+<h3 id="8-mirror-a-packages-contents-into-a-registry"><a class="header" href="#8-mirror-a-packages-contents-into-a-registry">8. Mirror a Package’s Contents into a Registry</a></h3>
+<p><code>publish</code> uploads a package as one artifact, to be pulled back as a package. <code>mirror</code> does the opposite: it unpacks what the package carries into a registry as individually pullable content, so the mirror a fleet already pulls through holds what its nodes will ask for.</p>
+<pre><code class="language-bash"># Push every image and file the package carries into a registry
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://harbor.internal
+
+# Under a repository prefix, which most hosted registries require
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://harbor.internal/cargoship
+
+# Or read the destination from the registry proxy the cluster config already declares
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst --config ./cluster.yaml
+
+# Only the images, against a registry on plain HTTP
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:5000 --images --plain-http
+</code></pre>
+<p>An image keeps its repository path and its tag, and only the registry host changes: <code>registry.k8s.io/pause:3.10</code> is pushed as <code>harbor.internal/pause:3.10</code>. That is not cosmetic - it is exactly what a node asks a mirror for, because <code>apply</code> writes that same proxy address into each host’s containerd configuration from <code>spec.config.registries[].proxy.url</code>. Passing <code>--config</code> reads the destination from that one field, so what gets pushed and what the nodes ask for cannot drift apart.</p>
+<p>See <a href="guides/mirror-registry.html">Mirroring to a Registry</a> for the naming rules, and how this compares with <code>--registry-override</code> and <code>--content-store</code>.</p>
+<h3 id="9-encrypt-credentials-in-a-config-file"><a class="header" href="#9-encrypt-credentials-in-a-config-file">9. Encrypt Credentials in a Config File</a></h3>
 <p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
 <pre><code class="language-bash"># Encrypt one value for a registry's user/pass/token field
 cargoship vault encrypt my-registry-password --vault-password-file ./vault-pass.txt
@@ -374,7 +390,7 @@ cargoship vault keygen
 cargoship vault rekey ./cargoship-config.yaml --new-vault-password-file ./new-pass.txt
 </code></pre>
 <p><code>encrypt-path</code> only encrypts; cargoship decrypts a registry’s <code>auth.user</code>, <code>auth.pass</code>, <code>auth.token</code> and <code>tls.ca</code> at apply time, and warns when asked to encrypt a path outside that set. <code>decrypt</code>, <code>decrypt-path</code>, <code>decrypt-file</code> and <code>encrypt-file</code> complete the set; <code>cargoship vault --help</code> lists all eight.</p>
-<h3 id="9-validate-a-file-or-write-its-schema"><a class="header" href="#9-validate-a-file-or-write-its-schema">9. Validate a File, or Write Its Schema</a></h3>
+<h3 id="10-validate-a-file-or-write-its-schema"><a class="header" href="#10-validate-a-file-or-write-its-schema">10. Validate a File, or Write Its Schema</a></h3>
 <pre><code class="language-bash"># Check an inventory, package definition, or config file against its schema
 cargoship validate ./cargoship-config.yaml
 
@@ -384,7 +400,7 @@ cargoship schema inventory -o ./inventory.schema.json
 # Checksum a file, or one file inside an archive
 cargoship dev sha256sum ./build/cargoship-distro-amd64.tar.zst
 </code></pre>
-<h3 id="10-record-a-run-for-audit"><a class="header" href="#10-record-a-run-for-audit">10. Record a Run for Audit</a></h3>
+<h3 id="11-record-a-run-for-audit"><a class="header" href="#11-record-a-run-for-audit">11. Record a Run for Audit</a></h3>
 <pre><code class="language-bash"># Write a structured record of the run: what ran, against which package, against which fleet,
 # and what changed. Written whether the run succeeds or fails, readable only by its owner.
 cargoship apply ./build/cargoship-distro-amd64.tar.zst \
@@ -401,7 +417,7 @@ cargoship dev redact-receipt ./receipt.json -o ./share.json
   receipt_path: /var/log/cargoship/receipts/{command}-{timestamp}.json
 </code></pre>
 <p>Those two placeholders are the only ones accepted; anything else is rejected before the run starts, rather than written out literally. <code>--receipt-path</code> overrides the configured value and takes the same placeholders.</p>
-<h3 id="11-iterate-on-a-definition-while-authoring-it"><a class="header" href="#11-iterate-on-a-definition-while-authoring-it">11. Iterate on a Definition While Authoring It</a></h3>
+<h3 id="12-iterate-on-a-definition-while-authoring-it"><a class="header" href="#12-iterate-on-a-definition-while-authoring-it">12. Iterate on a Definition While Authoring It</a></h3>
 <p>Editing a <code>distro.yaml</code> normally costs a build and a separate install, and the artifact between them is most of the wait: a package is compressed on the way out of <code>create</code> and decompressed again on the way into <code>apply</code>, over bytes that never leave the machine. <code>dev apply</code> does both halves in one process and leaves the artifact out:</p>
 <pre><code class="language-bash"># build the definition and run the apply phases against it, with no package written
 cargoship dev apply ./distro-defs --config ./cargoship-config.yaml --confirm
