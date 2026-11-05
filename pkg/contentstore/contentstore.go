@@ -20,11 +20,15 @@ package contentstore
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -144,3 +148,47 @@ var (
 	zarfPartSuffix    = regexp.MustCompile(`\.part\d{3}$`)
 	haulerChunkSuffix = regexp.MustCompile(`\.\d{3}$`)
 )
+
+// fileRefTagBytes is how much of the source digest goes into a file artifact's tag. Twelve hex
+// characters is 48 bits, which makes a collision between two sources in one package not worth
+// reasoning about, and still leaves a tag somebody can read back off a registry listing.
+const fileRefTagBytes = 6
+
+// invalidRepoChars matches every run of characters an OCI repository path component may not hold.
+var invalidRepoChars = regexp.MustCompile(`[^a-z0-9]+`)
+
+// FileRef is where the file declared as coming from source lives in a mirror under target.
+//
+// It is the one rule a writer and a reader of a mirrored file both apply, which is what lets a
+// reader recompute a reference instead of discovering it -- a registry offers a repository
+// catalogue and per-repository tags, never one annotated index the way a hauler store or a zarf
+// package does, so there is nothing to walk and nothing to match against.
+//
+// The name carries the file's basename so a repository listing is legible to a person, and the
+// tag is a digest of the whole source so it is correct. Keying on the basename alone would be
+// wrong rather than merely ugly: every rke2 and etcd release archive is named the same across
+// versions, so one version's file would be served for another's.
+func FileRef(target, source string) (string, error) {
+	if target == "" {
+		return "", errors.New("target registry is required")
+	}
+	if source == "" {
+		return "", errors.New("a file with no source has no reference to mirror it under")
+	}
+
+	// path.Base rather than filepath.Base: a source is a URL far more often than a path, and a
+	// URL's separator is "/" whatever the management node's separator happens to be.
+	base := path.Base(source)
+	if i := strings.IndexAny(base, "?#"); i >= 0 {
+		base = base[:i]
+	}
+	slug := strings.Trim(invalidRepoChars.ReplaceAllString(strings.ToLower(base), "-"), "-")
+	if slug == "" {
+		// A source whose last path segment slugs away to nothing -- "https://example.com/%20"
+		// -- still needs somewhere to go, and the tag already distinguishes it.
+		slug = "file"
+	}
+
+	sum := sha256.Sum256([]byte(source))
+	return fmt.Sprintf("%s/files/%s:%s", strings.TrimSuffix(target, "/"), slug, hex.EncodeToString(sum[:fileRefTagBytes])), nil
+}
