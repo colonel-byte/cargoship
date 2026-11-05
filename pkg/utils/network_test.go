@@ -293,3 +293,151 @@ func TestDownloadToFileWithChecksumConcurrentCacheWrites(t *testing.T) {
 		t.Fatalf("cache file checksum mismatch after concurrent writes: got %s, want %s", cachedSum, checksum)
 	}
 }
+
+// withIsolatedCache points the shared cache at a directory this test owns and returns the
+// files/ subdirectory inside it, where CachedArchive puts an entry.
+func withIsolatedCache(t *testing.T) string {
+	t.Helper()
+
+	cacheRoot := t.TempDir()
+	orig := config.CommonOptions.CachePath
+	config.CommonOptions.CachePath = cacheRoot
+	t.Cleanup(func() { config.CommonOptions.CachePath = orig })
+
+	return filepath.Join(cacheRoot, cacheFilesSubdir)
+}
+
+// serveCounted serves content and counts how many requests it answered.
+func serveCounted(t *testing.T, content []byte, hits *int) *httptest.Server {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		*hits++
+		if _, err := w.Write(content); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	return server
+}
+
+func TestCachedArchiveServesSecondCallFromCache(t *testing.T) {
+	ctx := context.Background()
+	cacheFiles := withIsolatedCache(t)
+
+	content := []byte("archive-bytes")
+	var hits int
+	server := serveCounted(t, content, &hits)
+
+	first, err := CachedArchive(ctx, server.URL+"/rke2.tar.gz", "rke2.tar.gz")
+	if err != nil {
+		t.Fatalf("CachedArchive first call failed: %v", err)
+	}
+	if hits != 1 {
+		t.Fatalf("expected 1 request on a cold cache, got %d", hits)
+	}
+
+	second, err := CachedArchive(ctx, server.URL+"/rke2.tar.gz", "rke2.tar.gz")
+	if err != nil {
+		t.Fatalf("CachedArchive second call failed: %v", err)
+	}
+	if hits != 1 {
+		t.Fatalf("expected the second call to be served from the cache, got %d requests", hits)
+	}
+	if first != second {
+		t.Fatalf("expected both calls to return the same cache path, got %q and %q", first, second)
+	}
+
+	got, err := os.ReadFile(first)
+	if err != nil {
+		t.Fatalf("unable to read the cached archive: %v", err)
+	}
+	if string(got) != string(content) {
+		t.Fatalf("cached archive content mismatch: got %q, want %q", got, content)
+	}
+
+	// The entry lands in the shared files/ directory, beside the shasum-keyed ones.
+	entries, err := os.ReadDir(cacheFiles)
+	if err != nil {
+		t.Fatalf("unable to read the cache directory: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected exactly 1 cache entry, got %d", len(entries))
+	}
+	if filepath.Dir(first) != cacheFiles {
+		t.Fatalf("expected the entry inside %q, got %q", cacheFiles, first)
+	}
+}
+
+// TestCachedArchiveKeysDistinctURLsApart is the reason the key is a digest of the whole URL
+// rather than the file name: every rke2 and etcd release ends in the same base name, so keying
+// on that would serve one version's archive for another's.
+func TestCachedArchiveKeysDistinctURLsApart(t *testing.T) {
+	ctx := context.Background()
+	withIsolatedCache(t)
+
+	firstContent := []byte("from the first release")
+	secondContent := []byte("from the second release")
+
+	var firstHits, secondHits int
+	firstServer := serveCounted(t, firstContent, &firstHits)
+	secondServer := serveCounted(t, secondContent, &secondHits)
+
+	firstPath, err := CachedArchive(ctx, firstServer.URL+"/v1/archive.tar.gz", "archive.tar.gz")
+	if err != nil {
+		t.Fatalf("CachedArchive for the first URL failed: %v", err)
+	}
+	secondPath, err := CachedArchive(ctx, secondServer.URL+"/v2/archive.tar.gz", "archive.tar.gz")
+	if err != nil {
+		t.Fatalf("CachedArchive for the second URL failed: %v", err)
+	}
+
+	if firstPath == secondPath {
+		t.Fatalf("two different URLs sharing a base name must not share a cache entry, both got %q", firstPath)
+	}
+
+	// Coming back to the first URL must serve the first archive, not whichever was written last.
+	againPath, err := CachedArchive(ctx, firstServer.URL+"/v1/archive.tar.gz", "archive.tar.gz")
+	if err != nil {
+		t.Fatalf("CachedArchive returning to the first URL failed: %v", err)
+	}
+	if firstHits != 1 {
+		t.Fatalf("expected the first URL to be downloaded once, got %d requests", firstHits)
+	}
+	got, err := os.ReadFile(againPath)
+	if err != nil {
+		t.Fatalf("unable to read the cached archive: %v", err)
+	}
+	if string(got) != string(firstContent) {
+		t.Fatalf("cache served the wrong archive: got %q, want %q", got, firstContent)
+	}
+}
+
+// TestCachedArchiveFailedDownloadCachesNothing matters because an entry is served on its key
+// alone, with no digest to check it against: a truncated or empty one left behind would be
+// handed to every later build as though it were the archive.
+func TestCachedArchiveFailedDownloadCachesNothing(t *testing.T) {
+	ctx := context.Background()
+	cacheFiles := withIsolatedCache(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(server.Close)
+
+	if _, err := CachedArchive(ctx, server.URL+"/missing.tar.gz", "missing.tar.gz"); err == nil {
+		t.Fatal("expected CachedArchive to fail on a 404")
+	}
+
+	entries, err := os.ReadDir(cacheFiles)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			t.Fatalf("unable to read the cache directory: %v", err)
+		}
+		return
+	}
+	if len(entries) != 0 {
+		t.Fatalf("a failed download must leave nothing cached, found %d entries", len(entries))
+	}
+}

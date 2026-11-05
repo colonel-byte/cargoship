@@ -22,6 +22,8 @@ package utils
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -181,6 +183,83 @@ func cacheFilePath(ctx context.Context, checksum, cacheBaseName string) string {
 		cacheFileName = fmt.Sprintf("%s_%s", checksum, cacheBaseName)
 	}
 	return filepath.Join(cacheRoot, cacheFilesSubdir, cacheFileName)
+}
+
+// archiveCacheKeyPrefix marks a cache entry keyed on a URL rather than on a content
+// digest, so the two kinds are telling apart at a glance in a directory listing and an
+// entry written by one scheme is never read by the other.
+const archiveCacheKeyPrefix = "url-"
+
+// CachedArchive returns the path to the archive at src inside the shared file cache,
+// downloading it there first if it is not already present. The returned path is the
+// cache entry itself, so a caller extracting from it reads the cache in place rather
+// than copying a multi-hundred-megabyte archive to use it once.
+//
+// It exists because an archive carrying an extractPath file declares no digest of its
+// own: with extractPath set, the file's Shasum is the digest of the extracted member,
+// not of the archive it came out of, so the shasum-keyed cache behind
+// DownloadToFileWithChecksum has no key to store one under. This keys on the resolved
+// URL instead.
+//
+// A cached archive is therefore trusted on its URL rather than on its content, which is
+// weaker than what this repository does everywhere else and is worth stating rather than
+// leaving for a reader to notice. What makes it safe enough is that the member extracted
+// from the archive is still checked against the shasum the definition declares, so a bad
+// entry here cannot produce a bad package -- and where a definition declares no shasum,
+// the extracted file is equally unverified whether or not the archive came from a cache,
+// so nothing is weakened relative to fetching it every time.
+func CachedArchive(ctx context.Context, src, baseName string) (string, error) {
+	l := logger.From(ctx)
+
+	cacheRoot, err := config.GetAbsCachePath()
+	if err != nil {
+		return "", fmt.Errorf("unable to resolve the cache directory for %s: %w", src, err)
+	}
+
+	// Keyed on a digest of the whole URL and not on baseName: two releases very commonly
+	// end in the same file name -- every rke2 and etcd tarball does -- and keying on that
+	// would serve one version's archive for another's.
+	sum := sha256.Sum256([]byte(src))
+	name := archiveCacheKeyPrefix + hex.EncodeToString(sum[:])
+	if baseName != "" {
+		name += "_" + baseName
+	}
+	cachePath := filepath.Join(cacheRoot, cacheFilesSubdir, name)
+
+	if _, err := os.Stat(cachePath); err == nil {
+		l.Debug("found archive in cache, using cached copy", "url", src, "path", cachePath)
+		return cachePath, nil
+	}
+
+	if err := helpers.CreateDirectory(filepath.Dir(cachePath), helpers.ReadWriteExecuteUser); err != nil {
+		return "", fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(cachePath), err)
+	}
+
+	l.Info("archive not in cache, downloading", "url", src, "path", cachePath)
+
+	// Downloaded beside the entry and renamed into place, so a failed or partial download
+	// never becomes a cache hit for the next build, and two builds racing on the same
+	// archive cannot interleave writes into one entry.
+	tmp, err := os.CreateTemp(filepath.Dir(cachePath), filepath.Base(cachePath)+".tmp-*")
+	if err != nil {
+		return "", fmt.Errorf("unable to create a temporary file for %s: %w", src, err)
+	}
+	tmpPath := tmp.Name()
+	if err := tmp.Close(); err != nil {
+		return "", errors.Join(fmt.Errorf("unable to create a temporary file for %s: %w", src, err), os.Remove(tmpPath))
+	}
+	defer os.Remove(tmpPath) //nolint:errcheck // a no-op once renamed into place below
+
+	// An empty checksum is passed deliberately: there is none to check against, per the
+	// comment above. It also disables the shasum-keyed caching inside this call, which
+	// would otherwise have nothing to key on either.
+	if err := DownloadToFileWithChecksum(ctx, src, tmpPath, "", ""); err != nil {
+		return "", err
+	}
+	if err := os.Rename(tmpPath, cachePath); err != nil {
+		return "", fmt.Errorf("unable to move the downloaded archive into the cache: %w", err)
+	}
+	return cachePath, nil
 }
 
 // tryServeFromCache copies cachePath to dst if it exists and its content matches

@@ -213,19 +213,8 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 	// definition order. Appending in a fixed order is what keeps --reproducible reproducible.
 	var fileSources []distro.FileSource
 
-	// One archive commonly supplies several files -- every rke2 binary, script and unit file
-	// is extracted from the same tarball -- so archives are downloaded once into a cache that
-	// spans both file loops. A cached archive has to outlive the fileGrabber call that fetched
-	// it, so the cache is owned here and torn down once every file is staged.
-	archives := newDownloadCache()
-	defer func() {
-		if err := archives.cleanup(); err != nil {
-			l.Warn("unable to remove downloaded archive cache", "error", err)
-		}
-	}()
-
 	for filesIdx, file := range d.Spec.Config.Files {
-		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, archives)
+		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore)
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage file %d (%s): %w", filesIdx, file, err)
 		}
@@ -234,7 +223,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, archives)
+		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore)
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage os file %d (%s): %w", filesIdx, file, err)
 		}
@@ -411,88 +400,10 @@ func checkMappings(ctx context.Context, d distro.Distro, values map[string]any) 
 	}
 }
 
-// downloadCache remembers the archives already downloaded during one assemble, so several
-// files extracted from the same URL cost one download rather than one each.
-//
-// The cache owns a directory of its own, created on first use and removed by cleanup. That is
-// what distinguishes it from a plain map: a cached archive is read again by a later
-// fileGrabber call, so it cannot be cleaned up by the call that downloaded it.
-//
-// A nil *downloadCache is a working cache that never hits, for callers staging a single file.
-type downloadCache struct {
-	// dir holds the downloaded archives, empty until the first one is reserved.
-	dir string
-	// paths maps a resolved source URL to the archive downloaded from it.
-	paths map[string]string
-}
-
-// newDownloadCache returns an empty cache. No directory is created until something is cached,
-// so an assemble that stages no remote archives leaves nothing behind.
-func newDownloadCache() *downloadCache {
-	return &downloadCache{paths: map[string]string{}}
-}
-
-// get returns the archive already downloaded from url, if there is one.
-func (c *downloadCache) get(url string) (string, bool) {
-	if c == nil {
-		return "", false
-	}
-	path, ok := c.paths[url]
-	return path, ok
-}
-
-// reserve names the path an archive called name should be downloaded to, creating the cache
-// directory on first use. Each archive gets its own numbered subdirectory, so two archives
-// whose URLs end in the same file name do not overwrite each other.
-func (c *downloadCache) reserve(name string) (string, error) {
-	if c == nil {
-		dir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(dir, name), nil
-	}
-	if c.dir == "" {
-		dir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return "", err
-		}
-		c.dir = dir
-	}
-	dir := filepath.Join(c.dir, strconv.Itoa(len(c.paths)))
-	if err := os.MkdirAll(dir, helpers.ReadWriteExecuteUser); err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, name), nil
-}
-
-// put records that url's archive was downloaded to path, so the next file extracted from url
-// reuses it. A nil cache drops the record, which is what makes its get always miss.
-func (c *downloadCache) put(url, path string) {
-	if c != nil {
-		c.paths[url] = path
-	}
-}
-
-// cleanup removes every archive the cache downloaded. Safe to call on a cache that never
-// downloaded anything, and on a nil cache.
-func (c *downloadCache) cleanup() error {
-	if c == nil || c.dir == "" {
-		return nil
-	}
-	err := os.RemoveAll(c.dir)
-	c.dir = ""
-	return err
-}
-
 // fileGrabber stages one file into buildPath. The returned FileSource is non-nil only when the
 // bytes came from somewhere other than the declared source -- an override, or a content store --
 // so the caller records what actually happened rather than only what was configured.
-//
-// archives may be nil, in which case any archive downloaded here is removed before returning.
-// A caller staging more than one file passes a shared cache so that an archive several files
-// are extracted from is downloaded once; see newDownloadCache.
-func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, store ContentStore, archives *downloadCache) (provenance *distro.FileSource, err error) {
+func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, store ContentStore) (provenance *distro.FileSource, err error) {
 	rel := filepath.Join(resourceType, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 	dst := filepath.Join(buildPath, rel)
 	destinationDir := filepath.Dir(dst)
@@ -588,28 +499,14 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 				return nil, fmt.Errorf(zlang.ErrFileNameExtract, file.Source, err)
 			}
 
-			compressedFile, cached := archives.get(source)
-			if !cached {
-				compressedFile, err = archives.reserve(compressedFileName)
-				if err != nil {
-					return nil, err
-				}
-				// An archive this call downloaded is only reachable through the cache once the
-				// download has succeeded, so an uncached one -- including a failed download --
-				// is removed here rather than left in the temp directory.
-				defer func() {
-					if _, ok := archives.get(source); !ok {
-						err = errors.Join(err, os.RemoveAll(filepath.Dir(compressedFile)))
-					}
-				}()
-
-				// file.Shasum is deliberately not passed here. With ExtractPath set it is the
-				// digest of the extracted file, which the check at the end of this function
-				// makes against dst -- the archive it came out of has a different one.
-				if err := utils.DownloadToFileWithChecksum(ctx, source, compressedFile, "", filepath.Base(file.Target)); err != nil {
-					return nil, fmt.Errorf(zlang.ErrDownloading, source, err)
-				}
-				archives.put(source, compressedFile)
+			// One archive commonly supplies several files -- every rke2 binary, script and
+			// unit file is extracted from the same tarball -- and the same archive is wanted
+			// again by the next build. Both are served by the shared cache, which is keyed on
+			// the URL because an archive carrying an extractPath file declares no digest of
+			// its own; see utils.CachedArchive for why that is safe here.
+			compressedFile, err := utils.CachedArchive(ctx, source, compressedFileName)
+			if err != nil {
+				return nil, fmt.Errorf(zlang.ErrDownloading, source, err)
 			}
 
 			decompressOpts := archive.DecompressOpts{
