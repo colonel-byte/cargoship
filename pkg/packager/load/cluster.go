@@ -63,9 +63,15 @@ func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions)
 	return cluster, nil
 }
 
-func validateCluster(_ context.Context, c v1alpha1.Cluster, path string) error {
+func validateCluster(ctx context.Context, c v1alpha1.Cluster, path string) error {
 	if err := v1alpha1.ValidateRegistries(c.Spec.Config.Registries); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
+	}
+	for _, registry := range c.Spec.Config.Registries {
+		for _, pattern := range registry.Proxy.UnreferencedRewrites() {
+			logger.From(ctx).Warn("proxy.rewrite captures a group its replacement does not reference; the capture is discarded",
+				"registry", registry.Name, "pattern", pattern, "replacement", registry.Proxy.Rewrite[pattern], "path", path)
+		}
 	}
 	return nil
 }

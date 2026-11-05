@@ -119,6 +119,60 @@ func TestParseConcurrency(t *testing.T) {
 	})
 }
 
+func TestRegistryProxyUnreferencedRewrites(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		proxy *RegistryProxy
+		want  []string
+	}{
+		"a nil proxy has nothing to report": {
+			proxy: nil,
+		},
+		"a captured group no replacement references": {
+			proxy: &RegistryProxy{
+				Rewrite: map[string]string{"^rancher/(.*)": "mirror/static"},
+			},
+			want: []string{"^rancher/(.*)"},
+		},
+		"every reference form counts as a use": {
+			proxy: &RegistryProxy{
+				Rewrite: map[string]string{
+					"^rancher/(.*)":    "mirror/$1",
+					"^library/(.*)$":   "mirror/${1}",
+					"^(?P<repo>.*)$":   "mirror/${repo}",
+					"^longhornio/(.*)": "mirror/$0",
+				},
+			},
+		},
+		"a prefix rewrite captures nothing to discard": {
+			proxy: &RegistryProxy{
+				Rewrite: map[string]string{"^rancher/": "mirror/rancher/"},
+			},
+		},
+		"an escaped dollar is not a reference": {
+			proxy: &RegistryProxy{
+				Rewrite: map[string]string{"^rancher/(.*)": "mirror/$$1"},
+			},
+			want: []string{"^rancher/(.*)"},
+		},
+		"reported patterns are sorted": {
+			proxy: &RegistryProxy{
+				Rewrite: map[string]string{
+					"^zeta/(.*)":  "mirror/zeta",
+					"^alpha/(.*)": "mirror/alpha",
+				},
+			},
+			want: []string{"^alpha/(.*)", "^zeta/(.*)"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, tc.proxy.UnreferencedRewrites())
+		})
+	}
+}
+
 func TestClusterRegistriesValidate(t *testing.T) {
 	cases := map[string]struct {
 		registry Registries
@@ -219,6 +273,50 @@ func TestClusterRegistriesValidate(t *testing.T) {
 				},
 			},
 			wantErr: `registry "docker.io": proxy.rewrite pattern "^rancher/(.*)" has an empty replacement`,
+		},
+		"a rewrite referencing a group the pattern does not capture loses that piece": {
+			registry: Registries{
+				Name: "docker.io",
+				Proxy: &RegistryProxy{
+					URL:     "https://mirror.example.com",
+					Rewrite: map[string]string{"^rancher/(.*)": "mirror/$2"},
+				},
+			},
+			wantErr: `registry "docker.io": proxy.rewrite replacement "mirror/$2" for pattern "^rancher/(.*)" references group $2, but the pattern captures 1`,
+		},
+		"a rewrite referencing a group of a pattern that captures none": {
+			registry: Registries{
+				Name: "docker.io",
+				Proxy: &RegistryProxy{
+					URL:     "https://mirror.example.com",
+					Rewrite: map[string]string{"^rancher/": "mirror/${1}"},
+				},
+			},
+			wantErr: `registry "docker.io": proxy.rewrite replacement "mirror/${1}" for pattern "^rancher/" references group $1, but the pattern captures 0`,
+		},
+		"a prefix rewrite needs no group reference": {
+			registry: Registries{
+				Name: "docker.io",
+				Proxy: &RegistryProxy{
+					URL:     "https://mirror.example.com",
+					Rewrite: map[string]string{"^rancher/": "mirror/rancher/"},
+				},
+			},
+		},
+		"a rewrite may reference the whole match, a named group, or a braced group": {
+			registry: Registries{
+				Name: "docker.io",
+				Proxy: &RegistryProxy{
+					URL: "https://mirror.example.com",
+					Rewrite: map[string]string{
+						"^rancher/(.*)":    "mirror/${1}",
+						"^(.*)/(.*)$":      "$2",
+						"^library/(.*)$":   "mirror/$0",
+						"^(?P<repo>.*)$":   "mirror/${repo}",
+						"^longhornio/(.*)": "mirror/$$1/${1}",
+					},
+				},
+			},
 		},
 		"half of a basic auth pair authenticates nothing": {
 			registry: Registries{
