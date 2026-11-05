@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b57189f9.js";
+            window.path_to_searchindex_js = "searchindex-faa35e45.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b565ef75.js"></script>
+        <script src="toc-7d57cb55.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -298,6 +298,17 @@ cargoship create ./distro-defs --content-store ./zarf-package-rke2-content-amd64
     content_store: ~/hauls/haul.tar.zst
 </code></pre>
 <p>See <a href="guides/content-store.html">Building From a Local Content Store</a> for the collect-and-carry workflow, what each format must contain, and how this compares with <code>--registry-override</code> and <code>--file-override</code>.</p>
+<p>A build caches what it fetches under <code>~/.cache/cargoship</code>, so a rebuild of the same definition reaches the network for little or nothing. Nothing expires that cache – it has no size limit and grows for as long as definitions name new versions – so <code>clean-cache</code> is what reclaims it:</p>
+<pre><code class="language-bash"># report every area with its size and what would go, removing nothing
+cargoship dev clean-cache --dry-run
+
+# keep anything fetched in the last fortnight, drop the rest
+cargoship dev clean-cache --older-than 336h
+
+# remove every fetchable area
+cargoship dev clean-cache
+</code></pre>
+<p>Run logs and the local dev fleet’s images are never removed, and neither is an area this version does not recognise. An age window cannot prune the image layout, which is an index over shared blobs; it is reported as skipped and comes out whole when <code>--older-than</code> is omitted.</p>
 <h3 id="2-prepare-target-nodes"><a class="header" href="#2-prepare-target-nodes">2. Prepare Target Nodes</a></h3>
 <p>Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, <code>fapolicyd</code> rules, and <code>/etc/hosts</code>) across target machines using your cluster configuration inventory:</p>
 <pre><code class="language-bash">cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
@@ -371,7 +382,7 @@ cargoship validate ./cargoship-config.yaml
 cargoship schema inventory -o ./inventory.schema.json
 
 # Checksum a file, or one file inside an archive
-cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
+cargoship dev sha256sum ./build/cargoship-distro-amd64.tar.zst
 </code></pre>
 <h3 id="10-record-a-run-for-audit"><a class="header" href="#10-record-a-run-for-audit">10. Record a Run for Audit</a></h3>
 <pre><code class="language-bash"># Write a structured record of the run: what ran, against which package, against which fleet,
@@ -381,7 +392,7 @@ cargoship apply ./build/cargoship-distro-amd64.tar.zst \
   --receipt-path /var/log/cargoship/receipts/apply-20260928-143000.json
 
 # Strip everything that identifies the fleet, ready to attach to a bug report
-cargoship redact-receipt ./receipt.json -o ./share.json
+cargoship dev redact-receipt ./receipt.json -o ./share.json
 </code></pre>
 <p>The receipt carries the invocation and the cargoship that ran it, the package’s digests and signature status, the cluster inventory, the phase-by-phase ledger with per-host change reasons and diffs, and any warnings the run raised under <code>outcome.warnings</code> – a successful run that left something on a host worth looking at says so there. <code>redact-receipt</code> renumbers the hosts <code>host-01</code>, <code>host-02</code>, drops the diff bodies – an engine configuration diff carries join tokens – and removes the cluster name, operator and command line, leaving what a maintainer triages from.</p>
 <p>A fleet that keeps an audit trail sets the path once in the config file instead, under <code>.distro.receipt_path</code>, where <code>apply</code>, <code>prepare</code>, <code>reset</code> and <code>engine-config-sync</code> all pick it up:</p>
@@ -390,6 +401,17 @@ cargoship redact-receipt ./receipt.json -o ./share.json
   receipt_path: /var/log/cargoship/receipts/{command}-{timestamp}.json
 </code></pre>
 <p>Those two placeholders are the only ones accepted; anything else is rejected before the run starts, rather than written out literally. <code>--receipt-path</code> overrides the configured value and takes the same placeholders.</p>
+<h3 id="11-iterate-on-a-definition-while-authoring-it"><a class="header" href="#11-iterate-on-a-definition-while-authoring-it">11. Iterate on a Definition While Authoring It</a></h3>
+<p>Editing a <code>distro.yaml</code> normally costs a build and a separate install, and the artifact between them is most of the wait: a package is compressed on the way out of <code>create</code> and decompressed again on the way into <code>apply</code>, over bytes that never leave the machine. <code>dev apply</code> does both halves in one process and leaves the artifact out:</p>
+<pre><code class="language-bash"># build the definition and run the apply phases against it, with no package written
+cargoship dev apply ./distro-defs --config ./cargoship-config.yaml --confirm
+</code></pre>
+<p>Everything after the build is the same code <code>apply</code> runs – values resolution, engine-configuration mapping and template rendering – so what reaches the hosts is what the built package would have put there. It takes the build-side flags that change what gets built, so a loop can still resolve content locally:</p>
+<pre><code class="language-bash">cargoship dev apply ./distro-defs --config ./cargoship-config.yaml \
+  --content-store ./haul.tar.zst --confirm
+</code></pre>
+<p>The build still fetches what the definition declares, and still serves it from the shared cache when it is already there, so a second run after an edit usually reaches the network for nothing new. That cache is what <a href="#1-compile-an-offline-package">Compile an Offline Package</a> describes reclaiming with <code>clean-cache</code>.</p>
+<p>This is for a definition under active edit, not for shipping. It writes no artifact to carry, keep, or sign, and it does not verify a signature – there is nothing to verify, because the package was built by the same process a moment earlier. A release still goes through <code>create</code>, <code>sign</code> and <code>apply</code>. See <a href="dev/package-authoring.html">Authoring a Distro Package</a> for the whole loop and what the build caches between runs.</p>
 <hr>
 <h2 id="opentofu-and-terraform"><a class="header" href="#opentofu-and-terraform">OpenTofu and Terraform</a></h2>
 <p>The same phases run from a declarative configuration through the OpenTofu provider, which lives in <a href="https://github.com/colonel-byte/terraform-provider-cargoship">colonel-byte/terraform-provider-cargoship</a> and consumes this repository as a library: <code>cargoship_cluster</code> converges a cluster – install, join and upgrade are one apply, because the engine version already on each host is what tells them apart – and <code>cargoship_cluster_facts</code> reads a fleet without changing it. It drives cargoship in process, so it still opens every SSH connection itself from the machine OpenTofu runs on.</p>

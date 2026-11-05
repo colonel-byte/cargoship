@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b57189f9.js";
+            window.path_to_searchindex_js = "../searchindex-faa35e45.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b565ef75.js"></script>
+        <script src="../toc-7d57cb55.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="choice-what-a-run-receipt-records-and-what-it-refuses-to"><a class="header" href="#choice-what-a-run-receipt-records-and-what-it-refuses-to">Choice: what a run receipt records, and what it refuses to</a></h1>
-<p><code>cargoship apply --receipt-path</code> writes a structured record of a run, and <code>cargoship redact-receipt</code> projects it into something safe to attach to a public issue. Five decisions in that design look like oversights from the code alone. They are not.</p>
+<p><code>cargoship apply --receipt-path</code> writes a structured record of a run, and <code>cargoship dev redact-receipt</code> projects it into something safe to attach to a public issue. Five decisions in that design look like oversights from the code alone. They are not.</p>
 <h2 id="host-records-are-an-allowlist-never-a-denylist"><a class="header" href="#host-records-are-an-allowlist-never-a-denylist">Host records are an allowlist, never a denylist</a></h2>
 <p><code>internal/receipt.Host</code> copies in a fixed set of fields by name, and nothing anywhere marshals <code>cluster.Host</code> into a receipt.</p>
 <p>That looks like needless transcription – the host object already has every field, and a <code>json:"-"</code> tag on the ones that must not appear would be less code. It is deliberate. <code>cluster.Host</code> embeds a live <code>rig.ClientWithConfig</code> and a <code>Metadata</code> struct full of connection state, and a receipt built by excluding what must not appear leaks the next field somebody adds to either. An allowlist fails closed: a new fact is absent from receipts until a person adds it to <code>Host</code>, which is the safe direction to be wrong in.</p>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b57189f9.js";
+            window.path_to_searchindex_js = "../searchindex-faa35e45.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b565ef75.js"></script>
+        <script src="../toc-7d57cb55.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -380,7 +380,6 @@ ansible-vault decrypt --vault-password-file ./vault-pass.txt --output - &lt; ct.
 <p>Cargoship writes a plain block scalar with no tag, and its <code>-path</code> and <code>-file</code> commands reject a tagged value rather than strand the tag on a value that no longer matches it. Drop the <code>!vault</code> tag when moving a value across; the ciphertext underneath needs no change.</p>
 <h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
 <ul>
-<li><code>cargoship vault-encrypt</code> is the old spelling of <code>cargoship vault encrypt</code>. It still works and still prints a deprecation notice. Use the <code>vault</code> group instead.</li>
 <li>A failed command never touches the file. The rewrite goes to a temporary file alongside the original and is renamed over it, so an interruption cannot leave a half-written configuration.</li>
 <li>The file’s mode is preserved across a rewrite.</li>
 </ul>
