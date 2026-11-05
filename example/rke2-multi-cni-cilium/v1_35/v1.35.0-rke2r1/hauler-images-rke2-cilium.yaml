@@ -17,16 +17,23 @@ apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:
   name: multi-cni-cilium-rke2-cilium
+  annotations:
+    # The registry every image below is collected from. Hauler supplies it for the unqualified
+    # names in this document, so pointing this at a mirror that carries the same repository
+    # paths redirects the whole document -- and `cargoship create --registry-override
+    # docker.io=<mirror>` then looks the collected images up under the reference the mirror
+    # recorded. See docs/guides/content-store.md.
+    hauler.dev/registry: docker.io
 spec:
   images:
-    - name: docker.io/rancher/mirrored-cilium-certgen:v0.2.4
-    - name: docker.io/rancher/mirrored-cilium-cilium:v1.18.4
-    - name: docker.io/rancher/mirrored-cilium-cilium-envoy:v1.34.10-1762597008-ff7ae7d623be00078865cff1b0672cc5d9bfc6d5
-    - name: docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.18.4
-    - name: docker.io/rancher/mirrored-cilium-hubble-relay:v1.18.4
-    - name: docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.3
-    - name: docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.3
-    - name: docker.io/rancher/mirrored-cilium-operator-aws:v1.18.4
-    - name: docker.io/rancher/mirrored-cilium-operator-azure:v1.18.4
-    - name: docker.io/rancher/mirrored-cilium-operator-generic:v1.18.4
-    - name: docker.io/rancher/hardened-cni-plugins:v1.8.0-build20251204
+    - name: rancher/mirrored-cilium-certgen:v0.2.4
+    - name: rancher/mirrored-cilium-cilium:v1.18.4
+    - name: rancher/mirrored-cilium-cilium-envoy:v1.34.10-1762597008-ff7ae7d623be00078865cff1b0672cc5d9bfc6d5
+    - name: rancher/mirrored-cilium-clustermesh-apiserver:v1.18.4
+    - name: rancher/mirrored-cilium-hubble-relay:v1.18.4
+    - name: rancher/mirrored-cilium-hubble-ui:v0.13.3
+    - name: rancher/mirrored-cilium-hubble-ui-backend:v0.13.3
+    - name: rancher/mirrored-cilium-operator-aws:v1.18.4
+    - name: rancher/mirrored-cilium-operator-azure:v1.18.4
+    - name: rancher/mirrored-cilium-operator-generic:v1.18.4
+    - name: rancher/hardened-cni-plugins:v1.8.0-build20251204

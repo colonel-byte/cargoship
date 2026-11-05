@@ -13,24 +13,32 @@
 # limitations under the License.
 #
 # Do not edit; see example/AGENTS.md.
+# yaml-language-server: $schema=../../../../schema/hauler-manifest.json
 apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:
   name: multi-cni-cilium-core
+  annotations:
+    # The registry every image below is collected from. Hauler supplies it for the unqualified
+    # names in this document, so pointing this at a mirror that carries the same repository
+    # paths redirects the whole document -- and `cargoship create --registry-override
+    # docker.io=<mirror>` then looks the collected images up under the reference the mirror
+    # recorded. See docs/guides/content-store.md.
+    hauler.dev/registry: docker.io
 spec:
   images:
-    - name: docker.io/rancher/rke2-runtime:v1.35.2-rke2r1
-    - name: docker.io/rancher/hardened-kubernetes:v1.35.2-rke2r1-build20260227
-    - name: docker.io/rancher/hardened-coredns:v1.14.1-build20260206
-    - name: docker.io/rancher/hardened-cluster-autoscaler:v1.10.3-build20260206
-    - name: docker.io/rancher/hardened-dns-node-cache:1.26.7-build20260206
-    - name: docker.io/rancher/hardened-etcd:v3.6.7-k3s1-build20260227
-    - name: docker.io/rancher/hardened-k8s-metrics-server:v0.8.1-build20260206
-    - name: docker.io/rancher/hardened-addon-resizer:1.8.23-build20260206
-    - name: docker.io/rancher/klipper-helm:v0.9.14-build20260210
-    - name: docker.io/rancher/klipper-lb:v0.4.14
-    - name: docker.io/rancher/mirrored-pause:3.6
-    - name: docker.io/rancher/mirrored-ingress-nginx-kube-webhook-certgen:v1.6.7
-    - name: docker.io/rancher/nginx-ingress-controller:v1.14.3-hardened3
-    - name: docker.io/rancher/rke2-cloud-provider:v1.35.1-0.20260211145923-50fa2d70c239-build20260211
-    - name: docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260205
+    - name: rancher/rke2-runtime:v1.35.2-rke2r1
+    - name: rancher/hardened-kubernetes:v1.35.2-rke2r1-build20260227
+    - name: rancher/hardened-coredns:v1.14.1-build20260206
+    - name: rancher/hardened-cluster-autoscaler:v1.10.3-build20260206
+    - name: rancher/hardened-dns-node-cache:1.26.7-build20260206
+    - name: rancher/hardened-etcd:v3.6.7-k3s1-build20260227
+    - name: rancher/hardened-k8s-metrics-server:v0.8.1-build20260206
+    - name: rancher/hardened-addon-resizer:1.8.23-build20260206
+    - name: rancher/klipper-helm:v0.9.14-build20260210
+    - name: rancher/klipper-lb:v0.4.14
+    - name: rancher/mirrored-pause:3.6
+    - name: rancher/mirrored-ingress-nginx-kube-webhook-certgen:v1.6.7
+    - name: rancher/nginx-ingress-controller:v1.14.3-hardened3
+    - name: rancher/rke2-cloud-provider:v1.35.1-0.20260211145923-50fa2d70c239-build20260211
+    - name: rancher/hardened-snapshot-controller:v8.4.0-build20260205
