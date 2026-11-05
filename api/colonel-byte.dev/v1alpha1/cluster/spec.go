@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -439,9 +440,9 @@ type RegistryAuth struct {
 // endpointSchemeRegex matches a URL that already names a scheme, e.g. "https://" or "http://".
 var endpointSchemeRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.\-]*://`)
 
-// numericGroupRefRegex matches a numbered capture-group reference in a regular expression
-// replacement, in either the bare "$1" or the braced "${1}" form.
-var numericGroupRefRegex = regexp.MustCompile(`\$(\d+)|\$\{(\d+)\}`)
+// rewriteGroupRefRegex matches a capture-group reference in a regular expression replacement,
+// numbered or named, in either the bare "$1" / "$repo" or braced "${1}" / "${repo}" form.
+var rewriteGroupRefRegex = regexp.MustCompile(`\$(\w+|\{\w+\})`)
 
 // RegistryProxy redirects pulls for a registry to a different URL.
 type RegistryProxy struct {
@@ -516,15 +517,42 @@ func (p *RegistryProxy) Validate(name RegistryName) error {
 		// image name silently loses that piece. "$$" is an escaped literal dollar, so strip those
 		// first rather than reading the second "$" as the start of a reference.
 		// shortcut: numbered references only, so a "${name}" naming a group the pattern lacks is
-		// not caught; widen to re.SubexpNames() if named groups start being used here.
-		for _, match := range numericGroupRefRegex.FindAllStringSubmatch(strings.ReplaceAll(replacement, "$$", ""), -1) {
-			ref := match[1] + match[2]
-			if n, err := strconv.Atoi(ref); err == nil && n > re.NumSubexp() {
+		// not caught; compare against re.SubexpNames() if named groups start being used here.
+		for _, match := range rewriteGroupRefRegex.FindAllStringSubmatch(strings.ReplaceAll(replacement, "$$", ""), -1) {
+			if n, err := strconv.Atoi(strings.Trim(match[1], "{}")); err == nil && n > re.NumSubexp() {
 				return fmt.Errorf("registry %q: proxy.rewrite replacement %q for pattern %q references group $%d, but the pattern captures %d", name, replacement, pattern, n, re.NumSubexp())
 			}
 		}
 	}
 	return nil
+}
+
+// UnreferencedRewrites returns the proxy.rewrite patterns whose replacement references none of
+// the groups the pattern captures, sorted. The engine discards those captures, which is well
+// defined -- the matched span is replaced wholesale -- but it is almost always a replacement that
+// meant to use them, so a caller reports it rather than rejecting the document. A nil receiver,
+// an uncompilable pattern, and a pattern that captures nothing all return nothing: the first two
+// are the business of Validate, and the third is an ordinary prefix rewrite.
+//
+// shortcut: a replacement carrying any reference at all satisfies this, so a pattern with two
+// groups whose replacement uses only the first is not reported. Count per group if that case
+// starts mattering.
+func (p *RegistryProxy) UnreferencedRewrites() []string {
+	if p == nil {
+		return nil
+	}
+	var patterns []string
+	for pattern, replacement := range p.Rewrite {
+		re, err := regexp.Compile(pattern)
+		if err != nil || re.NumSubexp() == 0 {
+			continue
+		}
+		if !rewriteGroupRefRegex.MatchString(strings.ReplaceAll(replacement, "$$", "")) {
+			patterns = append(patterns, pattern)
+		}
+	}
+	sort.Strings(patterns)
+	return patterns
 }
 
 // Validate returns an error when the credentials cannot be used as given. name identifies the
