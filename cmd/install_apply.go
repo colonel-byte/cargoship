@@ -23,6 +23,7 @@ package cmd
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
@@ -44,6 +45,40 @@ type installApplyOptions struct {
 	updateKubeConfig bool
 	kubeConfigPath   string
 	keyFlags
+	// source is where the package comes from. The zero value loads a built package, which is
+	// what `apply` does; `dev apply` sets it to build a definition in this same process.
+	//
+	// It is injected rather than branched on so that everything else run does is shared
+	// verbatim -- the receipt lifecycle, the keyring, the registry-auth check, the timeout and
+	// the phases themselves. A dev loop that diverged from a real apply in any of those would
+	// be worse than no dev loop.
+	source packageSource
+}
+
+// packageSource is how an apply-shaped command turns its argument into a phase manager.
+//
+// Both halves vary together: a command that builds a definition instead of loading a package
+// needs a different preflight check as well as a different way of producing the layout.
+type packageSource struct {
+	// preflight validates the source, the cluster config and the gates before anything
+	// connects to a host. Nil means preflightInstall.
+	preflight func(source, configPath string, confirm, dryRun bool) (time.Duration, error)
+	// open produces the phase manager and the package layout. Nil means initManager.
+	open func(ctx context.Context, source string, opt InstallCommon) (*phase.Manager, *layout.DistroLayout, error)
+}
+
+func (s packageSource) preflightOrDefault() func(string, string, bool, bool) (time.Duration, error) {
+	if s.preflight != nil {
+		return s.preflight
+	}
+	return preflightInstall
+}
+
+func (s packageSource) openOrDefault() func(context.Context, string, InstallCommon) (*phase.Manager, *layout.DistroLayout, error) {
+	if s.open != nil {
+		return s.open
+	}
+	return initManager
 }
 
 func newInstallApplyCommand() *cobra.Command {
@@ -62,6 +97,19 @@ func newInstallApplyCommand() *cobra.Command {
 		},
 	}
 
+	addInstallApplyFlags(cmd, &o)
+	addVerifyFlags(cmd, &o.packageVerifyFlags)
+
+	return cmd
+}
+
+// addInstallApplyFlags registers the flags every apply-shaped command takes. It is shared by
+// `apply` and `dev apply` so that a flag added to one cannot go missing from the other.
+//
+// The verification flags are not among them. They are registered by `apply`, which loads a
+// package whose signature there is something to check; `dev apply` builds the package it runs,
+// so a --key there could only ever be accepted and ignored.
+func addInstallApplyFlags(cmd *cobra.Command, o *installApplyOptions) {
 	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
@@ -79,14 +127,10 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 	addAgeFlags(cmd, &o.keyFlags)
 
-	addVerifyFlags(cmd, &o.packageVerifyFlags)
-
 	markRequired(cmd, InstallConfig)
 
 	addBuildFlags(cmd)
 	addTimeoutFlag(cmd)
-
-	return cmd
 }
 
 func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
@@ -106,7 +150,7 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 	}
 	defer func() { finishReceipt(manager, args[0], distroLayout, runErr) }()
 
-	d, runErr := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
+	d, runErr := o.source.preflightOrDefault()(args[0], o.config, o.confirm, o.dryRun)
 	if runErr != nil {
 		return runErr
 	}
@@ -115,7 +159,7 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		return runErr
 	}
 
-	manager, distroLayout, runErr = initManager(ctx, args[0], o.InstallCommon)
+	manager, distroLayout, runErr = o.source.openOrDefault()(ctx, args[0], o.InstallCommon)
 	if runErr != nil {
 		return runErr
 	}

@@ -20,8 +20,9 @@ import (
 )
 
 // newDevCommand groups the commands that serve someone working on a distro definition or on
-// cargoship itself, rather than someone operating a fleet. None of them is part of building a
-// package or installing one, which is why they are not at the root. It runs nothing itself.
+// cargoship itself, rather than someone operating a fleet. What they have in common is that none
+// of them produces an artifact to carry, keep, or sign, which is why they are not at the root. It
+// runs nothing itself.
 func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dev",
@@ -29,6 +30,7 @@ func newDevCommand() *cobra.Command {
 		Long:  lang.CmdDevLong,
 	}
 
+	cmd.AddCommand(newDevApplyCommand())
 	cmd.AddCommand(newSha256SumCommand())
 	cmd.AddCommand(newCleanCacheCommand())
 	cmd.AddCommand(newRedactReceiptCommand())

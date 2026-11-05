@@ -315,6 +315,26 @@ distro:
 
 Those two placeholders are the only ones accepted; anything else is rejected before the run starts, rather than written out literally. `--receipt-path` overrides the configured value and takes the same placeholders.
 
+### 11. Iterate on a Definition While Authoring It
+
+Editing a `distro.yaml` normally costs a build and a separate install, and the artifact between them is most of the wait: a package is compressed on the way out of `create` and decompressed again on the way into `apply`, over bytes that never leave the machine. `dev apply` does both halves in one process and leaves the artifact out:
+
+```bash
+# build the definition and run the apply phases against it, with no package written
+cargoship dev apply ./distro-defs --config ./cargoship-config.yaml --confirm
+```
+
+Everything after the build is the same code `apply` runs -- values resolution, engine-configuration mapping and template rendering -- so what reaches the hosts is what the built package would have put there. It takes the build-side flags that change what gets built, so a loop can still resolve content locally:
+
+```bash
+cargoship dev apply ./distro-defs --config ./cargoship-config.yaml \
+  --content-store ./haul.tar.zst --confirm
+```
+
+The build still fetches what the definition declares, and still serves it from the shared cache when it is already there, so a second run after an edit usually reaches the network for nothing new. That cache is what [Compile an Offline Package](#1-compile-an-offline-package) describes reclaiming with `clean-cache`.
+
+This is for a definition under active edit, not for shipping. It writes no artifact to carry, keep, or sign, and it does not verify a signature -- there is nothing to verify, because the package was built by the same process a moment earlier. A release still goes through `create`, `sign` and `apply`. See [Authoring a Distro Package](docs/dev/package-authoring.md) for the whole loop and what the build caches between runs.
+
 ---
 
 ## OpenTofu and Terraform

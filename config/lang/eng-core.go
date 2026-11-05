@@ -266,8 +266,24 @@ const (
 	// CmdDevShort dev short
 	CmdDevShort = "Commands for working on a definition or on cargoship itself"
 	// CmdDevLong dev long
-	CmdDevLong = "Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. None of them builds a package or installs one: they report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.\n\n" +
+	CmdDevLong = "Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. They build and apply a definition in one step, report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.\n\n" +
 		"They are grouped rather than sitting at the root because the root is the operator's surface -- create, apply, prepare, reset -- and a command that is only ever reached for while editing a definition or filing a bug does not belong in that list."
+	// CmdDevApplyShort dev apply short
+	CmdDevApplyShort = "Builds a distro definition and applies it in one step"
+	// CmdDevApplyLong dev apply long
+	CmdDevApplyLong = "Builds the distro definition in DIR and immediately runs the apply phases against it, without writing a package first. It is 'cargoship create' followed by 'cargoship apply' with the artifact between them left out.\n\n" +
+		"That artifact is what makes the normal loop slow. A package is compressed on the way out of create and decompressed again on the way into apply, over bytes that never leave this machine, which on a package carrying a fleet's images is most of the wait. Here the build stays in its directory and the apply phases read it where it sits.\n\n" +
+		"Everything after the build is the same code 'cargoship apply' runs, including values resolution, engine-configuration mapping and template rendering, so what reaches the hosts is what the built package would have put there. The checks that differ are the ones that have nothing left to check: a package's integrity and signature are verified when apply loads one because those bytes travelled, and here they were produced by this process a moment earlier. Nothing is signed either, so a run cannot stand in for a check that a release build would pass.\n\n" +
+		"The images and files a definition declares are still fetched, and are still served from the shared cache when they are already in it, so a second run after an edit usually reaches the network for nothing new.\n\n" +
+		"This changes every host it is pointed at, so it needs --confirm. Pass --dry-run instead to build the definition, connect to every host and run the preflight checks for real, reporting what the run would change without changing it."
+	// CmdDevApplyExample dev apply example
+	CmdDevApplyExample = "\n" +
+		"# Build the definition in the current directory and apply it\n" +
+		"$ cargoship dev apply --config ./inventory.yaml --confirm\n\n" +
+		"# Build a definition elsewhere, reporting what it would change without changing it\n" +
+		"$ cargoship dev apply ./distro-defs --config ./inventory.yaml --dry-run\n\n" +
+		"# Resolve the content from a local content store instead of the network\n" +
+		"$ cargoship dev apply ./distro-defs --config ./inventory.yaml --content-store ./haul.tar.zst --confirm\n"
 	// CmdInventoryShort inventory short
 	CmdInventoryShort = "Generates a cluster inventory from another source of truth"
 	// CmdInventoryLong inventory long
