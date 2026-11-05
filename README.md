@@ -255,7 +255,29 @@ cargoship import ./my-package.tar -o ./build/
 
 A cosign keypair is the only signing method - keyless (Fulcio/OIDC) signing and verification were removed, because they need network the management node does not have; see [#848](https://github.com/colonel-byte/cargoship/issues/848). The commands that load a package - `apply`, `prepare`, `engine-config-sync`, `publish`, `pull`, `import`, `validate`, `schema` - verify as part of loading, gated on `--verify=never|if-possible|always`. `verify` does nothing but check the signature, which is what makes it the one to run before a playbook.
 
-### 8. Encrypt Credentials in a Config File
+### 8. Mirror a Package's Contents into a Registry
+
+`publish` uploads a package as one artifact, to be pulled back as a package. `mirror` does the opposite: it unpacks what the package carries into a registry as individually pullable content, so the mirror a fleet already pulls through holds what its nodes will ask for.
+
+```bash
+# Push every image and file the package carries into a registry
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://harbor.internal
+
+# Under a repository prefix, which most hosted registries require
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://harbor.internal/cargoship
+
+# Or read the destination from the registry proxy the cluster config already declares
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst --config ./cluster.yaml
+
+# Only the images, against a registry on plain HTTP
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:5000 --images --plain-http
+```
+
+An image keeps its repository path and its tag, and only the registry host changes: `registry.k8s.io/pause:3.10` is pushed as `harbor.internal/pause:3.10`. That is not cosmetic - it is exactly what a node asks a mirror for, because `apply` writes that same proxy address into each host's containerd configuration from `spec.config.registries[].proxy.url`. Passing `--config` reads the destination from that one field, so what gets pushed and what the nodes ask for cannot drift apart.
+
+See [Mirroring to a Registry](docs/guides/mirror-registry.md) for the naming rules, and how this compares with `--registry-override` and `--content-store`.
+
+### 9. Encrypt Credentials in a Config File
 
 Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The `vault` command group covers both:
 
@@ -277,7 +299,7 @@ cargoship vault rekey ./cargoship-config.yaml --new-vault-password-file ./new-pa
 
 `encrypt-path` only encrypts; cargoship decrypts a registry's `auth.user`, `auth.pass`, `auth.token` and `tls.ca` at apply time, and warns when asked to encrypt a path outside that set. `decrypt`, `decrypt-path`, `decrypt-file` and `encrypt-file` complete the set; `cargoship vault --help` lists all eight.
 
-### 9. Validate a File, or Write Its Schema
+### 10. Validate a File, or Write Its Schema
 
 ```bash
 # Check an inventory, package definition, or config file against its schema
@@ -290,7 +312,7 @@ cargoship schema inventory -o ./inventory.schema.json
 cargoship dev sha256sum ./build/cargoship-distro-amd64.tar.zst
 ```
 
-### 10. Record a Run for Audit
+### 11. Record a Run for Audit
 
 ```bash
 # Write a structured record of the run: what ran, against which package, against which fleet,
@@ -315,7 +337,7 @@ distro:
 
 Those two placeholders are the only ones accepted; anything else is rejected before the run starts, rather than written out literally. `--receipt-path` overrides the configured value and takes the same placeholders.
 
-### 11. Iterate on a Definition While Authoring It
+### 12. Iterate on a Definition While Authoring It
 
 Editing a `distro.yaml` normally costs a build and a separate install, and the artifact between them is most of the wait: a package is compressed on the way out of `create` and decompressed again on the way into `apply`, over bytes that never leave the machine. `dev apply` does both halves in one process and leaves the artifact out:
 

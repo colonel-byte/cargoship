@@ -173,6 +173,7 @@ func NewCargoshipCommand() *cobra.Command {
 	// Package related
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.AddCommand(newPackagePublishCommand())
+	rootCmd.AddCommand(newPackageMirrorCommand())
 	rootCmd.AddCommand(newPackagePullCommand())
 	rootCmd.AddCommand(newPackageImportCommand())
 	rootCmd.AddCommand(newPackageSignCommand())

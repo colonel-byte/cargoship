@@ -27,6 +27,7 @@ cargoship COMMAND [flags]
 * [cargoship import](./cargoship_import.md)	 - Converts an OCI Image Layout archive into a native Cargoship package
 * [cargoship inventory](./cargoship_inventory.md)	 - Generates a cluster inventory from another source of truth
 * [cargoship kube-config](./cargoship_kube-config.md)	 - Get the admin kube-config for a control-plane node
+* [cargoship mirror](./cargoship_mirror.md)	 - Publish a built package's images and files to an OCI registry
 * [cargoship prepare](./cargoship_prepare.md)	 - Prepares the nodes, including restarting the node if new kernel modules are enabled
 * [cargoship publish](./cargoship_publish.md)	 - Publish the Cargoship Package to an OCI registry
 * [cargoship pull](./cargoship_pull.md)	 - Pulls a Cargoship package from a remote registry and saves it to the local filesystem
