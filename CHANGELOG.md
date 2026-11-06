@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.39.1](https://github.com/colonel-byte/cargoship/compare/v0.39.0...v0.39.1) (2026-11-06)
+
+
+### Build
+
+* **deps:** bump github.com/Azure/azure-sdk-for-go/sdk/azcore from 1.23.3 to 1.24.0 in the cloud-kms group ([#1035](https://github.com/colonel-byte/cargoship/issues/1035)) ([55b5ab3](https://github.com/colonel-byte/cargoship/commit/55b5ab3c8e52c37d53ec52f940f19fb595d13930))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.1.7 to 4.1.8 ([#1038](https://github.com/colonel-byte/cargoship/issues/1038)) ([6befcaa](https://github.com/colonel-byte/cargoship/commit/6befcaadc445aa8401cacb373313907065b1efac))
+* **deps:** bump github.com/spf13/pflag from 1.0.10 to 1.1.0 ([#1037](https://github.com/colonel-byte/cargoship/issues/1037)) ([b79856c](https://github.com/colonel-byte/cargoship/commit/b79856c74ea3934e9f6f038aa79095d451b83646))
+* **deps:** bump the core group with 3 updates ([#1036](https://github.com/colonel-byte/cargoship/issues/1036)) ([0197fda](https://github.com/colonel-byte/cargoship/commit/0197fda71bc81f7928d1b67ab04f59657753ad82))
+
 ## [0.39.0](https://github.com/colonel-byte/cargoship/compare/v0.38.0...v0.39.0) (2026-11-06)
 
 
