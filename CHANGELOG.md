@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.39.0](https://github.com/colonel-byte/cargoship/compare/v0.38.0...v0.39.0) (2026-11-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cmd:** add mirror to publish a package's contents to a registry ([#1026](https://github.com/colonel-byte/cargoship/issues/1026))
+* **cmd:** add dev apply to build and apply a definition in one step ([#1022](https://github.com/colonel-byte/cargoship/issues/1022))
+* **cmd:** add clean-cache under a new dev group, drop vault-encrypt ([#1021](https://github.com/colonel-byte/cargoship/issues/1021))
+* **pkg:** allow creation from a zarf package ([#1015](https://github.com/colonel-byte/cargoship/issues/1015))
+
+### Features
+
+* **api:** reject a registry rewrite referencing an uncaptured group ([#1029](https://github.com/colonel-byte/cargoship/issues/1029)) ([2642b90](https://github.com/colonel-byte/cargoship/commit/2642b90b1352453ec8c1df5ce65e2e5badafe9cb))
+* **assemble:** cache the archives an extractPath file is extracted from ([#1020](https://github.com/colonel-byte/cargoship/issues/1020)) ([c8ed947](https://github.com/colonel-byte/cargoship/commit/c8ed947c96aa534fac5f17c6f4b91377fb3f4208))
+* **cmd:** add clean-cache under a new dev group, drop vault-encrypt ([#1021](https://github.com/colonel-byte/cargoship/issues/1021)) ([5b9f634](https://github.com/colonel-byte/cargoship/commit/5b9f6343079a5dbf7303c7ba4d9e2f332c73c150))
+* **cmd:** add dev apply to build and apply a definition in one step ([#1022](https://github.com/colonel-byte/cargoship/issues/1022)) ([1aa26b9](https://github.com/colonel-byte/cargoship/commit/1aa26b9bbc1db887e4daba403d38bf1515a912b0))
+* **cmd:** add mirror to publish a package's contents to a registry ([#1026](https://github.com/colonel-byte/cargoship/issues/1026)) ([dcba187](https://github.com/colonel-byte/cargoship/commit/dcba187c5f67144bdd3597467eaf6874501cc745))
+* **distro:** mirror a package's files to a registry alongside its images ([#1025](https://github.com/colonel-byte/cargoship/issues/1025)) ([42c421a](https://github.com/colonel-byte/cargoship/commit/42c421a798ab8db9b13371f640ffd75bde7ed4e5))
+* **examples:** declare hauler images under a registry annotation ([#1030](https://github.com/colonel-byte/cargoship/issues/1030)) ([1687ae6](https://github.com/colonel-byte/cargoship/commit/1687ae635cda4043768b7ed470640acc302cbc02))
+* **examples:** generate zarf package definitions beside a distro.yaml ([#1016](https://github.com/colonel-byte/cargoship/issues/1016)) ([53bb7ac](https://github.com/colonel-byte/cargoship/commit/53bb7ac701daaaf36645cdfc9254f14085e249d0))
+* **examples:** render the generated zarf package definitions ([#1017](https://github.com/colonel-byte/cargoship/issues/1017)) ([c20288d](https://github.com/colonel-byte/cargoship/commit/c20288dc7cdc7d4525e2ba938718485419a21571))
+* **images:** push a package's images to a registry, host swapped ([#1024](https://github.com/colonel-byte/cargoship/issues/1024)) ([c4b78f3](https://github.com/colonel-byte/cargoship/commit/c4b78f34acd076fa8b437c2384d103d62025e4ba))
+* **pkg:** allow creation from a zarf package ([#1015](https://github.com/colonel-byte/cargoship/issues/1015)) ([f9d6921](https://github.com/colonel-byte/cargoship/commit/f9d6921b3bd132eb0a7e963207ffff748b36ad5a))
+
+
+### Miscellaneous
+
+* **examples:** render the hauler manifests with the registry annotation ([#1031](https://github.com/colonel-byte/cargoship/issues/1031)) ([57fcadd](https://github.com/colonel-byte/cargoship/commit/57fcadd80702a6674ed50af495edd6e675d7e585))
+
+
+### Build
+
+* **deps:** bump go.yaml.in/yaml/v2 from 2.4.4 to 2.4.5 ([#1028](https://github.com/colonel-byte/cargoship/issues/1028)) ([46b6d42](https://github.com/colonel-byte/cargoship/commit/46b6d4206e2fb167ba3341aef47df8d961f70861))
+
 ## [0.38.0](https://github.com/colonel-byte/cargoship/compare/v0.37.0...v0.38.0) (2026-11-03)
 
 
