@@ -17,16 +17,23 @@ apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:
   name: multi-cni-cilium-rke2-cilium
+  annotations:
+    # The registry every image below is collected from. Hauler supplies it for the unqualified
+    # names in this document, so pointing this at a mirror that carries the same repository
+    # paths redirects the whole document -- and `cargoship create --registry-override
+    # docker.io=<mirror>` then looks the collected images up under the reference the mirror
+    # recorded. See docs/guides/content-store.md.
+    hauler.dev/registry: docker.io
 spec:
   images:
-    - name: docker.io/rancher/mirrored-cilium-certgen:v0.4.9
-    - name: docker.io/rancher/mirrored-cilium-cilium:v1.20.1
-    - name: docker.io/rancher/mirrored-cilium-cilium-envoy:v1.37.5-1786810558-766ccfb37260a43e9d228837aa84ce3faf9f64e7
-    - name: docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.20.1
-    - name: docker.io/rancher/mirrored-cilium-hubble-relay:v1.20.1
-    - name: docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.5
-    - name: docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.5
-    - name: docker.io/rancher/mirrored-cilium-operator-aws:v1.20.1
-    - name: docker.io/rancher/mirrored-cilium-operator-azure:v1.20.1
-    - name: docker.io/rancher/mirrored-cilium-operator-generic:v1.20.1
-    - name: docker.io/rancher/hardened-cni-plugins:v1.9.1-build20260903
+    - name: rancher/mirrored-cilium-certgen:v0.4.9
+    - name: rancher/mirrored-cilium-cilium:v1.20.1
+    - name: rancher/mirrored-cilium-cilium-envoy:v1.37.5-1786810558-766ccfb37260a43e9d228837aa84ce3faf9f64e7
+    - name: rancher/mirrored-cilium-clustermesh-apiserver:v1.20.1
+    - name: rancher/mirrored-cilium-hubble-relay:v1.20.1
+    - name: rancher/mirrored-cilium-hubble-ui:v0.13.5
+    - name: rancher/mirrored-cilium-hubble-ui-backend:v0.13.5
+    - name: rancher/mirrored-cilium-operator-aws:v1.20.1
+    - name: rancher/mirrored-cilium-operator-azure:v1.20.1
+    - name: rancher/mirrored-cilium-operator-generic:v1.20.1
+    - name: rancher/hardened-cni-plugins:v1.9.1-build20260903

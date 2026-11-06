@@ -13,23 +13,31 @@
 # limitations under the License.
 #
 # Do not edit; see example/AGENTS.md.
+# yaml-language-server: $schema=../../../../schema/hauler-manifest.json
 apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:
   name: multi-cni-cilium-core
+  annotations:
+    # The registry every image below is collected from. Hauler supplies it for the unqualified
+    # names in this document, so pointing this at a mirror that carries the same repository
+    # paths redirects the whole document -- and `cargoship create --registry-override
+    # docker.io=<mirror>` then looks the collected images up under the reference the mirror
+    # recorded. See docs/guides/content-store.md.
+    hauler.dev/registry: docker.io
 spec:
   images:
-    - name: docker.io/rancher/rke2-runtime:v1.36.2-rke2r1
-    - name: docker.io/rancher/hardened-kubernetes:v1.36.2-rke2r1-build20260612
-    - name: docker.io/rancher/hardened-coredns:v1.14.4-build20260610
-    - name: docker.io/rancher/hardened-cluster-autoscaler:v1.10.3-build20260604
-    - name: docker.io/rancher/hardened-dns-node-cache:1.26.8-build20260608
-    - name: docker.io/rancher/hardened-etcd:v3.6.12-k3s1-build20260603
-    - name: docker.io/rancher/hardened-k8s-metrics-server:v0.8.1-build20260604
-    - name: docker.io/rancher/hardened-addon-resizer:1.8.23-build20260604
-    - name: docker.io/rancher/klipper-helm:v0.11.1-build20260615
-    - name: docker.io/rancher/klipper-lb:v0.4.17
-    - name: docker.io/rancher/mirrored-pause:3.6
-    - name: docker.io/rancher/rke2-cloud-provider:v1.36.1-0.20260508014929-7bbbf7c9b258-build20260515
-    - name: docker.io/rancher/hardened-snapshot-controller:v8.6.0-build20260608
-    - name: docker.io/rancher/hardened-traefik:v3.7.4-build20260608
+    - name: rancher/rke2-runtime:v1.36.2-rke2r1
+    - name: rancher/hardened-kubernetes:v1.36.2-rke2r1-build20260612
+    - name: rancher/hardened-coredns:v1.14.4-build20260610
+    - name: rancher/hardened-cluster-autoscaler:v1.10.3-build20260604
+    - name: rancher/hardened-dns-node-cache:1.26.8-build20260608
+    - name: rancher/hardened-etcd:v3.6.12-k3s1-build20260603
+    - name: rancher/hardened-k8s-metrics-server:v0.8.1-build20260604
+    - name: rancher/hardened-addon-resizer:1.8.23-build20260604
+    - name: rancher/klipper-helm:v0.11.1-build20260615
+    - name: rancher/klipper-lb:v0.4.17
+    - name: rancher/mirrored-pause:3.6
+    - name: rancher/rke2-cloud-provider:v1.36.1-0.20260508014929-7bbbf7c9b258-build20260515
+    - name: rancher/hardened-snapshot-controller:v8.6.0-build20260608
+    - name: rancher/hardened-traefik:v3.7.4-build20260608
