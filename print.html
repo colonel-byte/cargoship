@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a19f0b82.js";
+            window.path_to_searchindex_js = "searchindex-d71538ac.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b8270bf1.js"></script>
@@ -1386,6 +1386,30 @@ WRN image not held by the local image source, falling back to its registry image
 <p>All three can be passed together, and they resolve in a fixed order.</p>
 <p>For <strong>files</strong>, an explicit <code>--file-override</code> wins over the store. An operator who named a redirect for a specific file asked for that one, and a store that happens to also hold it does not silently take precedence.</p>
 <p>For <strong>images</strong>, a <code>--registry-override</code> is applied <em>first</em>, and the store is then searched for the rewritten reference. So an override that rewrites <code>registry.k8s.io</code> to <code>mirror.example.com</code> means the store is searched for <code>mirror.example.com/...</code>, which is usually not what a store collected from upstream holds. Pass the store without registry overrides unless the store was itself collected from the mirror.</p>
+<h3 id="collecting-a-haul-from-a-mirror"><a class="header" href="#collecting-a-haul-from-a-mirror">Collecting a Haul From a Mirror</a></h3>
+<p>The generated <code>hauler-images-*.yaml</code> beside each example declare their images unqualified, under a document-wide <code>hauler.dev/registry</code> annotation:</p>
+<pre><code class="language-yaml">metadata:
+  annotations:
+    hauler.dev/registry: docker.io
+spec:
+  images:
+    - name: rancher/rke2-runtime:v1.37.0-rke2r1
+</code></pre>
+<p>Pointing that one line at a mirror redirects every image in the document, so collecting a release from an internal registry needs no per-image editing. Hauler supplies the annotation’s registry for unqualified names only, so an image that is already qualified under some other registry stays where it is and the annotation does not touch it.</p>
+<p>What the annotation cannot do is preserve the upstream identity. <code>hauler.dev/original-ref</code> is hauler’s record of what it actually fetched, so a haul collected through the annotation records <code>mirror.example.com/rancher/...</code> and not <code>docker.io/rancher/...</code>. That is the <code>unless</code> case the section above names: the store <em>was</em> collected from the mirror, so the build has to look its images up under the same name.</p>
+<pre><code class="language-yaml"># cargoship-config.yaml
+registry_override:
+  docker.io: mirror.example.com
+</code></pre>
+<p>The config file is the right half of this rather than <code>--registry-override</code>, because which mirror a management node reaches is a standing answer for the whole fleet rather than a decision about one invocation. Either form works, and a flag replaces the config file’s mappings rather than merging with them.</p>
+<p>Two things this does not solve:</p>
+<ul>
+<li><strong>The mirror has to carry the same repository paths.</strong> The annotation replaces the registry host and nothing else, so a mirror serving <code>mirror.example.com/rke2-runtime</code> rather than <code>mirror.example.com/rancher/rke2-runtime</code> still needs an entry per image.</li>
+<li><strong>Hauler’s <code>rewrite</code> is not a way around the first point.</strong> A per-image <code>rewrite</code> moves <code>io.containerd.image.name</code>, which cargoship does not match on, and leaves <code>original-ref</code> as the fetch source; the document-level <code>hauler.dev/rewrite</code> annotation had no effect at all when tried against hauler 2.1.2, in either the bare-host or the full-reference form.</li>
+</ul>
+<p>Check what a haul recorded rather than assuming, since a mismatch here shows up as a store miss per image rather than as an error:</p>
+<pre><code class="language-bash">hauler store info --store ./store --output json --type image
+</code></pre>
 <h2 id="serving-a-haul-instead"><a class="header" href="#serving-a-haul-instead">Serving a Haul Instead</a></h2>
 <p>Hauler can also serve a store, and that path needs nothing from this guide - it is the existing override mechanism:</p>
 <pre><code class="language-bash"># On the disconnected side
@@ -3158,7 +3182,7 @@ $ cargoship dev apply ./distro-defs --config ./inventory.yaml --content-store ./
       --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig.
       --oci-concurrency int               Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http                        Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --receipt-path string               Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship redact-receipt' over it before attaching it to a ticket.
+      --receipt-path string               Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket.
       --registry-override strings         Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
       --timeout string                    Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                     Specify the temporary directory to use for intermediate files (default "/tmp")
