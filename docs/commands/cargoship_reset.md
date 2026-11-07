@@ -39,10 +39,10 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 ```
   -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string             Config file used to bootstrap a cluster.
-      --confirm                   Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
+      --confirm[=true|false]      Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
-      --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -h, --help                      help for reset
+      --dry-run[=true|false]      Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
+  -h, --help[=true|false]         help for reset
       --receipt-path string       Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket.
       --target-hosts strings      Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration.
   -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
@@ -51,10 +51,10 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO

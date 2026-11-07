@@ -39,28 +39,28 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:
 ### Options
 
 ```
-  -a, --architecture string        Architecture for OCI images and Zarf packages
-  -f, --config PATH                PATH of a cluster configuration to read the destination registry from, in place of naming one as an argument. The address is taken from the single entry under spec.config.registries that declares a proxy URL, which is the mirror cargoship configures each host to pull through.
-      --files                      Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
-  -h, --help                       help for mirror
-      --images                     Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -k, --key string                 Path to public key file for validating signed packages
-      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --retries int                Number of retries to perform for Cargoship's operations, such as package publishes.
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --verify verifyMode          Verify the Cargoship package signature. (default if-possible)
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -a, --architecture string                     Architecture for OCI images and Zarf packages
+  -f, --config PATH                             PATH of a cluster configuration to read the destination registry from, in place of naming one as an argument. The address is taken from the single entry under spec.config.registries that declares a proxy URL, which is the mirror cargoship configures each host to pull through.
+      --files[=true|false]                      Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
+  -h, --help[=true|false]                       help for mirror
+      --images[=true|false]                     Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
+      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string                              Path to public key file for validating signed packages
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
+      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
+      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO

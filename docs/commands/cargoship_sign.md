@@ -34,30 +34,30 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key env://
 ### Options
 
 ```
-  -a, --architecture string        Architecture for OCI images and Zarf packages
-      --confirm                    Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes).
-  -h, --help                       help for sign
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -k, --key string                 Public key to verify the existing signature before re-signing (optional)
-      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string              Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
-      --overwrite                  Overwrite an existing signature if the package is already signed
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --retries int                Number of retries to perform for Cargoship's operations, such as package publishes.
-      --signing-key string         Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
-      --signing-key-pass string    Password for encrypted private key
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --verify verifyMode          Verify the Cargoship package signature. (default if-possible)
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -a, --architecture string                     Architecture for OCI images and Zarf packages
+      --confirm[=true|false]                    Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes).
+  -h, --help[=true|false]                       help for sign
+      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string                              Public key to verify the existing signature before re-signing (optional)
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string                           Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
+      --overwrite[=true|false]                  Overwrite an existing signature if the package is already signed
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
+      --signing-key string                      Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
+      --signing-key-pass string                 Password for encrypted private key
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
+      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
+      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO

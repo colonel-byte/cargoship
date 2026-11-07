@@ -38,44 +38,44 @@ $ cargoship dev apply ./distro-defs --config ./inventory.yaml --content-store ./
 ### Options
 
 ```
-      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
-      --allow-downgrade                   Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
-      --allow-unmanaged-nodes             Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
-  -a, --architecture string               Architecture for OCI images and Zarf packages
-  -c, --concurrency int                   Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string                     Config file used to bootstrap a cluster.
-      --confirm                           Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
-      --content-store PATH                PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it.
-      --dry-run                           Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-      --file-override strings             Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
-  -F, --firewall                          Whether to update every host node's firewall configuration.
-  -h, --help                              help for apply
-  -H, --hosts                             Whether to update every host node's /etc/hosts file.
-      --insecure-skip-tls-verify          Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --kubeconfig string                 Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
-      --label-nodes                       Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig.
-      --oci-concurrency int               Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --plain-http                        Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --receipt-path string               Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket.
-      --registry-override strings         Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
-      --timeout string                    Set the timeout for how long functions will last. (default "60m")
-      --tmpdir string                     Specify the temporary directory to use for intermediate files (default "/tmp")
-      --update-kubeconfig                 Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
-      --values stringArray                Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
-      --vault-password-file string        Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
-  -w, --work-concurrency string           Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
-      --zarf-cache string                 Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray               A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray         Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --allow-downgrade[=true|false]            Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
+      --allow-unmanaged-nodes[=true|false]      Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
+  -a, --architecture string                     Architecture for OCI images and Zarf packages
+  -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string                           Config file used to bootstrap a cluster.
+      --confirm[=true|false]                    Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
+      --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it.
+      --dry-run[=true|false]                    Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
+      --file-override strings                   Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
+  -F, --firewall[=true|false]                   Whether to update every host node's firewall configuration.
+  -h, --help[=true|false]                       help for apply
+  -H, --hosts[=true|false]                      Whether to update every host node's /etc/hosts file.
+      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
+      --label-nodes[=true|false]                Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig.
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket.
+      --registry-override strings               Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --timeout string                          Set the timeout for how long functions will last. (default "60m")
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
+      --update-kubeconfig[=true|false]          Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
+      --values stringArray                      Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
+      --vault-password-file string              Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+  -w, --work-concurrency string                 Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
+      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO

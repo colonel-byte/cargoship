@@ -38,21 +38,21 @@ $ cargoship dev clean-cache --older-than 336h
 ### Options
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages
-      --dry-run               Report what would be removed without removing it.
-  -h, --help                  help for clean-cache
-      --older-than duration   Only remove entries written longer ago than this, as a Go duration such as 336h. Omit it to remove every fetchable area, which is also the only way an image layout is removed. Measured from when an entry was written rather than when it was last read.
-      --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -a, --architecture string    Architecture for OCI images and Zarf packages
+      --dry-run[=true|false]   Report what would be removed without removing it.
+  -h, --help[=true|false]      help for clean-cache
+      --older-than duration    Only remove entries written longer ago than this, as a Go duration such as 336h. Omit it to remove every fetchable area, which is also the only way an image layout is removed. Measured from when an entry was written rather than when it was last read.
+      --tmpdir string          Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string      Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO
