@@ -21,6 +21,7 @@ require (
 	github.com/k0sproject/rig/v2 v2.2.1
 	github.com/klauspost/compress v1.20.3
 	github.com/magefile/mage v1.17.2
+	github.com/mholt/archives v0.1.5
 	github.com/nao1215/markdown v1.1.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
@@ -169,7 +170,6 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
-	github.com/mholt/archives v0.1.5 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
 	github.com/minio/minlz v1.2.3 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
