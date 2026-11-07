@@ -82,46 +82,12 @@ const maxReportedLayerTitles = 8
 // The layer is verified against the digest its manifest gives it as it is read, so a truncated
 // or substituted transfer fails here whatever the caller does afterwards.
 func FetchFile(ctx context.Context, ref string, sel FileSelector, dst string, opts FileOptions) (err error) {
-	remote, err := fileRemote(ctx, ref, sel.Arch, opts)
-	if err != nil {
-		return err
-	}
-
-	manifest, err := resolveManifest(ctx, remote, ref, sel.Arch)
-	if err != nil {
-		return err
-	}
-	layer, err := selectLayer(ref, sel, manifest)
-	if err != nil {
-		return err
-	}
-
-	// Fetched through remote.Fetch rather than FetchLayerReader so that the body is closed:
-	// the blob cache writes its copy as the reader is drained and finishes that write on
-	// Close, and FetchLayerReader's VerifyReader has no Close to call.
-	body, err := remote.Fetch(ctx, layer)
-	if err != nil {
-		return fmt.Errorf("unable to fetch %s from %s: %w", layer.Digest, ref, err)
-	}
-	defer func() {
-		err = errors.Join(err, body.Close())
-	}()
-	rc := content.NewVerifyReader(body, layer)
-
 	if sel.ExtractPath == "" {
-		if err := writeFileFrom(rc, dst); err != nil {
-			return fmt.Errorf("unable to write %s: %w", dst, err)
-		}
-		return rc.Verify()
+		return fetchLayerTo(ctx, ref, sel, dst, opts)
 	}
 
-	// The layer is itself an archive, and the extraction identifies the format from the file
-	// name rather than from the bytes -- so the staged copy has to keep the name the artifact
-	// gave the layer, extension and all.
-	title := layer.Annotations[ocispec.AnnotationTitle]
-	if title == "" {
-		return fmt.Errorf("an extract path was given, but the layer selected in %s carries no %s annotation, so the archive format cannot be identified", ref, ocispec.AnnotationTitle)
-	}
+	// The layer is an archive and one member is wanted out of it, so it is staged under its
+	// own name first -- see FetchLayerFile for why the name matters.
 	staged, err := os.MkdirTemp("", "cargoship-oci-file-")
 	if err != nil {
 		return fmt.Errorf("unable to create a staging directory for %s: %w", ref, err)
@@ -129,11 +95,8 @@ func FetchFile(ctx context.Context, ref string, sel FileSelector, dst string, op
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(staged))
 	}()
-	stagedArchive := filepath.Join(staged, filepath.Base(filepath.FromSlash(title)))
-	if err := writeFileFrom(rc, stagedArchive); err != nil {
-		return fmt.Errorf("unable to stage %s: %w", title, err)
-	}
-	if err := rc.Verify(); err != nil {
+	archivePath, err := FetchLayerFile(ctx, ref, sel, staged, opts)
+	if err != nil {
 		return err
 	}
 
@@ -141,12 +104,86 @@ func FetchFile(ctx context.Context, ref string, sel FileSelector, dst string, op
 	// can carry directories that would otherwise collide with dst itself -- zarf's component
 	// tarballs hold "zarf-injector/files/0/zarf-injector" for a target named zarf-injector.
 	extractDir := filepath.Join(staged, "extracted")
-	if err := archive.Decompress(ctx, stagedArchive, extractDir, archive.DecompressOpts{
+	if err := archive.Decompress(ctx, archivePath, extractDir, archive.DecompressOpts{
 		Files: []string{sel.ExtractPath},
 	}); err != nil {
-		return fmt.Errorf("unable to extract %s from %s: %w", sel.ExtractPath, title, err)
+		return fmt.Errorf("unable to extract %s from %s: %w", sel.ExtractPath, filepath.Base(archivePath), err)
 	}
 	return helpers.CreatePathAndCopy(filepath.Join(extractDir, filepath.FromSlash(sel.ExtractPath)), dst)
+}
+
+// fetchLayerTo writes the selected layer's bytes to the exact path dst.
+func fetchLayerTo(ctx context.Context, ref string, sel FileSelector, dst string, opts FileOptions) (err error) {
+	_, body, layer, err := openLayer(ctx, ref, sel, opts)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, body.Close())
+	}()
+
+	rc := content.NewVerifyReader(body, layer)
+	if err := writeFileFrom(rc, dst); err != nil {
+		return fmt.Errorf("unable to write %s: %w", dst, err)
+	}
+	return rc.Verify()
+}
+
+// openLayer resolves ref against sel and opens the selected layer for reading.
+//
+// Fetched through remote.Fetch rather than FetchLayerReader so that the body is closed: the
+// blob cache writes its copy as the reader is drained and finishes that write on Close, and
+// FetchLayerReader's VerifyReader has no Close to call. The caller closes it exactly once.
+func openLayer(ctx context.Context, ref string, sel FileSelector, opts FileOptions) (*Remote, io.ReadCloser, ocispec.Descriptor, error) {
+	remote, err := fileRemote(ctx, ref, sel.Arch, opts)
+	if err != nil {
+		return nil, nil, ocispec.Descriptor{}, err
+	}
+	manifest, err := resolveManifest(ctx, remote, ref, sel.Arch)
+	if err != nil {
+		return nil, nil, ocispec.Descriptor{}, err
+	}
+	layer, err := selectLayer(ref, sel, manifest)
+	if err != nil {
+		return nil, nil, ocispec.Descriptor{}, err
+	}
+	body, err := remote.Fetch(ctx, layer)
+	if err != nil {
+		return nil, nil, ocispec.Descriptor{}, fmt.Errorf("unable to fetch %s from %s: %w", layer.Digest, ref, err)
+	}
+	return remote, body, layer, nil
+}
+
+// FetchLayerFile writes the layer ref and sel select into dir, under the name the artifact
+// gave it, and returns the path it wrote.
+//
+// The name is not cosmetic. An extraction identifies an archive's format from its file name
+// rather than from its bytes, so a layer staged as anything but its own title cannot be
+// extracted from -- which is why a layer carrying no title is refused here rather than left to
+// fail inside an extractor, naming a temporary path the caller never chose.
+func FetchLayerFile(ctx context.Context, ref string, sel FileSelector, dir string, opts FileOptions) (_ string, err error) {
+	_, body, layer, err := openLayer(ctx, ref, sel, opts)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		err = errors.Join(err, body.Close())
+	}()
+
+	title := layer.Annotations[ocispec.AnnotationTitle]
+	if title == "" {
+		return "", fmt.Errorf("the layer selected in %s carries no %s annotation, so the archive format cannot be identified", ref, ocispec.AnnotationTitle)
+	}
+	rc := content.NewVerifyReader(body, layer)
+
+	path := filepath.Join(dir, filepath.Base(filepath.FromSlash(title)))
+	if err := writeFileFrom(rc, path); err != nil {
+		return "", fmt.Errorf("unable to stage %s: %w", title, err)
+	}
+	if err := rc.Verify(); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // fileRemote opens the registry client an artifact is read through.
