@@ -215,7 +215,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 	var fileSources []distro.FileSource
 
 	for filesIdx, file := range d.Spec.Config.Files {
-		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore)
+		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, opts.ociOptions())
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage file %d (%s): %w", filesIdx, file, err)
 		}
@@ -224,7 +224,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore)
+		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, opts.ociOptions())
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage os file %d (%s): %w", filesIdx, file, err)
 		}
@@ -418,7 +418,7 @@ func fileArch(file v1alpha1.File) string {
 // fileGrabber stages one file into buildPath. The returned FileSource is non-nil only when the
 // bytes came from somewhere other than the declared source -- an override, or a content store --
 // so the caller records what actually happened rather than only what was configured.
-func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, store ContentStore) (provenance *distro.FileSource, err error) {
+func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, store ContentStore, ociOpts ociOptions) (provenance *distro.FileSource, err error) {
 	rel := filepath.Join(resourceType, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 	dst := filepath.Join(buildPath, rel)
 	destinationDir := filepath.Dir(dst)
@@ -466,7 +466,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	// over it. What the store yields is a local file, so the staging below hands off to the
 	// local-source branch and reuses its extraction, verification and permissions unchanged.
 	if !overridden && store != nil {
-		req := contentstore.FileRequest{Source: file.Source, Arch: fileArch(file)}
+		req := contentstore.FileRequest{Source: file.Source, Arch: fileArch(file), Layer: file.Layer}
 		name, held, err := store.File(req)
 		if err != nil {
 			return nil, err
@@ -508,7 +508,46 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 		}
 	}
 
-	if helpers.IsURL(source) {
+	// A registry override applies to an oci:// source for the same reason it applies to an
+	// image pull: an operator who redirects a registry means it for everything cargoship
+	// fetches from there. It is resolved here rather than in the fetch so that the refusal
+	// and the provenance record sit beside the ones --file-override writes.
+	//
+	// Note that --file-override itself never matches an oci:// source: pkg/fileoverride
+	// parses http and https only.
+	if helpers.IsOCIURL(source) && provenance == nil {
+		// Matched on the reference without its scheme, because an override's source is a
+		// registry prefix as an image list spells one -- "registry.example.com", with no
+		// oci:// in front of it.
+		rewritten, match, ok := images.ApplyOverride(strings.TrimPrefix(source, helpers.OCIURLPrefix), ociOpts.RegistryOverrides)
+		if ok {
+			rewritten = helpers.OCIURLPrefix + rewritten
+			// Overridden bytes come from a registry the definition's author never named,
+			// so something has to tie them to what upstream published. A digest in the
+			// reference does that by itself; otherwise the declared shasum is the only
+			// thing left, and without it the override is an unauthenticated substitution.
+			if file.Shasum == "" && !pinnedByDigest(source) {
+				return nil, fmt.Errorf("registry override %s=%s applies to %s, which declares no shasum and is not pinned by digest: refusing to fetch it unverified",
+					match.Source, match.Override, file.Source)
+			}
+			logger.From(ctx).Info("file source overridden",
+				"declared", file.Source, "resolved", rewritten, "override", match.Source)
+			source = rewritten
+			provenance = &distro.FileSource{
+				Path:     filepath.ToSlash(rel),
+				Declared: file.Source,
+				Resolved: rewritten,
+				Override: match.Source,
+				Shasum:   file.Shasum,
+			}
+		}
+	}
+
+	if helpers.IsOCIURL(source) {
+		if err := fetchOCIFile(ctx, source, file, fileArch(file), dst, destinationDir, ociOpts); err != nil {
+			return nil, err
+		}
+	} else if helpers.IsURL(source) {
 		if file.ExtractPath != "" {
 			// The temp name is local bookkeeping, so it comes from the declared source: a
 			// mirror is free to serve the same artifact under a different path, and the

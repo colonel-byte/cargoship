@@ -25,7 +25,6 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/spf13/cobra"
-	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -79,7 +78,7 @@ func newDevApplyCommand() *cobra.Command {
 
 	cmd.Flags().StringSliceVar(&o.fileOverrides, "file-override", fileOverrideDefaults, lang.CmdPackageCreateFlagFileOverride)
 	cmd.Flags().StringVar(&o.contentStore, "content-store", resolvedConfig.DistroOpts.CreateOpts.ContentStore, lang.CmdPackageCreateFlagContentStore)
-	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, zlang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, lang.CmdPackageCreateFlagRegistryOverride)
 
 	// apply does not register these, because loading a built package reaches no registry.
 	// This command pulls the images itself, so it needs the same transport flags create has.

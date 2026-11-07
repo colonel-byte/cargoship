@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/pkg/helpers"
@@ -47,6 +48,24 @@ type RegistryOverride struct {
 	Source string
 	// Override replaces the source registry as a string prefix.
 	Override string
+}
+
+// ApplyOverride rewrites ref through the first registry override whose source is a prefix of
+// it, returning the rewritten reference, the override that matched, and whether one did.
+//
+// The first match wins, which relies on the overrides being sorted longest prefix first --
+// ParseRegistryOverrides does that -- so that docker.io/library supersedes docker.io.
+//
+// This is shared rather than inlined because an oci:// file source is a registry reference
+// too, and an operator who redirects a registry means it for everything cargoship pulls from
+// there. Two copies of a prefix rule would drift.
+func ApplyOverride(ref string, overrides []RegistryOverride) (string, RegistryOverride, bool) {
+	for _, override := range overrides {
+		if strings.HasPrefix(ref, override.Source) {
+			return strings.Replace(ref, override.Source, override.Override, 1), override, true
+		}
+	}
+	return ref, RegistryOverride{}, false
 }
 
 const (

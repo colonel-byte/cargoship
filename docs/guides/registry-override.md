@@ -1,6 +1,6 @@
 # Registry Override Guide
 
-This guide explains how to redirect the images Cargoship pulls when creating a package, and how to authenticate to the resulting registry at apply time using an Ansible Vault-encrypted credential.
+This guide explains how to redirect what Cargoship pulls from a registry when creating a package, and how to authenticate to the resulting registry at apply time using an Ansible Vault-encrypted credential.
 
 For the same idea applied to the files and OS packages a distro definition downloads over HTTP, see the [file override guide](file-override.md).
 
@@ -9,6 +9,23 @@ For the same idea applied to the files and OS packages a distro definition downl
 By default, `cargoship create` pulls images from the registries referenced in your source manifests (e.g. `docker.io`, `ghcr.io`). A registry override rewrites the registry portion of an image reference at package-create time, so images are instead pulled from a mirror -- for example an internal pull-through cache or an air-gapped registry.
 
 This only affects where `create` pulls *from*. It doesn't touch the cluster the package is later applied to; for authenticating the cluster's container engine to a registry, see [Authenticating to the Registry](#authenticating-to-the-registry) below.
+
+### It Also Covers an `oci://` File Source
+
+A file a distro definition declares can name an OCI reference rather than an HTTP URL -- see the [OCI file source guide](oci-file-source.md) -- and an override rewrites those too, by the same prefix rule. An operator who points a registry somewhere else means it for everything cargoship fetches from there, so there is nothing extra to configure.
+
+One rule is stricter for a file than for an image. An image reference is resolved through its digest, so an overridden image is verified by construction; a file is not, and an overridden file source is **refused** unless it declares a `shasum` or pins its reference with a digest:
+
+```text
+ERR failed to create distro package: unable to stage file 0 (engine):
+    registry override registry.example.com=registry.internal.example.net applies to
+    oci://registry.example.com/vendor/engine:v1.37.1, which declares no shasum and is not
+    pinned by digest: refusing to fetch it unverified
+```
+
+The reasoning is the same as the one behind the [file override guide](file-override.md)'s mandatory shasum: an override moves the choice of where the bytes come from to whoever runs `create`, and something has to tie them to what upstream published. A `@sha256:...` reference does that by itself, which is why it is accepted in place of a declared `shasum`.
+
+Note that `--file-override` does **not** apply to an `oci://` source -- it matches http and https prefixes only. For an OCI reference, this is the mechanism.
 
 ## Setting an Override
 

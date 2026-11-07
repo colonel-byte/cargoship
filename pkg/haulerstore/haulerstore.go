@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -89,10 +90,16 @@ var fileConfigMediaTypes = map[string]bool{
 // file by the source a distro definition declared and gets bytes, not a descriptor, because the
 // other content stores hold files that have no descriptor to hand back.
 type file struct {
-	// descriptor is the content layer, not the manifest.
+	// descriptor is the content layer, not the manifest. It is the layer an entry naming no
+	// title gets.
 	descriptor ocispec.Descriptor
-	// name is the layer's title annotation -- the filename hauler recorded.
+	// name is that layer's title annotation -- the filename hauler recorded.
 	name string
+	// titled indexes every titled layer of the artifact. An artifact hauler collected holds
+	// one, but a vendor-published one can carry every file in a release as its own titled
+	// layer, and an entry naming one by title has to get that one rather than whichever the
+	// manifest happened to list first.
+	titled map[string]ocispec.Descriptor
 }
 
 // fileKey identifies a file artifact in the store: the reference hauler recorded it under,
@@ -247,16 +254,27 @@ func (s *Store) classify(ctx context.Context, desc ocispec.Descriptor) (file, bo
 	return file{}, false, nil
 }
 
-// fileLayer picks the single content layer out of a file artifact's manifest.
+// fileLayer indexes the content layers of a file artifact's manifest, and picks the one an
+// entry naming no title gets.
 func fileLayer(manifest ocispec.Manifest) (file, bool, error) {
+	entry := file{titled: map[string]ocispec.Descriptor{}}
 	for _, layer := range manifest.Layers {
-		if title := layer.Annotations[ocispec.AnnotationTitle]; title != "" {
-			return file{descriptor: layer, name: title}, true, nil
+		title := layer.Annotations[ocispec.AnnotationTitle]
+		if title == "" {
+			continue
+		}
+		entry.titled[title] = layer
+		if entry.name == "" {
+			entry.descriptor = layer
+			entry.name = title
 		}
 	}
-	// A file artifact with no titled layer has no name to restore it under, so there is
-	// nothing useful to return; treating it as an image would be worse.
-	return file{}, false, errors.New("hauler file artifact carries no titled layer")
+	if entry.name == "" {
+		// A file artifact with no titled layer has no name to restore it under, so there is
+		// nothing useful to return; treating it as an image would be worse.
+		return file{}, false, errors.New("hauler file artifact carries no titled layer")
+	}
+	return entry, true, nil
 }
 
 // mediaTypeDockerManifestList is the Docker spelling of an image index, which is what hauler
@@ -351,12 +369,12 @@ func (s *Store) File(req contentstore.FileRequest) (string, bool, error) {
 // file resolves a request against the index built at load time.
 func (s *Store) file(req contentstore.FileRequest) (file, bool, error) {
 	if f, ok := s.files[fileKey{ref: req.Source, arch: req.Arch}]; ok {
-		return f, true, nil
+		return s.layer(f, req)
 	}
 	// A file artifact published as a single manifest carries no platform and answers for
 	// every architecture, including a request that names one.
 	if f, ok := s.files[fileKey{ref: req.Source}]; ok {
-		return f, true, nil
+		return s.layer(f, req)
 	}
 	if req.Arch == "" {
 		if arches := s.fileArches(req.Source); len(arches) > 0 {
@@ -366,6 +384,24 @@ func (s *Store) file(req contentstore.FileRequest) (file, bool, error) {
 	// A store that holds the reference for other architectures but not for this one is a
 	// partial store, which is a miss and not an error.
 	return file{}, false, nil
+}
+
+// layer narrows a resolved artifact to the layer the request names, which is the artifact's
+// own single layer when it names none.
+//
+// A request naming a title the artifact does not carry is refused rather than served the
+// default layer: the entry said which bytes it wanted, and staging different ones would ship
+// a package nobody asked for.
+func (s *Store) layer(f file, req contentstore.FileRequest) (file, bool, error) {
+	if req.Layer == "" || req.Layer == f.name {
+		return f, true, nil
+	}
+	desc, ok := f.titled[req.Layer]
+	if !ok {
+		titles := slices.Sorted(maps.Keys(f.titled))
+		return file{}, false, fmt.Errorf("%s holds %s, which carries no layer titled %q; it carries %s", s.source, req.Source, req.Layer, strings.Join(titles, ", "))
+	}
+	return file{descriptor: desc, name: req.Layer, titled: f.titled}, true, nil
 }
 
 // fileArches lists the architectures the store holds ref for, sorted, for a message.
@@ -407,6 +443,11 @@ func (s *Store) Fetch(ctx context.Context, req contentstore.FileRequest, dst str
 		err = errors.Join(err, rc.Close())
 	}()
 
+	// A layer title can carry a path -- an artifact publishing every file in a release titles
+	// them "cri-o/bin/crio" and the like -- so the parent of dst is not guaranteed to exist.
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("creating %s: %w", filepath.Dir(dst), err)
+	}
 	out, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("creating %s: %w", dst, err)

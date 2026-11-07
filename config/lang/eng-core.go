@@ -143,6 +143,10 @@ const (
 	// CmdPackageCreateFlagHaulerStore create flag hauler store. Deprecated: superseded by
 	// CmdPackageCreateFlagContentStore, and kept only for the deprecated --hauler-store flag.
 	CmdPackageCreateFlagHaulerStore = "`PATH` of a hauler store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a store directory or an archive written by hauler store save. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it."
+	// CmdPackageCreateFlagRegistryOverride create flag registry override. It replaces zarf's
+	// string of the same name, which describes the flag as applying to image pulls only --
+	// cargoship also redirects an oci:// file source through it.
+	CmdPackageCreateFlagRegistryOverride = "Redirect what cargoship pulls from a registry, as SOURCE=TARGET pairs of registry prefixes, for example --registry-override docker.io=dockerio-reg.enterprise.intranet. Repeatable. When several sources match, the longest wins. This covers both the images a distro definition declares and any file whose source is an oci:// reference; for a redirected file, the declared shasum is enforced, and one that declares neither a shasum nor a digest in its reference is refused rather than fetched unverified from a mirror."
 	// CmdPackageCreateFlagFileOverride create flag file override
 	CmdPackageCreateFlagFileOverride = "Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror."
 	// CmdPackageCreateFlagOutput create flag output

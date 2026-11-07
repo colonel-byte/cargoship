@@ -75,7 +75,7 @@ func TestFileGrabberRemoteOverride(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, ociOptions{})
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -107,7 +107,7 @@ func TestFileGrabberLocalOverride(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, ociOptions{})
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -134,7 +134,7 @@ func TestFileGrabberRefusesOverrideWithoutShasum(t *testing.T) {
 		Target: "/usr/local/bin/k3s",
 	}
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, ociOptions{})
 	require.ErrorContains(t, err, "declares no shasum")
 }
 
@@ -154,7 +154,7 @@ func TestFileGrabberChecksumMismatchLeavesNothingBehind(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, ociOptions{})
 	require.Error(t, err)
 
 	_, statErr := os.Stat(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -176,7 +176,7 @@ func TestFileGrabberUnmatchedSourceIsUntouched(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, ociOptions{})
 	require.NoError(t, err)
 	require.Nil(t, provenance, "a file no override touched must record nothing, so packages built without overrides are unchanged")
 
@@ -198,7 +198,7 @@ func TestFileGrabberLocalSourceStillResolvesAgainstDistroPath(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil, nil, ociOptions{})
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -229,7 +229,7 @@ func TestFileGrabberExtractPathChecksExtractedFileShasum(t *testing.T) {
 		Shasum:      extractedHex,
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, nil, ociOptions{})
 	require.NoError(t, err)
 	require.NotNil(t, provenance)
 	require.Equal(t, extractedHex, provenance.Shasum)
@@ -278,10 +278,10 @@ func TestFileGrabberExtractPathReusesCachedArchive(t *testing.T) {
 		Shasum:      file2Hex,
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file1, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file1, nil, nil, ociOptions{})
 	require.NoError(t, err)
 
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, file2, nil, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, file2, nil, nil, ociOptions{})
 	require.NoError(t, err)
 
 	require.Equal(t, 1, downloadCount, "archive must be downloaded exactly once across both extractions")
@@ -381,7 +381,7 @@ func TestFileGrabberExtractPathCachesArchiveAcrossBuilds(t *testing.T) {
 
 	// Two builds, each with its own build directory, as two invocations of create would have.
 	for _, buildPath := range []string{t.TempDir(), t.TempDir()} {
-		_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil)
+		_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil, ociOptions{})
 		require.NoError(t, err)
 
 		got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "rke2"))
@@ -416,7 +416,7 @@ func TestFileGrabberExtractPathFailedDownloadCachesNothing(t *testing.T) {
 		Target:      "/usr/local/bin/rke2",
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, nil, ociOptions{})
 	require.Error(t, err)
 
 	left, err := os.ReadDir(cacheFiles)
@@ -467,11 +467,11 @@ func TestFileGrabberExtractPathArchivesSharingABaseName(t *testing.T) {
 	firstAgain := first
 	firstAgain.Target = "/usr/local/bin/first-again"
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, first, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, first, nil, nil, ociOptions{})
 	require.NoError(t, err)
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, second, nil, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 1, second, nil, nil, ociOptions{})
 	require.NoError(t, err)
-	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 2, firstAgain, nil, nil)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 2, firstAgain, nil, nil, ociOptions{})
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "first"))
@@ -548,7 +548,7 @@ func TestFileGrabberFromHaulerStore(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store, ociOptions{})
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -576,7 +576,7 @@ func TestFileGrabberHaulerStoreRefusesFileWithoutShasum(t *testing.T) {
 		Target: "/usr/local/bin/k3s",
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store, ociOptions{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "shasum")
 }
@@ -598,7 +598,7 @@ func TestFileGrabberOverrideBeatsHaulerStore(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, store)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides, store, ociOptions{})
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -621,7 +621,7 @@ func TestFileGrabberFallsBackWhenStoreLacksTheFile(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store, ociOptions{})
 	require.NoError(t, err)
 	require.Nil(t, provenance, "a file read from its declared source reports no redirection")
 
@@ -711,7 +711,7 @@ func TestFileGrabberMultiPlatformStoreUsesSelectorArch(t *testing.T) {
 		Selector: v1alpha1.BinarySelector{Arch: api.Arches{api.ArchAMD64}},
 	}
 
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store, ociOptions{})
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "engine"))
@@ -753,7 +753,7 @@ func TestFileGrabberMultiPlatformStoreRefusesAmbiguousEntry(t *testing.T) {
 				Selector: tc.selector,
 			}
 
-			_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store)
+			_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store, ociOptions{})
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "selector.arch")
 			require.Contains(t, err.Error(), declared)
@@ -786,7 +786,7 @@ func TestFileGrabberExtractPathSharingTheTargetName(t *testing.T) {
 		Shasum:      payloadShasum(),
 	}
 
-	_, err := fileGrabber(context.Background(), string(config.OSDir), buildPath, distroPath, 0, file, nil, nil)
+	_, err := fileGrabber(context.Background(), string(config.OSDir), buildPath, distroPath, 0, file, nil, nil, ociOptions{})
 	require.NoError(t, err)
 
 	staged := filepath.Join(buildPath, string(config.OSDir), "0", "zarf-injector")

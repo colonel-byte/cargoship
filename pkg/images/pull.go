@@ -132,15 +132,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	// Iterate over all images, marking each one as overridden.
 	for _, img := range imageList {
 		overriddenImage := img
-		for _, v := range opts.RegistryOverrides {
-			if strings.HasPrefix(img.Reference, v.Source) {
-				// If we have an override, the first override wins.
-				// Doing so allows earlier, longer prefixes (such as docker.io/library)
-				// to supersede shorter prefixes (such as docker.io).
-				overriddenImage.Reference = strings.Replace(img.Reference, v.Source, v.Override, 1)
-				break
-			}
-		}
+		overriddenImage.Reference, _, _ = ApplyOverride(img.Reference, opts.RegistryOverrides)
 		imagesWithOverride = append(imagesWithOverride, imageWithOverride{
 			original:   img,
 			overridden: overriddenImage,
