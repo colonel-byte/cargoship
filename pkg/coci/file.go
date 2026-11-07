@@ -154,6 +154,39 @@ func openLayer(ctx context.Context, ref string, sel FileSelector, opts FileOptio
 	return remote, body, layer, nil
 }
 
+// layerMediaTypeExtensions maps the layer media types that declare an archive format to the
+// file extension naming it.
+//
+// A layer of a container image carries no title - nothing names the files inside a root
+// filesystem layer - but its media type says exactly what the bytes are, which is the same
+// question a title is being read for. These are the spellings in use: the OCI set, and
+// Docker's for an image built or pushed by older tooling.
+var layerMediaTypeExtensions = map[string]string{
+	ocispec.MediaTypeImageLayer:                         ".tar",
+	ocispec.MediaTypeImageLayerGzip:                     ".tar.gz",
+	ocispec.MediaTypeImageLayerZstd:                     ".tar.zst",
+	"application/vnd.docker.image.rootfs.diff.tar":      ".tar",
+	"application/vnd.docker.image.rootfs.diff.tar.gzip": ".tar.gz",
+}
+
+// archiveName is the file name a layer is staged under, which is what decides how its format
+// is identified: an extraction resolves a format from the name rather than from the bytes.
+//
+// A titled layer keeps its own name, because that is what the publisher called it and it is
+// the more recognisable of the two in an error. A layer with no title falls back to its media
+// type, which covers the single-layer container image - `docker.io/rancher/k3s` is one - whose
+// root filesystem is a tarball that nothing has any reason to have titled.
+func archiveName(ref string, layer ocispec.Descriptor) (string, error) {
+	if title := layer.Annotations[ocispec.AnnotationTitle]; title != "" {
+		return filepath.Base(filepath.FromSlash(title)), nil
+	}
+	if ext, ok := layerMediaTypeExtensions[layer.MediaType]; ok {
+		return "layer" + ext, nil
+	}
+	return "", fmt.Errorf("the layer selected in %s carries no %s annotation and its media type %q declares no archive format, so it cannot be extracted from",
+		ref, ocispec.AnnotationTitle, layer.MediaType)
+}
+
 // LayerDigest returns the digest of the layer ref and sel select, without fetching it.
 //
 // It costs one reference resolution and, for an index, one manifest read -- both of which the
@@ -187,23 +220,39 @@ func LayerDigest(ctx context.Context, ref string, sel FileSelector, opts FileOpt
 // extracted from -- which is why a layer carrying no title is refused here rather than left to
 // fail inside an extractor, naming a temporary path the caller never chose.
 func FetchLayerFile(ctx context.Context, ref string, sel FileSelector, dir string, opts FileOptions) (_ string, err error) {
-	_, body, layer, err := openLayer(ctx, ref, sel, opts)
+	remote, err := fileRemote(ctx, ref, sel.Arch, opts)
 	if err != nil {
 		return "", err
+	}
+	manifest, err := resolveManifest(ctx, remote, ref, sel.Arch)
+	if err != nil {
+		return "", err
+	}
+	layer, err := selectLayer(ref, sel, manifest)
+	if err != nil {
+		return "", err
+	}
+
+	// Resolved before the layer is opened, so a name that cannot be worked out costs no
+	// transfer -- and, more to the point, does not leave a half-read body for the blob cache
+	// to choke on.
+	name, err := archiveName(ref, layer)
+	if err != nil {
+		return "", err
+	}
+
+	body, err := remote.Fetch(ctx, layer)
+	if err != nil {
+		return "", fmt.Errorf("unable to fetch %s from %s: %w", layer.Digest, ref, err)
 	}
 	defer func() {
 		err = errors.Join(err, body.Close())
 	}()
-
-	title := layer.Annotations[ocispec.AnnotationTitle]
-	if title == "" {
-		return "", fmt.Errorf("the layer selected in %s carries no %s annotation, so the archive format cannot be identified", ref, ocispec.AnnotationTitle)
-	}
 	rc := content.NewVerifyReader(body, layer)
 
-	path := filepath.Join(dir, filepath.Base(filepath.FromSlash(title)))
+	path := filepath.Join(dir, name)
 	if err := writeFileFrom(rc, path); err != nil {
-		return "", fmt.Errorf("unable to stage %s: %w", title, err)
+		return "", fmt.Errorf("unable to stage %s: %w", name, err)
 	}
 	if err := rc.Verify(); err != nil {
 		return "", err
