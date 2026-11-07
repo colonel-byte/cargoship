@@ -40,6 +40,43 @@ Image references are canonicalised before the lookup, so every spelling of one i
 
 Reach for an override instead when the content is behind an internal mirror that the management node *can* reach, or when you want one specific file swapped and nothing else. The two work together - see [Combining a Content Store With Overrides](#combining-a-content-store-with-overrides).
 
+### A Multi-Platform File Artifact Resolves Per Architecture
+
+A file in a haul is usually one manifest holding one titled layer, and the reference names bytes on its own. Some vendors publish an air-gapped engine bundle differently: one tag, an image index, and one manifest per platform, each carrying that architecture's tarball as a titled layer.
+
+```text
+registry.example.com/vendor/engine:v1.37.1   -> application/vnd.oci.image.index.v1+json
+  |- linux/amd64   layer title "engine.linux-amd64.tar.gz"
+  |- linux/arm64   layer title "engine.linux-arm64.tar.gz"
+```
+
+The reference no longer names one file, so the entry's own `selector.arch` picks the platform child out of the index:
+
+```yaml
+- source: oci://registry.example.com/vendor/engine:v1.37.1
+  extractPath: bin/engine
+  target: /usr/local/bin/engine
+  executable: true
+  shasum: <sha256 of the extracted member>
+  selector:
+    package: binary
+    arch:
+      - amd64
+```
+
+A file is staged arch-blind during a build - every architecture's entries go into one tree, keyed on the entry's position in the list - so `selector.arch` is the only thing that says which platform an entry meant. An entry naming none of them, or naming several, is therefore **refused** rather than resolved to a guess:
+
+```text
+ERR failed to create distro package: unable to stage file 0:
+    hauler store ./haul.tar.zst holds oci://registry.example.com/vendor/engine:v1.37.1 for
+    amd64, arm64, and the file entry selects no single architecture: name one in its
+    selector.arch
+```
+
+Write one entry per architecture, each naming its own. A store that holds the reference for some architectures but not the one an entry names is a [partial store](#a-partial-store-still-builds), not an error: that entry falls back to its declared source.
+
+Note that **a haul synced one architecture at a time can mask this.** A single-platform `hauler store sync` leaves a bare entry under the same reference in addition to the index, and that entry carries no platform, so it answers for every architecture. A store built up one architecture at a time therefore appears to work for whichever architecture was synced last, while a clean two-platform store resolves per entry as above.
+
 ## Collecting a Haul
 
 On a machine that can reach the upstream registries and URLs, add everything the distro definition declares. **Add files by the same URL the definition names**, because that URL is what the match is made on:

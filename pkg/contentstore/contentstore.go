@@ -106,6 +106,20 @@ func CanonicalImageRef(ref string) string {
 	return parsed.Name()
 }
 
+// FileRequest is what a distro definition's file entry asks a content bundle for. It is a
+// struct rather than a reference string because one reference is not always enough to name
+// the bytes: a vendor-published file artifact is commonly an image index over one manifest
+// per platform, and the entry's own selector is the only thing that says which to take.
+type FileRequest struct {
+	// Source is the source the definition declared, which is the string a bundle recorded as
+	// the content's original reference.
+	Source string
+	// Arch is the single architecture the entry's selector names, and is empty when the entry
+	// names none or several. A bundle holding one platform of a file answers without it; a
+	// bundle holding several cannot, and refuses rather than choosing.
+	Arch string
+}
+
 // Unpack makes the content bundle at path readable as a directory, returning the directory to
 // read and the temporary directory the caller must remove when it is done -- which is empty
 // when path was already a directory, because an operator's own store is never written to or

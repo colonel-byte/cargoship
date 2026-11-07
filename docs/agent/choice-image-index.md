@@ -2,6 +2,8 @@
 
 A cargoship package is fat: one tarball carries every architecture it targets, and the host's architecture selects what gets uploaded at apply time. Files fall out of that arrangement for free, because `fileGrabber` keys its output directories by the index of the entry in `spec.config.files`, so an amd64 entry and an arm64 entry are two list entries and land in two directories without anyone arranging it. Images do not, and the reason is not visible from the code that writes them.
 
+> **Partly superseded**, as far as files are concerned. The per-entry arrangement above is still how a package *stores* files, and it is still why the images half needed an index. What does not hold is the implied claim that a file is therefore never subject to the one-tag-many-platforms problem: a vendor-published file artifact can be an image index over one manifest per platform, so a single declared `source` does hold more than one platform's bytes. The per-entry model is what resolves it - the entry's `selector.arch` picks the child - but the resolver had to stop discarding the architecture first. See [#1033](https://github.com/colonel-byte/cargoship/issues/1033), `Store.classifyIndex` in `pkg/haulerstore`, and `fileArch` in `pkg/packager/assemble`. Everything below about images is unchanged.
+
 ## The OCI store tags by image reference
 
 `images.Pull` (`pkg/images/pull.go`) copies each pulled image into an `oci.Store` rooted at the package's `images` directory, and the store is keyed by the image reference it was pulled as. That reference is `registry/name:tag`. It says nothing about a platform.

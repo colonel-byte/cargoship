@@ -30,6 +30,8 @@ import (
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+
+	"github.com/colonel-byte/cargoship/pkg/contentstore"
 )
 
 const (
@@ -52,6 +54,18 @@ type packageFile struct {
 
 // writeBlob stores data in the layout's content-addressed blob directory and returns the
 // descriptor naming it.
+
+// fileFor looks a file up naming no architecture. A zarf package has no platform dimension, so
+// its File never errors; the helper keeps that assertion in one place.
+func fileFor(t *testing.T, p *Package, src string) (string, bool) {
+	t.Helper()
+	name, ok, err := p.File(contentstore.FileRequest{Source: src})
+	if err != nil {
+		t.Fatalf("File(%q): %v", src, err)
+	}
+	return name, ok
+}
+
 func writeBlob(t *testing.T, layoutDir, mediaType string, data []byte) ocispec.Descriptor {
 	t.Helper()
 	sum := sha256.Sum256(data)
@@ -228,7 +242,7 @@ func TestOpenPackageAPIVersions(t *testing.T) {
 		t.Run("apiVersion="+apiVersion, func(t *testing.T) {
 			p := openDir(t, newPackageDir(t, apiVersion, defaultFiles(), []string{testImageRef}))
 
-			name, ok := p.File(testFileURL)
+			name, ok := fileFor(t, p, testFileURL)
 			if !ok {
 				t.Fatalf("File(%q) not found", testFileURL)
 			}
@@ -246,7 +260,7 @@ func TestFetchWritesComponentFile(t *testing.T) {
 	p := openDir(t, newPackageDir(t, "zarf.dev/v1alpha1", defaultFiles(), nil))
 
 	dst := filepath.Join(t.TempDir(), "out")
-	if err := p.Fetch(context.Background(), testFileURL, dst); err != nil {
+	if err := p.Fetch(context.Background(), contentstore.FileRequest{Source: testFileURL}, dst); err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
 	got, err := os.ReadFile(dst)
@@ -261,7 +275,7 @@ func TestFetchWritesComponentFile(t *testing.T) {
 func TestFetchUnheldFile(t *testing.T) {
 	p := openDir(t, newPackageDir(t, "zarf.dev/v1alpha1", defaultFiles(), nil))
 
-	err := p.Fetch(context.Background(), "https://example.com/absent", filepath.Join(t.TempDir(), "out"))
+	err := p.Fetch(context.Background(), contentstore.FileRequest{Source: "https://example.com/absent"}, filepath.Join(t.TempDir(), "out"))
 	if err == nil {
 		t.Fatal("Fetch of a file the package does not hold returned no error")
 	}
@@ -272,7 +286,7 @@ func TestFetchUnheldFile(t *testing.T) {
 func TestFileRefIsNotCanonicalised(t *testing.T) {
 	p := openDir(t, newPackageDir(t, "zarf.dev/v1alpha1", defaultFiles(), nil))
 
-	if _, ok := p.File(testFileURL); !ok {
+	if _, ok := fileFor(t, p, testFileURL); !ok {
 		t.Errorf("File(%q) not found; a URL key was rewritten", testFileURL)
 	}
 }
@@ -288,7 +302,7 @@ func TestExtractPathFileIsSkipped(t *testing.T) {
 	}}
 	p := openDir(t, newPackageDir(t, "zarf.dev/v1alpha1", files, []string{testImageRef}))
 
-	if _, ok := p.File(files[0].source); ok {
+	if _, ok := fileFor(t, p, files[0].source); ok {
 		t.Errorf("File(%q) found; a pre-extracted file was indexed", files[0].source)
 	}
 }
@@ -422,14 +436,14 @@ func TestOpenArchive(t *testing.T) {
 	if unpacked == "" {
 		t.Fatal("Open of an archive recorded no temporary directory")
 	}
-	if _, ok := p.File(testFileURL); !ok {
+	if _, ok := fileFor(t, p, testFileURL); !ok {
 		t.Errorf("File(%q) not found in the archive", testFileURL)
 	}
 	if !p.HasImage(testImageRef) {
 		t.Errorf("HasImage(%q) false, want true", testImageRef)
 	}
 	dst := filepath.Join(t.TempDir(), "out")
-	if err := p.Fetch(ctx, testFileURL, dst); err != nil {
+	if err := p.Fetch(ctx, contentstore.FileRequest{Source: testFileURL}, dst); err != nil {
 		t.Fatalf("Fetch from an archive: %v", err)
 	}
 
@@ -481,7 +495,7 @@ func TestRealZarfPackage(t *testing.T) {
 	for src, entry := range p.files {
 		t.Logf("file %s -> %s", src, entry.member)
 		dst := filepath.Join(t.TempDir(), entry.name)
-		if err := p.Fetch(context.Background(), src, dst); err != nil {
+		if err := p.Fetch(context.Background(), contentstore.FileRequest{Source: src}, dst); err != nil {
 			t.Errorf("Fetch(%q): %v", src, err)
 		}
 	}
