@@ -29,6 +29,16 @@
     "docker.io/rancher/mirrored-metrics-server:v0.8.1",
     "docker.io/rancher/mirrored-pause:3.6"
   ],
+  "https://github.com/k3s-io/k3s/releases/download/v1.35.10%2Bk3s1/k3s-images.txt": [
+    "docker.io/rancher/klipper-helm:v0.13.3-build20261021",
+    "docker.io/rancher/klipper-lb:v0.4.17",
+    "docker.io/rancher/local-path-provisioner:v0.0.37",
+    "docker.io/rancher/mirrored-coredns-coredns:1.14.7",
+    "docker.io/rancher/mirrored-library-busybox:1.37.0",
+    "docker.io/rancher/mirrored-library-traefik:3.7.15",
+    "docker.io/rancher/mirrored-metrics-server:v0.9.0",
+    "docker.io/rancher/mirrored-pause:3.10.2"
+  ],
   "https://github.com/k3s-io/k3s/releases/download/v1.35.2%2Bk3s1/k3s-images.txt": [
     "docker.io/rancher/klipper-helm:v0.9.14-build20260210",
     "docker.io/rancher/klipper-lb:v0.4.14",
@@ -169,6 +179,16 @@
     "docker.io/rancher/mirrored-metrics-server:v0.9.0",
     "docker.io/rancher/mirrored-pause:3.10.2"
   ],
+  "https://github.com/k3s-io/k3s/releases/download/v1.36.6%2Bk3s1/k3s-images.txt": [
+    "docker.io/rancher/klipper-helm:v0.13.3-build20261021",
+    "docker.io/rancher/klipper-lb:v0.4.17",
+    "docker.io/rancher/local-path-provisioner:v0.0.37",
+    "docker.io/rancher/mirrored-coredns-coredns:1.14.7",
+    "docker.io/rancher/mirrored-library-busybox:1.37.0",
+    "docker.io/rancher/mirrored-library-traefik:3.7.15",
+    "docker.io/rancher/mirrored-metrics-server:v0.9.0",
+    "docker.io/rancher/mirrored-pause:3.10.2"
+  ],
   "https://github.com/k3s-io/k3s/releases/download/v1.37.0%2Bk3s1/k3s-images.txt": [
     "docker.io/rancher/klipper-helm:v0.13.3-build20260727",
     "docker.io/rancher/klipper-lb:v0.4.17",
@@ -186,6 +206,16 @@
     "docker.io/rancher/mirrored-coredns-coredns:1.14.7",
     "docker.io/rancher/mirrored-library-busybox:1.37.0",
     "docker.io/rancher/mirrored-library-traefik:3.7.13",
+    "docker.io/rancher/mirrored-metrics-server:v0.9.0",
+    "docker.io/rancher/mirrored-pause:3.10.2"
+  ],
+  "https://github.com/k3s-io/k3s/releases/download/v1.37.2%2Bk3s1/k3s-images.txt": [
+    "docker.io/rancher/klipper-helm:v0.13.3-build20261021",
+    "docker.io/rancher/klipper-lb:v0.4.17",
+    "docker.io/rancher/local-path-provisioner:v0.0.37",
+    "docker.io/rancher/mirrored-coredns-coredns:1.14.7",
+    "docker.io/rancher/mirrored-library-busybox:1.37.0",
+    "docker.io/rancher/mirrored-library-traefik:3.7.15",
     "docker.io/rancher/mirrored-metrics-server:v0.9.0",
     "docker.io/rancher/mirrored-pause:3.10.2"
   ],
@@ -323,6 +353,51 @@
     "docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0",
     "docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1",
     "docker.io/rancher/hardened-csi-snapshotter:v8.4.0-build20260205"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2-images-canal.linux-amd64.txt": [
+    "docker.io/rancher/hardened-calico:v3.32.2-build20261022",
+    "docker.io/rancher/hardened-flannel:v0.28.10-build20261022"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2-images-cilium.linux-amd64.txt": [
+    "docker.io/rancher/mirrored-cilium-certgen:v0.4.13",
+    "docker.io/rancher/mirrored-cilium-cilium:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-cilium-envoy:v1.39.5-1792733054-8c73b2816bc8239e27f1fd53b271884688137459",
+    "docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-hubble-relay:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.6",
+    "docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.6",
+    "docker.io/rancher/mirrored-cilium-operator-aws:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-operator-azure:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-operator-generic:v1.20.4",
+    "docker.io/rancher/hardened-cni-plugins:v1.9.1-build20261022"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2-images-core.linux-amd64.txt": [
+    "docker.io/rancher/rke2-runtime:v1.35.10-rke2r1",
+    "docker.io/rancher/hardened-kubernetes:v1.35.10-rke2r1-build20261029",
+    "docker.io/rancher/hardened-coredns:v1.14.7-build20261020",
+    "docker.io/rancher/hardened-cluster-autoscaler:v1.11.0-build20261020",
+    "docker.io/rancher/hardened-dns-node-cache:1.27.2-r1-build20261022",
+    "docker.io/rancher/hardened-etcd:v3.6.14-k3s3-build20261020",
+    "docker.io/rancher/hardened-k8s-metrics-server:v0.9.0-build20261020",
+    "docker.io/rancher/hardened-addon-resizer:1.8.24-build20261021",
+    "docker.io/rancher/klipper-helm:v0.13.3-build20261021",
+    "docker.io/rancher/klipper-lb:v0.4.17",
+    "docker.io/rancher/mirrored-pause:3.10.2",
+    "docker.io/rancher/kube-webhook-certgen:v1.14.5-hardened2",
+    "docker.io/rancher/nginx-ingress-controller:v1.14.5-hardened2",
+    "docker.io/rancher/rke2-cloud-provider:v1.35.10-0.20261016153020-10a456cdc331-build20261021",
+    "docker.io/rancher/hardened-snapshot-controller:v8.7.0-build20261021"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2-images-vsphere.linux-amd64.txt": [
+    "docker.io/rancher/mirrored-cloud-provider-vsphere:v1.35.1",
+    "docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v3.7.3",
+    "docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v3.7.3",
+    "docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.13.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-resizer:v1.12.0",
+    "docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.15.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1",
+    "docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20261012"
   ],
   "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2-images-canal.linux-amd64.txt": [
     "docker.io/rancher/hardened-calico:v3.31.3-build20260206",
@@ -1082,6 +1157,50 @@
     "docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1",
     "docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20260909"
   ],
+  "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2-images-canal.linux-amd64.txt": [
+    "docker.io/rancher/hardened-calico:v3.32.2-build20261022",
+    "docker.io/rancher/hardened-flannel:v0.28.10-build20261022"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2-images-cilium.linux-amd64.txt": [
+    "docker.io/rancher/mirrored-cilium-certgen:v0.4.13",
+    "docker.io/rancher/mirrored-cilium-cilium:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-cilium-envoy:v1.39.5-1792733054-8c73b2816bc8239e27f1fd53b271884688137459",
+    "docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-hubble-relay:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.6",
+    "docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.6",
+    "docker.io/rancher/mirrored-cilium-operator-aws:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-operator-azure:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-operator-generic:v1.20.4",
+    "docker.io/rancher/hardened-cni-plugins:v1.9.1-build20261022"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2-images-core.linux-amd64.txt": [
+    "docker.io/rancher/rke2-runtime:v1.36.6-rke2r1",
+    "docker.io/rancher/hardened-kubernetes:v1.36.6-rke2r1-build20261029",
+    "docker.io/rancher/hardened-coredns:v1.14.7-build20261020",
+    "docker.io/rancher/hardened-cluster-autoscaler:v1.11.0-build20261020",
+    "docker.io/rancher/hardened-dns-node-cache:1.27.2-r1-build20261022",
+    "docker.io/rancher/hardened-etcd:v3.6.14-k3s3-build20261020",
+    "docker.io/rancher/hardened-k8s-metrics-server:v0.9.0-build20261020",
+    "docker.io/rancher/hardened-addon-resizer:1.8.24-build20261021",
+    "docker.io/rancher/klipper-helm:v0.13.3-build20261021",
+    "docker.io/rancher/klipper-lb:v0.4.17",
+    "docker.io/rancher/mirrored-pause:3.10.2",
+    "docker.io/rancher/rke2-cloud-provider:v1.36.6-0.20261016153003-c2fdd7c56c2c-build20261021",
+    "docker.io/rancher/hardened-snapshot-controller:v8.7.0-build20261021",
+    "docker.io/rancher/hardened-traefik:v3.7.16-build20261028"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2-images-vsphere.linux-amd64.txt": [
+    "docker.io/rancher/mirrored-cloud-provider-vsphere:v1.36.0",
+    "docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v3.7.3",
+    "docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v3.7.3",
+    "docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.13.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-resizer:v1.12.0",
+    "docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.15.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1",
+    "docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20261012"
+  ],
   "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2-images-canal.linux-amd64.txt": [
     "docker.io/rancher/hardened-calico:v3.32.2-build20260909",
     "docker.io/rancher/hardened-flannel:v0.28.9-build20260909"
@@ -1171,5 +1290,50 @@
     "docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0",
     "docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1",
     "docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20260909"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2-images-canal.linux-amd64.txt": [
+    "docker.io/rancher/hardened-calico:v3.32.2-build20261022",
+    "docker.io/rancher/hardened-flannel:v0.28.10-build20261022"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2-images-cilium.linux-amd64.txt": [
+    "docker.io/rancher/mirrored-cilium-certgen:v0.4.13",
+    "docker.io/rancher/mirrored-cilium-cilium:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-cilium-envoy:v1.39.5-1792733054-8c73b2816bc8239e27f1fd53b271884688137459",
+    "docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-hubble-relay:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.6",
+    "docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.6",
+    "docker.io/rancher/mirrored-cilium-operator-aws:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-operator-azure:v1.20.4",
+    "docker.io/rancher/mirrored-cilium-operator-generic:v1.20.4",
+    "docker.io/rancher/hardened-cni-plugins:v1.9.1-build20261022"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2-images-core.linux-amd64.txt": [
+    "docker.io/rancher/rke2-runtime:v1.37.2-rke2r1",
+    "docker.io/rancher/hardened-kubernetes:v1.37.2-rke2r1-build20261029",
+    "docker.io/rancher/hardened-coredns:v1.14.7-build20261020",
+    "docker.io/rancher/hardened-cluster-autoscaler:v1.11.0-build20261020",
+    "docker.io/rancher/hardened-dns-node-cache:1.27.2-r1-build20261022",
+    "docker.io/rancher/hardened-etcd:v3.7.1-k3s3-build20261020",
+    "docker.io/rancher/hardened-k8s-metrics-server:v0.9.0-build20261020",
+    "docker.io/rancher/hardened-addon-resizer:1.8.24-build20261021",
+    "docker.io/rancher/klipper-helm:v0.13.3-build20261021",
+    "docker.io/rancher/klipper-lb:v0.4.17",
+    "docker.io/rancher/mirrored-pause:3.10.2",
+    "docker.io/rancher/rke2-cloud-provider:v1.37.2-0.20261016152943-06368081f0b2-build20261021",
+    "docker.io/rancher/rke2-security-responder:v0.1.9",
+    "docker.io/rancher/hardened-snapshot-controller:v8.7.0-build20261021",
+    "docker.io/rancher/hardened-traefik:v3.7.16-build20261028"
+  ],
+  "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2-images-vsphere.linux-amd64.txt": [
+    "docker.io/rancher/mirrored-cloud-provider-vsphere:v1.37.0",
+    "docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v3.8.0",
+    "docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v3.8.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.14.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-resizer:v2.0.0",
+    "docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.17.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.10.0",
+    "docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1",
+    "docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20261026"
   ]
 }

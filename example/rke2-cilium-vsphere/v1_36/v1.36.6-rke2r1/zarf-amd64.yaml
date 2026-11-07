@@ -1,0 +1,84 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Do not edit; see example/AGENTS.md.
+---
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: cilium-vsphere-content-amd64
+  version: 1.36.6-rke2r1
+  description: Images and files for the cargoship cilium-vsphere 1.36.6-rke2r1 example on amd64
+  architecture: amd64
+components:
+  - name: images
+    required: true
+    images:
+      - docker.io/rancher/rke2-runtime:v1.36.6-rke2r1
+      - docker.io/rancher/hardened-kubernetes:v1.36.6-rke2r1-build20261029
+      - docker.io/rancher/hardened-coredns:v1.14.7-build20261020
+      - docker.io/rancher/hardened-cluster-autoscaler:v1.11.0-build20261020
+      - docker.io/rancher/hardened-dns-node-cache:1.27.2-r1-build20261022
+      - docker.io/rancher/hardened-etcd:v3.6.14-k3s3-build20261020
+      - docker.io/rancher/hardened-k8s-metrics-server:v0.9.0-build20261020
+      - docker.io/rancher/hardened-addon-resizer:1.8.24-build20261021
+      - docker.io/rancher/klipper-helm:v0.13.3-build20261021
+      - docker.io/rancher/klipper-lb:v0.4.17
+      - docker.io/rancher/mirrored-pause:3.10.2
+      - docker.io/rancher/rke2-cloud-provider:v1.36.6-0.20261016153003-c2fdd7c56c2c-build20261021
+      - docker.io/rancher/hardened-snapshot-controller:v8.7.0-build20261021
+      - docker.io/rancher/hardened-traefik:v3.7.16-build20261028
+      - docker.io/rancher/mirrored-cloud-provider-vsphere:v1.36.0
+      - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v3.7.3
+      - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v3.7.3
+      - docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.13.0
+      - docker.io/rancher/mirrored-sig-storage-csi-resizer:v1.12.0
+      - docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.15.0
+      - docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0
+      - docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1
+      - docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20261012
+      - docker.io/rancher/mirrored-cilium-certgen:v0.4.13
+      - docker.io/rancher/mirrored-cilium-cilium:v1.20.4
+      - docker.io/rancher/mirrored-cilium-cilium-envoy:v1.39.5-1792733054-8c73b2816bc8239e27f1fd53b271884688137459
+      - docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.20.4
+      - docker.io/rancher/mirrored-cilium-hubble-relay:v1.20.4
+      - docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.6
+      - docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.6
+      - docker.io/rancher/mirrored-cilium-operator-aws:v1.20.4
+      - docker.io/rancher/mirrored-cilium-operator-azure:v1.20.4
+      - docker.io/rancher/mirrored-cilium-operator-generic:v1.20.4
+      - docker.io/rancher/hardened-cni-plugins:v1.9.1-build20261022
+  - name: files
+    required: true
+    # Each target is unused by cargoship, which reads a package's files by the source they
+    # declare; zarf requires one, and its basename is what the staged file is called.
+    files:
+      - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
+        target: /var/lib/cargoship/content/rke2-selinux-0.22-1.el9.noarch.rpm
+        shasum: cb05b41bc3c3032392aec81258478a54fd121c563dfd2688153d5b2b925d69fc
+      - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.6~rke2r1-0.el9.x86_64.rpm
+        target: /var/lib/cargoship/content/rke2-common-1.36.6~rke2r1-0.el9.x86_64.rpm
+        shasum: 28c0795b18e642115762107254a232f949e7cf48bc8c8f550e3ab74d3518cfd6
+      - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-server-1.36.6~rke2r1-0.el9.x86_64.rpm
+        target: /var/lib/cargoship/content/rke2-server-1.36.6~rke2r1-0.el9.x86_64.rpm
+        shasum: df08f2a8571a574010f86043988fdc1a2f1b1c3b22ec50acd3c81bea550da744
+      - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-agent-1.36.6~rke2r1-0.el9.x86_64.rpm
+        target: /var/lib/cargoship/content/rke2-agent-1.36.6~rke2r1-0.el9.x86_64.rpm
+        shasum: ff7890733db38383895481b4b0f6429821f9acc8cb00aa3136e928ceeaa726c7
+      - source: https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz
+        target: /var/lib/cargoship/content/rke2.linux-amd64.tar.gz
+        shasum: e111ac6333ddb2b819d133a413914d4456dd2195a3d694865cb7acda5bf81ae4
+      - source: https://github.com/etcd-io/etcd/releases/download/v3.6.14/etcd-v3.6.14-linux-amd64.tar.gz
+        target: /var/lib/cargoship/content/etcd-v3.6.14-linux-amd64.tar.gz
+        shasum: ffe840ff9295808e88cce2794a18a5ac87f12a5203c8314d0bf6aa119b41bac5
