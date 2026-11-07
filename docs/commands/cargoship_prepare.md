@@ -37,30 +37,30 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
 ### Options
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages
-  -c, --concurrency int       Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string         Config file used to bootstrap a cluster.
-      --confirm               Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
-      --dry-run               Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -F, --firewall              Whether to update every host node's firewall configuration.
-  -h, --help                  help for prepare
-  -H, --hosts                 Whether to update every host node's /etc/hosts file.
-  -k, --key string            Path to public key file for validating signed packages
-      --receipt-path string   Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket.
-      --timeout string        Set the timeout for how long functions will last. (default "60m")
-      --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
-      --values stringArray    Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
-      --verify verifyMode     Verify the Cargoship package signature. (default if-possible)
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -a, --architecture string     Architecture for OCI images and Zarf packages
+  -c, --concurrency int         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string           Config file used to bootstrap a cluster.
+      --confirm[=true|false]    Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
+      --dry-run[=true|false]    Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
+  -F, --firewall[=true|false]   Whether to update every host node's firewall configuration.
+  -h, --help[=true|false]       help for prepare
+  -H, --hosts[=true|false]      Whether to update every host node's /etc/hosts file.
+  -k, --key string              Path to public key file for validating signed packages
+      --receipt-path string     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket.
+      --timeout string          Set the timeout for how long functions will last. (default "60m")
+      --tmpdir string           Specify the temporary directory to use for intermediate files (default "/tmp")
+      --values stringArray      Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
+      --verify verifyMode       Verify the Cargoship package signature. (default if-possible)
+      --zarf-cache string       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO

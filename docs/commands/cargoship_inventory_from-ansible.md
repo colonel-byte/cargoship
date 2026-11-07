@@ -40,7 +40,7 @@ $ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer
 ### Options
 
 ```
-  -h, --help                  help for from-ansible
+  -h, --help[=true|false]     help for from-ansible
       --loadbalancer string   Control-plane address, overriding the one in the input. Cargoship adds it to the API server's TLS subject alternative names.
       --name string           Cluster name, overriding the one in the input. It becomes metadata.name, and the context name in the kubeconfig.
   -o, --output string         Path to write the generated inventory to. Omit it to write to stdout.
@@ -49,10 +49,10 @@ $ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer
 ### Options inherited from parent commands
 
 ```
-      --log-file                     Always write a full-verbosity debug log to a file, regardless of --log-level.
+      --log-file[=true|false]        Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string            Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string             Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                     Disable terminal color codes in logging and stdout prints.
+      --no-color[=true|false]        Disable terminal color codes in logging and stdout prints.
       --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 

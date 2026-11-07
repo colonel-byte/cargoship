@@ -27,17 +27,17 @@ $ cargoship dev redact-receipt ./apply-20260928-143000.json -o ./share.json
 ### Options
 
 ```
-  -h, --help            help for redact-receipt
-  -o, --output string   Write the redacted receipt to this path instead of standard output. The file is created readable only by its owner.
+  -h, --help[=true|false]   help for redact-receipt
+  -o, --output string       Write the redacted receipt to this path instead of standard output. The file is created readable only by its owner.
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO
