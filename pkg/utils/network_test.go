@@ -22,6 +22,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -439,5 +440,81 @@ func TestCachedArchiveFailedDownloadCachesNothing(t *testing.T) {
 	}
 	if len(entries) != 0 {
 		t.Fatalf("a failed download must leave nothing cached, found %d entries", len(entries))
+	}
+}
+
+// A member extracted out of an archive is cached under the archive's own content digest, so a
+// rebuild takes it from there rather than fetching and decompressing the archive again.
+func TestMemberCacheRoundTrip(t *testing.T) {
+	previous := config.CommonOptions.CachePath
+	config.CommonOptions.CachePath = t.TempDir()
+	t.Cleanup(func() { config.CommonOptions.CachePath = previous })
+
+	ctx := context.Background()
+	const digest = "sha256:faa2577be9b54e45ede4db5ad1d13489c0a51229c00569c2f101ae49cdc06b88"
+	const member = "bin/rke2"
+	const body = "engine binary\n"
+
+	if _, ok := CachedMember(ctx, digest, member); ok {
+		t.Fatal("an empty cache reported a member as held")
+	}
+
+	src := filepath.Join(t.TempDir(), "rke2")
+	if err := os.WriteFile(src, []byte(body), 0o600); err != nil {
+		t.Fatalf("writing the source: %v", err)
+	}
+	CacheMember(ctx, digest, member, src)
+
+	cached, ok := CachedMember(ctx, digest, member)
+	if !ok {
+		t.Fatal("the member was not cached")
+	}
+	got, err := os.ReadFile(cached)
+	if err != nil {
+		t.Fatalf("reading the cached member: %v", err)
+	}
+	if string(got) != body {
+		t.Errorf("cached %q, want %q", got, body)
+	}
+	// The file name carries the member's base name, so a cache directory is readable.
+	if filepath.Base(cached) == "" || !strings.HasSuffix(filepath.Base(cached), "_rke2") {
+		t.Errorf("cache entry %q does not name the member it holds", filepath.Base(cached))
+	}
+}
+
+// The key is the archive and the member together: a different archive, or a different path out
+// of the same one, is a different entry. Getting this wrong would serve one file's bytes for
+// another, which no later check would catch for an entry declaring no shasum.
+func TestMemberCacheKeyIsArchivePlusMember(t *testing.T) {
+	previous := config.CommonOptions.CachePath
+	config.CommonOptions.CachePath = t.TempDir()
+	t.Cleanup(func() { config.CommonOptions.CachePath = previous })
+
+	ctx := context.Background()
+	const amd64Archive = "sha256:faa2577be9b54e45ede4db5ad1d13489c0a51229c00569c2f101ae49cdc06b88"
+	const arm64Archive = "sha256:a59ee55a8a68ed5ae8af39e91cf89314f431178f456b3f63d3f87638180b417a"
+
+	paths := map[string]string{
+		"amd64/rke2":    memberCachePath(ctx, amd64Archive, "bin/rke2"),
+		"arm64/rke2":    memberCachePath(ctx, arm64Archive, "bin/rke2"),
+		"amd64/killall": memberCachePath(ctx, amd64Archive, "bin/rke2-killall.sh"),
+	}
+	seen := map[string]string{}
+	for name, p := range paths {
+		if p == "" {
+			t.Fatalf("%s produced no cache path", name)
+		}
+		if other, clash := seen[p]; clash {
+			t.Errorf("%s and %s share a cache entry", name, other)
+		}
+		seen[p] = name
+	}
+
+	// Nothing to key on means no caching rather than a shared key.
+	if got := memberCachePath(ctx, "", "bin/rke2"); got != "" {
+		t.Errorf("an archive with no digest produced the cache path %q", got)
+	}
+	if got := memberCachePath(ctx, amd64Archive, ""); got != "" {
+		t.Errorf("an empty member produced the cache path %q", got)
 	}
 }

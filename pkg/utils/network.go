@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -398,4 +399,90 @@ func ParseRetryAfter(value string) time.Duration {
 		}
 	}
 	return 0
+}
+
+// memberCacheKeyPrefix marks a cache entry holding one member extracted out of an archive,
+// keyed on a digest of that archive rather than on the member's own content.
+const memberCacheKeyPrefix = "member-"
+
+// memberCachePath returns the cache path for the member at extractPath inside the archive with
+// the given content digest, or "" when caching does not apply.
+//
+// The key is a digest of the archive plus the path taken out of it. That is a stronger key
+// than the one CachedArchive can manage: an archive reached by URL carries no digest of its
+// own, so that cache is keyed on the URL and trusts an archive by its name. An archive that is
+// an OCI layer does carry one, verified against the registry on fetch, and extraction is
+// deterministic -- so an entry here is as trustworthy as the archive it came out of.
+//
+// Like the archive cache it is not re-verified on read. What makes that safe enough is the
+// same thing: the member is still checked against the shasum the definition declares, and an
+// entry that declares none is equally unverified whether or not a cache was involved.
+func memberCachePath(ctx context.Context, archiveDigest, extractPath string) string {
+	if archiveDigest == "" || extractPath == "" {
+		return ""
+	}
+	cacheRoot, err := config.GetAbsCachePath()
+	if err != nil || cacheRoot == "" {
+		logger.From(ctx).Debug("cache root unavailable, skipping member cache", "error", err)
+		return ""
+	}
+	sum := sha256.Sum256([]byte(archiveDigest + "\x00" + extractPath))
+	name := memberCacheKeyPrefix + hex.EncodeToString(sum[:])
+	if base := path.Base(filepath.ToSlash(extractPath)); base != "" && base != "." && base != "/" {
+		name += "_" + base
+	}
+	return filepath.Join(cacheRoot, cacheFilesSubdir, name)
+}
+
+// CachedMember returns the path to the cached copy of the member at extractPath inside the
+// archive with the given content digest, and whether there was one.
+func CachedMember(ctx context.Context, archiveDigest, extractPath string) (string, bool) {
+	cachePath := memberCachePath(ctx, archiveDigest, extractPath)
+	if cachePath == "" {
+		return "", false
+	}
+	if _, err := os.Stat(cachePath); err != nil {
+		return "", false
+	}
+	logger.From(ctx).Debug("found extracted member in cache", "member", extractPath, "path", cachePath)
+	return cachePath, true
+}
+
+// CacheMember copies the extracted member at src into the shared cache, so the next build
+// takes it from there rather than fetching and decompressing the archive again.
+//
+// A failure to cache is not a failure to build: the member is already staged, and the only
+// cost is doing this work again next time.
+func CacheMember(ctx context.Context, archiveDigest, extractPath, src string) {
+	cachePath := memberCachePath(ctx, archiveDigest, extractPath)
+	if cachePath == "" {
+		return
+	}
+	if err := helpers.CreateDirectory(filepath.Dir(cachePath), helpers.ReadWriteExecuteUser); err != nil {
+		logger.From(ctx).Debug("unable to create the member cache directory", "error", err)
+		return
+	}
+	// Written beside the entry and renamed into place, so a partial copy never becomes a
+	// cache hit for the next build.
+	tmp, err := os.CreateTemp(filepath.Dir(cachePath), filepath.Base(cachePath)+".tmp-*")
+	if err != nil {
+		logger.From(ctx).Debug("unable to stage a member cache entry", "error", err)
+		return
+	}
+	tmpPath := tmp.Name()
+	if err := tmp.Close(); err != nil {
+		logger.From(ctx).Debug("unable to stage a member cache entry", "error", err)
+		return
+	}
+	defer os.Remove(tmpPath) //nolint:errcheck // a no-op once renamed into place below
+
+	if err := helpers.CreatePathAndCopy(src, tmpPath); err != nil {
+		logger.From(ctx).Debug("unable to copy a member into the cache", "error", err)
+		return
+	}
+	if err := os.Rename(tmpPath, cachePath); err != nil {
+		logger.From(ctx).Debug("unable to move a member into the cache", "error", err)
+		return
+	}
+	logger.From(ctx).Debug("cached extracted member", "member", extractPath, "path", cachePath)
 }

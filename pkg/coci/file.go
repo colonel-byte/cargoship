@@ -154,6 +154,31 @@ func openLayer(ctx context.Context, ref string, sel FileSelector, opts FileOptio
 	return remote, body, layer, nil
 }
 
+// LayerDigest returns the digest of the layer ref and sel select, without fetching it.
+//
+// It costs one reference resolution and, for an index, one manifest read -- both of which the
+// fetch that usually follows would do anyway, and both of which are small and cached. It
+// exists so a caller can ask "have I already got what comes out of this archive?" before
+// spending tens of mebibytes finding out.
+//
+// The digest is the registry's, verified on any subsequent fetch, so it is a safe key for
+// anything derived from the layer's content.
+func LayerDigest(ctx context.Context, ref string, sel FileSelector, opts FileOptions) (string, error) {
+	remote, err := fileRemote(ctx, ref, sel.Arch, opts)
+	if err != nil {
+		return "", err
+	}
+	manifest, err := resolveManifest(ctx, remote, ref, sel.Arch)
+	if err != nil {
+		return "", err
+	}
+	layer, err := selectLayer(ref, sel, manifest)
+	if err != nil {
+		return "", err
+	}
+	return layer.Digest.String(), nil
+}
+
 // FetchLayerFile writes the layer ref and sel select into dir, under the name the artifact
 // gave it, and returns the path it wrote.
 //

@@ -31,6 +31,19 @@ The staged member is now **copied** out of the extraction directory into the ent
 
 The fix for that is still a separate change with its own test, and the test still guards the behaviour. This supersedes the mechanism rather than the requirement.
 
-## What it does not do
+## Between builds, the member itself is cached
 
-Nothing is cached between builds. A rebuild still fetches nothing - the layer cache and the archive cache both survive - but it decompresses again, because the extraction directory lives for the duration of one build and is removed with it. Caching the extracted member across builds is a separate change, and for an `oci://` source it has a key the URL path never had: the layer descriptor's digest is a verified digest of the archive itself, which is the thing [`todo-extractpath-archive-cache.md`](todo-extractpath-archive-cache.md) says a URL-sourced archive does not carry.
+The extraction directory lives for one build, so on its own this leaves a rebuild decompressing again. For an `oci://` source it does not have to: the layer descriptor carries a content digest the registry verifies on fetch, so `utils.CacheMember` files each extracted member under that digest plus the path taken out of it, and the next build reads it back without staging the archive at all - no fetch, no decompression.
+
+This needs its own measurement rather than another row on the table above, because that definition is URL-sourced and a URL-sourced archive is deliberately excluded - see below. Measured instead on four members of `components/k3s.tar`, a 248 MiB layer of the public `ghcr.io/zarf-dev/packages/init:v0.89.0`, with the layer already in the blob cache either way:
+
+|                            | wall  | CPU   |
+| -------------------------- | ----- | ----- |
+| one extraction per archive | 1.33s | 0.73s |
+| rebuild, members cached    | 0.81s | 0.50s |
+
+What remains is unavoidable: the package still copies each member into its tree and checksums everything in it, and one of these four members is 176 MiB on its own.
+
+A URL-sourced archive gets none of this, deliberately. It carries no digest of its own - the entry's `shasum` is the digest of the extracted *member*, not of the archive - so there is nothing trustworthy to key a member on, and filing one under the URL would be weaker than what [`todo-extractpath-archive-cache.md`](todo-extractpath-archive-cache.md) already settled for the download. The archive is still cached there; only the extraction is repeated.
+
+The cache is not re-verified on read, which is the same position `CachedArchive` takes and for the same reason: the member is still checked against the shasum the definition declares, and an entry declaring none is equally unverified whether or not a cache was involved. The difference worth noting is the key - a verified content digest rather than a URL - so an entry here cannot be served for an archive that merely shares a name.

@@ -563,9 +563,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	// dst, which is what the three arms below differ on.
 	if file.ExtractPath != "" {
 		member, err := extractor.member(ctx, keyFor(file), file.ExtractPath,
-			func(dir string) (string, error) {
-				return stageArchive(ctx, source, file, distroPath, dir, ociOpts)
-			})
+			newArchiveSource(source, file, distroPath, ociOpts))
 		if err != nil {
 			return nil, err
 		}
