@@ -1,0 +1,129 @@
+---
+# This file is generated in magefiles/templates/rke2/values.yaml.tmpl.
+
+# The values this package is built with. A cluster overrides any of them in its
+# inventory file under spec.config.values, and cargoship checks the result
+# against values.schema.json before it installs anything.
+
+# yaml-language-server: $schema=values.schema.json
+addons:
+  # The bundled charts rke2 is told not to install. Setting this in an inventory
+  # replaces the whole list rather than adding to it, so name every chart the
+  # cluster wants left out, including the ones listed here.
+  #
+  # values.schema.json carries the charts rke2 1.35 packages, extracted
+  # from the engine's source, and an editor offers them here as completions. That
+  # list is the engine's own --disable help text, which does not name every chart
+  # the build bundles, so any rke2- chart is accepted rather than only those --
+  # cargoship warns when it configures a node with one this build does not package.
+  disabled:
+    - rke2-ingress-nginx
+  vsphere:
+    # Which of the bundled vSphere charts this cluster runs. Turning one off keeps
+    # its images in the package and stops them being uploaded, and writes no
+    # HelmChartConfig for it.
+    #
+    # The two are not independent: the CSI driver reads the ProviderID the CPI sets
+    # on each node, so CSI without CPI does not work. CPI without CSI is ordinary --
+    # vSphere for node metadata and load balancers, something else for storage.
+    cpi:
+      enabled: true
+      # tolerations:
+      #   - operator: Exists
+      # nodeSelector:
+      #   node-role.kubernetes.io/control-plane: "true"
+      #
+      # The ConfigMap the CPI reads its cloud config from, mounted at /etc/cloud. Set
+      # generate: false to supply your own instead of having the chart render one -- which is
+      # the only way to give the CPI a CA certificate, since the chart exposes no value for
+      # one. Your ConfigMap then needs two kinds of entry:
+      #
+      #   vsphere.yaml  the cloud config itself, including a caFile line
+      #   <any key>     the vCenter CA, PEM-encoded
+      #
+      # The whole ConfigMap mounts as a directory, so a key named vcenter-ca.pem lands at
+      # /etc/cloud/vcenter-ca.pem, which is what caFile points at. The key name is the file
+      # name; a DER or PKCS#12 certificate will not do, the drivers read PEM.
+      #
+      # Set insecure: false alongside it. Upstream ignores caFile entirely while the insecure
+      # flag is on, so leaving it true means the certificate is loaded and never checked. The
+      # CSI driver takes a CA the same way -- see auth.secret.generate and csiName.
+      # cloudConfig:
+      #   generate: false
+      #   name: vsphere-cloud-config
+    csi:
+      enabled: true
+      storageClass:
+        isDefault: true
+      # node:
+      #   tolerations:
+      #     - operator: Exists
+      #   nodeSelector:
+      #     node-role.kubernetes.io/worker: "true"
+      # controller:
+      #   tolerations:
+      #     - operator: Exists
+      #   nodeSelector:
+      #     node-role.kubernetes.io/control-plane: "true"
+      #   affinity:
+      #     podAntiAffinity:
+      #       requiredDuringSchedulingIgnoredDuringExecution:
+      #         - labelSelector:
+      #             matchExpressions:
+      #               - key: app
+      #                 operator: In
+      #                 values:
+      #                   - vsphere-csi-controller
+      #           topologyKey: kubernetes.io/hostname
+    # Connection and credentials settings for vCenter:
+    # host: ""
+    # port: 443
+    # insecure: true
+    # datacenters: ""
+    # clusterId: ""
+    # auth:
+    #   user: ""
+    #   pass: ""
+    #   secret:
+    #     generate: true
+    #     # Named separately on purpose -- the two charts generate two Secrets with different
+    #     # contents, so one name collides them. Set these only to point the charts at Secrets
+    #     # you created yourself, alongside generate: false.
+    #     cpiName: vsphere-cpi-creds
+    #     csiName: vsphere-config-secret
+cilium:
+  encryption:
+    # Transparent pod-to-pod encryption, using WireGuard. Costs throughput, so it
+    # is off unless a cluster asks for it.
+    enabled: false
+  l2announcements:
+    # Answer ARP for LoadBalancer addresses, so services are reachable on a flat
+    # network with no BGP and no external load balancer.
+    enabled: true
+  hubble:
+    ui:
+      # The Hubble web interface, and the relay it reads from.
+      enabled: true
+      # Serve the interface over IPv6. Off because the frontend fails to start when
+      # it binds IPv6 on a node that has none.
+      ipv6: false
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
+  # Who pod security admission does not apply to. Setting one of these in an
+  # inventory replaces the whole list rather than adding to it, so carry the
+  # entries below that the cluster still needs -- kube-system and zarf hold
+  # components that do not run under the restricted profile.
+  exemptions:
+    usernames: []
+    runtimeClasses: []
+    namespaces:
+      - kube-system
+      - rook-ceph
+      - zarf
+tools:
+  etcdctl:
+    # Optional debug CLI installed on control-plane hosts.
+    enabled: false

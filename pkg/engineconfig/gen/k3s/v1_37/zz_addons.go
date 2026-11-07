@@ -24,6 +24,7 @@ var Addons = []string{
 	"local-storage",
 	"metrics-server",
 	"runtimes",
+	"gateway-api-crd",
 }
 
 // CNIs is the set of values k3s v1_37 accepts in `cni:`. Empty for distros

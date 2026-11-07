@@ -19,7 +19,8 @@
               "traefik",
               "local-storage",
               "metrics-server",
-              "runtimes"
+              "runtimes",
+              "gateway-api-crd"
             ]
           },
           "uniqueItems": true

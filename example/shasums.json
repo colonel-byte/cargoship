@@ -5461,6 +5461,18 @@
     ],
     "sha256": "a985fa9dcd5627dc7fe34c743c2f38844ea9e8a73af31463ad4454e149dc8316"
   },
+  "rke2-agent-1.35.10~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.35/centos/9/aarch64/rke2-agent-1.35.10~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "ba54225b94c42d1777897afa7fb6d06110abc1987180b706193dee2818c95188"
+  },
+  "rke2-agent-1.35.10~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-agent-1.35.10~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "01180f7486a95b7c784b386b87a20102c58237c406ce8170806bb186a7b45ecf"
+  },
   "rke2-agent-1.35.1~rke2r1-0.el9.aarch64.rpm": {
     "urls": [
       "https://rpm.rancher.io/rke2/latest/1.35/centos/9/aarch64/rke2-agent-1.35.1~rke2r1-0.el9.aarch64.rpm"
@@ -5677,6 +5689,18 @@
     ],
     "sha256": "a3cf063d90b2e1a9e861f12f3ebc9a8b4cdae0ccd303ccab6a210500d6d68e60"
   },
+  "rke2-agent-1.36.6~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-agent-1.36.6~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "c80c37b18341b96d1e02b3caa89bf560a69e14cdd0bf1208a3efb1640dfd959d"
+  },
+  "rke2-agent-1.36.6~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-agent-1.36.6~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "ff7890733db38383895481b4b0f6429821f9acc8cb00aa3136e928ceeaa726c7"
+  },
   "rke2-agent-1.37.0~rke2r1-0.el9.aarch64.rpm": {
     "urls": [
       "https://rpm.rancher.io/rke2/latest/1.37/centos/9/aarch64/rke2-agent-1.37.0~rke2r1-0.el9.aarch64.rpm"
@@ -5700,6 +5724,18 @@
       "https://rpm.rancher.io/rke2/latest/1.37/centos/9/x86_64/rke2-agent-1.37.1~rke2r1-0.el9.x86_64.rpm"
     ],
     "sha256": "115a77b58bf3ab88953ee93a58d35484197b75007e1ba06b16ede659b993dcb2"
+  },
+  "rke2-agent-1.37.2~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.37/centos/9/aarch64/rke2-agent-1.37.2~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "ad6ae987453150262e79b12ca8e4fb4139618e0705540e752d4e6ad6926ff4e5"
+  },
+  "rke2-agent-1.37.2~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.37/centos/9/x86_64/rke2-agent-1.37.2~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "776a973276c5185a9c6006a6a40a13bfb7b7b1a8ba3cffbbf20a44b477ceb4be"
   },
   "rke2-common-1.31.14~rke2r1-0.el9.x86_64.rpm": {
     "urls": [
@@ -6307,6 +6343,18 @@
     ],
     "sha256": "a015d6c6c4ced0dd8f03b1aff1822398dfc7c2abd71e07270ae294d40e028908"
   },
+  "rke2-common-1.35.10~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.35/centos/9/aarch64/rke2-common-1.35.10~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "a351affd82f9964e49f713a1c81aec4609613e3d68eb24e9e077132b028d0480"
+  },
+  "rke2-common-1.35.10~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-common-1.35.10~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "4adc4be1830a7d20de7df3d010748dc9fd8b3c84c07c26fda08ffd45f5b6bdd2"
+  },
   "rke2-common-1.35.1~rke2r1-0.el9.aarch64.rpm": {
     "urls": [
       "https://rpm.rancher.io/rke2/latest/1.35/centos/9/aarch64/rke2-common-1.35.1~rke2r1-0.el9.aarch64.rpm"
@@ -6523,6 +6571,18 @@
     ],
     "sha256": "612b23c1a8d7ec2bf4586e8f2ca7061cdf7fca593fa0ab9cf959554e43ccdc87"
   },
+  "rke2-common-1.36.6~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-common-1.36.6~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "69437b6aec8c9e3851415fc70c5705c3af98c1018fef8c779e35907a626f3ea1"
+  },
+  "rke2-common-1.36.6~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.6~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "28c0795b18e642115762107254a232f949e7cf48bc8c8f550e3ab74d3518cfd6"
+  },
   "rke2-common-1.37.0~rke2r1-0.el9.aarch64.rpm": {
     "urls": [
       "https://rpm.rancher.io/rke2/latest/1.37/centos/9/aarch64/rke2-common-1.37.0~rke2r1-0.el9.aarch64.rpm"
@@ -6546,6 +6606,18 @@
       "https://rpm.rancher.io/rke2/latest/1.37/centos/9/x86_64/rke2-common-1.37.1~rke2r1-0.el9.x86_64.rpm"
     ],
     "sha256": "5b1f7c4f53e3662e5719099842f5b1ef4c2850a070270923640b1c1e5d8d4a11"
+  },
+  "rke2-common-1.37.2~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.37/centos/9/aarch64/rke2-common-1.37.2~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "537efdf2de57a183c2b1ae4d929b2c2f0c3041ebae3956600c9cff3a2e7aab23"
+  },
+  "rke2-common-1.37.2~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.37/centos/9/x86_64/rke2-common-1.37.2~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "635e2e571821ea2ee90c6540a2fe4437521be59130d9201b415e5eb4b9a89cec"
   },
   "rke2-selinux-0.22-1.el9.noarch.rpm": {
     "urls": [
@@ -7159,6 +7231,18 @@
     ],
     "sha256": "0af35ba900c40a2f2f8ffeb43f1cdcdc1e247b22aa9ddf8592a1f8b1ac2fa084"
   },
+  "rke2-server-1.35.10~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.35/centos/9/aarch64/rke2-server-1.35.10~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "9ecfaa39a863e31508b04a0a5e23326665854877b6c4d09b7de347a8baddbd4d"
+  },
+  "rke2-server-1.35.10~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-server-1.35.10~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "daacfaa92d70b9fd13ba4aa25dfbef28c48dc5a5a7eeca8c801684f654159e01"
+  },
   "rke2-server-1.35.1~rke2r1-0.el9.aarch64.rpm": {
     "urls": [
       "https://rpm.rancher.io/rke2/latest/1.35/centos/9/aarch64/rke2-server-1.35.1~rke2r1-0.el9.aarch64.rpm"
@@ -7375,6 +7459,18 @@
     ],
     "sha256": "38289bcfbde4d2ea99cc3909239ec171f19e3f30c66a7edf0200ef915a135075"
   },
+  "rke2-server-1.36.6~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-server-1.36.6~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "a00b2ba50e147d66de679ad01ca19d38a533427acfb9049e3b47794de084a9dc"
+  },
+  "rke2-server-1.36.6~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-server-1.36.6~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "df08f2a8571a574010f86043988fdc1a2f1b1c3b22ec50acd3c81bea550da744"
+  },
   "rke2-server-1.37.0~rke2r1-0.el9.aarch64.rpm": {
     "urls": [
       "https://rpm.rancher.io/rke2/latest/1.37/centos/9/aarch64/rke2-server-1.37.0~rke2r1-0.el9.aarch64.rpm"
@@ -7398,6 +7494,18 @@
       "https://rpm.rancher.io/rke2/latest/1.37/centos/9/x86_64/rke2-server-1.37.1~rke2r1-0.el9.x86_64.rpm"
     ],
     "sha256": "f3c53b08d0ee26ac7edc97021409d9484c73db5153779070f84967e21b04f2ce"
+  },
+  "rke2-server-1.37.2~rke2r1-0.el9.aarch64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.37/centos/9/aarch64/rke2-server-1.37.2~rke2r1-0.el9.aarch64.rpm"
+    ],
+    "sha256": "14cb93f9275fcaa4ab76f5d72cebce0e57fd1b81ad625551fc12d1217e2b2016"
+  },
+  "rke2-server-1.37.2~rke2r1-0.el9.x86_64.rpm": {
+    "urls": [
+      "https://rpm.rancher.io/rke2/latest/1.37/centos/9/x86_64/rke2-server-1.37.2~rke2r1-0.el9.x86_64.rpm"
+    ],
+    "sha256": "3875e214748696a96061aea82348005dd77ff59abc720d9c05ba5d71d83f7083"
   },
   "rke2.linux-amd64.tar.gz": {
     "urls": [
@@ -10501,6 +10609,78 @@
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
   },
+  "v1.35.10%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.10%2Bk3s1/k3s"
+    ],
+    "sha256": "5cd49f0faca5b2ea4355d4761e7b1445b8aa05cd50e612fd9c370551db49e5e2"
+  },
+  "v1.35.10%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.35.10%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "0c780ef4b6275bd27c77ed64a647fa1d859b1bd60597ad420f3243c261e5ffb6"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "298f240cee5678faacd6acfaabd000a1b8c60a2af388393e0e3bd21f25e46958"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2-killall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "b69be516ea28d5632323d0d53e870bbd0f30ef06b73f6cd244bef8a9536580e6"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2-uninstall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz!lib/systemd/system/rke2-agent.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz!lib/systemd/system/rke2-server.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "fc57b1f70d9e7f0cf14661ac24291825f15fcfc3cae34378c1a93d7dbcecb3ac"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2-killall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "b69be516ea28d5632323d0d53e870bbd0f30ef06b73f6cd244bef8a9536580e6"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2-uninstall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz!lib/systemd/system/rke2-agent.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz!lib/systemd/system/rke2-server.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
   "v1.35.2%2Bk3s1/k3s": {
     "urls": [
       "https://github.com/k3s-io/k3s/releases/download/v1.35.2%2Bk3s1/k3s"
@@ -11689,6 +11869,78 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.6%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.6%2Bk3s1/k3s"
+    ],
+    "sha256": "66ceb8e67edfa547195135d74783bfadc2ecc04a91059e90ae5f70a3dbc98c15"
+  },
+  "v1.36.6%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.36.6%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "49dcecdb4f64f5e92bdc52d204d407fb39729e492f09074488125ee58b6f2895"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "68f9140c73231d185d83f723465b72cf0e346a11a14f1b6190c8e6bd24e5ac78"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2-killall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "b69be516ea28d5632323d0d53e870bbd0f30ef06b73f6cd244bef8a9536580e6"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2-uninstall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz!lib/systemd/system/rke2-agent.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz!lib/systemd/system/rke2-server.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "87b964311ce57a3be4cd9b23f3b9c5809ae1e8a9b24c80d810dcb44dd41d8f3a"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2-killall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "b69be516ea28d5632323d0d53e870bbd0f30ef06b73f6cd244bef8a9536580e6"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2-uninstall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz!lib/systemd/system/rke2-agent.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz!lib/systemd/system/rke2-server.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
   "v1.37.0%2Bk3s1/k3s": {
     "urls": [
       "https://github.com/k3s-io/k3s/releases/download/v1.37.0%2Bk3s1/k3s"
@@ -11830,6 +12082,78 @@
   "v1.37.1%2Brke2r1/rke2.linux-arm64.tar.gz!lib/systemd/system/rke2-server.service": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.37.2%2Bk3s1/k3s": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.2%2Bk3s1/k3s"
+    ],
+    "sha256": "265b3ee6a3198ef14033c63ef46cbb32370d83795199fb6d1b01f21575eddbda"
+  },
+  "v1.37.2%2Bk3s1/k3s-arm64": {
+    "urls": [
+      "https://github.com/k3s-io/k3s/releases/download/v1.37.2%2Bk3s1/k3s-arm64"
+    ],
+    "sha256": "a779ccf1e5e2e33a62f5a29c2f1c0bbf99431e100579d4c10f0aa0742a6aa84b"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "6206d03b363b75dc9758964cee0bdf9863c70551425aa988421fccfecc5d5982"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2-killall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "b69be516ea28d5632323d0d53e870bbd0f30ef06b73f6cd244bef8a9536580e6"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2-uninstall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz!lib/systemd/system/rke2-agent.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz!lib/systemd/system/rke2-server.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "fc6d5db50a27f1d6aba1496f4ea115f9637141d46d62b1cc5bee9f4a8eab7e56"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2-killall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "b69be516ea28d5632323d0d53e870bbd0f30ef06b73f6cd244bef8a9536580e6"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2-uninstall.sh": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz!lib/systemd/system/rke2-agent.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz!lib/systemd/system/rke2-server.service": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },

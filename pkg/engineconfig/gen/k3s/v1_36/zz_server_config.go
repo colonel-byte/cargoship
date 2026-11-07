@@ -83,6 +83,7 @@ type ServerConfig struct {
 	EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
 	EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
 	EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
+	EtcdSnapshotRestrictions      []string `yaml:"etcd-snapshot-restrictions,omitempty"`
 	EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
 	EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
 	EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
