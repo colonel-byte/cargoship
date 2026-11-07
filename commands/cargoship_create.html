@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fa451a81.js";
+            window.path_to_searchindex_js = "../searchindex-b45b73ba.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b8270bf1.js"></script>
@@ -215,28 +215,28 @@ $ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
 $ cargoship create ./distro-defs --reproducible
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
-<pre><code>  -a, --architecture string         Architecture for OCI images and Zarf packages
-  -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
-      --content-store PATH          PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it.
-      --file-override strings       Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
-  -h, --help                        help for create
-      --insecure-skip-tls-verify    Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package. (default ".")
-      --plain-http                  Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
-      --reproducible                Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
-      --signing-key string          Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
-      --signing-key-pass string     Password to the private key used for signing packages
-      --tag string                  The tag or version to override the package metadata version with.
-      --tmpdir string               Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string           Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+<pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
+  -c, --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
+      --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it.
+      --file-override strings                   Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
+  -h, --help[=true|false]                       help for create
+      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string                           Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package. (default ".")
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --registry-override strings               Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --reproducible[=true|false]               Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
+      --signing-key string                      Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
+      --signing-key-pass string                 Password to the private key used for signing packages
+      --tag string                              The tag or version to override the package metadata version with.
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
-<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+<pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
 <h3 id="see-also"><a class="header" href="#see-also">SEE ALSO</a></h3>
 <ul>
