@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/pkg/coci"
 	"github.com/colonel-byte/cargoship/pkg/images"
 )
@@ -59,8 +60,14 @@ func fetchOCIFile(ctx context.Context, src string, file v1alpha1.File, arch stri
 		ExtractPath: file.ExtractPath,
 	}, dst, opts.FileOptions)
 
-	// coci reports what the reference did not answer; the definition field that answers it is
-	// named here, because only this caller knows the entry is YAML with a selector in it.
+	return ociFieldHint(err)
+}
+
+// ociFieldHint names the definition field that answers what coci reported as missing.
+//
+// coci is generic and has no idea its caller is reading YAML with a selector in it, so it
+// reports the gap and leaves the vocabulary to whoever has one.
+func ociFieldHint(err error) error {
 	switch {
 	case errors.Is(err, coci.ErrArchRequired):
 		return fmt.Errorf("%w: name one in the file entry's selector.arch", err)
@@ -75,4 +82,26 @@ func fetchOCIFile(ctx context.Context, src string, file v1alpha1.File, arch stri
 func pinnedByDigest(ref string) bool {
 	_, dgst, found := strings.Cut(ref, "@")
 	return found && dgst != ""
+}
+
+// pinOCISource rewrites an oci:// entry's source from the tag it was written with to the
+// digest that tag resolved to, in the definition the package carries.
+//
+// The definition on disk keeps its tag, which is what an author maintains. The one inside the
+// package names bytes, so rebuilding from it resolves what this build resolved rather than
+// whatever the tag points at by then - a tag is mutable and an air-gapped package may be
+// rebuilt a long way from when it was first cut.
+//
+// A redirected entry is left alone. The digest would be as valid, since a digest is content
+// and a mirror serving the same bytes has the same one, but the reference would then name an
+// internal registry in an artifact that travels - and `.build.fileSources` already records
+// the override, the mirror and both digests for anyone auditing what was read.
+func pinOCISource(file *v1alpha1.File, provenance distro.FileSource) {
+	if file == nil || provenance.Override != "" {
+		return
+	}
+	if provenance.ManifestDigest == "" || provenance.Resolved == "" {
+		return
+	}
+	file.Source = provenance.Resolved
 }

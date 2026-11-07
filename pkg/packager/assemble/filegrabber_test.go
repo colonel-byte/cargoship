@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -36,9 +37,11 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/coci"
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
 	"github.com/colonel-byte/cargoship/pkg/haulerstore"
 	"github.com/colonel-byte/cargoship/pkg/utils"
+	"github.com/colonel-byte/cargoship/test"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -935,34 +938,42 @@ func TestFileGrabberServesAMemberFromTheCache(t *testing.T) {
 	config.CommonOptions.CachePath = t.TempDir()
 	t.Cleanup(func() { config.CommonOptions.CachePath = previous })
 
-	const digest = "sha256:0000000000000000000000000000000000000000000000000000000000000001"
 	const member = "bin/engine"
+	// The registry holds one thing and the cache holds another, so the bytes that get staged
+	// say which was used. Blocking the network would not do: the entry is still resolved, to
+	// record the digest it pins to, and only the layer fetch is what the cache saves.
+	addr := test.SetupInMemoryRegistry(t)
+	archive := tarGz(t, tarGzEntry{name: member, content: "from the registry\n"})
+	pushLayerArtifact(t, addr, "vendor/engine", "v1", "engine.tar.gz", archive)
+
+	buildPath := t.TempDir()
+	file := v1alpha1.File{
+		Source:      fmt.Sprintf("oci://%s/vendor/engine:v1", addr),
+		ExtractPath: member,
+		Target:      "/usr/local/bin/engine",
+	}
+
+	opts := ociOptions{}
+	opts.PlainHTTP = true
+	digest, err := coci.LayerDigest(context.Background(), file.Source,
+		coci.FileSelector{Arch: fileArch(file), Layer: file.Layer}, opts.FileOptions)
+	require.NoError(t, err)
+
 	utils.CacheMember(context.Background(), digest, member, func() string {
 		path := filepath.Join(t.TempDir(), "engine")
 		require.NoError(t, os.WriteFile(path, []byte(grabbedPayload), 0o600))
 		return path
 	}())
 
-	buildPath := t.TempDir()
-	file := v1alpha1.File{
-		Source:      "oci://registry.example.invalid/vendor/engine:v1",
-		ExtractPath: member,
-		Target:      "/usr/local/bin/engine",
-		Shasum:      payloadShasum(),
-	}
-
 	extractor := newArchiveExtractor(buildPath, []*v1alpha1.File{&file})
 	t.Cleanup(func() { require.NoError(t, extractor.cleanup()) })
-	// The digest is supplied directly rather than resolved, so the registry in the source is
-	// never contacted -- which is the point: a cache hit must not need the archive.
-	extractor.digests[keyFor(file)] = digest
 
-	_, err := fileGrabber(context.Background(), string(config.OSDir), buildPath, t.TempDir(), 0, file, nil, nil, ociOptions{}, extractor)
-	require.NoError(t, err, "a cached member must not require the archive; registry.example.invalid does not resolve")
+	_, err = fileGrabber(context.Background(), string(config.OSDir), buildPath, t.TempDir(), 0, file, nil, nil, opts, extractor)
+	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.OSDir), "0", "engine"))
 	require.NoError(t, err)
-	require.Equal(t, grabbedPayload, string(got))
+	require.Equal(t, grabbedPayload, string(got), "the registry's copy was staged, so the member cache was not used")
 }
 
 // An archive with no digest is not cached between builds. A URL-sourced archive carries none

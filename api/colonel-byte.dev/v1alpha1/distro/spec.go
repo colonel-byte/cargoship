@@ -94,8 +94,15 @@ type FileSource struct {
 	// was used.
 	Store string `json:"store,omitempty"`
 	// Shasum is the checksum the bytes were verified against. Neither an override nor a
-	// content store is accepted for a file that declares none, so this is never empty.
+	// content store is accepted for a file that declares none, so this is empty only for a
+	// file read from a registry, which is verified by the digests below instead.
 	Shasum string `json:"shasum"`
+	// ManifestDigest is the digest of the manifest an oci:// source resolved to for this
+	// entry's architecture. It is empty for every other kind of source.
+	ManifestDigest string `json:"manifestDigest,omitempty"`
+	// LayerDigest is the digest of the layer the bytes were read from, which the registry
+	// verified them against on fetch. It is empty for every other kind of source.
+	LayerDigest string `json:"layerDigest,omitempty"`
 }
 
 // BuildData holds information recorded when the package was built.

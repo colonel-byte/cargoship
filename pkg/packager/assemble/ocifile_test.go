@@ -166,7 +166,14 @@ func TestFetchOCIFileTarballLayer(t *testing.T) {
 	}, ociOptions{})
 	require.NoError(t, err)
 	require.Equal(t, grabbedPayload, got)
-	require.Nil(t, provenance, "a file read from its declared reference reports no redirection")
+
+	// Every oci:// entry records what it resolved to, redirected or not: a tag is mutable, so
+	// the digests are the only statement of which bytes the package actually holds.
+	require.NotNil(t, provenance, "an oci:// source must record the artifact it read")
+	require.Contains(t, provenance.Resolved, "@sha256:", "the recorded reference must be pinned")
+	require.NotEmpty(t, provenance.ManifestDigest)
+	require.NotEmpty(t, provenance.LayerDigest)
+	require.Empty(t, provenance.Override, "nothing redirected this entry")
 }
 
 // The other shape in the wild: every file in the release as its own titled layer, where the
@@ -341,8 +348,12 @@ func TestFetchOCIFileHonoursRegistryOverride(t *testing.T) {
 
 	require.NotNil(t, provenance, "an overridden fetch must record where the bytes came from")
 	require.Equal(t, declared, provenance.Declared)
-	require.Equal(t, fmt.Sprintf("oci://%s/vendor/engine:v1.37.1", mirrorAddr), provenance.Resolved)
 	require.Equal(t, declaredAddr, provenance.Override)
+	// The recorded reference names the mirror the bytes came from, pinned to the digest it
+	// served, so an audit can tell exactly what was read and from where.
+	require.Contains(t, provenance.Resolved, mirrorAddr)
+	require.Contains(t, provenance.Resolved, "@sha256:")
+	require.NotEmpty(t, provenance.LayerDigest)
 }
 
 // An override moves the choice of registry to whoever runs create, so something has to tie the
@@ -524,4 +535,84 @@ func TestFetchOCIFileZarfComponentShape(t *testing.T) {
 	}, ociOptions{})
 	require.NoError(t, err)
 	require.Equal(t, grabbedPayload, got)
+}
+
+// pushLayerArtifact pushes a single-layer artifact whose layer is the bytes given, titled so
+// the extraction can identify its format.
+func pushLayerArtifact(t *testing.T, addr, repoName, tag, title string, body []byte) {
+	t.Helper()
+	pushArtifact(t, addr, repoName, tag, map[string][]artifactLayer{
+		"": {{title: title, content: body}},
+	})
+}
+
+// The definition the package carries names the digest its tag resolved to, so a rebuild from
+// the package resolves the bytes this build resolved rather than whatever the tag points at
+// by then. The definition on disk keeps its tag, which is what an author maintains.
+func TestPinOCISource(t *testing.T) {
+	const declared = "oci://ghcr.io/vendor/engine:v1.37.1"
+	const pinned = "oci://ghcr.io/vendor/engine@sha256:c5c07d4db7c435c7adf25b651c7a03ae995fff4b2034bacb8741d47c3f52b2d8"
+
+	for _, tc := range []struct {
+		name       string
+		provenance distro.FileSource
+		want       string
+	}{
+		{
+			name: "an oci entry is pinned to what it resolved to",
+			provenance: distro.FileSource{
+				Resolved:       pinned,
+				ManifestDigest: "sha256:c5c07d4d",
+			},
+			want: pinned,
+		},
+		{
+			name: "a redirected entry keeps its tag",
+			provenance: distro.FileSource{
+				Resolved:       "oci://mirror.internal.example.net/vendor/engine@sha256:c5c07d4d",
+				ManifestDigest: "sha256:c5c07d4d",
+				Override:       "ghcr.io",
+			},
+			want: declared,
+		},
+		{
+			name: "a file from a content store is not an oci entry",
+			provenance: distro.FileSource{
+				Resolved: "engine.tar.gz",
+				Store:    "./haul.tar.zst",
+			},
+			want: declared,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			file := &v1alpha1.File{Source: declared}
+			pinOCISource(file, tc.provenance)
+			require.Equal(t, tc.want, file.Source)
+		})
+	}
+}
+
+// End to end: the built definition names a digest where the authored one named a tag.
+func TestAssembledDefinitionPinsAnOCISource(t *testing.T) {
+	addr := test.SetupInMemoryRegistry(t)
+	pushArtifact(t, addr, "vendor/engine", "v1.37.1", map[string][]artifactLayer{
+		"": {{title: "engine", content: []byte(grabbedPayload)}},
+	})
+
+	file := &v1alpha1.File{
+		Source: fmt.Sprintf("oci://%s/vendor/engine:v1.37.1", addr),
+		Target: "/usr/local/bin/engine",
+		Shasum: payloadShasum(),
+	}
+	opts := ociOptions{}
+	opts.PlainHTTP = true
+
+	provenance, err := fileGrabber(context.Background(), string(config.OSDir), t.TempDir(), t.TempDir(), 0, *file, nil, nil, opts, nil)
+	require.NoError(t, err)
+	require.NotNil(t, provenance)
+
+	pinOCISource(file, *provenance)
+	require.Contains(t, file.Source, "@sha256:", "the packaged entry still names a tag")
+	require.NotContains(t, file.Source, ":v1.37.1", "the tag survived the pin")
+	require.Equal(t, provenance.Resolved, file.Source)
 }
