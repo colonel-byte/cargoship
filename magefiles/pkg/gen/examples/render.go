@@ -17,9 +17,9 @@ package examples
 import (
 	"fmt"
 	"strings"
-	"text/template"
 
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/engineconfig"
+	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 )
 
 // RenderAll renders every example distro.yaml from the shared templates.
@@ -48,11 +48,6 @@ func RenderAll() error {
 			return err
 		}
 
-		tmpl, err := parseExampleTemplate(spec, sums)
-		if err != nil {
-			return err
-		}
-
 		for _, f := range spec.flavors {
 			tags, err := exampleTags(d.Tags, spec, f)
 			if err != nil {
@@ -60,7 +55,7 @@ func RenderAll() error {
 			}
 
 			for _, tag := range tags {
-				if err := renderExample(tmpl, d.Repo, tag, spec, f, sums); err != nil {
+				if err := renderExample(exampleFuncs(sums), d.Repo, tag, spec, f, sums); err != nil {
 					return err
 				}
 			}
@@ -116,11 +111,6 @@ func RenderLine(distro, prefix string) error {
 		return err
 	}
 
-	tmpl, err := parseExampleTemplate(spec, sums)
-	if err != nil {
-		return err
-	}
-
 	tags, err := engineconfig.RemoteTags(d.Repo, prefix)
 	if err != nil {
 		return err
@@ -145,7 +135,7 @@ func RenderLine(distro, prefix string) error {
 		}
 
 		for _, tag := range flavorTags {
-			if err := renderExample(tmpl, d.Repo, tag, spec, f, sums); err != nil {
+			if err := renderExample(exampleFuncs(sums), d.Repo, tag, spec, f, sums); err != nil {
 				return err
 			}
 		}
@@ -153,8 +143,8 @@ func RenderLine(distro, prefix string) error {
 	return nil
 }
 
-func renderExample(tmpl *template.Template, repoURL, tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) error {
-	path, err := writeExample(tmpl, repoURL, tag, spec, f, sums)
+func renderExample(funcs helmvalues.Option, repoURL, tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) error {
+	path, err := writeExample(funcs, repoURL, tag, spec, f, sums)
 	if err != nil {
 		return fmt.Errorf("generating %s %s example for %s: %w", spec.name, f.flavorName(), tag, err)
 	}

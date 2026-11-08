@@ -66,6 +66,7 @@ type Option func(*options)
 type options struct {
 	createFuncs bool
 	ctx         context.Context
+	extraFuncs  template.FuncMap
 }
 
 // WithCreateFuncs exposes the helpers that reach the local filesystem and the
@@ -86,6 +87,22 @@ func WithCreateFuncs(ctx context.Context) Option {
 	return func(o *options) {
 		o.createFuncs = true
 		o.ctx = ctx
+	}
+}
+
+// WithFuncs adds caller-supplied template functions on top of the default map,
+// overriding a default of the same name.
+//
+// This is for a caller that generates package definitions rather than rendering
+// one: the example generator hashes remote artifacts and names hauler store
+// entries from inside its templates, which is its own vocabulary and no part of
+// what a package author may call.
+func WithFuncs(fm template.FuncMap) Option {
+	return func(o *options) {
+		if o.extraFuncs == nil {
+			o.extraFuncs = template.FuncMap{}
+		}
+		maps.Copy(o.extraFuncs, fm)
 	}
 }
 
@@ -117,6 +134,7 @@ func FuncMap(opts ...Option) template.FuncMap {
 	if o.createFuncs {
 		addCreateFuncs(o.ctx, fm)
 	}
+	maps.Copy(fm, o.extraFuncs)
 
 	return fm
 }

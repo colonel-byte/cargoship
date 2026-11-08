@@ -1,6 +1,6 @@
 # Authoring a Distro Package
 
-This page is about the loop you run while writing or changing a `distro.yaml`: what each step costs, what is cached between runs, and how `cargoship dev apply` shortens it. It is a development page -- for what a distro definition can contain, see the [distro schema](../schema/distro.md), and for the shipped examples see [`example/AGENTS.md`](https://github.com/colonel-byte/cargoship/blob/main/example/AGENTS.md).
+This page is about the loop you run while writing or changing a `distro.yaml`: what each step costs, what is cached between runs, and how `cargoship dev apply` shortens it. It is a development page -- for what a distro definition can contain, see the [distro schema](../schema/distro.md), and for the shipped examples see [`example/AGENTS.md`](https://github.com/colonel-byte/cargoship/blob/main/example/AGENTS.md). For keeping several near-identical definitions as one template instead of several files, see [Generating Definitions From a Template](../guides/generating-definitions.md).
 
 ## The Loop Without `dev apply`
 

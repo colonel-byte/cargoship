@@ -297,7 +297,7 @@ const (
 	// CmdDevShort dev short
 	CmdDevShort = "Commands for working on a definition or on cargoship itself"
 	// CmdDevLong dev long
-	CmdDevLong = "Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. They build and apply a definition in one step, report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.\n\n" +
+	CmdDevLong = "Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. They render a definition from templates, build and apply one in one step, report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.\n\n" +
 		"They are grouped rather than sitting at the root because the root is the operator's surface -- create, apply, prepare, reset -- and a command that is only ever reached for while editing a definition or filing a bug does not belong in that list."
 	// CmdDevApplyShort dev apply short
 	CmdDevApplyShort = "Builds a distro definition and applies it in one step"
@@ -315,6 +315,29 @@ const (
 		"$ cargoship dev apply ./distro-defs --config ./inventory.yaml --dry-run\n\n" +
 		"# Resolve the content from a local content store instead of the network\n" +
 		"$ cargoship dev apply ./distro-defs --config ./inventory.yaml --content-store ./haul.tar.zst --confirm\n"
+	// CmdDevRenderShort render short
+	CmdDevRenderShort = "Renders package definition templates into a distro.yaml and the files beside it"
+	// CmdDevRenderLong render long
+	CmdDevRenderLong = "Evaluates Go templates against one or more YAML values files and writes the result, which is how a fleet of package definitions that differ only in a version, an architecture or a CNI is kept as one template plus a small input file per package.\n\n" +
+		"Each --template renders to its own base name with the '.tmpl' suffix dropped, so 'distro.yaml.tmpl' becomes 'distro.yaml' and 'values.yaml.tmpl' becomes 'values.yaml' in the --out directory. Every template renders against the same merged values, so a value that has to agree between a definition and the values beside it is written once.\n\n" +
+		"The values files are merged in the order given, later files winning, and reach a template as its top-level context: a file setting 'version: 1.36.4' is addressed as '{{ .version }}'. The template functions are the ones a package's own values templates get -- the sprig set, minus the functions that read host state -- so a template cannot read the environment or resolve names. A value path that resolves to nothing is an error rather than a 'no value' placeholder in the output.\n\n" +
+		"An output named 'distro.yaml' is checked against the package schema before anything is written, so a definition that renders but cannot be built is reported here rather than by 'cargoship create'. Pass --no-validate to write it anyway.\n\n" +
+		"This is the same generator cargoship's own example packages under example/ are rendered with, with one difference: the digest helpers those templates use fetch and hash remote artifacts, and are not available here."
+	// CmdDevRenderExample render example
+	CmdDevRenderExample = "\n" +
+		"# Render a definition from a template and an input file\n" +
+		"$ cargoship dev render --template ./distro.yaml.tmpl --values ./v1.36.4.yaml --out ./packages/v1.36.4\n\n" +
+		"# Render a definition and the values file beside it together\n" +
+		"$ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4\n"
+	// CmdDevRenderFlagTemplate flag description
+	CmdDevRenderFlagTemplate = "Template to render, repeatable. Each one is written to the --out directory under its own name with '.tmpl' dropped."
+	// CmdDevRenderFlagValues flag description
+	CmdDevRenderFlagValues = "YAML file holding the values every template renders against, repeatable. Merged in the order given, later files winning."
+	// CmdDevRenderFlagOut flag description
+	CmdDevRenderFlagOut = "Directory to write the rendered files to. Created if it does not exist."
+	// CmdDevRenderFlagNoValidate flag description
+	CmdDevRenderFlagNoValidate = "Write a rendered distro.yaml without checking it against the package schema first."
+
 	// CmdInventoryShort inventory short
 	CmdInventoryShort = "Generates a cluster inventory from another source of truth"
 	// CmdInventoryLong inventory long

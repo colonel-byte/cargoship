@@ -387,6 +387,25 @@ The build still fetches what the definition declares, and still serves it from t
 
 This is for a definition under active edit, not for shipping. It writes no artifact to carry, keep, or sign, and it does not verify a signature -- there is nothing to verify, because the package was built by the same process a moment earlier. A release still goes through `create`, `sign` and `apply`. See [Authoring a Distro Package](dev/package-authoring.md) for the whole loop and what the build caches between runs.
 
+### 13. Generate Definitions from a Template
+
+A fleet's package definitions usually differ in a handful of values -- a version, an architecture, a CNI -- and are otherwise the same file. `dev render` keeps them as one template plus a small values file per package, which is how cargoship's own examples under [`example/`](https://github.com/colonel-byte/cargoship/tree/main/example) are generated:
+
+```bash
+# render a definition from a template and an input file
+cargoship dev render --template ./distro.yaml.tmpl --values ./v1.36.4.yaml --out ./packages/v1.36.4
+
+# render a definition and the values file beside it together, merging a common input first
+cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl \
+  -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+```
+
+Each `--template` is written to `--out` under its own name with `.tmpl` dropped, and every template renders against the same merged values, so a value that has to agree between a definition and the values beside it is written once. The template functions are the ones a package's own values templates get -- the sprig set, minus the functions that read host state -- and a value path that resolves to nothing is an error rather than a placeholder in the output.
+
+A rendered `distro.yaml` is checked against the package schema before anything is written, so a definition that renders but cannot be built is reported here rather than by `create`. `cargoship create ./packages/v1.36.4` is the next step.
+
+See [Generating Definitions From a Template](guides/generating-definitions.md) for the values-merge order, which template functions are available and which are deliberately not, and how to emit build-time `{{ .Values.x }}` expressions into the definition.
+
 ---
 
 ## OpenTofu and Terraform
