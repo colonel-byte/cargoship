@@ -93,7 +93,7 @@ func newPackageCreateCommand() *cobra.Command {
 	}
 	slices.Sort(fileOverrideDefaults)
 
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
 	cmd.Flags().StringSliceVar(&o.fileOverrides, "file-override", fileOverrideDefaults, lang.CmdPackageCreateFlagFileOverride)
 	cmd.Flags().StringSliceVar(&o.contentStore, "content-store", resolvedConfig.DistroOpts.CreateOpts.ContentStore, lang.CmdPackageCreateFlagContentStore)
 	// Reading the deprecated key is the whole job of the deprecated flag: an operator who set

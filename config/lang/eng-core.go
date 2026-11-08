@@ -138,6 +138,10 @@ const (
 	CmdInstallKubeConfigPath = "Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config."
 	// CmdInstallUpdateKubeConfig install flag update kubeconfig
 	CmdInstallUpdateKubeConfig = "Whether to write the admin creds for this cluster to a kubeconfig file at all."
+	// CmdPackageCreateFlagConfirm create flag confirm. Replaces zarf's
+	// CmdPackagePublishFlagConfirm, which described publishing a package and a signing-key
+	// password prompt -- create does neither, and cargoship has no such prompt anywhere.
+	CmdPackageCreateFlagConfirm = "Build the package without asking for confirmation first."
 	// CmdPackageCreateFlagContentStore create flag content store
 	CmdPackageCreateFlagContentStore = "`PATH` of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Repeatable, and comma-separated values are accepted: several stores are read as one, which is what a multi-architecture build needs when each zarf package carries a single architecture. Content no store holds still comes from its declared source, so a partial store works. A file is taken from a store only when the definition declares a shasum for it."
 	// CmdPackageCreateFlagHaulerStore create flag hauler store. Deprecated: superseded by
@@ -328,7 +332,7 @@ const (
 		"# Render a definition from a template and an input file\n" +
 		"$ cargoship dev render --template ./distro.yaml.tmpl --values ./v1.36.4.yaml --out ./packages/v1.36.4\n\n" +
 		"# Render a definition and the values file beside it together\n" +
-		"$ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4\n"
+		"$ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4\n"
 	// CmdDevRenderFlagTemplate flag description
 	CmdDevRenderFlagTemplate = "Template to render, repeatable. Each one is written to the --out directory under its own name with '.tmpl' dropped."
 	// CmdDevRenderFlagValues flag description

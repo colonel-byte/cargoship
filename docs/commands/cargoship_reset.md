@@ -38,7 +38,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 
 ```
   -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string             Config file used to bootstrap a cluster.
+  -f, --config string             Config file used to bootstrap a cluster.
       --confirm[=true|false]      Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
       --dry-run[=true|false]      Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.

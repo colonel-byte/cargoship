@@ -34,7 +34,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
 
 ```
   -a, --architecture string                     Architecture for OCI images and Zarf packages
-  -c, --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
+      --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
   -h, --help[=true|false]                       help for publish
       --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                              Path to public key file for validating signed packages

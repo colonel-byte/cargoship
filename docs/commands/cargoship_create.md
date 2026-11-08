@@ -47,7 +47,7 @@ $ cargoship create ./distro-defs --reproducible
 
 ```
   -a, --architecture string                     Architecture for OCI images and Zarf packages
-  -c, --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
+      --confirm[=true|false]                    Build the package without asking for confirmation first.
       --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Repeatable, and comma-separated values are accepted: several stores are read as one, which is what a multi-architecture build needs when each zarf package carries a single architecture. Content no store holds still comes from its declared source, so a partial store works. A file is taken from a store only when the definition declares a shasum for it.
       --file-override strings                   Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
   -h, --help[=true|false]                       help for create

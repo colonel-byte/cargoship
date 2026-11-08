@@ -28,7 +28,7 @@ cargoship dev render [flags]
 $ cargoship dev render --template ./distro.yaml.tmpl --values ./v1.36.4.yaml --out ./packages/v1.36.4
 
 # Render a definition and the values file beside it together
-$ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+$ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 
 ```
 
@@ -39,7 +39,7 @@ $ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -f ./common.y
       --no-validate[=true|false]   Write a rendered distro.yaml without checking it against the package schema first.
   -o, --out string                 Directory to write the rendered files to. Created if it does not exist. (default ".")
   -t, --template stringArray       Template to render, repeatable. Each one is written to the --out directory under its own name with '.tmpl' dropped.
-  -f, --values stringArray         YAML file holding the values every template renders against, repeatable. Merged in the order given, later files winning.
+      --values stringArray         YAML file holding the values every template renders against, repeatable. Merged in the order given, later files winning.
 ```
 
 ### Options inherited from parent commands
