@@ -35,6 +35,40 @@ argument_specs:
           - "The settings that belong to the cluster rather than to any host."
           - "C(name) and C(loadbalancer) are required; C(profiles), C(registries), and C(values) are optional and take the shape the inventory schema documents."
           - "See the inventory guide for the full document."
+        # Only the five top-level keys are declared, with their types and nothing more. The shape
+        # inside profiles and registries belongs to the inventory schema, which the module
+        # validates the translated document against -- restating it here would be a second copy to
+        # keep in step with the first, and the one that goes stale without anything failing.
+        #
+        # What this does buy is the misspelling. cargoship_cluster is an ordinary dict, so
+        # "load_balancer" or "profile" would otherwise reach Go as a key nobody set and be reported
+        # some way into the module's run; declared here, ansible-core refuses it by name before the
+        # module is reached at all.
+        options:
+          name:
+            type: str
+            required: true
+            description:
+              - "The cluster name. It becomes C(metadata.name), and the kubeconfig context name."
+          loadbalancer:
+            type: str
+            required: true
+            description:
+              - "The hostname clients use to reach the cluster control plane."
+          profiles:
+            type: dict
+            description:
+              - "Maps a profile name to the host and engine overrides a host selecting it receives."
+              - "A host selects one by name with the C(cargoship_profile) host variable."
+          registries:
+            type: list
+            elements: dict
+            description:
+              - "The container registries the cluster uses: mirrors, credentials, and TLS settings."
+          values:
+            type: dict
+            description:
+              - "Overrides for the values the distro package was built with. It must still satisfy the package's values schema."
       cargoship_role_groups:
         type: dict
         default: {}
