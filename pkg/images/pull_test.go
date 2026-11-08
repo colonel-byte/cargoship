@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/test"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -31,6 +32,7 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
 // pushBlob writes bytes into the store and returns the descriptor pointing at them.
@@ -486,5 +488,257 @@ func TestPullErrorsWhenAnImageCannotBeResolved(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), ref) {
 		t.Errorf("error %q does not name the image that could not be resolved", err)
+	}
+}
+
+// A source holding one architecture of a multi-architecture build must not stand in for the
+// registry. It used to: the reference was held, so the store answered for it, the single
+// manifest it returned was taken as "what every requested architecture gets", and the
+// architectures it could not serve were dropped with no warning and no error. A zarf package
+// carries one metadata.architecture by construction, which made that routine.
+func TestPullFallsBackWhenTheSourceHoldsOneArchitecture(t *testing.T) {
+	ctx := context.Background()
+	const ref = "registry.invalid/pause:3.10"
+
+	src := newStore(ctx, t)
+	manifestDesc := pushManifest(ctx, t, src, "amd64")
+	if err := src.Tag(ctx, manifestDesc, ref); err != nil {
+		t.Fatalf("failed to tag the source image: %v", err)
+	}
+
+	refInfo, err := transform.ParseImageRef(ref)
+	if err != nil {
+		t.Fatalf("failed to parse %s: %v", ref, err)
+	}
+
+	// registry.invalid does not resolve, so reaching the registry is the failure. That is the
+	// assertion: the build must not quietly accept the source's single architecture.
+	_, err = Pull(ctx, []transform.Image{refInfo}, t.TempDir(), PullOptions{
+		Arches:         []string{"amd64", "arm64"},
+		CacheDirectory: t.TempDir(),
+		Source:         stubSource{store: src, refs: map[string]bool{ref: true}},
+	})
+	if err == nil {
+		t.Fatal("Pull succeeded with a source holding only amd64, so arm64 was dropped silently")
+	}
+	if !strings.Contains(err.Error(), ref) {
+		t.Errorf("error %q does not name the image that could not be completed", err)
+	}
+}
+
+// The same source serving a build that asks only for the architecture it holds is still used,
+// and never reaches the registry.
+func TestPullUsesASourceThatCoversEveryArchitecture(t *testing.T) {
+	ctx := context.Background()
+	const ref = "registry.invalid/pause:3.10"
+
+	src := newStore(ctx, t)
+	manifestDesc := pushManifest(ctx, t, src, "amd64")
+	if err := src.Tag(ctx, manifestDesc, ref); err != nil {
+		t.Fatalf("failed to tag the source image: %v", err)
+	}
+
+	refInfo, err := transform.ParseImageRef(ref)
+	if err != nil {
+		t.Fatalf("failed to parse %s: %v", ref, err)
+	}
+
+	got, err := Pull(ctx, []transform.Image{refInfo}, t.TempDir(), PullOptions{
+		Arches:         []string{"amd64"},
+		CacheDirectory: t.TempDir(),
+		Source:         stubSource{store: src, refs: map[string]bool{ref: true}},
+	})
+	if err != nil {
+		t.Fatalf("Pull from a source covering the one requested architecture: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("Pull returned %d images, want 1", len(got))
+	}
+}
+
+// An artifact that names no architecture at all -- a signature, an SBOM, a file artifact
+// stored as an image -- is not multi-platform, so one copy answers whatever is asked and the
+// source still stands in for the registry.
+func TestPullUsesASourceForAnArtifactWithNoArchitecture(t *testing.T) {
+	ctx := context.Background()
+	const ref = "registry.invalid/artifact:1.0"
+
+	src := newStore(ctx, t)
+	desc := pushArtifactWithoutArchitecture(ctx, t, src)
+	if err := src.Tag(ctx, desc, ref); err != nil {
+		t.Fatalf("failed to tag the source artifact: %v", err)
+	}
+
+	refInfo, err := transform.ParseImageRef(ref)
+	if err != nil {
+		t.Fatalf("failed to parse %s: %v", ref, err)
+	}
+
+	got, err := Pull(ctx, []transform.Image{refInfo}, t.TempDir(), PullOptions{
+		Arches:         []string{"amd64", "arm64"},
+		CacheDirectory: t.TempDir(),
+		Source:         stubSource{store: src, refs: map[string]bool{ref: true}},
+	})
+	if err != nil {
+		t.Fatalf("Pull of an artifact naming no architecture: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("Pull returned %d artifacts, want 1", len(got))
+	}
+}
+
+// pushArtifactWithoutArchitecture pushes a manifest whose config names no architecture.
+func pushArtifactWithoutArchitecture(ctx context.Context, t *testing.T, store *oci.Store) ocispec.Descriptor {
+	t.Helper()
+
+	configBytes := []byte(`{}`)
+	configDesc := ocispec.Descriptor{
+		MediaType: ocispec.MediaTypeImageConfig,
+		Digest:    digest.FromBytes(configBytes),
+		Size:      int64(len(configBytes)),
+	}
+	if err := store.Push(ctx, configDesc, bytes.NewReader(configBytes)); err != nil {
+		t.Fatalf("failed to push the config: %v", err)
+	}
+	manifestBytes, err := json.Marshal(ocispec.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: ocispec.MediaTypeImageManifest,
+		Config:    configDesc,
+		Layers:    []ocispec.Descriptor{},
+	})
+	if err != nil {
+		t.Fatalf("failed to marshal the manifest: %v", err)
+	}
+	manifestDesc := ocispec.Descriptor{
+		MediaType: ocispec.MediaTypeImageManifest,
+		Digest:    digest.FromBytes(manifestBytes),
+		Size:      int64(len(manifestBytes)),
+	}
+	if err := store.Push(ctx, manifestDesc, bytes.NewReader(manifestBytes)); err != nil {
+		t.Fatalf("failed to push the manifest: %v", err)
+	}
+	return manifestDesc
+}
+
+// The fallback has to carry into the copy, not just the metadata read. A source holding one
+// architecture is passed over for the whole image, and the copy that follows must go to the
+// registry too -- asking the source a second time sent it back to the bundle that had just
+// been rejected, which failed with "platform in manifest does not match target platform".
+//
+// This needs a registry that answers, which is what distinguishes it from
+// TestPullFallsBackWhenTheSourceHoldsOneArchitecture: that one only reaches the decision, this
+// one follows it all the way into the layout.
+func TestPullCompletesTheFallbackFromAPartlyCoveringSource(t *testing.T) {
+	ctx := context.Background()
+	addr := test.SetupInMemoryRegistry(t)
+	ref := addr + "/library/pause:3.10"
+
+	// The registry holds both architectures.
+	pushIndexToRegistry(ctx, t, addr, "library/pause", "3.10", "amd64", "arm64")
+
+	// The source holds only amd64, under the same reference.
+	src := newStore(ctx, t)
+	amd := pushManifest(ctx, t, src, "amd64")
+	if err := src.Tag(ctx, amd, ref); err != nil {
+		t.Fatalf("failed to tag the source image: %v", err)
+	}
+
+	refInfo, err := transform.ParseImageRef(ref)
+	if err != nil {
+		t.Fatalf("failed to parse %s: %v", ref, err)
+	}
+
+	dest := t.TempDir()
+	got, err := Pull(ctx, []transform.Image{refInfo}, dest, PullOptions{
+		Arches:         []string{"amd64", "arm64"},
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+		Source:         stubSource{store: src, refs: map[string]bool{ref: true}},
+	})
+	if err != nil {
+		t.Fatalf("Pull after falling back to a registry that has both architectures: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("Pull returned %d manifests, want 2 -- one per architecture", len(got))
+	}
+
+	// Both architectures have to be in the written layout, not merely resolved: the copy is
+	// the step the stale decision broke.
+	arches := map[string]bool{}
+	for _, m := range got {
+		arches[m.Manifest.Config.Digest.String()] = true
+	}
+	if len(arches) != 2 {
+		t.Errorf("layout holds %d distinct image configs, want 2 -- one per architecture", len(arches))
+	}
+	layout, err := oci.NewWithContext(ctx, dest)
+	if err != nil {
+		t.Fatalf("failed to open the destination layout: %v", err)
+	}
+	if _, err := layout.Resolve(ctx, ref); err != nil {
+		t.Fatalf("destination does not hold %s: %v", ref, err)
+	}
+}
+
+// pushIndexToRegistry publishes an index over one manifest per architecture, so a fallback has
+// a registry that can actually answer.
+func pushIndexToRegistry(ctx context.Context, t *testing.T, addr, repoName, tag string, arches ...string) {
+	t.Helper()
+
+	repo, err := remote.NewRepository(addr + "/" + repoName)
+	if err != nil {
+		t.Fatalf("failed to open the registry repository: %v", err)
+	}
+	repo.PlainHTTP = true
+
+	push := func(mediaType string, body []byte) ocispec.Descriptor {
+		desc := ocispec.Descriptor{
+			MediaType: mediaType,
+			Digest:    digest.FromBytes(body),
+			Size:      int64(len(body)),
+		}
+		if err := repo.Push(ctx, desc, bytes.NewReader(body)); err != nil {
+			t.Fatalf("failed to push %s: %v", mediaType, err)
+		}
+		return desc
+	}
+
+	children := make([]ocispec.Descriptor, 0, len(arches))
+	for _, arch := range arches {
+		configBytes, err := json.Marshal(ocispec.Image{
+			Platform: ocispec.Platform{OS: "linux", Architecture: arch},
+		})
+		if err != nil {
+			t.Fatalf("failed to marshal the config: %v", err)
+		}
+		configDesc := push(ocispec.MediaTypeImageConfig, configBytes)
+		manifestBytes, err := json.Marshal(ocispec.Manifest{
+			Versioned: specs.Versioned{SchemaVersion: 2},
+			MediaType: ocispec.MediaTypeImageManifest,
+			Config:    configDesc,
+		})
+		if err != nil {
+			t.Fatalf("failed to marshal the manifest: %v", err)
+		}
+		child := push(ocispec.MediaTypeImageManifest, manifestBytes)
+		child.Platform = &ocispec.Platform{OS: "linux", Architecture: arch}
+		children = append(children, child)
+	}
+
+	indexBytes, err := json.Marshal(ocispec.Index{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: children,
+	})
+	if err != nil {
+		t.Fatalf("failed to marshal the index: %v", err)
+	}
+	indexDesc := ocispec.Descriptor{
+		MediaType: ocispec.MediaTypeImageIndex,
+		Digest:    digest.FromBytes(indexBytes),
+		Size:      int64(len(indexBytes)),
+	}
+	if err := repo.PushReference(ctx, indexDesc, bytes.NewReader(indexBytes), tag); err != nil {
+		t.Fatalf("failed to push the index: %v", err)
 	}
 }

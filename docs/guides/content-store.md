@@ -154,7 +154,14 @@ A zarf package carries a single `metadata.architecture`, so one package holds on
     --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
   ```
 
-- **Without `--architecture`, a multi-architecture definition built against a single-architecture store silently produces a package missing the other architecture.** The store is consulted per image reference rather than per platform, so it answers for both architectures and supplies only the one it has. The package is written, is named as a multi-architecture package, and holds one architecture's image layers. This is tracked as [#1012](https://github.com/colonel-byte/cargoship/issues/1012); until it is fixed, pass `--architecture` whenever the store covers fewer architectures than the definition declares.
+- **A store covering fewer architectures than the definition is not used for those images.** The store is consulted per platform, so one holding only amd64 cannot stand in for the registry on a build that also wants arm64. The image falls back to its registry and says so, naming what the store could serve:
+
+  ```text
+  WRN image held by the local image source for only some architectures, falling back to its registry
+      image=registry.k8s.io/pause:3.10 held=amd64 missing=arm64
+  ```
+
+  On a node with no route to that registry the build then fails naming the image, which is the documented behaviour for content that is in neither place. This used to be silent: the reference was held, so the store answered for it, and the architectures it could not serve were dropped without a word - producing a package named as multi-architecture that held one architecture's layers.
 
 The generated examples follow this: `example/rke2-cilium-vsphere` is the flavor that ships zarf definitions, because it is amd64-only and so cannot want a second package. The multi-architecture flavors ship hauler manifests instead.
 

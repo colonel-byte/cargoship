@@ -89,6 +89,12 @@ type imagePullInfo struct {
 	ref                 string
 	manifestDesc        ocispec.Descriptor
 	byteSize            int64
+	// fromSource records whether the metadata pass read this manifest from the local source
+	// or from the registry. It is carried rather than asked again, because the two passes
+	// must agree: a source holding the reference for only some architectures is passed over
+	// for the whole image, and asking HasImage a second time would send the copy back to a
+	// source the first pass already rejected.
+	fromSource bool
 }
 
 // fetchedManifest is a manifest descriptor and the bytes it points at, as returned by a metadata
@@ -165,19 +171,12 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// A local source stands in for the registry entirely, so none of the transport
 			// setup below -- the credentials and the plain-HTTP sniffing -- applies to an
 			// image it holds.
-			var src oras.ReadOnlyTarget
-			if opts.Source != nil && opts.Source.HasImage(image.overridden.Reference) {
-				src = opts.Source.Target()
-			} else {
-				if opts.Source != nil {
-					l.Warn("image not held by the local image source, falling back to its registry",
-						"image", image.overridden.Reference, "source", opts.Source.Describe())
-				}
+			registryTarget := func() (oras.ReadOnlyTarget, error) {
 				repo := &orasRemote.Repository{}
 
 				ref, err := registry.ParseReference(image.overridden.Reference)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				repo.Reference = ref
 				repo.Client = client
@@ -186,11 +185,26 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
 					repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 					if err != nil {
-						return fmt.Errorf("unable to connect to the registry %s for image %s: %w",
+						return nil, fmt.Errorf("unable to connect to the registry %s for image %s: %w",
 							repo.Reference.Host(), image.overridden.Reference, err)
 					}
 				}
-				src = repo
+				return repo, nil
+			}
+
+			var src oras.ReadOnlyTarget
+			fromSource := opts.Source != nil && opts.Source.HasImage(image.overridden.Reference)
+			if fromSource {
+				src = opts.Source.Target()
+			} else {
+				if opts.Source != nil {
+					l.Warn("image not held by the local image source, falling back to its registry",
+						"image", image.overridden.Reference, "source", opts.Source.Describe())
+				}
+				var err error
+				if src, err = registryTarget(); err != nil {
+					return err
+				}
 			}
 
 			fetchOpts := oras.DefaultFetchBytesOptions
@@ -201,6 +215,33 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
 				return fmt.Errorf("unable to find image %s: %w", image.overridden.Reference, err)
+			}
+
+			// A source holding the reference for only some of the requested architectures
+			// cannot stand in for the registry: the ones it lacks would otherwise be dropped
+			// without a word, which is what a zarf package built for one architecture used to
+			// do to every other one. Fall back wholesale, the way an image it does not hold
+			// at all already does, and say which architectures it could serve.
+			if fromSource {
+				coverage, coverErr := coverSource(ectx, src, desc, b, pullPlatforms)
+				if coverErr != nil {
+					return fmt.Errorf("unable to tell which architectures %s holds for %s: %w",
+						opts.Source.Describe(), image.overridden.Reference, coverErr)
+				}
+				if !coverage.complete() {
+					l.Warn("image held by the local image source for only some architectures, falling back to its registry",
+						"image", image.overridden.Reference, "source", opts.Source.Describe(),
+						"held", coverage.describe(), "missing", strings.Join(coverage.missing, ", "))
+					if src, err = registryTarget(); err != nil {
+						return err
+					}
+					if desc, b, err = oras.FetchBytes(ectx, src, image.overridden.Reference, fetchOpts); err != nil {
+						return fmt.Errorf("unable to find image %s: %w", image.overridden.Reference, err)
+					}
+					// The copy below has to follow this decision, or it would go back to the
+					// source that was just passed over and fail on the platform it lacks.
+					fromSource = false
+				}
 			}
 
 			// If the image sha points to an index then error
@@ -255,6 +296,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					ref:                 image.original.Reference,
 					byteSize:            getSizeOfImage(f.desc, manifest),
 					manifestDesc:        f.desc,
+					fromSource:          fromSource,
 				})
 				imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
 					Image:    image.original,
@@ -326,7 +368,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	l := logger.From(ctx)
 	var pullSrc oras.ReadOnlyTarget
 	var err error
-	fromSource := opts.Source != nil && opts.Source.HasImage(imageInfo.registryOverrideRef)
+	fromSource := imageInfo.fromSource
 	if !fromSource {
 		repo := &orasRemote.Repository{}
 		repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
