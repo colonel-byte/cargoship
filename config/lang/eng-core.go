@@ -52,7 +52,7 @@ const (
 		"# Mirror only the images, over plain HTTP:\n" +
 		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:5000 --images --plain-http\n"
 	// CmdPackageMirrorFlagConfig mirror flag config
-	CmdPackageMirrorFlagConfig = "`PATH` of a cluster configuration to read the destination registry from, in place of naming one as an argument. The address is taken from the single entry under spec.config.registries that declares a proxy URL, which is the mirror cargoship configures each host to pull through."
+	CmdPackageMirrorFlagConfig = "`PATH` of a cluster configuration to read the destination registry from. See docs/guides/mirror-registry.md."
 	// CmdPackageMirrorFlagImages mirror flag images
 	CmdPackageMirrorFlagImages = "Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given."
 	// CmdPackageMirrorFlagFiles mirror flag files
@@ -111,50 +111,59 @@ const (
 	// CmdInstallFlagResetDistro install flag config
 	CmdInstallFlagResetDistro = "What type of distro that will be reset. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagResetTargetHosts names specific hosts to reset
-	CmdInstallFlagResetTargetHosts = "Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration."
+	CmdInstallFlagResetTargetHosts = "Hosts to delete and uninstall, by hostname or address. Repeatable. Defaults to every host in the configuration."
 	// CmdInstallFlagKubeConfigDistro kube-config flag config
 	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
 	CmdInstallFlagConfirm = "Proceed with the run. Without it, a command that would change a host reports what it needs and stops."
 	// CmdInstallFlagDryRun install flag dry run
-	CmdInstallFlagDryRun = "Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm."
+	CmdInstallFlagDryRun = "Report what would be done without changing any host. Runs the preflight checks for real. Does not need --confirm."
 	// CmdInstallFlagTimeout install flag timeout
 	CmdInstallFlagTimeout = "Set the timeout for how long functions will last."
 	// CmdInstallFlagValues install flag values
-	CmdInstallFlagValues = "Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file."
+	CmdInstallFlagValues = "YAML values file overriding what the package ships, repeatable, later winning. See docs/guides/package-values.md."
 	// CmdInstallFlagVaultPasswordFile install flag vault password file
-	CmdInstallFlagVaultPasswordFile = "Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
+	CmdInstallFlagVaultPasswordFile = "File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD."
 	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
-	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. \"25%\"), set to 0 for unlimited."
+	CmdInstallFlagWorkerConcurrency = "Workers to update in parallel, a count or a percentage. See docs/guides/profile-concurrency.md."
 	// CmdInstallHostUpdate install flag host
 	CmdInstallHostUpdate = "Whether to update every host node's /etc/hosts file."
 	// CmdInstallAllowUnmanagedNodes install flag allow unmanaged nodes
-	CmdInstallAllowUnmanagedNodes = "Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone."
+	CmdInstallAllowUnmanagedNodes = "Continue when the cluster holds a node no host in the config accounts for. An apply never removes a node."
 	// CmdInstallAllowDowngrade install flag allow downgrade
-	CmdInstallAllowDowngrade = "Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it."
+	CmdInstallAllowDowngrade = "Continue when a host runs an engine newer than the package carries. Refused by default; engines do not move back."
 	// CmdInstallLabelNodes install flag label nodes
-	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig."
+	CmdInstallLabelNodes = "Check and add the node-role.kubernetes.io/PROFILE label on nodes. Reads admin credentials off a controller."
 	// CmdInstallKubeConfigPath install flag kubeconfig path
-	CmdInstallKubeConfigPath = "Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config."
+	CmdInstallKubeConfigPath = "Path of the kubeconfig to merge this cluster's admin creds into. Defaults to KUBECONFIG, else ~/.kube/config."
 	// CmdInstallUpdateKubeConfig install flag update kubeconfig
 	CmdInstallUpdateKubeConfig = "Whether to write the admin creds for this cluster to a kubeconfig file at all."
+	// CmdFlagPlainHTTP replaces zlang.RootCmdFlagPlainHTTP, which spends 159 characters on the
+	// caveat. Same meaning, one line in an 80-column terminal.
+	CmdFlagPlainHTTP = "Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason."
+	// CmdFlagInsecureSkipTLSVerify replaces zlang.RootCmdFlagInsecureSkipTLSVerify, for the same
+	// reason as CmdFlagPlainHTTP.
+	CmdFlagInsecureSkipTLSVerify = "Skip validating the registry's TLS certificate. Reduces security; use only with reason."
+	// CmdPackageSignFlagOutput replaces zlang.CmdPackageSignFlagOutput, which spelled its default
+	// out in prose. The default is shown by cobra, so it does not need saying twice.
+	CmdPackageSignFlagOutput = "Where to write the signed package: a local directory, or an oci:// registry URL."
 	// CmdPackageCreateFlagConfirm create flag confirm. Replaces zarf's
 	// CmdPackagePublishFlagConfirm, which described publishing a package and a signing-key
 	// password prompt -- create does neither, and cargoship has no such prompt anywhere.
 	CmdPackageCreateFlagConfirm = "Build the package without asking for confirmation first."
 	// CmdPackageCreateFlagContentStore create flag content store
-	CmdPackageCreateFlagContentStore = "`PATH` of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Repeatable, and comma-separated values are accepted: several stores are read as one, which is what a multi-architecture build needs when each zarf package carries a single architecture. Content no store holds still comes from its declared source, so a partial store works. A file is taken from a store only when the definition declares a shasum for it."
+	CmdPackageCreateFlagContentStore = "`PATH` of a content store to resolve images and files from instead of the network. See docs/guides/content-store.md."
 	// CmdPackageCreateFlagHaulerStore create flag hauler store. Deprecated: superseded by
 	// CmdPackageCreateFlagContentStore, and kept only for the deprecated --hauler-store flag.
-	CmdPackageCreateFlagHaulerStore = "`PATH` of a hauler store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a store directory or an archive written by hauler store save. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it."
+	CmdPackageCreateFlagHaulerStore = "`PATH` of a hauler store to resolve images and files from instead of the network. See docs/guides/content-store.md."
 	// CmdPackageCreateFlagRegistryOverride create flag registry override. It replaces zarf's
 	// string of the same name, which describes the flag as applying to image pulls only --
 	// cargoship also redirects an oci:// file source through it.
-	CmdPackageCreateFlagRegistryOverride = "Redirect what cargoship pulls from a registry, as SOURCE=TARGET pairs of registry prefixes, for example --registry-override docker.io=dockerio-reg.enterprise.intranet. Repeatable. When several sources match, the longest wins. This covers both the images a distro definition declares and any file whose source is an oci:// reference; for a redirected file, the declared shasum is enforced, and one that declares neither a shasum nor a digest in its reference is refused rather than fetched unverified from a mirror."
+	CmdPackageCreateFlagRegistryOverride = "Redirect registry pulls, as SOURCE=TARGET registry prefixes. Repeatable. See docs/guides/registry-override.md."
 	// CmdPackageCreateFlagFileOverride create flag file override
-	CmdPackageCreateFlagFileOverride = "Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror."
+	CmdPackageCreateFlagFileOverride = "Redirect file downloads, as SOURCE=TARGET URL prefixes or a local directory. See docs/guides/file-override.md."
 	// CmdPackageCreateFlagOutput create flag output
-	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package."
+	CmdPackageCreateFlagOutput = "Where to write the package: a local directory, or an oci:// registry URL."
 	// CmdPackageCreateFlagTag create flag tag
 	CmdPackageCreateFlagTag = "The tag or version to override the package metadata version with."
 	// CmdPackageFlagConcurrency deploy flag concurrency
@@ -170,11 +179,11 @@ const (
 	// CmdSha256SumShort sha256sum short
 	CmdSha256SumShort = "Generates a SHA256SUM for the given file"
 	// CmdSha256SumFlagExtractPath flag description
-	CmdSha256SumFlagExtractPath = "The path inside of an archive to use to calculate the sha256sum (i.e. for use with a file entry's `extractPath`). For an oci:// reference it is a path inside the layer --layer names. Shell completion lists that layer's members once both --layer and --arch are given, which it needs because listing them reads the layer itself."
+	CmdSha256SumFlagExtractPath = "Path inside an archive, or inside the layer --layer names, to checksum. See docs/guides/oci-file-source.md."
 	// CmdSha256SumFlagLayer flag description
-	CmdSha256SumFlagLayer = "For an oci:// reference, the layer to take, by its org.opencontainers.image.title annotation (i.e. for use with a file entry's `layer`). Required when the artifact carries more than one layer. Combine it with --extract-path when the named layer is itself an archive. Shell completion offers the titles the artifact carries, and reads them from the architecture --arch names, so give that first."
+	CmdSha256SumFlagLayer = "For an oci:// reference, the layer to take by its image title annotation. See docs/guides/oci-file-source.md."
 	// CmdSha256SumFlagArch flag description
-	CmdSha256SumFlagArch = "For an oci:// reference that resolves to an image index, the architecture whose manifest to read (i.e. for use with a file entry's `selector.arch`). It is not defaulted to this host's architecture: the digest is going into an entry that names its own architecture, and guessing here would give a plausible wrong answer. An artifact published as a single manifest needs none."
+	CmdSha256SumFlagArch = "For an oci:// index, the architecture whose manifest to read. Never defaulted. See docs/guides/oci-file-source.md."
 	// CmdVaultShort vault short
 	CmdVaultShort = "Encrypts and decrypts cluster configuration values with Ansible Vault or age"
 	// CmdVaultLong vault long
@@ -184,13 +193,13 @@ const (
 	// CmdVaultEncryptLong vault encrypt long
 	CmdVaultEncryptLong = "Encrypts VALUE, producing a string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. With --age-recipient or --age-recipients-file the output is armored age ciphertext beginning with -----BEGIN AGE ENCRYPTED FILE-----; otherwise it is Ansible Vault ciphertext beginning with $ANSIBLE_VAULT. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal."
 	// CmdVaultEncryptFlagPasswordFile flag description
-	CmdVaultEncryptFlagPasswordFile = "Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
+	CmdVaultEncryptFlagPasswordFile = "File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD."
 	// CmdFlagAgeIdentityFile flag description
-	CmdFlagAgeIdentityFile = "Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE."
+	CmdFlagAgeIdentityFile = "age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md."
 	// CmdFlagAgeRecipient flag description
-	CmdFlagAgeRecipient = "A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault."
+	CmdFlagAgeRecipient = "age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md."
 	// CmdFlagAgeRecipientsFile flag description
-	CmdFlagAgeRecipientsFile = "Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file."
+	CmdFlagAgeRecipientsFile = "File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md."
 	// CmdVaultFlagDryRun flag description, shared by every vault command that rewrites a file in place
 	CmdVaultFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultEncryptPathShort vault encrypt-path short
@@ -206,15 +215,15 @@ const (
 	// CmdVaultEncryptFileFlagForce flag description
 	CmdVaultEncryptFileFlagForce = "Encrypt values that are encrypted already, wrapping them a second time."
 	// CmdVaultRekeyFlagNewPasswordFile flag description
-	CmdVaultRekeyFlagNewPasswordFile = "Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the key the file already uses, or pass --age-recipient instead to move the file onto age. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened."
+	CmdVaultRekeyFlagNewPasswordFile = "File holding the Ansible Vault password to move to. Omit to re-salt under the current key. No environment fallback."
 	// CmdVaultKeygenShort vault keygen short
 	CmdVaultKeygenShort = "Generates an age key pair, or prints the public key of one you already hold"
 	// CmdVaultKeygenLong vault keygen long
 	CmdVaultKeygenLong = "Generates an age key pair in the format age-keygen writes, so that the age distribution is not a prerequisite for encrypting a configuration with age, and the file stays readable by 'age --decrypt' and anything else that speaks the format. The identity -- the private key, AGE-SECRET-KEY-1... -- goes to --output, or to stdout when that is omitted; the recipient -- the public key, age1... -- goes to stderr, so that the file holds the private key alone and the public key can be copied straight into a recipients file. With --public-key it generates nothing and instead prints the public keys held in IDENTITY_FILE, or in stdin when no file is given, which is how a recipient is recovered from a private key you still have. A key pair is not registered anywhere: pass the public key to 'cargoship vault encrypt' as --age-recipient, and the file back as --age-identity-file to read those values again."
 	// CmdVaultKeygenFlagOutput flag description
-	CmdVaultKeygenFlagOutput = "Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead."
+	CmdVaultKeygenFlagOutput = "Path to write the identity to, mode 0600. An existing file is never overwritten. Omit to write to stdout."
 	// CmdVaultKeygenFlagPublicKey flag description
-	CmdVaultKeygenFlagPublicKey = "Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given. This reads age identity files; the public key of an SSH key is in the \".pub\" file beside it."
+	CmdVaultKeygenFlagPublicKey = "Print the public keys in IDENTITY_FILE instead of generating a pair. Reads stdin when no file is given."
 	// CmdVaultDecryptShort vault decrypt short
 	CmdVaultDecryptShort = "Decrypts an Ansible Vault or age value, printing the plaintext"
 	// CmdVaultDecryptLong vault decrypt long
@@ -232,7 +241,7 @@ const (
 	// CmdVaultRekeyLong vault rekey long
 	CmdVaultRekeyLong = "Re-wraps every encrypted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- under the key named by --new-vault-password-file or by --age-recipient, leaving comments, key order, and the rest of the document untouched. Naming age recipients while reading with the vault password is how a configuration moves from Ansible Vault to age; naming neither re-wraps the values under the key they already carry, which gives every one of them fresh ciphertext without changing the key. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the keys given, and the command stops without touching FILE if one is not, because a configuration encrypted under two keys is one no single key can read back."
 	// CmdInstallFlagReceiptPath flag description
-	CmdInstallFlagReceiptPath = "Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket."
+	CmdInstallFlagReceiptPath = "Write a JSON record of the run to PATH. Takes the {command} and {timestamp} placeholders. It names every host."
 	// CmdRedactReceiptShort redact-receipt short
 	CmdRedactReceiptShort = "Rewrites a run receipt so it can be attached to an issue"
 	// CmdRedactReceiptLong redact-receipt long
@@ -244,7 +253,7 @@ const (
 	// RootCmdFlagLogFormat log format
 	RootCmdFlagLogFormat = "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'."
 	// RootCmdFlagLogLevel log level
-	RootCmdFlagLogLevel = "Log level when running cargoship. Valid options are: warn, info, debug, trace"
+	RootCmdFlagLogLevel = "Log level when running cargoship. One of: error, warn, info, debug."
 	// RootCmdFlagNoColor no color
 	RootCmdFlagNoColor = "Disable terminal color codes in logging and stdout prints."
 	// RootCmdFlagLogFile log file
@@ -264,11 +273,11 @@ const (
 	// CmdPackageFlagVerify flag
 	CmdPackageFlagVerify = "Verify the Cargoship package signature."
 	// CmdPackageFlagSigningKey signing key flag
-	CmdPackageFlagSigningKey = "Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported."
+	CmdPackageFlagSigningKey = "Private key for signing: a file path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md."
 	// CmdPackagePublishFlagSigningKey publish signing key flag
-	CmdPackagePublishFlagSigningKey = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported."
+	CmdPackagePublishFlagSigningKey = "Private key for signing or re-signing: a path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md."
 	// CmdPackageCreateFlagReproducible create flag reproducible
-	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package."
+	CmdPackageCreateFlagReproducible = "Pin the recorded build time to a fixed value, so identical inputs produce a byte-identical package."
 	// CmdSchemaShort schema short
 	CmdSchemaShort = "Writes out a JSON Schema for one of cargoship's own file formats"
 	// CmdSchemaLong schema long
@@ -276,7 +285,7 @@ const (
 	// CmdSchemaFlagOutput flag description
 	CmdSchemaFlagOutput = "Path to write the schema to. Omit it to write to stdout."
 	// CmdSchemaFlagPackage flag description
-	CmdSchemaFlagPackage = "Graft a package's own values schema onto spec.config.values. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
+	CmdSchemaFlagPackage = "Graft a package's values schema onto spec.config.values; 'inventory' only. See docs/guides/package-values.md."
 
 	// CmdCleanCacheShort clean-cache short
 	CmdCleanCacheShort = "Reports what the shared cache holds, and removes it"
@@ -295,7 +304,7 @@ const (
 		"# Keep anything fetched in the last fortnight\n" +
 		"$ cargoship dev clean-cache --older-than 336h\n"
 	// CmdCleanCacheFlagOlderThan clean-cache flag older-than
-	CmdCleanCacheFlagOlderThan = "Only remove entries written longer ago than this, as a Go duration such as 336h. Omit it to remove every fetchable area, which is also the only way an image layout is removed. Measured from when an entry was written rather than when it was last read."
+	CmdCleanCacheFlagOlderThan = "Only remove entries written longer ago than this Go duration, such as 336h. Omit to remove every fetchable area."
 	// CmdCleanCacheFlagDryRun clean-cache flag dry-run
 	CmdCleanCacheFlagDryRun = "Report what would be removed without removing it."
 	// CmdDevShort dev short
@@ -374,9 +383,9 @@ const (
 		"spec.config.values is untyped in the inventory schema, because its shape belongs to whichever package is " +
 		"being installed. Pass --package to check it as well."
 	// CmdValidateFlagKind flag description
-	CmdValidateFlagKind = "Name the schema to check against instead of reading the document's 'kind' field. Required for a cargoship config file, which declares no kind."
+	CmdValidateFlagKind = "Name the schema instead of reading the document's 'kind'. Required for a config file, which declares none."
 	// CmdValidateFlagPackage flag description
-	CmdValidateFlagPackage = "Check spec.config.values against a package's own values schema. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
+	CmdValidateFlagPackage = "Check spec.config.values against a package's values schema; 'inventory' only. See docs/guides/package-values.md."
 
 	// CmdDistroSignShort sign short
 	CmdDistroSignShort = "Signs an existing Cargoship distro package"

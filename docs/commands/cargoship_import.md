@@ -32,7 +32,7 @@ $ cargoship import ./oci-layout-dir -o ./build/
   -a, --architecture string   Architecture for OCI images and Zarf packages
   -h, --help[=true|false]     help for import
   -k, --key string            Path to public key file for validating signed packages
-  -o, --output string         Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package. (default ".")
+  -o, --output string         Where to write the package: a local directory, or an oci:// registry URL. (default ".")
       --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode     Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
@@ -43,7 +43,7 @@ $ cargoship import ./oci-layout-dir -o ./build/
 ```
       --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 

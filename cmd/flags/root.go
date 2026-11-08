@@ -28,16 +28,18 @@ func RegisterLogLevel(_ *cobra.Command, _ []string, _ string) ([]string, cobra.S
 }
 
 const (
-	logLevelTraceDescription = "most verbose: every step, including internals"
 	logLevelDebugDescription = "verbose: detailed diagnostic information"
 	logLevelInfoDescription  = "default: high-level progress messages"
 	logLevelWarnDescription  = "quiet: only warnings and errors"
 	logLevelErrorDescription = "quietest: only errors"
 )
 
+// getLogLevel returns the levels worth suggesting, most verbose first. "trace" is still accepted
+// -- config.RootFlagLogLevelTrace keeps working, and the e2e fixtures use it -- but it is not
+// offered, because the logger maps it to Debug: suggesting it as "most verbose" promised a level
+// above debug that does not exist.
 func getLogLevel() []string {
 	return []string{
-		fmt.Sprintf("%s\t%s", config.RootFlagLogLevelTrace, logLevelTraceDescription),
 		fmt.Sprintf("%s\t%s", config.RootFlagLogLevelDebug, logLevelDebugDescription),
 		fmt.Sprintf("%s\t%s", config.RootFlagLogLevelInfo, logLevelInfoDescription),
 		fmt.Sprintf("%s\t%s", config.RootFlagLogLevelWarn, logLevelWarnDescription),

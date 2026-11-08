@@ -36,12 +36,12 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
   -h, --help[=true|false]                       help for publish
-      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
   -k, --key string                              Path to public key file for validating signed packages
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
       --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
-      --signing-key string                      Private key for signing or re-signing packages with a new key. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
+      --signing-key string                      Private key for signing or re-signing: a path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md.
       --signing-key-pass string                 Password to the private key used for publishing packages
       --tag string                              The tag to be used in the OCI reference for the package in the registry
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
@@ -54,7 +54,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
 ```
       --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 ```
 

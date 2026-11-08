@@ -71,7 +71,7 @@ func newPackageSignCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackageFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageSignFlagSigningKeyPass)
-	cmd.Flags().StringVarP(&o.output, "output", "o", "", zlang.CmdPackageSignFlagOutput)
+	cmd.Flags().StringVarP(&o.output, "output", "o", "", lang.CmdPackageSignFlagOutput)
 	cmd.Flags().BoolVar(&o.overwrite, "overwrite", false, zlang.CmdPackageSignFlagOverwrite)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", resolvedConfig.DistroOpts.PublicKey, zlang.CmdPackageSignFlagKey)
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {

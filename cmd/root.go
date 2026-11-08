@@ -215,8 +215,9 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
 
-	// Last, so that it reaches every command and subcommand registered above.
+	// Last, so that they reach every command and subcommand registered above.
 	tagUsageArgs(rootCmd)
+	registerUsageTemplate(rootCmd)
 
 	return rootCmd
 }
