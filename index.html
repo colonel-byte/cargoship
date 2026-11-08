@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-575c7b0e.js";
+            window.path_to_searchindex_js = "searchindex-43f38244.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-717413a5.js"></script>
@@ -509,6 +509,34 @@ metadata:
 </table>
 </div>
 <p>Everything cargoship writes itself - <code>cargoship inventory from-ansible</code>, the Ansible collection, the OpenTofu provider, the generated example packages - now emits the new spelling. No removal date is set for the old one; when one is, it will be announced in a release before it lands.</p>
+<h2 id="exit-codes"><a class="header" href="#exit-codes">Exit Codes</a></h2>
+<p>Cargoship is usually driven from a script on the management node, so a failure needs to say what kind of failure it was. Every command uses the same codes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Code</th><th>Meaning</th><th>Worth retrying?</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0</code></td><td>Success</td><td>–</td></tr>
+<tr><td><code>1</code></td><td>A failure that is none of the below - a phase that ran and did not finish, an unrecognised command</td><td>Not on its own; read the error</td></tr>
+<tr><td><code>2</code></td><td>The invocation is wrong: an unknown flag, a bad flag value, the wrong number of arguments</td><td>No - the command line needs fixing</td></tr>
+<tr><td><code>3</code></td><td>A file cargoship was pointed at is invalid: it fails its schema, or a config file has an undefined key</td><td>No - the file needs fixing</td></tr>
+<tr><td><code>4</code></td><td>A host-changing command was run without <code>--confirm</code>. Nothing was touched</td><td>Yes, with <code>--confirm</code> or <code>--dry-run</code></td></tr>
+<tr><td><code>5</code></td><td>The fleet could not be reached or would not accept the credentials. No phase did any work</td><td><strong>Yes</strong> - this is the one safe to retry unattended</td></tr>
+<tr><td><code>130</code></td><td>Interrupted with <code>SIGINT</code>, following the conventional <code>128 + signal</code></td><td>Yes</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>5</code> is the code worth branching on. It means cargoship stopped at the connection, so nothing on any host changed and a retry starts from the same state - unlike <code>1</code>, which can mean a run stopped partway through and left a fleet mid-upgrade.</p>
+<pre><code class="language-bash">cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cluster.yaml --confirm
+case $? in
+  0) ;;                                        # done
+  5) echo "fleet unreachable, will retry" ;;   # safe to run again unattended
+  4) echo "refusing to change hosts without --confirm" ;;
+  *) echo "failed; read the receipt before retrying" ;;
+esac
+</code></pre>
+<p>These numbers are a compatibility promise. A new classification gets a new code; an existing one is not repurposed.</p>
 <hr>
 <h2 id="development-and-build-workflows"><a class="header" href="#development-and-build-workflows">Development and Build Workflows</a></h2>
 <p>Task automation is built using <strong>Mage</strong>, which drives builds, tests and code generation with the host Go toolchain.</p>

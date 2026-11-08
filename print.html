@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-575c7b0e.js";
+            window.path_to_searchindex_js = "searchindex-43f38244.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-717413a5.js"></script>
@@ -507,6 +507,34 @@ metadata:
 </table>
 </div>
 <p>Everything cargoship writes itself - <code>cargoship inventory from-ansible</code>, the Ansible collection, the OpenTofu provider, the generated example packages - now emits the new spelling. No removal date is set for the old one; when one is, it will be announced in a release before it lands.</p>
+<h2 id="exit-codes"><a class="header" href="#exit-codes">Exit Codes</a></h2>
+<p>Cargoship is usually driven from a script on the management node, so a failure needs to say what kind of failure it was. Every command uses the same codes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Code</th><th>Meaning</th><th>Worth retrying?</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0</code></td><td>Success</td><td>–</td></tr>
+<tr><td><code>1</code></td><td>A failure that is none of the below - a phase that ran and did not finish, an unrecognised command</td><td>Not on its own; read the error</td></tr>
+<tr><td><code>2</code></td><td>The invocation is wrong: an unknown flag, a bad flag value, the wrong number of arguments</td><td>No - the command line needs fixing</td></tr>
+<tr><td><code>3</code></td><td>A file cargoship was pointed at is invalid: it fails its schema, or a config file has an undefined key</td><td>No - the file needs fixing</td></tr>
+<tr><td><code>4</code></td><td>A host-changing command was run without <code>--confirm</code>. Nothing was touched</td><td>Yes, with <code>--confirm</code> or <code>--dry-run</code></td></tr>
+<tr><td><code>5</code></td><td>The fleet could not be reached or would not accept the credentials. No phase did any work</td><td><strong>Yes</strong> - this is the one safe to retry unattended</td></tr>
+<tr><td><code>130</code></td><td>Interrupted with <code>SIGINT</code>, following the conventional <code>128 + signal</code></td><td>Yes</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>5</code> is the code worth branching on. It means cargoship stopped at the connection, so nothing on any host changed and a retry starts from the same state - unlike <code>1</code>, which can mean a run stopped partway through and left a fleet mid-upgrade.</p>
+<pre><code class="language-bash">cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cluster.yaml --confirm
+case $? in
+  0) ;;                                        # done
+  5) echo "fleet unreachable, will retry" ;;   # safe to run again unattended
+  4) echo "refusing to change hosts without --confirm" ;;
+  *) echo "failed; read the receipt before retrying" ;;
+esac
+</code></pre>
+<p>These numbers are a compatibility promise. A new classification gets a new code; an existing one is not repurposed.</p>
 <hr>
 <h2 id="development-and-build-workflows"><a class="header" href="#development-and-build-workflows">Development and Build Workflows</a></h2>
 <p>Task automation is built using <strong>Mage</strong>, which drives builds, tests and code generation with the host Go toolchain.</p>
@@ -1858,7 +1886,7 @@ zarf package inspect images ./zarf-package-rke2-content-amd64.tar.zst
 <p>A template with no <code>.tmpl</code> suffix renders to its own name, so <code>--out</code> has to name a directory other than the one the templates are in - rendering a template onto itself is refused rather than silently overwriting it, as is two templates whose output names collide.</p>
 <p>Every template in one invocation renders against the same merged values, which is the point of passing more than one. A package’s <a href="#package-values">values file and its schema</a> sit beside its definition rather than inside it, so a value that has to agree between the two - a chart name the definition maps and the schema enumerates - is written once and used in both:</p>
 <pre><code class="language-bash">cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -t ./values.schema.json.tmpl \
-  -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+  --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 </code></pre>
 <h2 id="the-values-files"><a class="header" href="#the-values-files">The Values Files</a></h2>
 <p>A values file is YAML holding a mapping, and it reaches the template as the template’s own context - not under <code>.Values</code>. A file setting <code>version: 1.36.4-k3s1</code> is addressed as <code>{{ .version }}</code>.</p>
@@ -1873,7 +1901,7 @@ images:
 version: 1.36.4-k3s1
 binarySHA: 0f7a...
 </code></pre>
-<pre><code class="language-bash">cargoship dev render -t ./distro.yaml.tmpl -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+<pre><code class="language-bash">cargoship dev render -t ./distro.yaml.tmpl --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 </code></pre>
 <p>A values file must be <code>.yaml</code> or <code>.yml</code>, and its top level must be a mapping - values are addressed by key, and a document that is a list or a bare scalar has no keys to address. An empty file is fine.</p>
 <h2 id="what-a-template-may-call"><a class="header" href="#what-a-template-may-call">What a Template May Call</a></h2>
@@ -1906,11 +1934,11 @@ binarySHA: 0f7a...
 <p>The same applies to a <code>{{- if }}</code> block meant for build time. This is what the shipped example templates do - see <code>rke2-distro.yaml.tmpl</code> in <a href="https://github.com/colonel-byte/cargoship/tree/main/magefiles/templates"><code>magefiles/templates/</code></a> for a flavor that drives a chart from values this way.</p>
 <h2 id="mistakes-it-catches-and-one-it-does-not"><a class="header" href="#mistakes-it-catches-and-one-it-does-not">Mistakes It Catches, and One It Does Not</a></h2>
 <p>A value path that resolves to nothing is an error, not a placeholder in the output. Go templates print <code>&lt;no value&gt;</code> for a key the values do not set, which would otherwise ship a definition carrying that literal string:</p>
-<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl -f ./v1.36.4.yaml -o ./out
+<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl --values ./v1.36.4.yaml -o ./out
 ERR rendering ./distro.yaml.tmpl: template "..." resolved a missing key to "&lt;no value&gt;"
 </code></pre>
 <p>An output named <code>distro.yaml</code> is then checked against the package schema, and <strong>nothing is written unless it passes</strong> - so a failed render leaves no half-finished definition on disk to be mistaken for a good one:</p>
-<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl -f ./broken.yaml -o ./out
+<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl --values ./broken.yaml -o ./out
 ERR distro.yaml does not match the package schema:
   spec.config: Additional property images is not allowed
 </code></pre>
@@ -1920,7 +1948,7 @@ ERR distro.yaml does not match the package schema:
 <p>Because the inputs are files, a line of releases is a shell loop and nothing more:</p>
 <pre><code class="language-bash">for v in 1.36.3-k3s1 1.36.4-k3s1 1.37.1-k3s1; do
   cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl \
-    -f ./common.yaml -f "./versions/$v.yaml" -o "./packages/$v"
+    --values ./common.yaml --values "./versions/$v.yaml" -o "./packages/$v"
 done
 </code></pre>
 <p>Each directory is then a package source <code>create</code> takes:</p>
@@ -3740,7 +3768,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --allow-unmanaged-nodes[=true|false]   Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
   -a, --architecture string                  Architecture for OCI images and Zarf packages
   -c, --concurrency int                      Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string                        Config file used to bootstrap a cluster.
+  -f, --config string                        Config file used to bootstrap a cluster.
       --confirm[=true|false]                 Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run[=true|false]                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -F, --firewall[=true|false]                Whether to update every host node's firewall configuration.
@@ -3805,7 +3833,7 @@ $ cargoship create ./distro-defs --reproducible
 </code></pre>
 <h3 id="options-2"><a class="header" href="#options-2">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
-  -c, --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
+      --confirm[=true|false]                    Build the package without asking for confirmation first.
       --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Repeatable, and comma-separated values are accepted: several stores are read as one, which is what a multi-architecture build needs when each zarf package carries a single architecture. Content no store holds still comes from its declared source, so a partial store works. A file is taken from a store only when the definition declares a shasum for it.
       --file-override strings                   Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
   -h, --help[=true|false]                       help for create
@@ -3890,7 +3918,7 @@ $ cargoship dev apply ./distro-defs --config ./inventory.yaml --content-store ./
       --allow-unmanaged-nodes[=true|false]      Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string                           Config file used to bootstrap a cluster.
+  -f, --config string                           Config file used to bootstrap a cluster.
       --confirm[=true|false]                    Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Repeatable, and comma-separated values are accepted: several stores are read as one, which is what a multi-architecture build needs when each zarf package carries a single architecture. Content no store holds still comes from its declared source, so a partial store works. A file is taken from a store only when the definition declares a shasum for it.
       --dry-run[=true|false]                    Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
@@ -4017,7 +4045,7 @@ $ cargoship dev redact-receipt ./apply-20260928-143000.json -o ./share.json
 $ cargoship dev render --template ./distro.yaml.tmpl --values ./v1.36.4.yaml --out ./packages/v1.36.4
 
 # Render a definition and the values file beside it together
-$ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+$ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 
 </code></pre>
 <h3 id="options-7"><a class="header" href="#options-7">Options</a></h3>
@@ -4025,7 +4053,7 @@ $ cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -f ./common.y
       --no-validate[=true|false]   Write a rendered distro.yaml without checking it against the package schema first.
   -o, --out string                 Directory to write the rendered files to. Created if it does not exist. (default ".")
   -t, --template stringArray       Template to render, repeatable. Each one is written to the --out directory under its own name with '.tmpl' dropped.
-  -f, --values stringArray         YAML file holding the values every template renders against, repeatable. Merged in the order given, later files winning.
+      --values stringArray         YAML file holding the values every template renders against, repeatable. Merged in the order given, later files winning.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-6"><a class="header" href="#options-inherited-from-parent-commands-6">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
@@ -4115,7 +4143,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
       --allow-downgrade[=true|false]      Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
   -a, --architecture string               Architecture for OCI images and Zarf packages
   -c, --concurrency int                   Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string                     Config file used to bootstrap a cluster.
+  -f, --config string                     Config file used to bootstrap a cluster.
       --confirm[=true|false]              Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run[=true|false]              Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help[=true|false]                 help for engine-config-sync
@@ -4366,7 +4394,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
 <h3 id="options-15"><a class="header" href="#options-15">Options</a></h3>
 <pre><code>  -a, --architecture string     Architecture for OCI images and Zarf packages
   -c, --concurrency int         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string           Config file used to bootstrap a cluster.
+  -f, --config string           Config file used to bootstrap a cluster.
       --confirm[=true|false]    Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run[=true|false]    Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -F, --firewall[=true|false]   Whether to update every host node's firewall configuration.
@@ -4415,7 +4443,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
 </code></pre>
 <h3 id="options-16"><a class="header" href="#options-16">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
-  -c, --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
+      --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
   -h, --help[=true|false]                       help for publish
       --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                              Path to public key file for validating signed packages
@@ -4513,7 +4541,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 </code></pre>
 <h3 id="options-18"><a class="header" href="#options-18">Options</a></h3>
 <pre><code>  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string             Config file used to bootstrap a cluster.
+  -f, --config string             Config file used to bootstrap a cluster.
       --confirm[=true|false]      Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
       --dry-run[=true|false]      Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.

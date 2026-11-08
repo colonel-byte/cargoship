@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-575c7b0e.js";
+            window.path_to_searchindex_js = "../searchindex-43f38244.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-717413a5.js"></script>
@@ -206,7 +206,7 @@
 <p>A template with no <code>.tmpl</code> suffix renders to its own name, so <code>--out</code> has to name a directory other than the one the templates are in - rendering a template onto itself is refused rather than silently overwriting it, as is two templates whose output names collide.</p>
 <p>Every template in one invocation renders against the same merged values, which is the point of passing more than one. A package’s <a href="package-values.html">values file and its schema</a> sit beside its definition rather than inside it, so a value that has to agree between the two - a chart name the definition maps and the schema enumerates - is written once and used in both:</p>
 <pre><code class="language-bash">cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -t ./values.schema.json.tmpl \
-  -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+  --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 </code></pre>
 <h2 id="the-values-files"><a class="header" href="#the-values-files">The Values Files</a></h2>
 <p>A values file is YAML holding a mapping, and it reaches the template as the template’s own context - not under <code>.Values</code>. A file setting <code>version: 1.36.4-k3s1</code> is addressed as <code>{{ .version }}</code>.</p>
@@ -221,7 +221,7 @@ images:
 version: 1.36.4-k3s1
 binarySHA: 0f7a...
 </code></pre>
-<pre><code class="language-bash">cargoship dev render -t ./distro.yaml.tmpl -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+<pre><code class="language-bash">cargoship dev render -t ./distro.yaml.tmpl --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 </code></pre>
 <p>A values file must be <code>.yaml</code> or <code>.yml</code>, and its top level must be a mapping - values are addressed by key, and a document that is a list or a bare scalar has no keys to address. An empty file is fine.</p>
 <h2 id="what-a-template-may-call"><a class="header" href="#what-a-template-may-call">What a Template May Call</a></h2>
@@ -254,11 +254,11 @@ binarySHA: 0f7a...
 <p>The same applies to a <code>{{- if }}</code> block meant for build time. This is what the shipped example templates do - see <code>rke2-distro.yaml.tmpl</code> in <a href="https://github.com/colonel-byte/cargoship/tree/main/magefiles/templates"><code>magefiles/templates/</code></a> for a flavor that drives a chart from values this way.</p>
 <h2 id="mistakes-it-catches-and-one-it-does-not"><a class="header" href="#mistakes-it-catches-and-one-it-does-not">Mistakes It Catches, and One It Does Not</a></h2>
 <p>A value path that resolves to nothing is an error, not a placeholder in the output. Go templates print <code>&lt;no value&gt;</code> for a key the values do not set, which would otherwise ship a definition carrying that literal string:</p>
-<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl -f ./v1.36.4.yaml -o ./out
+<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl --values ./v1.36.4.yaml -o ./out
 ERR rendering ./distro.yaml.tmpl: template "..." resolved a missing key to "&lt;no value&gt;"
 </code></pre>
 <p>An output named <code>distro.yaml</code> is then checked against the package schema, and <strong>nothing is written unless it passes</strong> - so a failed render leaves no half-finished definition on disk to be mistaken for a good one:</p>
-<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl -f ./broken.yaml -o ./out
+<pre><code class="language-console">$ cargoship dev render -t ./distro.yaml.tmpl --values ./broken.yaml -o ./out
 ERR distro.yaml does not match the package schema:
   spec.config: Additional property images is not allowed
 </code></pre>
@@ -268,7 +268,7 @@ ERR distro.yaml does not match the package schema:
 <p>Because the inputs are files, a line of releases is a shell loop and nothing more:</p>
 <pre><code class="language-bash">for v in 1.36.3-k3s1 1.36.4-k3s1 1.37.1-k3s1; do
   cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl \
-    -f ./common.yaml -f "./versions/$v.yaml" -o "./packages/$v"
+    --values ./common.yaml --values "./versions/$v.yaml" -o "./packages/$v"
 done
 </code></pre>
 <p>Each directory is then a package source <code>create</code> takes:</p>

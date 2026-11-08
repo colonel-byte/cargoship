@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-575c7b0e.js";
+            window.path_to_searchindex_js = "../searchindex-43f38244.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-717413a5.js"></script>
@@ -216,7 +216,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --allow-unmanaged-nodes[=true|false]   Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
   -a, --architecture string                  Architecture for OCI images and Zarf packages
   -c, --concurrency int                      Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string                        Config file used to bootstrap a cluster.
+  -f, --config string                        Config file used to bootstrap a cluster.
       --confirm[=true|false]                 Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run[=true|false]                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -F, --firewall[=true|false]                Whether to update every host node's firewall configuration.
