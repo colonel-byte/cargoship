@@ -138,7 +138,7 @@ func (hosts Hosts) Each(ctx context.Context, filters ...func(context.Context, *H
 func (hosts Hosts) ParallelEach(ctx context.Context, filters ...func(context.Context, *Host) error) error {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	var errors []string
+	var failures []error
 
 	for _, filter := range filters {
 		for _, h := range hosts {
@@ -147,13 +147,13 @@ func (hosts Hosts) ParallelEach(ctx context.Context, filters ...func(context.Con
 				defer wg.Done()
 				if err := ctx.Err(); err != nil {
 					mu.Lock()
-					errors = append(errors, fmt.Sprintf("error from context: %v", err))
+					failures = append(failures, fmt.Errorf("error from context: %w", err))
 					mu.Unlock()
 					return
 				}
 				if err := filter(ctx, h); err != nil {
 					mu.Lock()
-					errors = append(errors, fmt.Sprintf("%s: %s", h.String(), err.Error()))
+					failures = append(failures, fmt.Errorf("%s: %w", h.String(), err))
 					mu.Unlock()
 				}
 			}(h)
@@ -161,12 +161,32 @@ func (hosts Hosts) ParallelEach(ctx context.Context, filters ...func(context.Con
 		wg.Wait()
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("failed on %d hosts:\n - %s", len(errors), strings.Join(errors, "\n - "))
+	if len(failures) > 0 {
+		return &HostsError{failures: failures}
 	}
 
 	return nil
 }
+
+// HostsError reports the hosts a parallel run failed on. It keeps each host's error wrapped rather
+// than formatted into a string, so that errors.Is and errors.As still reach what a phase returned
+// -- a caller deciding an exit code, or any other caller testing for a sentinel, cannot do that
+// through a flattened message.
+type HostsError struct {
+	failures []error
+}
+
+// Error renders one line per failing host.
+func (e *HostsError) Error() string {
+	parts := make([]string, 0, len(e.failures))
+	for _, f := range e.failures {
+		parts = append(parts, f.Error())
+	}
+	return fmt.Sprintf("failed on %d hosts:\n - %s", len(e.failures), strings.Join(parts, "\n - "))
+}
+
+// Unwrap exposes every host's error to errors.Is and errors.As.
+func (e *HostsError) Unwrap() []error { return e.failures }
 
 // BatchedParallelEach runs each filter on every host in parallel, in groups of batchSize hosts. It completes one group before it starts the next.
 // It stops and returns the error if ctx is canceled or a group returns an error.

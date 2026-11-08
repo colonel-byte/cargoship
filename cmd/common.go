@@ -210,7 +210,8 @@ func requireConfirm(confirm, dryRun bool) error {
 	if confirm || dryRun {
 		return nil
 	}
-	return fmt.Errorf("this changes every host in the cluster configuration; pass --%s to proceed, or --%s to see what it would do", InstallConfirm, InstallDryRun)
+	return fmt.Errorf("%w: this changes every host in the cluster configuration; pass --%s to proceed, or --%s to see what it would do",
+		ErrConfirmRequired, InstallConfirm, InstallDryRun)
 }
 
 // checkClusterConfig reports a --config that names a file nothing can be read from, without
