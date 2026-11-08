@@ -288,6 +288,26 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 
 Before creating or updating a pull request description, read [`.github/pull_request_template.md`](.github/pull_request_template.md) and follow the format rules in [`.github/AGENTS.md`](.github/AGENTS.md#writing-a-pull-request-description).
 
+### Naming the branches in a stacked PR
+
+Every branch in a stack is named `stack/<n>-<2-3 word header>`:
+
+```
+stack/1-color-tty
+stack/2-strict-config
+stack/3-verify-flags
+```
+
+**`<n>` counts within the stack, from 1.** It is the layer's position, bottom to top, so a nine-layer stack runs `stack/1-...` to `stack/9-...` and the next stack starts again at `stack/1-...`. A stack is self-contained; the number says where a branch sits in its own chain and nothing about any other work.
+
+This is the part worth stating, because the repository's history reads the other way. `stack/11-k3s-oci-example`, `stack/12-image-source-per-platform` and `stack/13-repeatable-content-store` ran consecutively across more than one effort, so the numbering looks like a running counter and the obvious next move is to carry on from the highest one seen. That is wrong - it couples unrelated stacks to each other, and it means a branch name cannot be read without knowing the repository's whole branch history. `stack/14-color-tty` through `stack/22-help-discovery` were opened that way; they are the last ones numbered like that.
+
+**`<2-3 word header>`** is the layer's concern in kebab case, not a sentence: `exit-codes`, `flag-shorthands`, `phase-progress`. Two or three words, matching the one-sentence description the layer should already have - a layer whose concern will not fit in three words is usually two layers. Do not restate the stack's topic in every branch; the chain supplies that.
+
+Because the number restarts, two live stacks can both hold a `stack/1-`, and uniqueness rests entirely on the header - `stack/1-role-parameter-gating` and `stack/1-color-tty` coexist happily. Pick a header that names this layer's concern and the clash does not arise; `gh stack add` fails outright on a branch that already exists, so a collision is loud rather than silent.
+
+Names are used verbatim by `gh stack add`, so there is nothing to correct afterwards. Renaming a branch once its PR is open is not worth it: `gh stack` tracks the chain by branch, so the fix is to delete the stack and re-open it, which discards any review already left on it.
+
 ## Tracking work in issues
 
 Work here is tracked in issues on the main repository, [`colonel-byte/cargoship`](https://github.com/colonel-byte/cargoship). Before starting a task, check for a related issue - someone may already have filed it, or filed something that overlaps enough to change the approach:
