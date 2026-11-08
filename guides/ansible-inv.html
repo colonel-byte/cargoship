@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2d9393e6.js";
+            window.path_to_searchindex_js = "../searchindex-ed3147eb.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-74e20e70.js"></script>
+        <script src="../toc-717413a5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -296,6 +296,39 @@ cargoship_profile_spec:
 <h3 id="misspelled-variables-are-errors"><a class="header" href="#misspelled-variables-are-errors">Misspelled variables are errors</a></h3>
 <p>A variable under the <code>cargoship_</code> prefix that cargoship does not read is an error, and so is an unknown key inside one of the structured variables. Ansible has no notion of a variable belonging to anyone, so a misspelled <code>cargoship_profil</code> would otherwise sit in <code>hostvars</code> looking set and doing nothing, and a misspelled key would be dropped on the way in. A misspelled variable and an unset one are indistinguishable at install time, which is too late to find out.</p>
 <p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
+<p>That error arrives at install time, which is the latest useful moment rather than the earliest. The section below moves it into the editor.</p>
+<h2 id="editor-completion-for-host-and-group-variables"><a class="header" href="#editor-completion-for-host-and-group-variables">Editor completion for host and group variables</a></h2>
+<p>Cargoship publishes a JSON Schema for the variables above, so an editor completes them as you type and reports a misspelling on the line that holds it. It is the same arrangement the <a href="setup-inv.html">inventory guide</a> describes for a <code>Cluster</code> document, pointed at a different file.</p>
+<pre><code class="language-sh">cargoship schema hostvars -o ./cargoship-hostvars.schema.json
+</code></pre>
+<p>The schema is served out of the binary, so this needs no network – which is the point, on a management node that has none. Then reference it from the top of each <code>host_vars</code> or <code>group_vars</code> file:</p>
+<pre><code class="language-yaml">---
+# yaml-language-server: $schema=../../cargoship-hostvars.schema.json
+cargoship_profile: infra
+cargoship_profile_spec:
+  engine:
+    taints:
+      - adrp.xyz/infra=true:NoSchedule
+</code></pre>
+<p>Each variable is typed against the field it configures, so <code>cargoship_host</code> completes as a host configuration, <code>cargoship_profile_spec</code> as a profile, and <code>cargoship_bastion</code> as an SSH block – the same definitions the cluster schema publishes. A misspelled <code>cargoship_profil</code>, or a <code>cargoship_host_key</code> that cargoship has never read, is reported as <code>Property cargoship_profil is not allowed</code> rather than surviving to install time.</p>
+<p>Variables belonging to other roles are left alone. A <code>host_vars</code> file legitimately carries settings for everything in the play, so anything outside the <code>cargoship_</code> and <code>ansible_</code> names above is accepted without comment. Only a key under the <code>cargoship_</code> prefix that cargoship does not read is refused, which is the same rule the translation applies, moved earlier.</p>
+<h3 id="where-the-schema-file-may-live-and-where-it-must-not"><a class="header" href="#where-the-schema-file-may-live-and-where-it-must-not">Where the schema file may live, and where it must not</a></h3>
+<p><strong>Do not put the <code>.json</code> file inside an inventory directory.</strong> Ansible’s <code>yaml_valid_extensions</code> includes <code>.json</code> by default, and two of the three obvious placements break – one of them silently.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Location</th><th>What Ansible does with it</th></tr>
+</thead>
+<tbody>
+<tr><td>Beside the inventory, outside it</td><td>Nothing. This is the one to use.</td></tr>
+<tr><td>The inventory root, next to <code>hosts.yml</code></td><td>Parses it as an <strong>inventory source</strong>. A schema’s top-level keys become groups, so you get a group named <code>properties</code> and warnings like <code>Skipping '$schema' as this is not a valid group definition</code>.</td></tr>
+<tr><td>A flat <code>host_vars/</code> or <code>group_vars/</code> directory</td><td>Nothing. The vars plugin matches files by entity name, and no host is called <code>cargoship-hostvars.schema</code>. Safe, but it is safe by accident – a file named after a host would be read as its variables.</td></tr>
+<tr><td>A per-host directory, <code>host_vars/&lt;hostname&gt;/</code></td><td><strong>Loads it as variables, silently.</strong> Ansible reads every file in a per-host directory, so <code>$schema</code>, <code>type</code>, <code>properties</code> and <code>$defs</code> all become variables on that host. There is no warning.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The last row is the one worth remembering. Cargoship itself is unharmed – the action plugin forwards only <code>ansible_</code> and <code>cargoship_</code> names, so the junk never reaches the module, and nothing in the generated inventory changes – but every other role in the play sees those variables, and nothing anywhere says so.</p>
+<p>Keep the schema out of the inventory entirely and reference it by relative path. The example inventory does this: <code>ansible/examples/inventories/fleet/host_vars/kw03.yml</code> points five levels up at the repository’s own <code>schema/</code> directory.</p>
 <h2 id="checking-the-result"><a class="header" href="#checking-the-result">Checking the result</a></h2>
 <p>The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.</p>
 <pre><code class="language-sh">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml

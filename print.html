@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2d9393e6.js";
+            window.path_to_searchindex_js = "searchindex-ed3147eb.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-74e20e70.js"></script>
+        <script src="toc-717413a5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1154,6 +1154,39 @@ cargoship_profile_spec:
 <h3 id="misspelled-variables-are-errors"><a class="header" href="#misspelled-variables-are-errors">Misspelled variables are errors</a></h3>
 <p>A variable under the <code>cargoship_</code> prefix that cargoship does not read is an error, and so is an unknown key inside one of the structured variables. Ansible has no notion of a variable belonging to anyone, so a misspelled <code>cargoship_profil</code> would otherwise sit in <code>hostvars</code> looking set and doing nothing, and a misspelled key would be dropped on the way in. A misspelled variable and an unset one are indistinguishable at install time, which is too late to find out.</p>
 <p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
+<p>That error arrives at install time, which is the latest useful moment rather than the earliest. The section below moves it into the editor.</p>
+<h2 id="editor-completion-for-host-and-group-variables"><a class="header" href="#editor-completion-for-host-and-group-variables">Editor completion for host and group variables</a></h2>
+<p>Cargoship publishes a JSON Schema for the variables above, so an editor completes them as you type and reports a misspelling on the line that holds it. It is the same arrangement the <a href="#inventory-configuration-guide">inventory guide</a> describes for a <code>Cluster</code> document, pointed at a different file.</p>
+<pre><code class="language-sh">cargoship schema hostvars -o ./cargoship-hostvars.schema.json
+</code></pre>
+<p>The schema is served out of the binary, so this needs no network – which is the point, on a management node that has none. Then reference it from the top of each <code>host_vars</code> or <code>group_vars</code> file:</p>
+<pre><code class="language-yaml">---
+# yaml-language-server: $schema=../../cargoship-hostvars.schema.json
+cargoship_profile: infra
+cargoship_profile_spec:
+  engine:
+    taints:
+      - adrp.xyz/infra=true:NoSchedule
+</code></pre>
+<p>Each variable is typed against the field it configures, so <code>cargoship_host</code> completes as a host configuration, <code>cargoship_profile_spec</code> as a profile, and <code>cargoship_bastion</code> as an SSH block – the same definitions the cluster schema publishes. A misspelled <code>cargoship_profil</code>, or a <code>cargoship_host_key</code> that cargoship has never read, is reported as <code>Property cargoship_profil is not allowed</code> rather than surviving to install time.</p>
+<p>Variables belonging to other roles are left alone. A <code>host_vars</code> file legitimately carries settings for everything in the play, so anything outside the <code>cargoship_</code> and <code>ansible_</code> names above is accepted without comment. Only a key under the <code>cargoship_</code> prefix that cargoship does not read is refused, which is the same rule the translation applies, moved earlier.</p>
+<h3 id="where-the-schema-file-may-live-and-where-it-must-not"><a class="header" href="#where-the-schema-file-may-live-and-where-it-must-not">Where the schema file may live, and where it must not</a></h3>
+<p><strong>Do not put the <code>.json</code> file inside an inventory directory.</strong> Ansible’s <code>yaml_valid_extensions</code> includes <code>.json</code> by default, and two of the three obvious placements break – one of them silently.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Location</th><th>What Ansible does with it</th></tr>
+</thead>
+<tbody>
+<tr><td>Beside the inventory, outside it</td><td>Nothing. This is the one to use.</td></tr>
+<tr><td>The inventory root, next to <code>hosts.yml</code></td><td>Parses it as an <strong>inventory source</strong>. A schema’s top-level keys become groups, so you get a group named <code>properties</code> and warnings like <code>Skipping '$schema' as this is not a valid group definition</code>.</td></tr>
+<tr><td>A flat <code>host_vars/</code> or <code>group_vars/</code> directory</td><td>Nothing. The vars plugin matches files by entity name, and no host is called <code>cargoship-hostvars.schema</code>. Safe, but it is safe by accident – a file named after a host would be read as its variables.</td></tr>
+<tr><td>A per-host directory, <code>host_vars/&lt;hostname&gt;/</code></td><td><strong>Loads it as variables, silently.</strong> Ansible reads every file in a per-host directory, so <code>$schema</code>, <code>type</code>, <code>properties</code> and <code>$defs</code> all become variables on that host. There is no warning.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The last row is the one worth remembering. Cargoship itself is unharmed – the action plugin forwards only <code>ansible_</code> and <code>cargoship_</code> names, so the junk never reaches the module, and nothing in the generated inventory changes – but every other role in the play sees those variables, and nothing anywhere says so.</p>
+<p>Keep the schema out of the inventory entirely and reference it by relative path. The example inventory does this: <code>ansible/examples/inventories/fleet/host_vars/kw03.yml</code> points five levels up at the repository’s own <code>schema/</code> directory.</p>
 <h2 id="checking-the-result"><a class="header" href="#checking-the-result">Checking the result</a></h2>
 <p>The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.</p>
 <pre><code class="language-sh">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
@@ -5094,11 +5127,11 @@ $ cargoship version -o json
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="cluster-1"><a href="#cluster-1" class="header">cluster</a></h1>
+<h1 id="ansible-hostvars"><a href="#ansible-hostvars" class="header">ansible-hostvars</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cluster-configuration"><a class="header" href="#cluster-configuration">Cluster configuration</a></h2>
-<p>is the root object of a cluster configuration document.</p>
-<p>Rendered from <code>schema/cluster-v1alpha1-schema.json</code>.</p>
+<h2 id="ansible-host-variables"><a class="header" href="#ansible-host-variables">Ansible host variables</a></h2>
+<p>is the set of Ansible variables cargoship reads for one host, as a type, so that a JSON Schema can be generated from it and an editor can complete and check a host_vars or group_vars file.</p>
+<p>Rendered from <code>schema/ansible-hostvars-schema.json</code>.</p>
 <div class="schema-table">
 <div class="table-wrapper">
 <table>
@@ -5106,59 +5139,21 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>apiVersion</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the API group and version of this configuration document. One of <code>colonel-byte.dev/v1alpha1</code>, <code>zarf.dev/v1alpha1</code>.</td></tr>
-<tr><td><code>kind</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the document type. The value must be Cluster, or ZarfCluster on a document written before the move to colonel-byte.dev. One of <code>Cluster</code>, <code>ZarfCluster</code>.</td></tr>
-<tr><td><code>metadata</code></td><td><a href="#metadata">Metadata</a></td><td>yes</td><td></td><td>holds identifying information for the cluster.</td></tr>
-<tr><td><code>spec</code></td><td><a href="#spec">Spec</a></td><td>yes</td><td></td><td>holds the configuration and hosts for the cluster.</td></tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<h3 id="ageencryption"><a class="header" href="#ageencryption">AgeEncryption</a></h3>
-<p>records the age recipients a document’s credentials were encrypted to.</p>
-<div class="schema-table">
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>lastModified</code></td><td><code>string</code></td><td>no</td><td></td><td>is when cargoship last rewrote the credentials in this document, in RFC 3339.</td></tr>
-<tr><td><code>recipients</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the age public keys cargoship encrypted to, in the order they were given. An SSH key keeps its authorized_keys comment, since that is the part that says whose key it is.</td></tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<h3 id="config"><a class="header" href="#config">Config</a></h3>
-<p>holds cluster-wide configuration.</p>
-<div class="schema-table">
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>loadbalancer</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the hostname clients use to reach the cluster control plane.</td></tr>
-<tr><td><code>profiles</code></td><td>map[string]<a href="#profiles">Profiles</a></td><td>no</td><td></td><td>maps a profile name to host and engine overrides that a host can select.</td></tr>
-<tr><td><code>registries</code></td><td>array of <a href="#registries">Registries</a></td><td>no</td><td></td><td>lists the container registries the cluster uses.</td></tr>
-<tr><td><code>values</code></td><td>object</td><td>no</td><td></td><td>overrides the values the distro package was built with. It is the same<br>nested structure the package ships, addressed by the same dotted paths, and it<br>must still satisfy the package’s values schema. Keys the package does not<br>define are kept, so a cluster can carry values a later package version reads.</td></tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<h3 id="encryption"><a class="header" href="#encryption">Encryption</a></h3>
-<p>records how the credentials in a document were encrypted.</p>
-<div class="schema-table">
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>age</code></td><td><a href="#ageencryption">AgeEncryption</a></td><td>no</td><td></td><td>records the age recipients this document’s credentials were encrypted to. Nothing verifies this list and nothing can: an age header carries no recipient identifier, so editing it changes what the file claims and not a byte of what it holds.</td></tr>
+<tr><td><code>ansible_host</code></td><td><code>string</code></td><td>no</td><td></td><td>Address cargoship opens the SSH connection to. Defaults to the name the inventory knows the host by, which is the common shape.</td></tr>
+<tr><td><code>ansible_port</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>Port cargoship connects on. Defaults to 22.</td></tr>
+<tr><td><code>ansible_ssh_private_key_file</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to the SSH private key cargoship authenticates with.</td></tr>
+<tr><td><code>ansible_user</code></td><td><code>string</code></td><td>no</td><td></td><td>User cargoship connects as. Defaults to root.</td></tr>
+<tr><td><code>cargoship_bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Jump host cargoship reaches this node through. Cargoship does not parse ansible_ssh_common_args, so an inventory that reaches the fleet through a bastion for Ansible’s own sake has to say so again here.</td></tr>
+<tr><td><code>cargoship_environment</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>Shell environment cargoship sets on the host, as a map of variable name to value.</td></tr>
+<tr><td><code>cargoship_files</code></td><td>array of <a href="#files">Files</a></td><td>no</td><td></td><td>Each entry is a file cargoship uploads to the host: src is a path on the management node, dst the path on the node.</td></tr>
+<tr><td><code>cargoship_host</code></td><td><a href="#hostconfig">HostConfig</a></td><td>no</td><td></td><td>Ports cargoship opens on this node, and the firewall rules it applies there.</td></tr>
+<tr><td><code>cargoship_hostname</code></td><td><code>string</code></td><td>no</td><td></td><td>What the node calls itself, when that is not the name the inventory knows it by. Defaults to the inventory hostname.</td></tr>
+<tr><td><code>cargoship_node_labels</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>Kubernetes node labels applied to this node. A host setting this replaces its group’s rather than adding to it.</td></tr>
+<tr><td><code>cargoship_node_taints</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>Kubernetes node taints applied to this node. A host setting this replaces its group’s rather than adding to it.</td></tr>
+<tr><td><code>cargoship_private_address</code></td><td><code>string</code></td><td>no</td><td></td><td>Address the cluster uses between nodes, when it is not the one cargoship would discover. A node with two interfaces is the usual reason.</td></tr>
+<tr><td><code>cargoship_private_interface</code></td><td><code>string</code></td><td>no</td><td></td><td>Interface the cluster uses between nodes, when it is not the one cargoship would discover.</td></tr>
+<tr><td><code>cargoship_profile</code></td><td><code>string</code></td><td>no</td><td></td><td>Name of the profile this host selects. Defaults to the host’s role, which is what makes the node-role.kubernetes.io/&lt;profile&gt; label say something.</td></tr>
+<tr><td><code>cargoship_profile_spec</code></td><td><a href="#profiles">Profiles</a></td><td>no</td><td></td><td>Body of the profile this host selects, declared beside the selection. A profile defined twice with different bodies is an error naming both sources.</td></tr>
 </tbody>
 </table>
 </div>
@@ -5210,8 +5205,8 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>egress</code></td><td><a href="#firewallzone">FirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic to.</td></tr>
-<tr><td><code>ingress</code></td><td><a href="#firewallzone">FirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic from.</td></tr>
+<tr><td><code>Egress</code></td><td><a href="#firewallzone">FirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic to.</td></tr>
+<tr><td><code>Ingress</code></td><td><a href="#firewallzone">FirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic from.</td></tr>
 <tr><td><code>ports</code></td><td>array of <a href="#firewallport">FirewallPort</a></td><td>no</td><td></td><td>lists the ports this policy allows.</td></tr>
 <tr><td><code>target</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the action taken on traffic that matches the policy. One of <code>CONTINUE</code>, <code>ACCEPT</code>, <code>REJECT</code>, <code>DROP</code>.</td></tr>
 </tbody>
@@ -5267,34 +5262,7 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the firewalld zone.</td></tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<h3 id="host"><a class="header" href="#host">Host</a></h3>
-<p>is a remote connection to a node</p>
-<div class="schema-table">
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>engine</code></td><td><a href="#hostengine">HostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides for this node.</td></tr>
-<tr><td><code>environment</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps environment variables cargoship sets on the host.</td></tr>
-<tr><td><code>files</code></td><td>array of <a href="#files">Files</a></td><td>no</td><td></td><td>lists files cargoship uploads to the host.</td></tr>
-<tr><td><code>host</code></td><td><a href="#hostconfig">HostConfig</a></td><td>no</td><td></td><td>holds the host-level configuration overrides for this node.</td></tr>
-<tr><td><code>hostname</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered name of the node.</td></tr>
-<tr><td><code>localhost</code></td><td><code>boolean</code></td><td>no</td><td></td><td></td></tr>
-<tr><td><code>openSSH</code></td><td><a href="#opensshconfig">OpenSSHConfig</a></td><td>no</td><td></td><td></td></tr>
-<tr><td><code>privateAddress</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered private address of the node.</td></tr>
-<tr><td><code>privateInterface</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered private interface of the node.</td></tr>
-<tr><td><code>profile</code></td><td><code>string</code></td><td>no</td><td></td><td>selects a profile by name from the cluster config’s Profiles map.</td></tr>
-<tr><td><code>role</code></td><td><code>string</code></td><td>yes</td><td></td><td>sets the node role when cargoship adds this host to the cluster. It must be controller or worker. One of <code>controller</code>, <code>worker</code>.</td></tr>
-<tr><td><code>ssh</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td></td></tr>
-<tr><td><code>winRM</code></td><td><a href="#winrmconfig">WinRMConfig</a></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>Name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the firewalld zone.</td></tr>
 </tbody>
 </table>
 </div>
@@ -5349,6 +5317,301 @@ $ cargoship version -o json
 </div>
 </div>
 
+<h3 id="optionarguments"><a class="header" href="#optionarguments">OptionArguments</a></h3>
+<h3 id="profiles"><a class="header" href="#profiles">Profiles</a></h3>
+<p>holds the host and engine overrides for one profile.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>concurrency</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>limits how many hosts using this profile cargoship processes at once, e.g.<br>draining, upgrading, initializing, or uninstalling. It accepts a fixed count (“1”) or a<br>percentage of the hosts sharing this profile (“25%”). Empty falls back to the phase’s<br>default concurrency.</td></tr>
+<tr><td><code>engine</code></td><td><a href="#hostengine">HostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides applied to a host that selects this profile.</td></tr>
+<tr><td><code>host</code></td><td><a href="#hostconfig">HostConfig</a></td><td>no</td><td></td><td>holds the configuration overrides applied to a host that selects this profile.</td></tr>
+<tr><td><code>inherit</code></td><td><code>string</code></td><td>no</td><td></td><td>names another profile this one starts from. The settings here win, and anything this profile leaves empty is taken from the named one, which may itself inherit. Without it a cluster whose profiles differ in one field each has to spell every one of them out in full, which is how a profiles block grows faster than the fleet does.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="sshconfig"><a class="header" href="#sshconfig">SSHConfig</a></h3>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host (IP or hostname)</td></tr>
+<tr><td><code>bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Optional bastion host</td></tr>
+<tr><td><code>ignoreSSHConfig</code></td><td><code>boolean</code></td><td>no</td><td></td><td>Do not read ~/.ssh/config or the system ssh_config for this host</td></tr>
+<tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH private key</td></tr>
+<tr><td><code>options</code></td><td><a href="#optionarguments">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
+<tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td><code>22.0</code></td><td>SSH port (default 22)</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td><code>root</code></td><td>User to log in as</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="cluster-1"><a href="#cluster-1" class="header">cluster</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cluster-configuration"><a class="header" href="#cluster-configuration">Cluster configuration</a></h2>
+<p>is the root object of a cluster configuration document.</p>
+<p>Rendered from <code>schema/cluster-v1alpha1-schema.json</code>.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>apiVersion</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the API group and version of this configuration document. One of <code>colonel-byte.dev/v1alpha1</code>, <code>zarf.dev/v1alpha1</code>.</td></tr>
+<tr><td><code>kind</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the document type. The value must be Cluster, or ZarfCluster on a document written before the move to colonel-byte.dev. One of <code>Cluster</code>, <code>ZarfCluster</code>.</td></tr>
+<tr><td><code>metadata</code></td><td><a href="#metadata">Metadata</a></td><td>yes</td><td></td><td>holds identifying information for the cluster.</td></tr>
+<tr><td><code>spec</code></td><td><a href="#spec">Spec</a></td><td>yes</td><td></td><td>holds the configuration and hosts for the cluster.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="ageencryption"><a class="header" href="#ageencryption">AgeEncryption</a></h3>
+<p>records the age recipients a document’s credentials were encrypted to.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>lastModified</code></td><td><code>string</code></td><td>no</td><td></td><td>is when cargoship last rewrote the credentials in this document, in RFC 3339.</td></tr>
+<tr><td><code>recipients</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the age public keys cargoship encrypted to, in the order they were given. An SSH key keeps its authorized_keys comment, since that is the part that says whose key it is.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="config"><a class="header" href="#config">Config</a></h3>
+<p>holds cluster-wide configuration.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>loadbalancer</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the hostname clients use to reach the cluster control plane.</td></tr>
+<tr><td><code>profiles</code></td><td>map[string]<a href="#profiles-1">Profiles</a></td><td>no</td><td></td><td>maps a profile name to host and engine overrides that a host can select.</td></tr>
+<tr><td><code>registries</code></td><td>array of <a href="#registries">Registries</a></td><td>no</td><td></td><td>lists the container registries the cluster uses.</td></tr>
+<tr><td><code>values</code></td><td>object</td><td>no</td><td></td><td>overrides the values the distro package was built with. It is the same<br>nested structure the package ships, addressed by the same dotted paths, and it<br>must still satisfy the package’s values schema. Keys the package does not<br>define are kept, so a cluster can carry values a later package version reads.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="encryption"><a class="header" href="#encryption">Encryption</a></h3>
+<p>records how the credentials in a document were encrypted.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>age</code></td><td><a href="#ageencryption">AgeEncryption</a></td><td>no</td><td></td><td>records the age recipients this document’s credentials were encrypted to. Nothing verifies this list and nothing can: an age header carries no recipient identifier, so editing it changes what the file claims and not a byte of what it holds.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="files-1"><a class="header" href="#files-1">Files</a></h3>
+<p>defines a file to write to a host.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>data</code></td><td><code>string</code></td><td>no</td><td></td><td>holds inline content for the file, as an alternative to Source.</td></tr>
+<tr><td><code>dst</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path on the host where cargoship writes the file.</td></tr>
+<tr><td><code>dstDir</code></td><td><code>string</code></td><td>no</td><td></td><td>is the directory on the host where cargoship writes the file.</td></tr>
+<tr><td><code>group</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the file group on the host.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the file in the cluster configuration.</td></tr>
+<tr><td><code>perm</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the file mode cargoship applies on the host.</td></tr>
+<tr><td><code>src</code></td><td><code>string</code></td><td>no</td><td></td><td>is the local path or URL cargoship reads the file from.</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the file owner on the host.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="firewallconfig-1"><a class="header" href="#firewallconfig-1">FirewallConfig</a></h3>
+<p>is the backend-neutral firewall configuration for a node.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rules</code></td><td>array of <a href="#firewallrule-1">FirewallRule</a></td><td>no</td><td></td><td>lists the firewall rules cargoship applies to the node.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="firewallpolicyconfig-1"><a class="header" href="#firewallpolicyconfig-1">FirewallPolicyConfig</a></h3>
+<p>configures a firewalld policy that opens ports from one zone to another.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>egress</code></td><td><a href="#firewallzone-1">FirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic to.</td></tr>
+<tr><td><code>ingress</code></td><td><a href="#firewallzone-1">FirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic from.</td></tr>
+<tr><td><code>ports</code></td><td>array of <a href="#firewallport-1">FirewallPort</a></td><td>no</td><td></td><td>lists the ports this policy allows.</td></tr>
+<tr><td><code>target</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the action taken on traffic that matches the policy. One of <code>CONTINUE</code>, <code>ACCEPT</code>, <code>REJECT</code>, <code>DROP</code>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="firewallport-1"><a class="header" href="#firewallport-1">FirewallPort</a></h3>
+<p>defines a port allowed through the firewalld policy.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>port</code></td><td><code>string</code> or <code>integer</code></td><td>yes</td><td></td><td>is the port number, or port range, cargoship opens.</td></tr>
+<tr><td><code>protocol</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the type of allowed traffic. One of <code>tcp</code>, <code>udp</code>, <code>sctp</code>, <code>dccp</code>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="firewallrule-1"><a class="header" href="#firewallrule-1">FirewallRule</a></h3>
+<p>is a single backend-neutral firewall rule.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>action</code></td><td><code>string</code></td><td>yes</td><td></td><td>is what cargoship does with traffic that matches the rule. One of <code>allow</code>, <code>deny</code>, <code>reject</code>.</td></tr>
+<tr><td><code>destination</code></td><td><code>string</code></td><td>no</td><td></td><td>is the address or CIDR the traffic goes to.</td></tr>
+<tr><td><code>direction</code></td><td><code>string</code></td><td>no</td><td><code>in</code></td><td>selects which traffic the rule matches. It defaults to in. One of <code>in</code>, <code>out</code>, <code>forward</code>.</td></tr>
+<tr><td><code>egress</code></td><td><code>string</code></td><td>no</td><td></td><td>names where forward traffic leaves. It is a zone on firewalld hosts and an<br>interface on ufw hosts. It applies to forward rules only.</td></tr>
+<tr><td><code>ingress</code></td><td><code>string</code></td><td>no</td><td></td><td>names where forward traffic enters. It is a zone on firewalld hosts and an<br>interface on ufw hosts. It applies to forward rules only.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the rule. Cargoship uses it to name the artifacts it writes on the<br>node, so it must be unique within a host. Cargoship generates one when it is empty.</td></tr>
+<tr><td><code>port</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>is the port number, or inclusive port range, the rule matches.</td></tr>
+<tr><td><code>protocol</code></td><td><code>string</code></td><td>no</td><td></td><td>is the type of traffic the rule matches. One of <code>tcp</code>, <code>udp</code>, <code>sctp</code>, <code>dccp</code>.</td></tr>
+<tr><td><code>source</code></td><td><code>string</code></td><td>no</td><td></td><td>is the address or CIDR the traffic comes from.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="firewallzone-1"><a class="header" href="#firewallzone-1">FirewallZone</a></h3>
+<p>is the name of either the ingress or egress zone for a policy.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the firewalld zone.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="host"><a class="header" href="#host">Host</a></h3>
+<p>is a remote connection to a node</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>engine</code></td><td><a href="#hostengine-1">HostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides for this node.</td></tr>
+<tr><td><code>environment</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps environment variables cargoship sets on the host.</td></tr>
+<tr><td><code>files</code></td><td>array of <a href="#files-1">Files</a></td><td>no</td><td></td><td>lists files cargoship uploads to the host.</td></tr>
+<tr><td><code>host</code></td><td><a href="#hostconfig-1">HostConfig</a></td><td>no</td><td></td><td>holds the host-level configuration overrides for this node.</td></tr>
+<tr><td><code>hostname</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered name of the node.</td></tr>
+<tr><td><code>localhost</code></td><td><code>boolean</code></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>openSSH</code></td><td><a href="#opensshconfig">OpenSSHConfig</a></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>privateAddress</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered private address of the node.</td></tr>
+<tr><td><code>privateInterface</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered private interface of the node.</td></tr>
+<tr><td><code>profile</code></td><td><code>string</code></td><td>no</td><td></td><td>selects a profile by name from the cluster config’s Profiles map.</td></tr>
+<tr><td><code>role</code></td><td><code>string</code></td><td>yes</td><td></td><td>sets the node role when cargoship adds this host to the cluster. It must be controller or worker. One of <code>controller</code>, <code>worker</code>.</td></tr>
+<tr><td><code>ssh</code></td><td><a href="#sshconfig-1">SSHConfig</a></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>winRM</code></td><td><a href="#winrmconfig">WinRMConfig</a></td><td>no</td><td></td><td></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="hostconfig-1"><a class="header" href="#hostconfig-1">HostConfig</a></h3>
+<p>defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>firewall</code></td><td><a href="#firewallconfig-1">FirewallConfig</a></td><td>no</td><td></td><td>holds the backend-neutral firewall rules cargoship renders onto whichever<br>firewall the node runs, firewalld, ufw, or nftables.</td></tr>
+<tr><td><code>policy</code></td><td>map[string]<a href="#firewallpolicyconfig-1">FirewallPolicyConfig</a></td><td>no</td><td></td><td>maps a policy name to a firewalld policy that allows traffic from one interface to another.<br>It is firewalld-only; prefer forward rules under <code>firewall.rules</code> for new configuration.</td></tr>
+<tr><td><code>ports</code></td><td>array of <a href="#hostport-1">HostPort</a></td><td>no</td><td></td><td>lists the ports and protocols cargoship opens on the node.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="hostengine-1"><a class="header" href="#hostengine-1">HostEngine</a></h3>
+<p>defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>labels</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps Kubernetes node label keys to their values.</td></tr>
+<tr><td><code>taints</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the Kubernetes node taints cargoship applies to the node.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="hostport-1"><a class="header" href="#hostport-1">HostPort</a></h3>
+<p>is a port cargoship opens on the public side of the firewall.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>port</code></td><td><code>string</code> or <code>integer</code></td><td>yes</td><td></td><td>is the port number, or port range, cargoship opens.</td></tr>
+<tr><td><code>protocol</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the type of allowed traffic. One of <code>tcp</code>, <code>udp</code>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
 <h3 id="hosts"><a class="header" href="#hosts">Hosts</a></h3>
 <p>is an ordered list of hosts that cargoship manages together.</p>
 <h3 id="metadata"><a class="header" href="#metadata">Metadata</a></h3>
@@ -5379,7 +5642,7 @@ $ cargoship version -o json
 <tr><td><code>configPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH config file</td></tr>
 <tr><td><code>disableMultiplexing</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td><td>Disable SSH connection multiplexing</td></tr>
 <tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH private key</td></tr>
-<tr><td><code>options</code></td><td><a href="#optionarguments">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
+<tr><td><code>options</code></td><td><a href="#optionarguments-1">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
 <tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td></td><td>Optional SSH port</td></tr>
 <tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>Optional SSH user</td></tr>
 </tbody>
@@ -5387,8 +5650,8 @@ $ cargoship version -o json
 </div>
 </div>
 
-<h3 id="optionarguments"><a class="header" href="#optionarguments">OptionArguments</a></h3>
-<h3 id="profiles"><a class="header" href="#profiles">Profiles</a></h3>
+<h3 id="optionarguments-1"><a class="header" href="#optionarguments-1">OptionArguments</a></h3>
+<h3 id="profiles-1"><a class="header" href="#profiles-1">Profiles</a></h3>
 <p>holds the host and engine overrides for one profile.</p>
 <div class="schema-table">
 <div class="table-wrapper">
@@ -5398,8 +5661,8 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>concurrency</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>limits how many hosts using this profile cargoship processes at once, e.g.<br>draining, upgrading, initializing, or uninstalling. It accepts a fixed count (“1”) or a<br>percentage of the hosts sharing this profile (“25%”). Empty falls back to the phase’s<br>default concurrency.</td></tr>
-<tr><td><code>engine</code></td><td><a href="#hostengine">HostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides applied to a host that selects this profile.</td></tr>
-<tr><td><code>host</code></td><td><a href="#hostconfig">HostConfig</a></td><td>no</td><td></td><td>holds the configuration overrides applied to a host that selects this profile.</td></tr>
+<tr><td><code>engine</code></td><td><a href="#hostengine-1">HostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides applied to a host that selects this profile.</td></tr>
+<tr><td><code>host</code></td><td><a href="#hostconfig-1">HostConfig</a></td><td>no</td><td></td><td>holds the configuration overrides applied to a host that selects this profile.</td></tr>
 <tr><td><code>inherit</code></td><td><code>string</code></td><td>no</td><td></td><td>names another profile this one starts from. The settings here win, and anything this profile leaves empty is taken from the named one, which may itself inherit. Without it a cluster whose profiles differ in one field each has to spell every one of them out in full, which is how a profiles block grows faster than the fleet does.</td></tr>
 </tbody>
 </table>
@@ -5476,7 +5739,7 @@ $ cargoship version -o json
 </div>
 </div>
 
-<h3 id="sshconfig"><a class="header" href="#sshconfig">SSHConfig</a></h3>
+<h3 id="sshconfig-1"><a class="header" href="#sshconfig-1">SSHConfig</a></h3>
 <div class="schema-table">
 <div class="table-wrapper">
 <table>
@@ -5485,10 +5748,10 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host (IP or hostname)</td></tr>
-<tr><td><code>bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Optional bastion host</td></tr>
+<tr><td><code>bastion</code></td><td><a href="#sshconfig-1">SSHConfig</a></td><td>no</td><td></td><td>Optional bastion host</td></tr>
 <tr><td><code>ignoreSshConfig</code></td><td><code>boolean</code></td><td>no</td><td></td><td>Do not read ~/.ssh/config or the system ssh_config for this host</td></tr>
 <tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH private key</td></tr>
-<tr><td><code>options</code></td><td><a href="#optionarguments">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
+<tr><td><code>options</code></td><td><a href="#optionarguments-1">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
 <tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td><code>22.0</code></td><td>SSH port (default 22)</td></tr>
 <tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td><code>root</code></td><td>User to log in as</td></tr>
 </tbody>
@@ -5521,7 +5784,7 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host</td></tr>
-<tr><td><code>bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Optional SSH bastion</td></tr>
+<tr><td><code>bastion</code></td><td><a href="#sshconfig-1">SSHConfig</a></td><td>no</td><td></td><td>Optional SSH bastion</td></tr>
 <tr><td><code>caCertPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to CA certificate</td></tr>
 <tr><td><code>certPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to client certificate</td></tr>
 <tr><td><code>insecure</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td><td>Accept invalid TLS certificates</td></tr>
@@ -5779,7 +6042,7 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>engine</code></td><td>object</td><td>no</td><td></td><td>holds configuration passed through to the distro engine.</td></tr>
-<tr><td><code>files</code></td><td><a href="#files-1">Files</a></td><td>no</td><td></td><td>lists files that cargoship writes to every host, no matter which install method it uses.</td></tr>
+<tr><td><code>files</code></td><td><a href="#files-2">Files</a></td><td>no</td><td></td><td>lists files that cargoship writes to every host, no matter which install method it uses.</td></tr>
 <tr><td><code>imageConfig</code></td><td><a href="#imageconfig">ImageConfig</a></td><td>no</td><td></td><td>holds settings for the images bundled with the package.</td></tr>
 <tr><td><code>manifests</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists on-host paths – each one the Target of a Files entry – that cargoship<br>kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by<br>Files; this is only the marker that says “and apply this one,” e.g. for a CNI a package<br>declares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.</td></tr>
 <tr><td><code>os</code></td><td><a href="#os">OS</a></td><td>no</td><td></td><td>holds settings applied to the host operating system.</td></tr>
@@ -5839,7 +6102,7 @@ $ cargoship version -o json
 </div>
 </div>
 
-<h3 id="files-1"><a class="header" href="#files-1">Files</a></h3>
+<h3 id="files-2"><a class="header" href="#files-2">Files</a></h3>
 <p>is an ordered list of files.</p>
 <h3 id="imageconfig"><a class="header" href="#imageconfig">ImageConfig</a></h3>
 <p>holds settings for the images cargoship writes to a host.</p>
@@ -5897,7 +6160,7 @@ $ cargoship version -o json
 <tbody>
 <tr><td><code>env</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps environment variables cargoship sets on the host.</td></tr>
 <tr><td><code>fapolicyd</code></td><td><code>string</code></td><td>no</td><td></td><td>holds the fapolicyd config file contents cargoship writes to a host.</td></tr>
-<tr><td><code>files</code></td><td><a href="#files-1">Files</a></td><td>no</td><td></td><td>lists files cargoship uploads to a host.</td></tr>
+<tr><td><code>files</code></td><td><a href="#files-2">Files</a></td><td>no</td><td></td><td>lists files cargoship uploads to a host.</td></tr>
 <tr><td><code>kernel</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the kernel modules cargoship enables on the host.</td></tr>
 <tr><td><code>selinux</code></td><td><a href="#selinux">SELinux</a></td><td>no</td><td></td><td>holds the custom SELinux policy cargoship applies to a host.</td></tr>
 <tr><td><code>sysctl</code></td><td>map[string]<code>string</code> or <code>number</code></td><td>no</td><td></td><td>maps sysctl keys to the values cargoship applies to a host.</td></tr>
