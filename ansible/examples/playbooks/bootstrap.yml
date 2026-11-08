@@ -1,0 +1,148 @@
+---
+# Make an already-staged cargoship binary and collection usable by Ansible.
+#
+#   ansible-playbook playbooks/bootstrap.yml \
+#     -e cargoship_binary_src=/mnt/transfer/cargoship \
+#     -e cargoship_collection_src=/mnt/transfer/colonel_byte-cargoship-0.40.0.tar.gz
+#
+# The `.rpm`, `.deb`, and `.apk` packages install the collection and create the module symlinks
+# themselves, and on a management node built from one of those there is nothing to do here. This
+# is for the other way in: the binary and the collection tarball carried across the airlock as two
+# files, with no package manager involved.
+#
+# What has to be true afterwards, and what this playbook arranges:
+#
+#   - cargoship is on PATH, executable.
+#   - the collection is somewhere on Ansible's collections path.
+#   - plugins/modules/ inside it holds five files named cargoship_<action>, each a symlink to the
+#     binary. Ansible resolves a task name to a module file before any plugin of ours is consulted,
+#     so without these the collection reaches nothing. The binary dispatches on the name it is
+#     invoked under: a basename of cargoship_ plus an action it answers as enters module mode, and
+#     anything else is the ordinary CLI.
+#
+# It runs against the management node, which is usually the Ansible controller -- hence
+# `hosts: localhost`. Point it elsewhere with `-e target=mgmt01` if the two are different machines;
+# the tasks use `become` for the system-wide paths and nothing else.
+- name: Make cargoship usable by Ansible
+  hosts: "{{ target | default('localhost') }}"
+  connection: "{{ 'local' if (target | default('localhost')) == 'localhost' else 'ssh' }}"
+  gather_facts: false
+
+  vars:
+    # Where the two staged files are. Both are required: there is no default that could be right,
+    # and guessing one would install whatever happened to be in the way.
+    cargoship_binary_src: ""
+    cargoship_collection_src: ""
+
+    # Where they go. The defaults are the system-wide locations the packages use, which is what
+    # puts the collection on ansible-core's default collections path without configuring anything.
+    # For an unprivileged install, pass ~/.local/bin and ~/.ansible/collections and set
+    # bootstrap_become=false.
+    cargoship_binary_dst: /usr/local/bin/cargoship
+    cargoship_collections_dst: /usr/share/ansible/collections
+    bootstrap_become: true
+
+    # The five actions the binary answers as. One symlink each.
+    cargoship_module_actions:
+      - apply
+      - engine_config_sync
+      - kube_config
+      - prepare
+      - reset
+
+  tasks:
+    - name: Check that both staged files were named
+      ansible.builtin.assert:
+        that:
+          - cargoship_binary_src | length > 0
+          - cargoship_collection_src | length > 0
+        fail_msg: >-
+          Pass -e cargoship_binary_src=<path to the cargoship binary> and
+          -e cargoship_collection_src=<path to the collection tarball or directory>.
+          Both are the files you carried across the airlock.
+
+    - name: Check that the staged binary is there
+      ansible.builtin.stat:
+        path: "{{ cargoship_binary_src }}"
+      register: staged_binary
+
+    - name: Fail if the staged binary is missing
+      ansible.builtin.assert:
+        that:
+          - staged_binary.stat.exists
+        fail_msg: "{{ cargoship_binary_src }} does not exist on {{ inventory_hostname }}."
+
+    - name: Install the binary
+      ansible.builtin.copy:
+        src: "{{ cargoship_binary_src }}"
+        dest: "{{ cargoship_binary_dst }}"
+        mode: "0755"
+        # The binary is already on this machine when the play runs locally, and carrying it over
+        # the connection is pointless either way: it is tens of megabytes and it is what the
+        # airlock transfer already moved.
+        remote_src: true
+      become: "{{ bootstrap_become | bool }}"
+
+    - name: Check that the installed binary runs here
+      ansible.builtin.command:
+        argv:
+          - "{{ cargoship_binary_dst }}"
+          - version
+      # Only to prove the binary runs where it landed, before anything is built on top of it. A
+      # binary for the wrong architecture fails here, which is a better place to find out than
+      # halfway through an apply.
+      changed_when: false
+      register: cargoship_version
+
+    - name: Report the version
+      ansible.builtin.debug:
+        msg: "cargoship {{ cargoship_version.stdout | trim }} at {{ cargoship_binary_dst }}"
+
+    - name: Unpack the collection
+      ansible.builtin.command:
+        argv:
+          - ansible-galaxy
+          - collection
+          - install
+          - "{{ cargoship_collection_src }}"
+          - --collections-path
+          - "{{ cargoship_collections_dst }}"
+          - --force
+      # ansible-galaxy reaches no network here: the argument is a local tarball or directory, which
+      # it installs by unpacking. --force makes the task idempotent in the only sense that matters,
+      # which is that re-running it leaves the same tree.
+      changed_when: true
+      become: "{{ bootstrap_become | bool }}"
+
+    - name: Create the module symlinks
+      ansible.builtin.file:
+        src: "{{ cargoship_binary_dst }}"
+        dest: "{{ cargoship_collections_dst }}/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_{{ item }}"
+        state: link
+        # The binary is installed by the task above, in this same play, so on the first run the
+        # target does not exist when Ansible checks. It does by the time Ansible follows the link.
+        force: true
+      loop: "{{ cargoship_module_actions }}"
+      become: "{{ bootstrap_become | bool }}"
+
+    - name: Check that Ansible can now see the collection
+      ansible.builtin.command:
+        argv:
+          - ansible-doc
+          - --list
+          - colonel_byte.cargoship
+      environment:
+        ANSIBLE_COLLECTIONS_PATH: "{{ cargoship_collections_dst }}"
+      changed_when: false
+      failed_when: false
+      register: collection_visible
+
+    - name: Report what is now installed
+      ansible.builtin.debug:
+        msg: >-
+          cargoship {{ cargoship_version.stdout | trim }} is at {{ cargoship_binary_dst }},
+          the collection is under {{ cargoship_collections_dst }}, and the five module links
+          ({{ cargoship_module_actions | join(', ') }}) point at the binary.
+          {{ 'ansible-doc sees the collection.' if collection_visible.rc == 0
+             else 'ansible-doc did not list it, which is expected when ' ~ cargoship_collections_dst ~
+                  ' is not on your configured collections path -- set ANSIBLE_COLLECTIONS_PATH or collections_path in ansible.cfg.' }}
