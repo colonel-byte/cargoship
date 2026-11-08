@@ -29,26 +29,26 @@ import (
 	"strings"
 
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
-// ReadByteStrict reads a byte array and tries to place it in the provided "destConfig" object
+// ReadByteStrict reads a byte array and tries to place it in the provided "destConfig" object.
+//
+// An unknown key is an error. This reads the cargoship config file, and a misspelled key that is
+// quietly dropped means the setting an operator wrote never takes effect -- which on an air-gapped
+// management node is discovered after the run, not during it. It previously warned and re-parsed
+// leniently, and because the warning went through a throwaway logger built before the real one
+// existed, in practice nothing was printed at all.
+//
+// goccy annotates the returned error with the line and column, so the caller has somewhere to
+// point the operator.
 func ReadByteStrict(data []byte, destConfig any) error {
-	log, err := logger.New(logger.ConfigDefault())
-	if err != nil {
-		return fmt.Errorf("failed to create logger: %w", err)
-	}
-
-	err = goyaml.UnmarshalWithOptions(data, &destConfig, goyaml.Strict())
-	if err != nil {
-		log.Warn("failed strict unmarshalling of YAML", "error", err)
-
-		// Try again with non-strict mode
-		err = goyaml.UnmarshalWithOptions(data, &destConfig)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal YAML at %w", err)
-		}
+	// destConfig, not &destConfig: the callers already pass a pointer, and taking the address of
+	// the interface variable handed goccy a **T to fill. It filled the interface instead of the
+	// struct behind it, so the destination stayed at its zero value and Strict() had no fields to
+	// compare against -- which is why an unknown key never produced an error.
+	if err := goyaml.UnmarshalWithOptions(data, destConfig, goyaml.Strict()); err != nil {
+		return fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
 	return nil
