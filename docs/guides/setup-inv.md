@@ -128,7 +128,32 @@ spec:
             - CriticalOnly=True:NoExecute
 ```
 
-## Target Hosts
+### Inheriting from another profile
+
+A host selects one profile, and a profile's settings apply only where the host left them empty. That means a cluster whose profiles differ in one field each has to spell every one of them out in full, and the `profiles` block grows with the number of combinations rather than with the fleet. `inherit` is how to write the difference instead of the whole:
+
+```yaml
+spec:
+  config:
+    profiles:
+      base:
+        host:
+          ports:
+            - port: "6443"
+              protocol: tcp
+        engine:
+          labels:
+            adrp.xyz/tier: "standard"
+      infra:
+        inherit: base
+        engine:
+          taints:
+            - adrp.xyz/infra=true:NoSchedule
+```
+
+`infra` opens the same port and carries the same label as `base`, because it said nothing about either. It adds a taint. Had it named labels of its own they would have replaced `base`'s entirely rather than being added to -- the same whole-field rule a host's settings follow against a profile's.
+
+A chain may be any length, and the nearest ancestor to set a field is the one that wins. Cargoship folds the chain in when it loads the document, so every phase sees a profile that already carries what it inherits. An `inherit` naming a profile the cluster does not define is refused, and so is a cycle, both naming the profiles involved.
 
 The `.spec.hosts` array is the main body of the inventory. It defines each host node, its connection details, role, and profile:
 

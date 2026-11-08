@@ -586,6 +586,10 @@
         "host": {
           "$ref": "#/$defs/HostConfig",
           "description": "holds the configuration overrides applied to a host that selects this profile."
+        },
+        "inherit": {
+          "description": "names another profile this one starts from. The settings here win, and anything this profile leaves empty is taken from the named one, which may itself inherit. Without it a cluster whose profiles differ in one field each has to spell every one of them out in full, which is how a profiles block grows faster than the fleet does.",
+          "type": "string"
         }
       },
       "type": "object"

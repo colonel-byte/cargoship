@@ -59,6 +59,14 @@ func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions)
 	if err != nil {
 		return v1alpha1.Cluster{}, err
 	}
+
+	// Profiles are folded here, once, so that every phase reads a profile that already carries
+	// what it inherits and none of them has to know inheritance exists.
+	cluster.Spec.Config.Profiles, err = v1alpha1.ResolveProfiles(cluster.Spec.Config.Profiles)
+	if err != nil {
+		return v1alpha1.Cluster{}, fmt.Errorf("%s: %w", conPath.ManifestFile, err)
+	}
+
 	l.Debug("done layout.ClusterDefinition", "duration", time.Since(start))
 	return cluster, nil
 }

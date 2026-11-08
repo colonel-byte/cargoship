@@ -123,6 +123,8 @@ type Config struct {
 
 // Profiles holds the host and engine overrides for one profile.
 type Profiles struct {
+	// Inherit names another profile this one starts from. The settings here win, and anything this profile leaves empty is taken from the named one, which may itself inherit. Without it a cluster whose profiles differ in one field each has to spell every one of them out in full, which is how a profiles block grows faster than the fleet does.
+	Inherit string `json:"inherit,omitempty"`
 	// Host holds the configuration overrides applied to a host that selects this profile.
 	Host HostConfig `json:"host,omitempty"`
 	// Engine holds the node label and taint overrides applied to a host that selects this profile.
