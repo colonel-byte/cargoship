@@ -73,6 +73,7 @@
 
 # Schema
 
+- [ansible-hostvars](schema/ansible-hostvars.md)
 - [cluster](schema/cluster.md)
 - [config](schema/config.md)
 - [distro](schema/distro.md)

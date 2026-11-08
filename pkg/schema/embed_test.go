@@ -24,7 +24,7 @@ import (
 
 func TestKindsAreServable(t *testing.T) {
 	kinds := Kinds()
-	require.Equal(t, []string{"config", "inventory", "package"}, kinds)
+	require.Equal(t, []string{"config", "hostvars", "inventory", "package"}, kinds)
 
 	for _, k := range kinds {
 		t.Run(k, func(t *testing.T) {

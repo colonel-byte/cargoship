@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=../../../../../schema/ansible-hostvars-schema.json
 # ansible_host and cargoship_hostname are different facts and both are kept: the first is where
 # cargoship connects, the second is what the node calls itself. Set the second when the names your
 # inventory uses are aliases that do not match the nodes.

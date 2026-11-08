@@ -1,0 +1,517 @@
+{
+  "$defs": {
+    "Files": {
+      "additionalProperties": false,
+      "description": "defines a file to write to a host.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "data": {
+          "description": "holds inline content for the file, as an alternative to Source.",
+          "type": "string"
+        },
+        "dst": {
+          "description": "is the path on the host where cargoship writes the file.",
+          "type": "string"
+        },
+        "dstDir": {
+          "description": "is the directory on the host where cargoship writes the file.",
+          "type": "string"
+        },
+        "group": {
+          "description": "identifies the file group on the host.",
+          "examples": [
+            "root"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the file in the cluster configuration.",
+          "type": "string"
+        },
+        "perm": {
+          "description": "sets the file mode cargoship applies on the host.",
+          "type": "string"
+        },
+        "src": {
+          "description": "is the local path or URL cargoship reads the file from.",
+          "type": "string"
+        },
+        "user": {
+          "description": "identifies the file owner on the host.",
+          "examples": [
+            "root"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "FirewallConfig": {
+      "additionalProperties": false,
+      "description": "is the backend-neutral firewall configuration for a node.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "rules": {
+          "description": "lists the firewall rules cargoship applies to the node.",
+          "items": {
+            "$ref": "#/$defs/FirewallRule"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "FirewallPolicyConfig": {
+      "additionalProperties": false,
+      "description": "configures a firewalld policy that opens ports from one zone to another.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "Egress": {
+          "$ref": "#/$defs/FirewallZone",
+          "description": "is the zone the policy allows traffic to."
+        },
+        "Ingress": {
+          "$ref": "#/$defs/FirewallZone",
+          "description": "is the zone the policy allows traffic from."
+        },
+        "ports": {
+          "description": "lists the ports this policy allows.",
+          "items": {
+            "$ref": "#/$defs/FirewallPort"
+          },
+          "type": "array"
+        },
+        "target": {
+          "description": "is the action taken on traffic that matches the policy.",
+          "enum": [
+            "CONTINUE",
+            "ACCEPT",
+            "REJECT",
+            "DROP"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "Ingress",
+        "Egress"
+      ],
+      "type": "object"
+    },
+    "FirewallPort": {
+      "additionalProperties": false,
+      "description": "defines a port allowed through the firewalld policy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "port": {
+          "description": "is the port number, or port range, cargoship opens.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of allowed traffic.",
+          "enum": [
+            "tcp",
+            "udp",
+            "sctp",
+            "dccp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "port"
+      ],
+      "type": "object"
+    },
+    "FirewallRule": {
+      "additionalProperties": false,
+      "description": "is a single backend-neutral firewall rule.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "action": {
+          "description": "is what cargoship does with traffic that matches the rule.",
+          "enum": [
+            "allow",
+            "deny",
+            "reject"
+          ],
+          "type": "string"
+        },
+        "destination": {
+          "description": "is the address or CIDR the traffic goes to.",
+          "examples": [
+            "10.42.0.0/16"
+          ],
+          "type": "string"
+        },
+        "direction": {
+          "default": "in",
+          "description": "selects which traffic the rule matches. It defaults to in.",
+          "enum": [
+            "in",
+            "out",
+            "forward"
+          ],
+          "type": "string"
+        },
+        "egress": {
+          "description": "names where forward traffic leaves. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "trusted"
+          ],
+          "type": "string"
+        },
+        "ingress": {
+          "description": "names where forward traffic enters. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "public"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the rule. Cargoship uses it to name the artifacts it writes on the\nnode, so it must be unique within a host. Cargoship generates one when it is empty.",
+          "examples": [
+            "allow-metrics"
+          ],
+          "type": "string"
+        },
+        "port": {
+          "description": "is the port number, or inclusive port range, the rule matches.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of traffic the rule matches.",
+          "enum": [
+            "tcp",
+            "udp",
+            "sctp",
+            "dccp"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "description": "is the address or CIDR the traffic comes from.",
+          "examples": [
+            "10.0.0.0/8"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "type": "object"
+    },
+    "FirewallZone": {
+      "additionalProperties": false,
+      "description": "is the name of either the ingress or egress zone for a policy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "Name": {
+          "description": "identifies the firewalld zone.",
+          "examples": [
+            "trusted",
+            "public"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "Name"
+      ],
+      "type": "object"
+    },
+    "HostConfig": {
+      "additionalProperties": false,
+      "description": "defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "firewall": {
+          "$ref": "#/$defs/FirewallConfig",
+          "description": "holds the backend-neutral firewall rules cargoship renders onto whichever\nfirewall the node runs, firewalld, ufw, or nftables."
+        },
+        "policy": {
+          "additionalProperties": {
+            "$ref": "#/$defs/FirewallPolicyConfig"
+          },
+          "description": "maps a policy name to a firewalld policy that allows traffic from one interface to another.\nIt is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.",
+          "type": "object"
+        },
+        "ports": {
+          "description": "lists the ports and protocols cargoship opens on the node.",
+          "items": {
+            "$ref": "#/$defs/HostPort"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "HostEngine": {
+      "additionalProperties": false,
+      "description": "defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps Kubernetes node label keys to their values.",
+          "type": "object"
+        },
+        "taints": {
+          "description": "lists the Kubernetes node taints cargoship applies to the node.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "HostPort": {
+      "additionalProperties": false,
+      "description": "is a port cargoship opens on the public side of the firewall.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "port": {
+          "description": "is the port number, or port range, cargoship opens.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of allowed traffic.",
+          "enum": [
+            "tcp",
+            "udp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "port"
+      ],
+      "type": "object"
+    },
+    "OptionArguments": {
+      "type": "object"
+    },
+    "Profiles": {
+      "additionalProperties": false,
+      "description": "holds the host and engine overrides for one profile.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "concurrency": {
+          "description": "limits how many hosts using this profile cargoship processes at once, e.g.\ndraining, upgrading, initializing, or uninstalling. It accepts a fixed count (\"1\") or a\npercentage of the hosts sharing this profile (\"25%\"). Empty falls back to the phase's\ndefault concurrency.",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "engine": {
+          "$ref": "#/$defs/HostEngine",
+          "description": "holds the node label and taint overrides applied to a host that selects this profile."
+        },
+        "host": {
+          "$ref": "#/$defs/HostConfig",
+          "description": "holds the configuration overrides applied to a host that selects this profile."
+        },
+        "inherit": {
+          "description": "names another profile this one starts from. The settings here win, and anything this profile leaves empty is taken from the named one, which may itself inherit. Without it a cluster whose profiles differ in one field each has to spell every one of them out in full, which is how a profiles block grows faster than the fleet does.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "SSHConfig": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "Address of the remote host (IP or hostname)",
+          "type": "string"
+        },
+        "bastion": {
+          "$ref": "#/$defs/SSHConfig",
+          "description": "Optional bastion host"
+        },
+        "ignoreSSHConfig": {
+          "description": "Do not read ~/.ssh/config or the system ssh_config for this host",
+          "type": "boolean"
+        },
+        "keyPath": {
+          "description": "Path to SSH private key",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/OptionArguments",
+          "description": "Additional SSH options as ssh_config key-value pairs"
+        },
+        "port": {
+          "default": 22,
+          "description": "SSH port (default 22)",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "user": {
+          "default": "root",
+          "description": "User to log in as",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/colonel-byte/cargoship/internal/ansibleinv/host-vars",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "is the set of Ansible variables cargoship reads for one host, as a type, so that a JSON Schema can be generated from it and an editor can complete and check a host_vars or group_vars file.",
+  "patternProperties": {
+    "^cargoship_(?!bastion$|environment$|files$|host$|hostname$|node_labels$|node_taints$|private_address$|private_interface$|profile$|profile_spec$)": false
+  },
+  "properties": {
+    "ansible_host": {
+      "description": "Address cargoship opens the SSH connection to. Defaults to the name the inventory knows the host by, which is the common shape.",
+      "type": "string"
+    },
+    "ansible_port": {
+      "description": "Port cargoship connects on. Defaults to 22.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "ansible_ssh_private_key_file": {
+      "description": "Path to the SSH private key cargoship authenticates with.",
+      "type": "string"
+    },
+    "ansible_user": {
+      "description": "User cargoship connects as. Defaults to root.",
+      "type": "string"
+    },
+    "cargoship_bastion": {
+      "$ref": "#/$defs/SSHConfig",
+      "description": "Jump host cargoship reaches this node through. Cargoship does not parse ansible_ssh_common_args, so an inventory that reaches the fleet through a bastion for Ansible's own sake has to say so again here."
+    },
+    "cargoship_environment": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Shell environment cargoship sets on the host, as a map of variable name to value.",
+      "type": "object"
+    },
+    "cargoship_files": {
+      "description": "Each entry is a file cargoship uploads to the host: src is a path on the management node, dst the path on the node.",
+      "items": {
+        "$ref": "#/$defs/Files"
+      },
+      "type": "array"
+    },
+    "cargoship_host": {
+      "$ref": "#/$defs/HostConfig",
+      "description": "Ports cargoship opens on this node, and the firewall rules it applies there."
+    },
+    "cargoship_hostname": {
+      "description": "What the node calls itself, when that is not the name the inventory knows it by. Defaults to the inventory hostname.",
+      "type": "string"
+    },
+    "cargoship_node_labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Kubernetes node labels applied to this node. A host setting this replaces its group's rather than adding to it.",
+      "type": "object"
+    },
+    "cargoship_node_taints": {
+      "description": "Kubernetes node taints applied to this node. A host setting this replaces its group's rather than adding to it.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "cargoship_private_address": {
+      "description": "Address the cluster uses between nodes, when it is not the one cargoship would discover. A node with two interfaces is the usual reason.",
+      "type": "string"
+    },
+    "cargoship_private_interface": {
+      "description": "Interface the cluster uses between nodes, when it is not the one cargoship would discover.",
+      "type": "string"
+    },
+    "cargoship_profile": {
+      "description": "Name of the profile this host selects. Defaults to the host's role, which is what makes the node-role.kubernetes.io/\u003cprofile\u003e label say something.",
+      "type": "string"
+    },
+    "cargoship_profile_spec": {
+      "$ref": "#/$defs/Profiles",
+      "description": "Body of the profile this host selects, declared beside the selection. A profile defined twice with different bodies is an error naming both sources."
+    }
+  },
+  "type": "object"
+}

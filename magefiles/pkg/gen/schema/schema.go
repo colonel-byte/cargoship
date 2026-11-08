@@ -26,6 +26,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/internal/ansibleinv"
 	"github.com/colonel-byte/cargoship/types"
 	"github.com/invopop/jsonschema"
 	strcase "github.com/stoewer/go-strcase"
@@ -100,6 +101,18 @@ func Targets() []Target {
 			},
 			DocTitle: "Cluster configuration",
 			DocFile:  "cluster.md",
+		},
+		{
+			SchemaStruct: &ansibleinv.HostVars{},
+			SchemaPath:   "ansible-hostvars-schema.json",
+			StructPath:   []string{"internal", "ansibleinv"},
+			// The keys are Ansible variable names and the json tags already spell them, so the
+			// namer has nothing to convert. lowerCamelCase would mangle the ones it did reach.
+			KeyNamer: func(s string) string {
+				return s
+			},
+			DocTitle: "Ansible host variables",
+			DocFile:  "ansible-hostvars.md",
 		},
 		{
 			SchemaStruct: &types.DistroConfig{},
