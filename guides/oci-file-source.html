@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2b92acd7.js";
+            window.path_to_searchindex_js = "../searchindex-4de0f550.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-aad83525.js"></script>
@@ -258,6 +258,18 @@
       - amd64
 </code></pre>
 <p>The <code>shasum</code> is the <strong>extracted member’s</strong>, not the layer’s - the same rule any <code>extractPath</code> entry follows.</p>
+<p><strong>A container image built <code>FROM scratch</code>.</strong> An image’s layers carry no titles - nothing names the files inside a root filesystem - but a single-layer image is still one archive, and its media type says what the bytes are. So an entry needs no <code>layer</code>, and <code>extractPath</code> names a path inside the rootfs:</p>
+<pre><code class="language-yaml">- source: oci://docker.io/rancher/k3s:v1.37.2-k3s1
+  extractPath: bin/k3s
+  target: /usr/local/bin/k3s
+  executable: true
+  shasum: 83aaf1cd78a0dd78ed398dc7007c73a7e6eabb5184af90224a8cf8c34dbc9a81
+  selector:
+    package: binary
+    arch:
+      - amd64
+</code></pre>
+<p>This works because that image has exactly one layer. An image with several is <strong>refused</strong>, and deliberately: layers of a multi-layer image are overlay diffs, so taking a file out of one of them is not the same as taking it out of the filesystem the image describes - whiteouts and later layers can replace or delete what an earlier one holds. Reading one layer of such an image would be wrong more often than it was right, so cargoship will not guess which.</p>
 <p>An entry naming a layer the artifact does not carry fails and lists the titles it does, so a typo costs one build rather than an afternoon:</p>
 <pre><code class="language-text">ERR failed to create distro package: unable to stage file 0 (crio):
     oci://ghcr.io/cri-o/bundle:d816c7e carries no layer titled "cri-o/bin/conmonrs-typo";
@@ -302,6 +314,28 @@
   target: /usr/local/bin/pinns
 </code></pre>
 <p>Either way, the redirect is recorded in the package’s <code>.build.fileSources</code> beside the declared source, so the package says where each file actually came from.</p>
+<h2 id="what-the-package-records-and-why-it-pins"><a class="header" href="#what-the-package-records-and-why-it-pins">What the Package Records, and Why It Pins</a></h2>
+<p>A tag is mutable. An air-gapped package may be rebuilt a long way from when it was first cut, by which time <code>:v1.37.2-k3s1</code> need not point where it did - so a build resolves the tag once, fetches by the digest it got, and writes both facts down.</p>
+<p><strong>Every <code>oci://</code> entry gets a <code>.build.fileSources</code> record</strong>, redirected or not:</p>
+<pre><code class="language-yaml">build:
+  fileSources:
+    - path: os/0/k3s
+      declared: oci://docker.io/rancher/k3s:v1.37.2-k3s1
+      resolved: oci://docker.io/rancher/k3s@sha256:21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c030dc005e7e88c4332
+      manifestDigest: sha256:bc340b84540f351ae23a1cef63b93d05bab20e12318d8186d60ce127c10d2124
+      layerDigest: sha256:e5c2411b57696ea0a9e7348ff26bdfa2d19c1ac98d60170d3a442e5ba27b6007
+</code></pre>
+<p><code>manifestDigest</code> is the platform manifest the entry’s architecture selected, so two entries sharing a reference record different ones - that is the per-architecture statement. <code>layerDigest</code> is the blob the bytes came out of, which the registry verified them against on fetch.</p>
+<p><strong>The definition inside the package names the digest</strong>, where the one on disk names the tag:</p>
+<pre><code class="language-yaml"># ./distro.yaml, which you maintain
+- source: oci://docker.io/rancher/k3s:v1.37.2-k3s1
+
+# distro.yaml inside the built package
+- source: oci://docker.io/rancher/k3s@sha256:21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c030dc005e7e88c4332
+</code></pre>
+<p>It pins to the digest the <strong>reference</strong> resolved to - the index’s own, where the artifact is an index - so <code>selector.arch</code> goes on doing exactly the job it did for the tag. Rebuilding from the packaged definition therefore resolves what this build resolved, for every architecture, rather than whatever the tag has become.</p>
+<p>A <strong>redirected</strong> entry is left naming its tag. The digest would be just as valid, since a digest is content and a mirror serving the same bytes has the same one, but the reference would then name an internal registry inside an artifact that travels. The override, the mirror and both digests are all in <code>.build.fileSources</code> for anyone auditing what was read.</p>
+<p>One consequence worth knowing: resolving costs a round trip, so a build against a registry makes one per <code>oci://</code> entry even when the layer is already cached. A build from a <code>--content-store</code> makes none - the store answers before the reference is ever resolved.</p>
 <p>Note that <strong><code>--file-override</code> does not apply to an <code>oci://</code> source.</strong> It matches http and https URL prefixes only, so it will silently never fire on one of these entries. A redirect for an OCI reference is a registry override.</p>
 <h2 id="credentials-and-transport"><a class="header" href="#credentials-and-transport">Credentials and Transport</a></h2>
 <p>Registry credentials come from the Docker credential store, the same place every other registry cargoship talks to reads them from - <code>docker login</code> or <code>podman login</code> against the registry is enough. <code>--plain-http</code> and <code>--insecure-skip-tls-verify</code> apply to these fetches too.</p>
