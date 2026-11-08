@@ -675,6 +675,10 @@ func (m *Manager) Run(ctx context.Context) error {
 
 		if c, ok := p.(conditional); ok {
 			if !c.ShouldRun() {
+				// Logged rather than passed over in silence. A run that skips nine of its
+				// phases otherwise shows an unexplained gap in the step numbers, and reading
+				// that as a complete run is the mistake this exists to prevent.
+				l.Info("skipping", "phase", title, "step", fmt.Sprintf("%d/%d", i+1, totalPhases))
 				skipped = append(skipped, p)
 				continue
 			}
@@ -708,7 +712,10 @@ func (m *Manager) Run(ctx context.Context) error {
 			}
 		}
 
-		l.Info("running", "phase", title)
+		// step is the same i+1/totalPhases the heartbeat already records. It was computed on
+		// every run and written only to a status file, which is set on few runs -- so an
+		// operator watching the terminal could not tell phase 3 of 32 from phase 30 of 32.
+		l.Info("running", "phase", title, "step", fmt.Sprintf("%d/%d", i+1, totalPhases))
 
 		if dp, ok := p.(withDryRun); ok && m.DryRun {
 			start := time.Now()

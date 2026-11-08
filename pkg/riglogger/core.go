@@ -35,9 +35,16 @@ import (
 // so rig v2's internal logging is routed through it.
 type rigSlogHandler struct {
 	ctx context.Context //nolint:containedctx // bound once at RigLogger time; rig's slog.Logger has no per-call context plumbing
+	// attrs are those accumulated through WithAttrs, and group is the prefix from WithGroup.
+	// rig attaches the host this way -- log.With(slog.String("host", conn.String())) -- so
+	// discarding them lost the one attribute that makes a 30-host run readable.
+	attrs []slog.Attr
+	group string
 }
 
-// Enabled implements slog.Handler.
+// Enabled implements slog.Handler. It answers true unconditionally and leaves level filtering to
+// the sink: this handler cannot see the level the context logger was configured with, and guessing
+// one here would drop records the --log-file debug handler exists to keep.
 func (rigSlogHandler) Enabled(context.Context, slog.Level) bool {
 	return true
 }
@@ -46,12 +53,23 @@ func (rigSlogHandler) Enabled(context.Context, slog.Level) bool {
 //
 // r's attrs are forwarded as-is rather than flattened into the message: structured sinks like
 // the --log-file JSON handler need the raw key-value pairs, not just a formatted string.
-func (h rigSlogHandler) Handle(ctx context.Context, r slog.Record) error {
-	l := logger.From(ctx)
+func (h rigSlogHandler) Handle(_ context.Context, r slog.Record) error {
+	// h.ctx, not the per-call ctx -- which is why the struct holds one at all. rig builds its
+	// slog.Logger once and calls it with no context plumbing, so the ctx arriving here carries no
+	// logger, and logger.From answers such a context with a discard handler. Reading it meant
+	// every line rig produced was thrown away: no SSH connection detail in the console output and
+	// none in the --log-file debug log either.
+	l := logger.From(h.ctx)
 	msg := r.Message
 
-	args := make([]any, 0, r.NumAttrs())
+	args := make([]any, 0, len(h.attrs)+r.NumAttrs())
+	for _, a := range h.attrs {
+		args = append(args, a)
+	}
 	r.Attrs(func(a slog.Attr) bool {
+		if h.group != "" {
+			a.Key = h.group + "." + a.Key
+		}
 		args = append(args, a)
 		return true
 	})
@@ -69,13 +87,39 @@ func (h rigSlogHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-// WithAttrs implements slog.Handler.
-func (h rigSlogHandler) WithAttrs(_ []slog.Attr) slog.Handler {
+// WithAttrs implements slog.Handler. The returned handler carries attrs in addition to those it
+// already holds, copied into a fresh slice rather than appended in place so that two loggers
+// derived from the same parent cannot scribble over each other's backing array.
+func (h rigSlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	if len(attrs) == 0 {
+		return h
+	}
+	merged := make([]slog.Attr, 0, len(h.attrs)+len(attrs))
+	merged = append(merged, h.attrs...)
+	// Prefixed with the group held right now, the same way Handle prefixes a record's own
+	// attrs. Storing them bare made the two paths disagree: under WithGroup("ssh"), an attr
+	// passed per call came out as ssh.user while the same attr added through With came out as
+	// user. slog's contract is that an attr added after WithGroup belongs to that group.
+	for _, a := range attrs {
+		if h.group != "" {
+			a.Key = h.group + "." + a.Key
+		}
+		merged = append(merged, a)
+	}
+	h.attrs = merged
 	return h
 }
 
-// WithGroup implements slog.Handler.
-func (h rigSlogHandler) WithGroup(_ string) slog.Handler {
+// WithGroup implements slog.Handler. Groups are flattened to a dotted key prefix, because the sink
+// is cargoship's own logger reached through its variadic args, which has no way to open a group.
+func (h rigSlogHandler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
+	if h.group != "" {
+		name = h.group + "." + name
+	}
+	h.group = name
 	return h
 }
 
