@@ -94,14 +94,14 @@ func (p *GatherFacts) investigateHost(ctx context.Context, h *cluster.Host) erro
 		if h.PrivateInterface == "" {
 			if iface, err := h.Configurer.PrivateInterface(h); err == nil {
 				h.PrivateInterface = iface
-				l.Info("discoverd", "host", h, "interface", iface)
+				l.Info("discovered", "host", h, "interface", iface)
 			}
 		}
 
 		if h.PrivateInterface != "" {
 			if addr, err := h.Configurer.PrivateAddress(h, h.PrivateInterface, h.Address()); err == nil {
 				h.PrivateAddress = addr
-				l.Info("discoverd", "host", h, "address", addr)
+				l.Info("discovered", "host", h, "address", addr)
 			}
 		}
 	}

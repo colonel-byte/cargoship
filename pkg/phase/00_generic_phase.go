@@ -52,7 +52,6 @@ var (
 // GenericPhase state
 type GenericPhase struct {
 	manager *Manager
-	wg      sync.WaitGroup
 }
 
 // GetDistro is an accessor to phase Distro
@@ -212,19 +211,54 @@ func (p *GenericPhase) VersionSkewTooGreat(host *cluster.Host, target string) bo
 	return tgt.Major() != cur.Major() || tgt.Minor()-cur.Minor() > 1
 }
 
+// tickerHelper starts a keepalive that reports msg every interval until the returned cancel is
+// called, so a phase that spends twenty minutes inside one remote command still says it is alive.
+//
+// The caller is expected to defer the returned CancelFunc, which is what ends the goroutine and
+// prints the closing line.
 func (p *GenericPhase) tickerHelper(ctx context.Context, msg string, interval time.Duration) (context.CancelFunc, error) {
 	ticker := time.NewTicker(interval)
 	start := time.Now()
-	child, cancel := context.WithTimeout(ctx, p.manager.Timeout)
 
-	p.wg.Add(1)
+	// A zero Timeout means "no deadline", not "already expired". reset and kube-config build
+	// their Manager without SetTimeout -- only apply, prepare and engine-config-sync call it --
+	// so WithTimeout(ctx, 0) handed those runs a context whose deadline had already passed. The
+	// keepalive then ended before its first tick and reported the phase as over the moment it
+	// started: harmless while that was an info line, but once it became a timeout warning a
+	// reset printed seven "timed out ... timeout=0s" lines for work that was just beginning.
+	child, cancel := context.WithCancel(ctx)
+	if p.manager.Timeout > 0 {
+		child, cancel = context.WithTimeout(ctx, p.manager.Timeout)
+	}
+
 	go func() {
+		// Stopped rather than left to the garbage collector: one ticker per phase per run is
+		// not a leak that matters, but it is one that never needed to exist.
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ticker.C:
 				logger.From(child).Info(msg, "time", time.Since(start).Truncate(time.Second))
 			case <-child.Done():
-				logger.From(child).Info(fmt.Sprintf("completed task: %s", msg), "time", time.Since(start).Truncate(time.Second))
+				elapsed := time.Since(start).Truncate(time.Second)
+				// child.Done fires for more than one reason, and this used to report every
+				// one of them as "completed task" -- so a phase that ran out its timeout, or
+				// one cut short by an interrupt, claimed to have finished its work.
+				//
+				// The ordinary case says "finished" rather than "completed task" because this
+				// goroutine cannot know the outcome: the caller defers cancel whether its work
+				// succeeded or failed, so claiming completion overstated what happened.
+				// Whether the phase failed is the manager's to report, and it does.
+				switch {
+				case errors.Is(child.Err(), context.DeadlineExceeded):
+					logger.From(child).Warn(fmt.Sprintf("timed out: %s", msg),
+						"time", elapsed, "timeout", p.manager.Timeout)
+				case errors.Is(context.Cause(ctx), context.Canceled):
+					logger.From(child).Warn(fmt.Sprintf("canceled: %s", msg), "time", elapsed)
+				default:
+					logger.From(child).Info(fmt.Sprintf("finished: %s", msg), "time", elapsed)
+				}
 				return
 			}
 		}
