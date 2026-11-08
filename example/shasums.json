@@ -4855,6 +4855,138 @@
     ],
     "sha256": "fbe479bf9b303fc88bd7c61769687235efa36f684e8ec5e97d45d08669dd1d4d"
   },
+  "oci://docker.io/rancher/k3s:v1.35.0-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.0-k3s1"
+    ],
+    "sha256": "10464930d9bad0c06aef9830e84cd4019c24ed44d5eab594efb7416119097248"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.0-k3s3": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.0-k3s3"
+    ],
+    "sha256": "ee87a9c9105fafb0d99bb0b3efc9cf91ce78fdd5dc1686c65ad612720e3cb3c5"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.1-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.1-k3s1"
+    ],
+    "sha256": "634920385dc89133d80060b3a3b2b547e734d711ef8c050e6b5c6341800d53fd"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.10-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.10-k3s1"
+    ],
+    "sha256": "8262ca99a558dca0c0437443421986480b2359f9118f2371359f88a41514522f"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.2-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.2-k3s1"
+    ],
+    "sha256": "c3184157c3048112bab0c3e17405991da486cb3413511eba23f7650efd70776b"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.3-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.3-k3s1"
+    ],
+    "sha256": "4607083d3cac07e1ccde7317297271d13ed5f60f35a78f33fcef84858a9f1d69"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.4-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.4-k3s1"
+    ],
+    "sha256": "475e036b3fd595472c13ec708c148ffd95459d5f9e40e6df76ba4d5b27098570"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.5-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.5-k3s1"
+    ],
+    "sha256": "2074403abe1bded11ef3dde09d457e13be8e0b64c218b1c4f8269b4565cfbc65"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.6-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.6-k3s1"
+    ],
+    "sha256": "9d6b9c15e8031c1aea7dd7f0cdc019f5e74a23c53b9eada564b7a8dc94efc14c"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.7-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.7-k3s1"
+    ],
+    "sha256": "eb7156a0bf9867ffac1afc6d55f453175b2f6c785627b786540df863014a56e7"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.8-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.8-k3s1"
+    ],
+    "sha256": "59fe491fd3b73204e499e40b325240d85c42c7189c3ae50150d37b78243f3b32"
+  },
+  "oci://docker.io/rancher/k3s:v1.35.9-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.35.9-k3s1"
+    ],
+    "sha256": "ec9868c6a38d4e8c1869832fb5fd1eb8473c39794a0b44d2b952e7ba911951bc"
+  },
+  "oci://docker.io/rancher/k3s:v1.36.0-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.36.0-k3s1"
+    ],
+    "sha256": "38069dc4a22a056f427f4f37c887303697cc817f7735e57dd142e169af7f398f"
+  },
+  "oci://docker.io/rancher/k3s:v1.36.1-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.36.1-k3s1"
+    ],
+    "sha256": "08fdebd14db9ab7d5ea821d5bfa95d02341a6ef886842fcc8d9dfd0e9fa9e0cd"
+  },
+  "oci://docker.io/rancher/k3s:v1.36.2-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.36.2-k3s1"
+    ],
+    "sha256": "6a47cea22c4b834d4ba72c89d291696b79ebe406251f90b446e4dff03513dd87"
+  },
+  "oci://docker.io/rancher/k3s:v1.36.3-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.36.3-k3s1"
+    ],
+    "sha256": "d0f79175794edd9694b4a12bafc5c52ae1977369a2f7cf256264e7bd2dae0be9"
+  },
+  "oci://docker.io/rancher/k3s:v1.36.4-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.36.4-k3s1"
+    ],
+    "sha256": "edad48e12bf81c3a09ac1c05c0c0ffaaa22145980b989d6fae84543a76b83657"
+  },
+  "oci://docker.io/rancher/k3s:v1.36.5-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.36.5-k3s1"
+    ],
+    "sha256": "057cfd5a9d51b89f1f0ee139c28d5d5fdd5aa7ddeac2742a0ba90c6dbc0329bb"
+  },
+  "oci://docker.io/rancher/k3s:v1.36.6-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.36.6-k3s1"
+    ],
+    "sha256": "88d3fac10eb4a429d3c5275f4868fe4b13620f6bbca5bdb5dca0627ac76ae2a0"
+  },
+  "oci://docker.io/rancher/k3s:v1.37.0-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.37.0-k3s1"
+    ],
+    "sha256": "d33b1973401a60410681d66c007f5c3a51d565a7c03608904764aef3321fee4d"
+  },
+  "oci://docker.io/rancher/k3s:v1.37.1-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.37.1-k3s1"
+    ],
+    "sha256": "ca7f37d993d82ef0dcdcfecb2e0e2618ea541dbaffc620c8cedebe01a82acd0d"
+  },
+  "oci://docker.io/rancher/k3s:v1.37.2-k3s1": {
+    "urls": [
+      "oci://docker.io/rancher/k3s:v1.37.2-k3s1"
+    ],
+    "sha256": "21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c030dc005e7e88c4332"
+  },
   "rke2-agent-1.31.14~rke2r1-0.el9.x86_64.rpm": {
     "urls": [
       "https://rpm.rancher.io/rke2/latest/1.31/centos/9/x86_64/rke2-agent-1.31.14~rke2r1-0.el9.x86_64.rpm"
