@@ -143,6 +143,21 @@ func TestHostsParallelEach(t *testing.T) {
 		require.ErrorContains(t, err, "worker")
 	})
 
+	t.Run("keeps each host's error reachable with errors.Is", func(t *testing.T) {
+		// The reason HostsError exists. Errors used to be formatted into strings here, which
+		// read the same but severed the chain -- so a caller testing for a sentinel (Execute,
+		// mapping a failure to a process exit code) could never match one through a parallel
+		// run. Asserting the message alone would not have caught that.
+		sentinel := errors.New("the underlying cause")
+		fn := func(_ context.Context, _ *Host) error {
+			return fmt.Errorf("wrapped: %w", sentinel)
+		}
+		err := hosts.ParallelEach(context.Background(), fn)
+		require.Error(t, err)
+		require.ErrorIs(t, err, sentinel)
+		require.ErrorContains(t, err, "failed on 2 hosts")
+	})
+
 	t.Run("context canceled before filter runs", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()

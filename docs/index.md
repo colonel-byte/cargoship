@@ -463,6 +463,34 @@ Both spellings are accepted, in any combination, and a document using the old on
 
 Everything cargoship writes itself - `cargoship inventory from-ansible`, the Ansible collection, the OpenTofu provider, the generated example packages - now emits the new spelling. No removal date is set for the old one; when one is, it will be announced in a release before it lands.
 
+## Exit Codes
+
+Cargoship is usually driven from a script on the management node, so a failure needs to say what kind of failure it was. Every command uses the same codes:
+
+| Code  | Meaning                                                                                                | Worth retrying?                                    |
+| ----- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `0`   | Success                                                                                                | --                                                 |
+| `1`   | A failure that is none of the below - a phase that ran and did not finish, an unrecognised command     | Not on its own; read the error                     |
+| `2`   | The invocation is wrong: an unknown flag, a bad flag value, the wrong number of arguments              | No - the command line needs fixing                 |
+| `3`   | A file cargoship was pointed at is invalid: it fails its schema, or a config file has an undefined key | No - the file needs fixing                         |
+| `4`   | A host-changing command was run without `--confirm`. Nothing was touched                               | Yes, with `--confirm` or `--dry-run`               |
+| `5`   | The fleet could not be reached or would not accept the credentials. No phase did any work              | **Yes** - this is the one safe to retry unattended |
+| `130` | Interrupted with `SIGINT`, following the conventional `128 + signal`                                   | Yes                                                |
+
+`5` is the code worth branching on. It means cargoship stopped at the connection, so nothing on any host changed and a retry starts from the same state - unlike `1`, which can mean a run stopped partway through and left a fleet mid-upgrade.
+
+```bash
+cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cluster.yaml --confirm
+case $? in
+  0) ;;                                        # done
+  5) echo "fleet unreachable, will retry" ;;   # safe to run again unattended
+  4) echo "refusing to change hosts without --confirm" ;;
+  *) echo "failed; read the receipt before retrying" ;;
+esac
+```
+
+These numbers are a compatibility promise. A new classification gets a new code; an existing one is not repurposed.
+
 ---
 
 ## Development and Build Workflows

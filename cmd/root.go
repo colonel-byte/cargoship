@@ -168,6 +168,15 @@ func NewCargoshipCommand() *cobra.Command {
 		PersistentPreRunE: preRun,
 	}
 
+	// Tag every flag parsing failure -- unknown flag, bad value, missing required flag -- so that
+	// Execute can exit 2 rather than 1. Cobra reports these as plain errors, and they are the
+	// one class a caller can act on without reading the message: the command line is wrong, so
+	// retrying it unchanged cannot help. Inherited by every subcommand.
+	rootCmd.SetFlagErrorFunc(func(c *cobra.Command, err error) error {
+		return fmt.Errorf("%w: %w\n\trun '%s --help' for the flags this command takes",
+			ErrUsage, err, c.CommandPath())
+	})
+
 	for _, g := range groups {
 		rootCmd.AddGroup(g)
 	}
@@ -205,6 +214,9 @@ func NewCargoshipCommand() *cobra.Command {
 	}
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
+
+	// Last, so that it reaches every command and subcommand registered above.
+	tagUsageArgs(rootCmd)
 
 	return rootCmd
 }
@@ -369,8 +381,8 @@ func loadViperConfig() error {
 		// The caller already names the file, so add only what the operator does next. validate
 		// reports every bad key at once where a decode stops at the first, which is one run
 		// instead of one per typo.
-		return fmt.Errorf("%w\n\trun 'cargoship validate --kind config %s' to see every problem in the file",
-			err, v.ConfigFileUsed())
+		return fmt.Errorf("%w: %w\n\trun 'cargoship validate --kind config %s' to see every problem in the file",
+			ErrInvalidInput, err, v.ConfigFileUsed())
 	}
 
 	return nil

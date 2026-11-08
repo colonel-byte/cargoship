@@ -68,11 +68,13 @@ func main() {
 				cancel()
 				continue
 			}
-			os.Exit(1)
+			// A second interrupt means the first did not take. Exit on the same code the
+			// graceful path reports, so a wrapper sees "interrupted" either way.
+			os.Exit(cmd.ExitInterrupted)
 		}
 	}()
 
 	if err := cmd.Execute(ctx); err != nil {
-		os.Exit(1)
+		os.Exit(cmd.ExitCode(err))
 	}
 }
