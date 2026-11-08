@@ -100,6 +100,13 @@ func Translate(in Input, meta ClusterMeta) (*cluster.Cluster, error) {
 		hosts = append(hosts, host)
 	}
 
+	// A profile's body may come from the cluster block or from the hosts that select it. See
+	// collectProfiles for why the second is offered and what happens when the two disagree.
+	profiles, err := collectProfiles(assignments, in.HostVars, meta.Profiles)
+	if err != nil {
+		return nil, err
+	}
+
 	out := &cluster.Cluster{
 		APIVersion: apiVersion,
 		Kind:       documentKind,
@@ -108,7 +115,7 @@ func Translate(in Input, meta ClusterMeta) (*cluster.Cluster, error) {
 			Config: cluster.Config{
 				LoadBalancer: meta.LoadBalancer,
 				Registries:   meta.Registries,
-				Profiles:     meta.Profiles,
+				Profiles:     profiles,
 				Values:       meta.Values,
 			},
 			Hosts: hosts,

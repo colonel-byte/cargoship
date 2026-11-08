@@ -1,4 +1,9 @@
 ---
 cargoship_profile: worker
+
+# The worker profile overrides nothing, so its body is empty. It is still written out, because a
+# profile a host selects has to be one the cluster defines.
+cargoship_profile_spec: {}
+
 cargoship_node_labels:
   adrp.xyz/purpose-worker: "true"

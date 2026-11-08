@@ -52,6 +52,7 @@ const (
 	VarPrivateAddress   = Prefix + "private_address"
 	VarPrivateInterface = Prefix + "private_interface"
 	VarProfile          = Prefix + "profile"
+	VarProfileSpec      = Prefix + "profile_spec"
 )
 
 // The Ansible connection variables cargoship reads. Everything else under ansible_ is ignored:
@@ -76,6 +77,7 @@ var known = []string{
 	VarPrivateAddress,
 	VarPrivateInterface,
 	VarProfile,
+	VarProfileSpec,
 }
 
 // hostFromVars builds one Host from the variables Ansible resolved for it.

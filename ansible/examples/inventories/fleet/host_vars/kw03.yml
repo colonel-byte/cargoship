@@ -11,9 +11,14 @@ cargoship_bastion:
 # A per-host override of the group's port.
 ansible_port: 2222
 
-# A profile the cluster defines, selected by one host rather than by a group. It has to be one of
-# the profiles in the playbook's cluster block.
+# A profile selected by one host rather than by a group, and declared on the same host. This
+# overrides the `worker` profile group_vars/worker.yml selects, body and all, because host
+# variables outrank group ones.
 cargoship_profile: infra
+cargoship_profile_spec:
+  engine:
+    taints:
+      - adrp.xyz/infra=true:NoSchedule
 
 # Labels and taints set on a host replace the group's rather than adding to them.
 cargoship_node_labels:

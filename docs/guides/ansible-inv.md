@@ -78,6 +78,7 @@ Connection details come from the Ansible variables you already set. Everything c
 | `ssh.bastion`      | `cargoship_bastion`            | unset                  |
 | `hostname`         | `cargoship_hostname`           | the inventory hostname |
 | `profile`          | `cargoship_profile`            | the host's role        |
+| (a profile's body) | `cargoship_profile_spec`       | unset                  |
 | `privateAddress`   | `cargoship_private_address`    | unset                  |
 | `privateInterface` | `cargoship_private_interface`  | unset                  |
 | `engine.labels`    | `cargoship_node_labels`        | unset                  |
@@ -112,6 +113,28 @@ cargoship_bastion:
 ```
 
 A bastion is declared as its own variable rather than read out of `ansible_ssh_common_args`. Cargoship does not parse SSH argument strings, and an inventory that reaches its fleet through a jump host via `ansible_ssh_common_args` has to say so again here.
+
+### A profile can be declared where it is selected
+
+`cargoship_profile` says which profile a host takes, and `cargoship_profile_spec` says what that profile is. The second is optional: a profile's body may also be written in the playbook's cluster block, under `profiles`, which is where it had to go before.
+
+Writing it here is what keeps the two together. `cargoship_profile` belongs in the `group_vars` of the group that carries the profile, so without the spec the selection is in one file and the body is in another, and adding a node group means editing both. With it, `group_vars/controller.yml` is the whole truth about controllers:
+
+```yaml
+cargoship_profile: control
+cargoship_profile_spec:
+  host:
+    ports:
+      - port: "6443"
+        protocol: tcp
+  engine:
+    labels:
+      adrp.xyz/purpose-control: "true"
+```
+
+The spec takes the shape the inventory schema documents for `.spec.config.profiles[<name>]` -- `host`, `engine`, and `concurrency` -- and it lands under the name the host selects. A host that names no profile takes one named for its role, so a spec in `group_vars/worker.yml` with no `cargoship_profile` beside it defines the `worker` profile.
+
+A profile defined twice with different bodies is an error naming both sources, whether the second is another host or the cluster block. There is no correct body to pick, and picking one silently would configure nodes in a way nobody wrote down -- the same reason a host in two groups that disagree about its role is refused rather than resolved. Two definitions that agree are not a conflict, so repeating a spec across several `group_vars` files is safe, and so is leaving a copy in the cluster block while one is being moved out of it.
 
 ### Misspelled variables are errors
 
