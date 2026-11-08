@@ -69,8 +69,13 @@ type archiveExtractor struct {
 	// root is the directory extractions are written under, one subdirectory per archive.
 	root string
 
-	mu   sync.Mutex
+	mu sync.Mutex
+	// done is the extraction each archive produced, so a second member is read rather than
+	// extracted again.
 	done map[archiveKey]*extraction
+	// digests memoises each archive's content digest, so resolving one costs one reference
+	// resolution per archive rather than one per entry.
+	digests map[archiveKey]string
 }
 
 // extraction is one archive's extracted members, and whatever went wrong producing them.
@@ -84,9 +89,10 @@ type extraction struct {
 // is still only walked once.
 func newArchiveExtractor(root string, lists ...[]*v1alpha1.File) *archiveExtractor {
 	e := &archiveExtractor{
-		wanted: map[archiveKey][]string{},
-		root:   root,
-		done:   map[archiveKey]*extraction{},
+		wanted:  map[archiveKey][]string{},
+		root:    root,
+		done:    map[archiveKey]*extraction{},
+		digests: map[archiveKey]string{},
 	}
 	for _, list := range lists {
 		for _, file := range list {
@@ -102,30 +108,72 @@ func newArchiveExtractor(root string, lists ...[]*v1alpha1.File) *archiveExtract
 	return e
 }
 
+// archiveSource is how one archive is obtained.
+type archiveSource struct {
+	// digest returns a verified content digest of the archive, or "" when the source has
+	// none to give. It must not fetch the archive.
+	digest func(ctx context.Context) (string, error)
+	// stage writes the archive into the directory it is given and returns the path it wrote.
+	stage func(ctx context.Context, dir string) (string, error)
+}
+
 // member returns the path to one extracted member, decompressing the archive on the first ask
 // and serving every later one from what that produced.
 //
-// stage is called at most once per archive, and only when something is actually needed out of
-// it: it writes the archive to the path it is given. Passing it as a function keeps the three
-// ways an archive arrives -- a registry layer, a cached download, a path beside the definition
-// -- out of here, since none of them changes what extracting it means.
-func (e *archiveExtractor) member(ctx context.Context, key archiveKey, extractPath string, stage func(dir string) (string, error)) (string, error) {
+// src.stage is called at most once per archive, and only when something is actually needed out
+// of it that is not already cached. Passing it as a function keeps the three ways an archive
+// arrives -- a registry layer, a cached download, a path beside the definition -- out of here,
+// since none of them changes what extracting it means.
+func (e *archiveExtractor) member(ctx context.Context, key archiveKey, extractPath string, src archiveSource) (string, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	// A member cached by an earlier build is served without touching the archive at all --
+	// no fetch and, more to the point, no decompression. An archive whose every member is
+	// cached is never staged.
+	if cached, ok := utils.CachedMember(ctx, e.digestFor(ctx, key, src), extractPath); ok {
+		return cached, nil
+	}
+
 	result, ok := e.done[key]
 	if !ok {
-		result = e.extract(ctx, key, stage)
+		result = e.extract(ctx, key, src)
 		e.done[key] = result
 	}
 	if result.err != nil {
 		return "", result.err
 	}
-	return filepath.Join(result.dir, filepath.FromSlash(extractPath)), nil
+
+	member := filepath.Join(result.dir, filepath.FromSlash(extractPath))
+	if digest := e.digestFor(ctx, key, src); digest != "" {
+		utils.CacheMember(ctx, digest, extractPath, member)
+	}
+	return member, nil
+}
+
+// digestFor returns the archive's content digest, asking the source at most once per archive
+// per build. An empty result means this archive has no digest to key a cache on, which is the
+// case for every source that is not an OCI layer -- see utils.CachedArchive.
+func (e *archiveExtractor) digestFor(ctx context.Context, key archiveKey, src archiveSource) string {
+	if digest, ok := e.digests[key]; ok {
+		return digest
+	}
+	var digest string
+	if src.digest != nil {
+		resolved, err := src.digest(ctx)
+		if err != nil {
+			// Not fatal: a digest is an optimisation, and whatever stopped this from
+			// resolving will be reported properly by the fetch that follows.
+			logger.From(ctx).Debug("unable to identify an archive for caching", "source", key.source, "error", err)
+		}
+		digest = resolved
+	}
+	e.digests[key] = digest
+	return digest
 }
 
 // extract stages one archive and decompresses every member anything asked it for.
-func (e *archiveExtractor) extract(ctx context.Context, key archiveKey, stage func(dir string) (string, error)) *extraction {
+func (e *archiveExtractor) extract(ctx context.Context, key archiveKey, src archiveSource) *extraction {
 	members := e.wanted[key]
 	if len(members) == 0 {
 		// Only reachable if a caller asks for a member of an archive newArchiveExtractor never
@@ -146,7 +194,7 @@ func (e *archiveExtractor) extract(ctx context.Context, key archiveKey, stage fu
 	if err := os.MkdirAll(staged, helpers.ReadExecuteAllWriteUser); err != nil {
 		return &extraction{err: err}
 	}
-	archivePath, err := stage(staged)
+	archivePath, err := src.stage(ctx, staged)
 	if err != nil {
 		return &extraction{err: err}
 	}
@@ -207,25 +255,45 @@ func localSource(source, distroPath string) string {
 	return filepath.Join(distroPath, source)
 }
 
-// stageArchive writes the archive an entry extracts from to dst, by whichever of the three
-// routes its source names.
-func stageArchive(ctx context.Context, source string, file v1alpha1.File, distroPath string, dir string, ociOpts ociOptions) (string, error) {
+// newArchiveSource describes how to obtain the archive an entry extracts from, by whichever of
+// the three routes its source names.
+//
+// Only an OCI layer offers a digest. A URL-sourced archive carries none of its own -- the
+// entry's shasum is the digest of the extracted member, not of the archive -- which is the
+// same reason utils.CachedArchive has to key on the URL, and why a member taken out of one is
+// not cached between builds.
+func newArchiveSource(source string, file v1alpha1.File, distroPath string, ociOpts ociOptions) archiveSource {
+	sel := coci.FileSelector{Arch: fileArch(file), Layer: file.Layer}
 	switch {
 	case helpers.IsOCIURL(source):
-		// The layer itself, not a member of it: the extraction happens once, above. coci
-		// names the file after the layer's title, which is what makes the format
-		// identifiable.
-		return coci.FetchLayerFile(ctx, source, coci.FileSelector{Arch: fileArch(file), Layer: file.Layer}, dir, ociOpts.FileOptions)
-	case helpers.IsURL(source):
-		// Keyed on the URL because an archive carrying an extractPath file declares no digest
-		// of its own; see utils.CachedArchive for why that is safe. The cached copy is read
-		// where it lies rather than copied, since it is already a stable path.
-		cached, err := utils.CachedArchive(ctx, source, archiveName(file))
-		if err != nil {
-			return "", fmt.Errorf(zlang.ErrDownloading, source, err)
+		return archiveSource{
+			digest: func(ctx context.Context) (string, error) {
+				return coci.LayerDigest(ctx, source, sel, ociOpts.FileOptions)
+			},
+			stage: func(ctx context.Context, dir string) (string, error) {
+				// The layer itself, not a member of it: the extraction happens once, in the
+				// extractor. coci names the file after the layer's title, which is what
+				// makes the format identifiable.
+				return coci.FetchLayerFile(ctx, source, sel, dir, ociOpts.FileOptions)
+			},
 		}
-		return cached, nil
+	case helpers.IsURL(source):
+		return archiveSource{
+			stage: func(ctx context.Context, _ string) (string, error) {
+				// Read where the shared cache holds it rather than copied, since that is
+				// already a stable path.
+				cached, err := utils.CachedArchive(ctx, source, archiveName(file))
+				if err != nil {
+					return "", fmt.Errorf(zlang.ErrDownloading, source, err)
+				}
+				return cached, nil
+			},
+		}
 	default:
-		return localSource(source, distroPath), nil
+		return archiveSource{
+			stage: func(_ context.Context, _ string) (string, error) {
+				return localSource(source, distroPath), nil
+			},
+		}
 	}
 }

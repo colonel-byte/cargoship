@@ -38,6 +38,7 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
 	"github.com/colonel-byte/cargoship/pkg/haulerstore"
+	"github.com/colonel-byte/cargoship/pkg/utils"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -924,4 +925,70 @@ func TestArchiveExtractorPlansAcrossBothLists(t *testing.T) {
 	e := newArchiveExtractor(t.TempDir(), first, second)
 	require.Len(t, e.wanted, 1, "one archive was planned for")
 	require.ElementsMatch(t, []string{"bin/engine", "lib/engine.service"}, e.wanted[keyFor(*first[0])])
+}
+
+// A member cached by an earlier build is served without staging the archive at all. For an
+// OCI layer that is the whole saving: no fetch and no decompression, because the archive's own
+// digest is a key the extraction result can be filed under.
+func TestFileGrabberServesAMemberFromTheCache(t *testing.T) {
+	previous := config.CommonOptions.CachePath
+	config.CommonOptions.CachePath = t.TempDir()
+	t.Cleanup(func() { config.CommonOptions.CachePath = previous })
+
+	const digest = "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+	const member = "bin/engine"
+	utils.CacheMember(context.Background(), digest, member, func() string {
+		path := filepath.Join(t.TempDir(), "engine")
+		require.NoError(t, os.WriteFile(path, []byte(grabbedPayload), 0o600))
+		return path
+	}())
+
+	buildPath := t.TempDir()
+	file := v1alpha1.File{
+		Source:      "oci://registry.example.invalid/vendor/engine:v1",
+		ExtractPath: member,
+		Target:      "/usr/local/bin/engine",
+		Shasum:      payloadShasum(),
+	}
+
+	extractor := newArchiveExtractor(buildPath, []*v1alpha1.File{&file})
+	t.Cleanup(func() { require.NoError(t, extractor.cleanup()) })
+	// The digest is supplied directly rather than resolved, so the registry in the source is
+	// never contacted -- which is the point: a cache hit must not need the archive.
+	extractor.digests[keyFor(file)] = digest
+
+	_, err := fileGrabber(context.Background(), string(config.OSDir), buildPath, t.TempDir(), 0, file, nil, nil, ociOptions{}, extractor)
+	require.NoError(t, err, "a cached member must not require the archive; registry.example.invalid does not resolve")
+
+	got, err := os.ReadFile(filepath.Join(buildPath, string(config.OSDir), "0", "engine"))
+	require.NoError(t, err)
+	require.Equal(t, grabbedPayload, string(got))
+}
+
+// An archive with no digest is not cached between builds. A URL-sourced archive carries none
+// of its own -- the entry's shasum is the digest of the extracted member, not of the archive
+// -- so there is nothing trustworthy to key on, and filing it under the URL would be the
+// weaker thing utils.CachedArchive already does for the download.
+func TestFileGrabberDoesNotCacheMembersWithoutAnArchiveDigest(t *testing.T) {
+	previous := config.CommonOptions.CachePath
+	cacheDir := t.TempDir()
+	config.CommonOptions.CachePath = cacheDir
+	t.Cleanup(func() { config.CommonOptions.CachePath = previous })
+
+	buildPath := t.TempDir()
+	archive := tarGz(t, tarGzEntry{name: "bin/engine", content: grabbedPayload})
+	srv := serveBytes(t, archive, nil)
+
+	file := v1alpha1.File{
+		Source:      srv.URL + "/engine.tar.gz",
+		ExtractPath: "bin/engine",
+		Target:      "/usr/local/bin/engine",
+		Shasum:      payloadShasum(),
+	}
+	_, err := fileGrabber(context.Background(), string(config.OSDir), buildPath, t.TempDir(), 0, file, nil, nil, ociOptions{}, nil)
+	require.NoError(t, err)
+
+	members, err := filepath.Glob(filepath.Join(cacheDir, "files", "member-*"))
+	require.NoError(t, err)
+	require.Empty(t, members, "a URL-sourced archive has no digest to key a member cache on")
 }
