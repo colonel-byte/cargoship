@@ -140,7 +140,7 @@ func grabOCI(t *testing.T, file v1alpha1.File, opts ociOptions) (string, *distro
 	t.Helper()
 	buildPath := t.TempDir()
 	opts.PlainHTTP = true
-	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil, opts)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, nil, opts, nil)
 	if err != nil {
 		return "", nil, err
 	}

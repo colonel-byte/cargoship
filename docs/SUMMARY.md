@@ -184,6 +184,7 @@
 - [choice-reset-target-hosts](agent/choice-reset-target-hosts.md)
 - [choice-run-receipts](agent/choice-run-receipts.md)
 - [choice-selinux-policy](agent/choice-selinux-policy.md)
+- [choice-shared-archive-extraction](agent/choice-shared-archive-extraction.md)
 - [choice-signing-fork](agent/choice-signing-fork.md)
 - [choice-tofu-provider-removal](agent/choice-tofu-provider-removal.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)

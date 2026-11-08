@@ -53,7 +53,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/k0sproject/dig"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -214,8 +213,15 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 	// definition order. Appending in a fixed order is what keeps --reproducible reproducible.
 	var fileSources []distro.FileSource
 
+	// Built across both lists before anything is staged, so that an archive several entries
+	// take members out of is fetched and decompressed once rather than once per entry.
+	extractor := newArchiveExtractor(buildPath, d.Spec.Config.Files, d.Spec.Config.OS.Files)
+	defer func() {
+		err = errors.Join(err, extractor.cleanup())
+	}()
+
 	for filesIdx, file := range d.Spec.Config.Files {
-		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, opts.ociOptions())
+		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, opts.ociOptions(), extractor)
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage file %d (%s): %w", filesIdx, file, err)
 		}
@@ -224,7 +230,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, opts.ociOptions())
+		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides, opts.ContentStore, opts.ociOptions(), extractor)
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage os file %d (%s): %w", filesIdx, file, err)
 		}
@@ -418,10 +424,18 @@ func fileArch(file v1alpha1.File) string {
 // fileGrabber stages one file into buildPath. The returned FileSource is non-nil only when the
 // bytes came from somewhere other than the declared source -- an override, or a content store --
 // so the caller records what actually happened rather than only what was configured.
-func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, store ContentStore, ociOpts ociOptions) (provenance *distro.FileSource, err error) {
+func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.File, overrides []fileoverride.Override, store ContentStore, ociOpts ociOptions, extractor *archiveExtractor) (provenance *distro.FileSource, err error) {
+	if extractor == nil {
+		// A caller staging one file on its own -- which is every test, and nothing in a real
+		// build -- gets an extractor that plans for just this entry.
+		extractor = newArchiveExtractor(filepath.Dir(buildPath), []*v1alpha1.File{&file})
+		defer func() {
+			err = errors.Join(err, extractor.cleanup())
+		}()
+	}
+
 	rel := filepath.Join(resourceType, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 	dst := filepath.Join(buildPath, rel)
-	destinationDir := filepath.Dir(dst)
 
 	// Leave nothing half-written behind. buildPath is walked later to generate the package
 	// checksums, so a file left by a failed download, a failed extraction, or a mismatched
@@ -543,90 +557,38 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 		}
 	}
 
-	if helpers.IsOCIURL(source) {
+	// An entry with an extractPath takes one member out of an archive that several entries
+	// usually share, so the archive is fetched and walked once by the extractor and every
+	// member is copied out of what that produced. An entry without one is staged straight to
+	// dst, which is what the three arms below differ on.
+	if file.ExtractPath != "" {
+		member, err := extractor.member(ctx, keyFor(file), file.ExtractPath,
+			func(dir string) (string, error) {
+				return stageArchive(ctx, source, file, distroPath, dir, ociOpts)
+			})
+		if err != nil {
+			return nil, err
+		}
+		// Copied rather than renamed, because a second entry wants the same member staged
+		// under its own target name. Copying into dst also means the extraction's own
+		// directories never occupy dst, which renaming into place used to collide with: an
+		// extractPath whose leading segment matches the target's base name -- zarf's
+		// "zarf-injector/files/0/zarf-injector" for a target named zarf-injector -- produced
+		// a "file exists" naming a path the definition never mentions.
+		if err := helpers.CreatePathAndCopy(member, dst); err != nil {
+			return nil, fmt.Errorf(zlang.ErrWritingFile, dst, err)
+		}
+	} else if helpers.IsOCIURL(source) {
 		if err := fetchOCIFile(ctx, source, file, fileArch(file), dst, ociOpts); err != nil {
 			return nil, err
 		}
 	} else if helpers.IsURL(source) {
-		if file.ExtractPath != "" {
-			// The temp name is local bookkeeping, so it comes from the declared source: a
-			// mirror is free to serve the same artifact under a different path, and the
-			// name the definition used is the more recognizable of the two in a log line.
-			compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
-			if err != nil {
-				return nil, fmt.Errorf(zlang.ErrFileNameExtract, file.Source, err)
-			}
-
-			// One archive commonly supplies several files -- every rke2 binary, script and
-			// unit file is extracted from the same tarball -- and the same archive is wanted
-			// again by the next build. Both are served by the shared cache, which is keyed on
-			// the URL because an archive carrying an extractPath file declares no digest of
-			// its own; see utils.CachedArchive for why that is safe here.
-			compressedFile, err := utils.CachedArchive(ctx, source, compressedFileName)
-			if err != nil {
-				return nil, fmt.Errorf(zlang.ErrDownloading, source, err)
-			}
-
-			decompressOpts := archive.DecompressOpts{
-				Files: []string{file.ExtractPath},
-			}
-			err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
-			if err != nil {
-				return nil, fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
-			}
-		} else {
-			if err := utils.DownloadToFileWithChecksum(ctx, source, dst, file.Shasum, filepath.Base(file.Target)); err != nil {
-				return nil, fmt.Errorf(zlang.ErrDownloading, source, err)
-			}
+		if err := utils.DownloadToFileWithChecksum(ctx, source, dst, file.Shasum, filepath.Base(file.Target)); err != nil {
+			return nil, fmt.Errorf(zlang.ErrDownloading, source, err)
 		}
 	} else {
-		// A resolved local override is already absolute, so it is never re-resolved against
-		// the distro definition directory here.
-		src := source
-		if !filepath.IsAbs(source) {
-			src = filepath.Join(distroPath, source)
-		}
-		if file.ExtractPath != "" {
-			decompressOpts := archive.DecompressOpts{
-				Files: []string{file.ExtractPath},
-			}
-			err := archive.Decompress(ctx, src, destinationDir, decompressOpts)
-			if err != nil {
-				return nil, fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, src, err)
-			}
-		} else {
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-				return nil, fmt.Errorf("unable to copy file %s: %w", src, err)
-			}
-		}
-	}
-
-	// The oci:// branch writes the file it was asked for straight to dst, so only the branches
-	// that extract into destinationDir have anything left to move.
-	if file.ExtractPath != "" && !helpers.IsOCIURL(source) {
-		// Make sure dst reflects the actual file or directory.
-		extracted := filepath.Join(destinationDir, file.ExtractPath)
-		if extracted != dst {
-			// Moved out to a temporary name first, because the extraction can have created a
-			// directory occupying dst itself: an extractPath whose leading segment matches
-			// the target's base name does exactly that, and zarf publishes its component
-			// tarballs that way -- "zarf-injector/files/0/zarf-injector" extracted for a
-			// target of /usr/local/bin/zarf-injector. Renaming straight onto dst then fails
-			// with "file exists" naming a path the definition never mentions.
-			staged := dst + ".extracted"
-			if err := os.Rename(extracted, staged); err != nil {
-				return nil, fmt.Errorf(zlang.ErrWritingFile, dst, err)
-			}
-			// Clear whatever tree the extraction left behind before taking its name. Only
-			// the leading segment is removed, which is the only part that can collide.
-			if root, _, nested := strings.Cut(filepath.ToSlash(file.ExtractPath), "/"); nested {
-				if err := os.RemoveAll(filepath.Join(destinationDir, root)); err != nil {
-					return nil, errors.Join(fmt.Errorf(zlang.ErrWritingFile, dst, err), os.RemoveAll(staged))
-				}
-			}
-			if err := os.Rename(staged, dst); err != nil {
-				return nil, errors.Join(fmt.Errorf(zlang.ErrWritingFile, dst, err), os.RemoveAll(staged))
-			}
+		if err := helpers.CreatePathAndCopy(localSource(source, distroPath), dst); err != nil {
+			return nil, fmt.Errorf("unable to copy file %s: %w", source, err)
 		}
 	}
 

@@ -15,16 +15,31 @@
 package coci
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"io"
+	"maps"
+	"os"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/test"
+	"github.com/klauspost/compress/zstd"
 	"github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
+	"github.com/zarf-dev/zarf/src/types"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
 // manifestWith builds a manifest carrying one layer per title. Each layer gets a real digest
@@ -250,5 +265,210 @@ func TestLayerListingChild(t *testing.T) {
 				t.Errorf("assumed = %v, want %v; the caller uses this to say it guessed", assumed, tc.wantAssumed)
 			}
 		})
+	}
+}
+
+// pushTarGzArtifact pushes a single-layer artifact whose layer is a gzipped tar, titled so the
+// extraction can identify its format.
+func pushTarGzArtifact(t *testing.T, addr, repoName, tag, title string, members map[string]string) {
+	t.Helper()
+	pushTarArtifact(t, addr, repoName, tag, title, members, func(w io.Writer) io.WriteCloser {
+		return gzip.NewWriter(w)
+	})
+}
+
+// pushTarZstdArtifact is pushTarGzArtifact with zstd compression, for the format the package
+// layout itself uses.
+func pushTarZstdArtifact(t *testing.T, addr, repoName, tag, title string, members map[string]string) {
+	t.Helper()
+	pushTarArtifact(t, addr, repoName, tag, title, members, func(w io.Writer) io.WriteCloser {
+		enc, err := zstd.NewWriter(w)
+		if err != nil {
+			t.Fatalf("zstd writer: %v", err)
+		}
+		return enc
+	})
+}
+
+// pushTarArtifact pushes a single-layer artifact whose layer is a tar compressed by compress,
+// titled so the extraction can identify its format from the name.
+func pushTarArtifact(t *testing.T, addr, repoName, tag, title string, members map[string]string, compress func(io.Writer) io.WriteCloser) {
+	t.Helper()
+	ctx := context.Background()
+
+	var buf bytes.Buffer
+	gw := compress(&buf)
+	tw := tar.NewWriter(gw)
+	for _, name := range slices.Sorted(maps.Keys(members)) {
+		body := members[name]
+		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body))}); err != nil {
+			t.Fatalf("tar header: %v", err)
+		}
+		if _, err := tw.Write([]byte(body)); err != nil {
+			t.Fatalf("tar write: %v", err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("tar close: %v", err)
+	}
+	if err := gw.Close(); err != nil {
+		t.Fatalf("compressor close: %v", err)
+	}
+
+	repo, err := remote.NewRepository(addr + "/" + repoName)
+	if err != nil {
+		t.Fatalf("NewRepository: %v", err)
+	}
+	repo.PlainHTTP = true
+
+	push := func(mediaType string, b []byte, annotations map[string]string) ocispec.Descriptor {
+		sum := sha256.Sum256(b)
+		desc := ocispec.Descriptor{
+			MediaType:   mediaType,
+			Digest:      digest.NewDigestFromEncoded(digest.SHA256, hex.EncodeToString(sum[:])),
+			Size:        int64(len(b)),
+			Annotations: annotations,
+		}
+		if err := repo.Push(ctx, desc, bytes.NewReader(b)); err != nil {
+			t.Fatalf("push: %v", err)
+		}
+		return desc
+	}
+
+	layer := push("application/gzip", buf.Bytes(), map[string]string{ocispec.AnnotationTitle: title})
+	cfg := push(ocispec.MediaTypeImageConfig, []byte(`{}`), nil)
+	manifestBytes, err := json.Marshal(ocispec.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: ocispec.MediaTypeImageManifest,
+		Config:    cfg,
+		Layers:    []ocispec.Descriptor{layer},
+	})
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	sum := sha256.Sum256(manifestBytes)
+	desc := ocispec.Descriptor{
+		MediaType: ocispec.MediaTypeImageManifest,
+		Digest:    digest.NewDigestFromEncoded(digest.SHA256, hex.EncodeToString(sum[:])),
+		Size:      int64(len(manifestBytes)),
+	}
+	if err := repo.PushReference(ctx, desc, bytes.NewReader(manifestBytes), tag); err != nil {
+		t.Fatalf("push manifest: %v", err)
+	}
+}
+
+// FetchFile with an extract path stages the layer and pulls one member out of it. This is the
+// path only `dev sha256sum` takes -- a package build goes through the shared extractor -- so
+// without a test here it is covered by the e2e walk alone, which is where a double Close on
+// the layer body went unnoticed until it reached the registry.
+func TestFetchFileExtractPath(t *testing.T) {
+	addr := test.SetupInMemoryRegistry(t)
+	pushTarGzArtifact(t, addr, "vendor/engine", "v1", "engine.linux-amd64.tar.gz", map[string]string{
+		"bin/engine":     "engine binary\n",
+		"lib/engine.svc": "unit file\n",
+	})
+	ref := "oci://" + addr + "/vendor/engine:v1"
+	sel := FileSelector{ExtractPath: "bin/engine"}
+	opts := FileOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}}
+
+	dst := filepath.Join(t.TempDir(), "engine")
+	if err := FetchFile(context.Background(), ref, sel, dst, opts); err != nil {
+		t.Fatalf("FetchFile: %v", err)
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("reading staged member: %v", err)
+	}
+	if string(got) != "engine binary\n" {
+		t.Errorf("staged %q, want the bin/engine member", got)
+	}
+
+	// Called twice, because the first call populates the layer cache and the second reads it
+	// back -- the arrangement the double Close showed up in.
+	second := filepath.Join(t.TempDir(), "engine")
+	if err := FetchFile(context.Background(), ref, sel, second, opts); err != nil {
+		t.Fatalf("FetchFile on a second call: %v", err)
+	}
+}
+
+// Without an extract path the layer's own bytes are the file.
+func TestFetchFileWholeLayer(t *testing.T) {
+	addr := test.SetupInMemoryRegistry(t)
+	pushTarGzArtifact(t, addr, "vendor/engine", "v1", "engine.linux-amd64.tar.gz", map[string]string{
+		"bin/engine": "engine binary\n",
+	})
+
+	dst := filepath.Join(t.TempDir(), "engine.tar.gz")
+	err := FetchFile(context.Background(), "oci://"+addr+"/vendor/engine:v1", FileSelector{}, dst,
+		FileOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	if err != nil {
+		t.Fatalf("FetchFile: %v", err)
+	}
+	info, err := os.Stat(dst)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Error("the staged layer is empty")
+	}
+}
+
+// The format is identified from the layer's title, so every compression the extractor
+// registers has to survive being staged under that name. zstd is the one that matters most
+// here: it is what a package layout itself is written in, so an artifact republishing one
+// arrives as `.tar.zst` rather than `.tar.gz`.
+func TestFetchFileExtractPathZstd(t *testing.T) {
+	addr := test.SetupInMemoryRegistry(t)
+	pushTarZstdArtifact(t, addr, "vendor/engine", "v1", "engine.linux-amd64.tar.zst", map[string]string{
+		"bin/engine":     "engine binary\n",
+		"lib/engine.svc": "unit file\n",
+	})
+	ref := "oci://" + addr + "/vendor/engine:v1"
+	opts := FileOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}}
+
+	dst := filepath.Join(t.TempDir(), "engine")
+	if err := FetchFile(context.Background(), ref, FileSelector{ExtractPath: "bin/engine"}, dst, opts); err != nil {
+		t.Fatalf("FetchFile: %v", err)
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("reading staged member: %v", err)
+	}
+	if string(got) != "engine binary\n" {
+		t.Errorf("staged %q, want the bin/engine member", got)
+	}
+
+	// A second member out of the same artifact, to pin that the title is what drives the
+	// format rather than anything cached from the first read.
+	other := filepath.Join(t.TempDir(), "engine.svc")
+	if err := FetchFile(context.Background(), ref, FileSelector{ExtractPath: "lib/engine.svc"}, other, opts); err != nil {
+		t.Fatalf("FetchFile for a second member: %v", err)
+	}
+	gotOther, err := os.ReadFile(other)
+	if err != nil {
+		t.Fatalf("reading the second member: %v", err)
+	}
+	if string(gotOther) != "unit file\n" {
+		t.Errorf("staged %q, want the lib/engine.svc member", gotOther)
+	}
+}
+
+// A layer staged under a name the extractor does not recognise cannot be opened, because the
+// format is resolved from the name and not from the bytes. The failure names the archive
+// rather than the temporary path it was staged at.
+func TestFetchFileExtractPathUnknownExtension(t *testing.T) {
+	addr := test.SetupInMemoryRegistry(t)
+	pushTarZstdArtifact(t, addr, "vendor/engine", "v1", "engine.linux-amd64.bin", map[string]string{
+		"bin/engine": "engine binary\n",
+	})
+
+	err := FetchFile(context.Background(), "oci://"+addr+"/vendor/engine:v1",
+		FileSelector{ExtractPath: "bin/engine"}, filepath.Join(t.TempDir(), "engine"),
+		FileOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	if err == nil {
+		t.Fatal("a layer titled .bin was extracted from, which the extractor cannot identify")
+	}
+	if !strings.Contains(err.Error(), "engine.linux-amd64.bin") {
+		t.Errorf("error %q does not name the archive it could not open", err)
 	}
 }
