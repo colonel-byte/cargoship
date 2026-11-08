@@ -32,6 +32,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// ErrConnect marks a failure to reach or authenticate to a host. It is joined into whatever the
+// SSH layer returned so that a caller -- Execute, deciding a process exit code -- can tell "the
+// fleet was unreachable" from "a phase did its work and failed", without importing rig.
+var ErrConnect = errors.New("cannot connect to host")
+
 // Connect connects to each of the hosts
 type Connect struct {
 	GenericPhase
@@ -59,9 +64,22 @@ func (p *Connect) Run(ctx context.Context) error {
 			if err := h.Connect(ctx); err != nil {
 				logger.From(ctx).Debug("got the following", "host", h, "err", err)
 				if errors.Is(err, rig.ErrNonRetryable) || strings.Contains(err.Error(), "host key mismatch") {
-					return errors.Join(retry.ErrAbort, err)
+					return errors.Join(retry.ErrAbort, ErrConnect, err)
 				}
-				return err
+				// Rejected credentials abort too. rig deliberately leaves ErrAuthFailed
+				// retryable, because a caller that provisions a host may connect while sshd is
+				// up but authorized_keys is not yet written -- and its documentation says a
+				// caller that would rather fail fast should test for it and stop its own loop.
+				//
+				// Cargoship is that caller: it manages hosts that already exist and never
+				// creates one, so the window rig protects does not occur here. What does occur
+				// is a wrong user or a wrong identity file in the inventory, which no amount of
+				// waiting fixes -- and retrying it burned the full ten minutes before telling
+				// the operator about a typo.
+				if errors.Is(err, rig.ErrAuthFailed) {
+					return errors.Join(retry.ErrAbort, ErrConnect, err)
+				}
+				return errors.Join(ErrConnect, err)
 			}
 			logger.From(ctx).Info("connected", "host", h)
 			return nil
