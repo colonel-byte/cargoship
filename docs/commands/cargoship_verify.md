@@ -29,10 +29,13 @@ $ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
 ### Options
 
 ```
+  -a, --architecture string                     Architecture for OCI images and Zarf packages
   -h, --help[=true|false]                       help for verify
       --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                              Path to public key file for validating signed packages
       --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands
