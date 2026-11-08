@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4de0f550.js";
+            window.path_to_searchindex_js = "searchindex-54dbc39b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-aad83525.js"></script>
+        <script src="toc-74e20e70.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -452,6 +452,18 @@ cargoship dev apply ./distro-defs --config ./cargoship-config.yaml --confirm
 </code></pre>
 <p>The build still fetches what the definition declares, and still serves it from the shared cache when it is already there, so a second run after an edit usually reaches the network for nothing new. That cache is what <a href="#1-compile-an-offline-package">Compile an Offline Package</a> describes reclaiming with <code>clean-cache</code>.</p>
 <p>This is for a definition under active edit, not for shipping. It writes no artifact to carry, keep, or sign, and it does not verify a signature – there is nothing to verify, because the package was built by the same process a moment earlier. A release still goes through <code>create</code>, <code>sign</code> and <code>apply</code>. See <a href="dev/package-authoring.html">Authoring a Distro Package</a> for the whole loop and what the build caches between runs.</p>
+<h3 id="13-generate-definitions-from-a-template"><a class="header" href="#13-generate-definitions-from-a-template">13. Generate Definitions from a Template</a></h3>
+<p>A fleet’s package definitions usually differ in a handful of values – a version, an architecture, a CNI – and are otherwise the same file. <code>dev render</code> keeps them as one template plus a small values file per package, which is how cargoship’s own examples under <a href="https://github.com/colonel-byte/cargoship/tree/main/example"><code>example/</code></a> are generated:</p>
+<pre><code class="language-bash"># render a definition from a template and an input file
+cargoship dev render --template ./distro.yaml.tmpl --values ./v1.36.4.yaml --out ./packages/v1.36.4
+
+# render a definition and the values file beside it together, merging a common input first
+cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl \
+  -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+</code></pre>
+<p>Each <code>--template</code> is written to <code>--out</code> under its own name with <code>.tmpl</code> dropped, and every template renders against the same merged values, so a value that has to agree between a definition and the values beside it is written once. The template functions are the ones a package’s own values templates get – the sprig set, minus the functions that read host state – and a value path that resolves to nothing is an error rather than a placeholder in the output.</p>
+<p>A rendered <code>distro.yaml</code> is checked against the package schema before anything is written, so a definition that renders but cannot be built is reported here rather than by <code>create</code>. <code>cargoship create ./packages/v1.36.4</code> is the next step.</p>
+<p>See <a href="guides/generating-definitions.html">Generating Definitions From a Template</a> for the values-merge order, which template functions are available and which are deliberately not, and how to emit build-time <code>{{ .Values.x }}</code> expressions into the definition.</p>
 <hr>
 <h2 id="opentofu-and-terraform"><a class="header" href="#opentofu-and-terraform">OpenTofu and Terraform</a></h2>
 <p>The same phases run from a declarative configuration through the OpenTofu provider, which lives in <a href="https://github.com/colonel-byte/terraform-provider-cargoship">colonel-byte/terraform-provider-cargoship</a> and consumes this repository as a library: <code>cargoship_cluster</code> converges a cluster – install, join and upgrade are one apply, because the engine version already on each host is what tells them apart – and <code>cargoship_cluster_facts</code> reads a fleet without changing it. It drives cargoship in process, so it still opens every SSH connection itself from the machine OpenTofu runs on.</p>

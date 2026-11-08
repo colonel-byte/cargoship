@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4de0f550.js";
+            window.path_to_searchindex_js = "../searchindex-54dbc39b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-aad83525.js"></script>
+        <script src="../toc-74e20e70.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,7 +186,7 @@
 <h2 id="cargoship-dev"><a class="header" href="#cargoship-dev">cargoship dev</a></h2>
 <p>Commands for working on a definition or on cargoship itself</p>
 <h3 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h3>
-<p>Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. They build and apply a definition in one step, report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.</p>
+<p>Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. They render a definition from templates, build and apply one in one step, report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.</p>
 <p>They are grouped rather than sitting at the root because the root is the operator’s surface – create, apply, prepare, reset – and a command that is only ever reached for while editing a definition or filing a bug does not belong in that list.</p>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>  -h, --help[=true|false]   help for dev
@@ -203,6 +203,7 @@
 <li><a href="./cargoship_dev_apply.html">cargoship dev apply</a>	 - Builds a distro definition and applies it in one step</li>
 <li><a href="./cargoship_dev_clean-cache.html">cargoship dev clean-cache</a>	 - Reports what the shared cache holds, and removes it</li>
 <li><a href="./cargoship_dev_redact-receipt.html">cargoship dev redact-receipt</a>	 - Rewrites a run receipt so it can be attached to an issue</li>
+<li><a href="./cargoship_dev_render.html">cargoship dev render</a>	 - Renders package definition templates into a distro.yaml and the files beside it</li>
 <li><a href="./cargoship_dev_sha256sum.html">cargoship dev sha256sum</a>	 - Generates a SHA256SUM for the given file</li>
 </ul>
 

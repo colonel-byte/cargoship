@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4de0f550.js";
+            window.path_to_searchindex_js = "../searchindex-54dbc39b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-aad83525.js"></script>
+        <script src="../toc-74e20e70.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="authoring-a-distro-package"><a class="header" href="#authoring-a-distro-package">Authoring a Distro Package</a></h1>
-<p>This page is about the loop you run while writing or changing a <code>distro.yaml</code>: what each step costs, what is cached between runs, and how <code>cargoship dev apply</code> shortens it. It is a development page – for what a distro definition can contain, see the <a href="../schema/distro.html">distro schema</a>, and for the shipped examples see <a href="https://github.com/colonel-byte/cargoship/blob/main/example/AGENTS.md"><code>example/AGENTS.md</code></a>.</p>
+<p>This page is about the loop you run while writing or changing a <code>distro.yaml</code>: what each step costs, what is cached between runs, and how <code>cargoship dev apply</code> shortens it. It is a development page – for what a distro definition can contain, see the <a href="../schema/distro.html">distro schema</a>, and for the shipped examples see <a href="https://github.com/colonel-byte/cargoship/blob/main/example/AGENTS.md"><code>example/AGENTS.md</code></a>. For keeping several near-identical definitions as one template instead of several files, see <a href="../guides/generating-definitions.html">Generating Definitions From a Template</a>.</p>
 <h2 id="the-loop-without-dev-apply"><a class="header" href="#the-loop-without-dev-apply">The Loop Without <code>dev apply</code></a></h2>
 <p>Authoring a definition means building a package and installing from it, over and over:</p>
 <pre><code class="language-sh">cargoship create ./distro-defs -o ./build
