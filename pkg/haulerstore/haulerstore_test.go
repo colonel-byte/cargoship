@@ -19,8 +19,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -28,6 +30,8 @@ import (
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+
+	"github.com/colonel-byte/cargoship/pkg/contentstore"
 )
 
 const (
@@ -37,6 +41,18 @@ const (
 
 // specsVersioned is the schema version every manifest and index in these fixtures carries.
 var specsVersioned = specs.Versioned{SchemaVersion: 2}
+
+// fileFor looks a file up naming no architecture, which is what an entry asking for a
+// single-platform artifact does. The error return is only ever non-nil for a reference the
+// store holds under several architectures, which these cases do not build.
+func fileFor(t *testing.T, s *Store, src string) (string, bool) {
+	t.Helper()
+	name, ok, err := s.File(contentstore.FileRequest{Source: src})
+	if err != nil {
+		t.Fatalf("File(%q): %v", src, err)
+	}
+	return name, ok
+}
 
 func digestOf(hexSum string) digest.Digest {
 	return digest.NewDigestFromEncoded(digest.SHA256, hexSum)
@@ -180,7 +196,7 @@ func TestOpenStoreDirectory(t *testing.T) {
 	}
 	defer s.Close() //nolint:errcheck
 
-	name, ok := s.File(testFileURL)
+	name, ok := fileFor(t, s, testFileURL)
 	if !ok {
 		t.Fatalf("File(%q) not found", testFileURL)
 	}
@@ -261,7 +277,7 @@ func TestImageConfigWithTitledLayerIsAFile(t *testing.T) {
 	}
 	defer s.Close() //nolint:errcheck
 
-	name, ok := s.File("https://get.rke2.io/rke2.linux-amd64")
+	name, ok := fileFor(t, s, "https://get.rke2.io/rke2.linux-amd64")
 	if !ok {
 		t.Fatal("artifact with an image config and a titled layer was not indexed as a file")
 	}
@@ -277,11 +293,11 @@ func TestFetchWritesContent(t *testing.T) {
 	}
 	defer s.Close() //nolint:errcheck
 
-	if _, ok := s.File(testFileURL); !ok {
+	if _, ok := fileFor(t, s, testFileURL); !ok {
 		t.Fatalf("File(%q) not found", testFileURL)
 	}
 	dst := filepath.Join(t.TempDir(), "out")
-	if err := s.Fetch(context.Background(), testFileURL, dst); err != nil {
+	if err := s.Fetch(context.Background(), contentstore.FileRequest{Source: testFileURL}, dst); err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
 	got, err := os.ReadFile(dst)
@@ -429,7 +445,7 @@ func TestOpenArchive(t *testing.T) {
 		t.Fatal("Open of an archive left tempDir empty, so Close would remove nothing")
 	}
 
-	if _, ok := s.File(testFileURL); !ok {
+	if _, ok := fileFor(t, s, testFileURL); !ok {
 		t.Errorf("File(%q) not found in the archive", testFileURL)
 	}
 	if !s.HasImage(testImageRef) {
@@ -527,7 +543,186 @@ func TestFileRefIsNotCanonicalised(t *testing.T) {
 	}
 	defer s.Close() //nolint:errcheck
 
-	if _, ok := s.File(testFileURL); !ok {
+	if _, ok := fileFor(t, s, testFileURL); !ok {
 		t.Errorf("File(%q) not found; a URL key was rewritten", testFileURL)
+	}
+}
+
+// multiPlatformFileEntry writes a file artifact published as an image index over one manifest
+// per platform, which is how at least one vendor ships an air-gapped engine bundle: one tag,
+// an index, and one titled layer per architecture.
+func multiPlatformFileEntry(t *testing.T, dir string, originalRef string, name string, perArch map[string][]byte) ocispec.Descriptor {
+	t.Helper()
+	children := make([]ocispec.Descriptor, 0, len(perArch))
+	for _, arch := range slices.Sorted(maps.Keys(perArch)) {
+		child := fileEntry(t, dir, originalRef, name+".linux-"+arch, perArch[arch])
+		child.Annotations = nil
+		child.Platform = &ocispec.Platform{OS: "linux", Architecture: arch}
+		children = append(children, child)
+	}
+	index := writeJSONBlob(t, dir, ocispec.MediaTypeImageIndex, ocispec.Index{
+		Versioned: specsVersioned,
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: children,
+	})
+	index.Annotations = map[string]string{
+		AnnotationOriginalRef:     originalRef,
+		AnnotationKind:            "dev.hauler/image",
+		ocispec.AnnotationRefName: "hauler/" + name + ":latest",
+	}
+	return index
+}
+
+const multiPlatformRef = "oci://registry.example.com/vendor/engine:v1.37.1"
+
+// newMultiPlatformStoreDir builds a store holding one file artifact published as an index over
+// an amd64 and an arm64 child.
+func newMultiPlatformStoreDir(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "store")
+	entry := multiPlatformFileEntry(t, dir, multiPlatformRef, "engine", map[string][]byte{
+		"amd64": []byte("amd64 engine"),
+		"arm64": []byte("arm64 engine"),
+	})
+	writeIndex(t, dir, []ocispec.Descriptor{entry})
+	return dir
+}
+
+// An index was taken to be an image for as long as this reader existed, so a store holding a
+// vendor-published file artifact resolved nothing at all. The entry's own architecture is what
+// picks the child out of it.
+func TestMultiPlatformFileResolvesPerArch(t *testing.T) {
+	s, err := Open(context.Background(), newMultiPlatformStoreDir(t))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	for arch, want := range map[string]string{"amd64": "amd64 engine", "arm64": "arm64 engine"} {
+		req := contentstore.FileRequest{Source: multiPlatformRef, Arch: arch}
+		name, ok, err := s.File(req)
+		if err != nil {
+			t.Fatalf("File(%s): %v", arch, err)
+		}
+		if !ok {
+			t.Fatalf("File(%s) not found; the index was not descended", arch)
+		}
+		if name != "engine.linux-"+arch {
+			t.Errorf("file name %q, want engine.linux-%s", name, arch)
+		}
+
+		dst := filepath.Join(t.TempDir(), name)
+		if err := s.Fetch(context.Background(), req, dst); err != nil {
+			t.Fatalf("Fetch(%s): %v", arch, err)
+		}
+		got, err := os.ReadFile(dst)
+		if err != nil {
+			t.Fatalf("reading fetched file: %v", err)
+		}
+		if string(got) != want {
+			t.Errorf("fetched %q, want %q; the wrong platform child was resolved", got, want)
+		}
+	}
+}
+
+// An entry whose source holds several platforms and whose selector names no single architecture
+// is genuinely ambiguous. Refuse it and name the entry, rather than reaching the network for
+// content the operator staged or shipping a binary the node cannot run.
+func TestMultiPlatformFileWithoutArchIsRefused(t *testing.T) {
+	s, err := Open(context.Background(), newMultiPlatformStoreDir(t))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	_, ok, err := s.File(contentstore.FileRequest{Source: multiPlatformRef})
+	if err == nil {
+		t.Fatal("File with no architecture returned no error for a multi-platform artifact")
+	}
+	if ok {
+		t.Error("File reported the ambiguous reference as held")
+	}
+	for _, want := range []string{multiPlatformRef, "amd64", "arm64", "selector.arch"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %q", err, want)
+		}
+	}
+
+	if err := s.Fetch(context.Background(), contentstore.FileRequest{Source: multiPlatformRef}, filepath.Join(t.TempDir(), "out")); err == nil {
+		t.Error("Fetch of the ambiguous reference returned no error")
+	}
+}
+
+// A store synced for two architectures and asked for a third is a partial store, which is the
+// case the build already handles by falling back to the declared source. It is a miss, not an
+// error.
+func TestMultiPlatformFileOtherArchIsAMiss(t *testing.T) {
+	s, err := Open(context.Background(), newMultiPlatformStoreDir(t))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	_, ok, err := s.File(contentstore.FileRequest{Source: multiPlatformRef, Arch: "s390x"})
+	if err != nil {
+		t.Fatalf("File for an architecture the store does not hold: %v", err)
+	}
+	if ok {
+		t.Error("File reported an architecture the store does not hold as held")
+	}
+}
+
+// A single-platform file artifact carries no platform and answers for every architecture, which
+// is what every store written before an index was descended holds.
+func TestSinglePlatformFileAnswersForAnyArch(t *testing.T) {
+	s, err := Open(context.Background(), newStoreDir(t))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	name, ok, err := s.File(contentstore.FileRequest{Source: testFileURL, Arch: "arm64"})
+	if err != nil {
+		t.Fatalf("File: %v", err)
+	}
+	if !ok {
+		t.Fatalf("File(%q) not found when an architecture was named", testFileURL)
+	}
+	if name != "install.sh" {
+		t.Errorf("file name %q, want install.sh", name)
+	}
+}
+
+// An index whose children are part file and part something else has no reading better than a
+// guess, and guessing would silently ship the wrong bytes.
+func TestMixedIndexIsRefused(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "store")
+	file := fileEntry(t, dir, multiPlatformRef, "engine.linux-amd64", []byte("amd64 engine"))
+	file.Annotations = nil
+	file.Platform = &ocispec.Platform{OS: "linux", Architecture: "amd64"}
+	plain := writeJSONBlob(t, dir, ocispec.MediaTypeImageManifest, ocispec.Manifest{
+		Versioned: specsVersioned,
+		MediaType: ocispec.MediaTypeImageManifest,
+		Config:    writeJSONBlob(t, dir, ocispec.MediaTypeImageConfig, map[string]string{}),
+		Layers:    []ocispec.Descriptor{},
+	})
+	plain.Platform = &ocispec.Platform{OS: "linux", Architecture: "arm64"}
+	index := writeJSONBlob(t, dir, ocispec.MediaTypeImageIndex, ocispec.Index{
+		Versioned: specsVersioned,
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: []ocispec.Descriptor{file, plain},
+	})
+	index.Annotations = map[string]string{
+		AnnotationOriginalRef: multiPlatformRef,
+		AnnotationKind:        "dev.hauler/image",
+	}
+	writeIndex(t, dir, []ocispec.Descriptor{index})
+
+	_, err := Open(context.Background(), dir)
+	if err == nil {
+		t.Fatal("Open of a mixed index returned no error")
+	}
+	if !strings.Contains(err.Error(), "only 1 of which are file artifacts") {
+		t.Errorf("error %q does not name the mixed index as the reason", err)
 	}
 }

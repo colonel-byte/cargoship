@@ -30,6 +30,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -94,6 +95,18 @@ type file struct {
 	name string
 }
 
+// fileKey identifies a file artifact in the store: the reference hauler recorded it under,
+// plus the architecture of the platform child it was found in.
+//
+// A file artifact published as a single manifest is keyed with an empty arch and answers for
+// every architecture, which is what a store holding one platform per reference has always
+// produced. One published as an image index is keyed per child, because the reference alone
+// no longer names bytes.
+type fileKey struct {
+	ref  string
+	arch string
+}
+
 // Store is an opened hauler store. Close removes anything Open unpacked, so every Store must
 // be closed.
 type Store struct {
@@ -104,7 +117,7 @@ type Store struct {
 	tempDir string
 	store   *orasoci.ReadOnlyStore
 	images  map[string]ocispec.Descriptor
-	files   map[string]file
+	files   map[fileKey]file
 }
 
 // Open reads the hauler store at path, which may be a store directory or an archive written by
@@ -157,10 +170,24 @@ func (s *Store) load(ctx context.Context, dir string) error {
 	}
 
 	s.images = map[string]ocispec.Descriptor{}
-	s.files = map[string]file{}
+	s.files = map[fileKey]file{}
 	for _, desc := range index.Manifests {
 		ref := desc.Annotations[AnnotationOriginalRef]
 		if ref == "" || isAttached(desc) {
+			continue
+		}
+		if isIndex(desc) {
+			held, err := s.classifyIndex(ctx, ref, desc)
+			if err != nil {
+				return err
+			}
+			if len(held) == 0 {
+				s.images[contentstore.CanonicalImageRef(ref)] = desc
+				continue
+			}
+			for arch, entry := range held {
+				s.files[fileKey{ref: ref, arch: arch}] = entry
+			}
 			continue
 		}
 		entry, isFile, err := s.classify(ctx, desc)
@@ -168,7 +195,7 @@ func (s *Store) load(ctx context.Context, dir string) error {
 			return err
 		}
 		if isFile {
-			s.files[ref] = entry
+			s.files[fileKey{ref: ref}] = entry
 			continue
 		}
 		s.images[contentstore.CanonicalImageRef(ref)] = desc
@@ -197,11 +224,6 @@ func isAttached(desc ocispec.Descriptor) bool {
 // implements -- some artifacts are stored under an OCI image config but hold file content,
 // which a layer title gives away.
 func (s *Store) classify(ctx context.Context, desc ocispec.Descriptor) (file, bool, error) {
-	// An index is always a multi-architecture image; there is no file artifact shaped as one.
-	if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == mediaTypeDockerManifestList {
-		return file{}, false, nil
-	}
-
 	manifestBytes, err := s.fetchAll(ctx, desc)
 	if err != nil {
 		return file{}, false, fmt.Errorf("reading manifest %s from %s: %w", desc.Digest, s.source, err)
@@ -241,6 +263,70 @@ func fileLayer(manifest ocispec.Manifest) (file, bool, error) {
 // records for a multi-architecture image pulled from a Docker registry.
 const mediaTypeDockerManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
 
+// isIndex reports whether desc describes an image index, in either spelling.
+func isIndex(desc ocispec.Descriptor) bool {
+	return desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == mediaTypeDockerManifestList
+}
+
+// classifyIndex classifies the children of an index entry, returning the file artifact each
+// platform child holds, keyed by architecture. An empty result means the index is an image,
+// which is what a multi-architecture image pulled into a store looks like.
+//
+// An index was assumed to be an image for as long as this reader existed, on the premise that
+// no file artifact is shaped as one. At least one vendor publishes an air-gapped engine bundle
+// exactly that way -- one tag, an index, and one titled layer per platform -- so the premise
+// was wrong and the store it was given resolved nothing. See issue #1033.
+func (s *Store) classifyIndex(ctx context.Context, ref string, desc ocispec.Descriptor) (map[string]file, error) {
+	indexBytes, err := s.fetchAll(ctx, desc)
+	if err != nil {
+		return nil, fmt.Errorf("reading index %s from %s: %w", desc.Digest, s.source, err)
+	}
+	var index ocispec.Index
+	if err := json.Unmarshal(indexBytes, &index); err != nil {
+		return nil, fmt.Errorf("unmarshaling index %s from %s: %w", desc.Digest, s.source, err)
+	}
+
+	held := map[string]file{}
+	for _, child := range index.Manifests {
+		// A nested index is not something either format produces, and descending it would
+		// have no architecture to key the result on.
+		if isIndex(child) {
+			continue
+		}
+		entry, isFile, err := s.classify(ctx, child)
+		if err != nil {
+			return nil, err
+		}
+		if !isFile {
+			continue
+		}
+		arch := ""
+		if child.Platform != nil {
+			arch = child.Platform.Architecture
+		}
+		if _, clash := held[arch]; clash {
+			return nil, fmt.Errorf("%s holds %s as an index with two %s children, so the reference does not name one file", s.source, ref, archName(arch))
+		}
+		held[arch] = entry
+	}
+
+	// A mixed index -- some children files, some not -- has no reading that is better than a
+	// guess, and guessing here would silently ship the wrong bytes.
+	if len(held) > 0 && len(held) != len(index.Manifests) {
+		return nil, fmt.Errorf("%s holds %s as an index of %d manifests, only %d of which are file artifacts", s.source, ref, len(index.Manifests), len(held))
+	}
+	return held, nil
+}
+
+// archName spells an empty architecture for a message, where "" would read as a gap in the
+// sentence rather than as the absence of a platform.
+func archName(arch string) string {
+	if arch == "" {
+		return "unplatformed"
+	}
+	return arch
+}
+
 // HasImage reports whether the store holds the image ref, spelled as a distro definition
 // spells it.
 func (s *Store) HasImage(ref string) bool {
@@ -248,11 +334,50 @@ func (s *Store) HasImage(ref string) bool {
 	return ok
 }
 
-// File reports whether the store holds the file it recorded as coming from src -- a URL or an
-// absolute path as it appeared in a distro definition -- and the name hauler recorded it under.
-func (s *Store) File(src string) (string, bool) {
-	f, ok := s.files[src]
-	return f.name, ok
+// File reports whether the store holds the file it recorded as coming from req.Source -- a URL
+// or an absolute path as it appeared in a distro definition -- and the name hauler recorded it
+// under.
+//
+// It returns an error, rather than reporting the file as absent, when the store holds the
+// reference for several architectures and the request names none. That is not a miss: the
+// bytes are there, and more than one answer is. Falling back to the declared source would
+// reach the network for content the operator staged, and picking a platform would ship a
+// binary the node cannot run.
+func (s *Store) File(req contentstore.FileRequest) (string, bool, error) {
+	f, ok, err := s.file(req)
+	return f.name, ok, err
+}
+
+// file resolves a request against the index built at load time.
+func (s *Store) file(req contentstore.FileRequest) (file, bool, error) {
+	if f, ok := s.files[fileKey{ref: req.Source, arch: req.Arch}]; ok {
+		return f, true, nil
+	}
+	// A file artifact published as a single manifest carries no platform and answers for
+	// every architecture, including a request that names one.
+	if f, ok := s.files[fileKey{ref: req.Source}]; ok {
+		return f, true, nil
+	}
+	if req.Arch == "" {
+		if arches := s.fileArches(req.Source); len(arches) > 0 {
+			return file{}, false, fmt.Errorf("%s holds %s for %s, and the file entry selects no single architecture: name one in its selector.arch", s.source, req.Source, strings.Join(arches, ", "))
+		}
+	}
+	// A store that holds the reference for other architectures but not for this one is a
+	// partial store, which is a miss and not an error.
+	return file{}, false, nil
+}
+
+// fileArches lists the architectures the store holds ref for, sorted, for a message.
+func (s *Store) fileArches(ref string) []string {
+	var arches []string
+	for key := range s.files {
+		if key.ref == ref {
+			arches = append(arches, archName(key.arch))
+		}
+	}
+	slices.Sort(arches)
+	return arches
 }
 
 // Source is the path the store was opened from, for messages and provenance.
@@ -265,11 +390,14 @@ func (s *Store) Describe() string {
 	return "hauler store " + s.source
 }
 
-// Fetch writes the file the store recorded as coming from src to dst, creating it.
-func (s *Store) Fetch(ctx context.Context, src, dst string) (err error) {
-	f, ok := s.files[src]
+// Fetch writes the file the store recorded as coming from req.Source to dst, creating it.
+func (s *Store) Fetch(ctx context.Context, req contentstore.FileRequest, dst string) (err error) {
+	f, ok, err := s.file(req)
+	if err != nil {
+		return err
+	}
 	if !ok {
-		return fmt.Errorf("%s does not hold the file %s", s.source, src)
+		return fmt.Errorf("%s does not hold the file %s", s.source, req.Source)
 	}
 	rc, err := s.store.Fetch(ctx, f.descriptor)
 	if err != nil {

@@ -40,6 +40,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/contentstore"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
@@ -400,6 +401,20 @@ func checkMappings(ctx context.Context, d distro.Distro, values map[string]any) 
 	}
 }
 
+// fileArch returns the one architecture a file entry selects, or "" when it selects none or
+// several.
+//
+// A file is staged arch-blind -- fileGrabber keys its output on the entry's index in the list,
+// and selector.arch is not read again until install time -- so this is the only thing that
+// tells a build which platform of a multi-platform source an entry meant. A resolver that
+// needs a platform and gets "" refuses rather than guessing; see issue #1033.
+func fileArch(file v1alpha1.File) string {
+	if len(file.Selector.Arch) != 1 {
+		return ""
+	}
+	return string(file.Selector.Arch[0])
+}
+
 // fileGrabber stages one file into buildPath. The returned FileSource is non-nil only when the
 // bytes came from somewhere other than the declared source -- an override, or a content store --
 // so the caller records what actually happened rather than only what was configured.
@@ -451,7 +466,11 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	// over it. What the store yields is a local file, so the staging below hands off to the
 	// local-source branch and reuses its extraction, verification and permissions unchanged.
 	if !overridden && store != nil {
-		name, held := store.File(file.Source)
+		req := contentstore.FileRequest{Source: file.Source, Arch: fileArch(file)}
+		name, held, err := store.File(req)
+		if err != nil {
+			return nil, err
+		}
 		switch {
 		case held:
 			// Store content is bytes whoever wrote the distro definition never saw, exactly
@@ -469,7 +488,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 				err = errors.Join(err, os.RemoveAll(staged))
 			}()
 			source = filepath.Join(staged, name)
-			if err := store.Fetch(ctx, file.Source, source); err != nil {
+			if err := store.Fetch(ctx, req, source); err != nil {
 				return nil, err
 			}
 			logger.From(ctx).Info("file read from content store",
@@ -683,11 +702,12 @@ func getChecksum(dirPath string) (string, string, error) {
 // and would send every lookup to a bundle that is not there. See openContentStore in pkg/distro.
 type ContentStore interface {
 	images.ImageSource
-	// File reports whether the bundle holds the file the definition named as src, and the
-	// name it is restored under.
-	File(src string) (name string, ok bool)
+	// File reports whether the bundle holds the file the definition's entry asks for, and
+	// the name it is restored under. It errors when the bundle holds the reference for
+	// several architectures and the request names none -- see contentstore.FileRequest.
+	File(req contentstore.FileRequest) (name string, ok bool, err error)
 	// Fetch writes that file to dst.
-	Fetch(ctx context.Context, src, dst string) error
+	Fetch(ctx context.Context, req contentstore.FileRequest, dst string) error
 	// Source names the bundle as the operator spelled it, for messages and provenance.
 	Source() string
 }

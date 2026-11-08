@@ -22,13 +22,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
@@ -625,6 +628,137 @@ func TestFileGrabberFallsBackWhenStoreLacksTheFile(t *testing.T) {
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
 	require.NoError(t, err)
 	require.Equal(t, grabbedPayload, string(got))
+}
+
+// haulWithMultiPlatformFile writes a hauler store holding one file artifact published as an
+// image index over one titled manifest per architecture, and returns it opened. This is the
+// shape a vendor-published engine bundle has, and the one a store resolved nothing for.
+func haulWithMultiPlatformFile(t *testing.T, originalRef string, name string, perArch map[string]string) *haulerstore.Store {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "store")
+	blobDir := filepath.Join(dir, "blobs", "sha256")
+	require.NoError(t, os.MkdirAll(blobDir, 0o755))
+
+	blob := func(mediaType string, b []byte, annotations map[string]string) ocispec.Descriptor {
+		sum := sha256.Sum256(b)
+		hexSum := hex.EncodeToString(sum[:])
+		require.NoError(t, os.WriteFile(filepath.Join(blobDir, hexSum), b, 0o644))
+		return ocispec.Descriptor{
+			MediaType:   mediaType,
+			Digest:      digest.NewDigestFromEncoded(digest.SHA256, hexSum),
+			Size:        int64(len(b)),
+			Annotations: annotations,
+		}
+	}
+
+	children := make([]ocispec.Descriptor, 0, len(perArch))
+	for _, arch := range slices.Sorted(maps.Keys(perArch)) {
+		layer := blob("application/vnd.content.hauler.file.layer.v1", []byte(perArch[arch]),
+			map[string]string{ocispec.AnnotationTitle: name})
+		config := blob("application/vnd.content.hauler.file.http.config.v1+json", []byte(`{}`), nil)
+		manifestBytes, err := json.Marshal(ocispec.Manifest{
+			Versioned: specs.Versioned{SchemaVersion: 2},
+			MediaType: ocispec.MediaTypeImageManifest,
+			Config:    config,
+			Layers:    []ocispec.Descriptor{layer},
+		})
+		require.NoError(t, err)
+		child := blob(ocispec.MediaTypeImageManifest, manifestBytes, nil)
+		child.Platform = &ocispec.Platform{OS: "linux", Architecture: arch}
+		children = append(children, child)
+	}
+
+	indexBytes, err := json.Marshal(ocispec.Index{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: children,
+	})
+	require.NoError(t, err)
+	entry := blob(ocispec.MediaTypeImageIndex, indexBytes, map[string]string{
+		haulerstore.AnnotationOriginalRef: originalRef,
+		haulerstore.AnnotationKind:        "dev.hauler/image",
+	})
+
+	outerBytes, err := json.Marshal(ocispec.Index{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: []ocispec.Descriptor{entry},
+	})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ocispec.ImageIndexFile), outerBytes, 0o644))
+
+	store, err := haulerstore.Open(context.Background(), dir)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, store.Close()) })
+	return store
+}
+
+// The entry's own selector.arch is what picks a platform out of a multi-platform source. It is
+// the only thing that can: a file is staged arch-blind, keyed on its index in the list, and
+// nothing else in the build knows which architecture an entry meant.
+func TestFileGrabberMultiPlatformStoreUsesSelectorArch(t *testing.T) {
+	const declared = "oci://registry.example.com/vendor/engine:v1.37.1"
+	buildPath := t.TempDir()
+	store := haulWithMultiPlatformFile(t, declared, "engine", map[string]string{
+		"amd64": grabbedPayload,
+		"arm64": "arm64 contents that must not be staged\n",
+	})
+
+	file := v1alpha1.File{
+		Source:   declared,
+		Target:   "/usr/local/bin/engine",
+		Shasum:   payloadShasum(),
+		Selector: v1alpha1.BinarySelector{Arch: api.Arches{api.ArchAMD64}},
+	}
+
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, nil, store)
+	require.NoError(t, err)
+
+	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "engine"))
+	require.NoError(t, err)
+	require.Equal(t, grabbedPayload, string(got), "the arm64 child was staged for an amd64 entry")
+
+	require.NotNil(t, provenance)
+	require.Equal(t, store.Source(), provenance.Store)
+}
+
+// An entry that names no single architecture cannot say which platform of a multi-platform
+// source it meant, and the refusal has to name the entry: falling back to the declared source
+// would reach the network for content the operator staged.
+func TestFileGrabberMultiPlatformStoreRefusesAmbiguousEntry(t *testing.T) {
+	const declared = "oci://registry.example.com/vendor/engine:v1.37.1"
+	store := haulWithMultiPlatformFile(t, declared, "engine", map[string]string{
+		"amd64": grabbedPayload,
+		"arm64": "arm64 contents\n",
+	})
+
+	for _, tc := range []struct {
+		name     string
+		selector v1alpha1.BinarySelector
+	}{
+		{
+			name:     "no architecture",
+			selector: v1alpha1.BinarySelector{},
+		},
+		{
+			name:     "several architectures",
+			selector: v1alpha1.BinarySelector{Arch: api.Arches{api.ArchAMD64, api.ArchARM64}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			file := v1alpha1.File{
+				Source:   declared,
+				Target:   "/usr/local/bin/engine",
+				Shasum:   payloadShasum(),
+				Selector: tc.selector,
+			}
+
+			_, err := fileGrabber(context.Background(), string(config.FilesDir), t.TempDir(), t.TempDir(), 0, file, nil, store)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "selector.arch")
+			require.Contains(t, err.Error(), declared)
+		})
+	}
 }
 
 // An extractPath whose leading segment is the target's own base name used to fail, because the
