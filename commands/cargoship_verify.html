@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-43f38244.js";
+            window.path_to_searchindex_js = "../searchindex-b9560233.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-717413a5.js"></script>
@@ -203,16 +203,16 @@ $ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
   -h, --help[=true|false]                       help for verify
-      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
   -k, --key string                              Path to public key file for validating signed packages
-      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
 <h3 id="see-also"><a class="header" href="#see-also">SEE ALSO</a></h3>

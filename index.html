@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-43f38244.js";
+            window.path_to_searchindex_js = "searchindex-b9560233.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-717413a5.js"></script>
@@ -415,8 +415,11 @@ cargoship vault rekey ./cargoship-config.yaml --new-vault-password-file ./new-pa
 </code></pre>
 <p><code>encrypt-path</code> only encrypts; cargoship decrypts a registry’s <code>auth.user</code>, <code>auth.pass</code>, <code>auth.token</code> and <code>tls.ca</code> at apply time, and warns when asked to encrypt a path outside that set. <code>decrypt</code>, <code>decrypt-path</code>, <code>decrypt-file</code> and <code>encrypt-file</code> complete the set; <code>cargoship vault --help</code> lists all eight.</p>
 <h3 id="10-validate-a-file-or-write-its-schema"><a class="header" href="#10-validate-a-file-or-write-its-schema">10. Validate a File, or Write Its Schema</a></h3>
-<pre><code class="language-bash"># Check an inventory, package definition, or config file against its schema
-cargoship validate ./cargoship-config.yaml
+<pre><code class="language-bash"># Check an inventory or package definition against its schema; the kind is read from the document
+cargoship validate ./cluster.yaml
+
+# A config file declares no kind, so name the schema for it
+cargoship validate --kind config ./cargoship-config.yaml
 
 # Write the JSON Schema for one of cargoship's own file formats: inventory, package, or config
 cargoship schema inventory -o ./inventory.schema.json
@@ -509,6 +512,7 @@ metadata:
 </table>
 </div>
 <p>Everything cargoship writes itself - <code>cargoship inventory from-ansible</code>, the Ansible collection, the OpenTofu provider, the generated example packages - now emits the new spelling. No removal date is set for the old one; when one is, it will be announced in a release before it lands.</p>
+<hr>
 <h2 id="exit-codes"><a class="header" href="#exit-codes">Exit Codes</a></h2>
 <p>Cargoship is usually driven from a script on the management node, so a failure needs to say what kind of failure it was. Every command uses the same codes:</p>
 <div class="table-wrapper">

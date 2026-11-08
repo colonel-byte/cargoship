@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-43f38244.js";
+            window.path_to_searchindex_js = "../searchindex-b9560233.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-717413a5.js"></script>
@@ -303,6 +303,9 @@ components:
 <pre><code class="language-bash">cargoship create ./distro-defs \
   --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst \
   --content-store ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
+</code></pre>
+<p>Comma-separated values work too, so the same two stores can be given in one flag. It is the spelling to reach for when the list comes from a variable rather than being typed - though the value is parsed as CSV, so a path containing a comma or a double quote has to use the repeated flag above:</p>
+<pre><code class="language-bash">cargoship create ./distro-defs --content-store "$AMD64_STORE,$ARM64_STORE"
 </code></pre>
 <p>Several stores are read as one, and the two halves merge differently because the two kinds of content are shaped differently. A <strong>file</strong> entry already names one architecture, so the store holding that architecture answers it. An <strong>image</strong> reference covers every architecture at once, so the stores holding it are merged into a single view and the build takes each platform from whichever store has it. Mixing formats is fine: a hauler store and a zarf package side by side read as one.</p>
 <p>The same list works in the config file:</p>

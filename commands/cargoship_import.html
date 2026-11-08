@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-43f38244.js";
+            window.path_to_searchindex_js = "../searchindex-b9560233.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-717413a5.js"></script>
@@ -204,7 +204,7 @@ $ cargoship import ./oci-layout-dir -o ./build/
 <pre><code>  -a, --architecture string   Architecture for OCI images and Zarf packages
   -h, --help[=true|false]     help for import
   -k, --key string            Path to public key file for validating signed packages
-  -o, --output string         Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package. (default ".")
+  -o, --output string         Where to write the package: a local directory, or an oci:// registry URL. (default ".")
       --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode     Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
@@ -212,7 +212,7 @@ $ cargoship import ./oci-layout-dir -o ./build/
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
 <h3 id="see-also"><a class="header" href="#see-also">SEE ALSO</a></h3>

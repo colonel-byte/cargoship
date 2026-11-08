@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-43f38244.js";
+            window.path_to_searchindex_js = "../searchindex-b9560233.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-717413a5.js"></script>
@@ -208,18 +208,18 @@ $ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
 $ cargoship dev sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
-<pre><code>      --arch selector.arch                      For an oci:// reference that resolves to an image index, the architecture whose manifest to read (i.e. for use with a file entry's selector.arch). It is not defaulted to this host's architecture: the digest is going into an entry that names its own architecture, and guessing here would give a plausible wrong answer. An artifact published as a single manifest needs none.
-  -e, --extract-path extractPath                The path inside of an archive to use to calculate the sha256sum (i.e. for use with a file entry's extractPath). For an oci:// reference it is a path inside the layer --layer names. Shell completion lists that layer's members once both --layer and --arch are given, which it needs because listing them reads the layer itself.
+<pre><code>      --arch string                             For an oci:// index, the architecture whose manifest to read. Never defaulted. See docs/guides/oci-file-source.md.
+  -e, --extract-path string                     Path inside an archive, or inside the layer --layer names, to checksum. See docs/guides/oci-file-source.md.
   -h, --help[=true|false]                       help for sha256sum
-      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --layer layer                             For an oci:// reference, the layer to take, by its org.opencontainers.image.title annotation (i.e. for use with a file entry's layer). Required when the artifact carries more than one layer. Combine it with --extract-path when the named layer is itself an archive. Shell completion offers the titles the artifact carries, and reads them from the architecture --arch names, so give that first.
-      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
+      --layer string                            For an oci:// reference, the layer to take by its image title annotation. See docs/guides/oci-file-source.md.
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string        Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
 <h3 id="see-also"><a class="header" href="#see-also">SEE ALSO</a></h3>
