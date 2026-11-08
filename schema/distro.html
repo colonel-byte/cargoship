@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b45b73ba.js";
+            window.path_to_searchindex_js = "../searchindex-2e02d2ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b8270bf1.js"></script>
+        <script src="../toc-096b91be.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -295,6 +295,7 @@
 <tr><td><code>extractPath</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path cargoship extracts from a tarball.</td></tr>
 <tr><td><code>group</code></td><td><code>string</code></td><td>no</td><td></td><td>is the group that owns the file.</td></tr>
 <tr><td><code>isDirectory</code></td><td><code>boolean</code></td><td>no</td><td></td><td>indicates that Target is a directory. Cargoship uses this mainly for image uploads.</td></tr>
+<tr><td><code>layer</code></td><td><code>string</code></td><td>no</td><td></td><td>names which layer of an oci:// source to take, by its org.opencontainers.image.title annotation. It is required when the artifact carries more than one layer, and is ignored for every other kind of source. Combine it with extractPath when the layer it names is itself an archive.</td></tr>
 <tr><td><code>name</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the file entry. It is not the file name on disk.</td></tr>
 <tr><td><code>perm</code></td><td>any</td><td>no</td><td></td><td>sets the permissions cargoship applies to the file. It accepts an octal string or an integer, for example “0644” or 644.</td></tr>
 <tr><td><code>selector</code></td><td><a href="#binaryselector">BinarySelector</a></td><td>no</td><td></td><td>controls whether cargoship uploads this file to a given node.</td></tr>

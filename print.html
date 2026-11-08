@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b45b73ba.js";
+            window.path_to_searchindex_js = "searchindex-2e02d2ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b8270bf1.js"></script>
+        <script src="toc-096b91be.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -296,6 +296,30 @@ cargoship create ./distro-defs --content-store ./zarf-package-rke2-content-amd64
     content_store: ~/hauls/haul.tar.zst
 </code></pre>
 <p>See <a href="#building-from-a-local-content-store">Building From a Local Content Store</a> for the collect-and-carry workflow, what each format must contain, and how this compares with <code>--registry-override</code> and <code>--file-override</code>.</p>
+<p>Where the build host can reach a registry, a file can also name an OCI reference directly, which is how a growing number of vendors publish air-gapped engine bundles. The entry says which layer it wants and <code>selector.arch</code> supplies the platform, so one tag covering several architectures resolves per entry:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    os:
+      files:
+        # one tarball per platform, published as a single titled layer
+        - source: oci://registry.example.com/vendor/engine:v1.37.1
+          extractPath: bin/engine
+          target: /usr/local/bin/engine
+          executable: true
+          selector:
+            arch:
+              - amd64
+
+        # every file in the release as its own titled layer
+        - source: oci://ghcr.io/cri-o/bundle:d816c7e
+          layer: cri-o/bin/crio
+          target: /usr/local/bin/crio
+          executable: true
+          selector:
+            arch:
+              - amd64
+</code></pre>
+<p><code>--registry-override</code> redirects these the way it redirects an image pull. See <a href="#declaring-a-file-from-an-oci-registry">Declaring a File From an OCI Registry</a>.</p>
 <p>A build caches what it fetches under <code>~/.cache/cargoship</code>, so a rebuild of the same definition reaches the network for little or nothing. Nothing expires that cache – it has no size limit and grows for as long as definitions name new versions – so <code>clean-cache</code> is what reclaims it:</p>
 <pre><code class="language-bash"># report every area with its size and what would go, removing nothing
 cargoship dev clean-cache --dry-run
@@ -1272,6 +1296,31 @@ ansible-galaxy collection install colonel_byte-cargoship-0.39.0.tar.gz
 <p>Those are the same strings a distro definition writes in <code>imageConfig.images</code> and in a file’s <code>source</code>, so matching the two is an exact lookup rather than a guess.</p>
 <p>Image references are canonicalised before the lookup, so every spelling of one image resolves to the same entry: a definition naming <code>nginx:1.27-alpine</code> matches a store that recorded <code>index.docker.io/library/nginx:1.27-alpine</code>.</p>
 <p>Reach for an override instead when the content is behind an internal mirror that the management node <em>can</em> reach, or when you want one specific file swapped and nothing else. The two work together - see <a href="#combining-a-content-store-with-overrides">Combining a Content Store With Overrides</a>.</p>
+<h3 id="a-multi-platform-file-artifact-resolves-per-architecture"><a class="header" href="#a-multi-platform-file-artifact-resolves-per-architecture">A Multi-Platform File Artifact Resolves Per Architecture</a></h3>
+<p>A file in a haul is usually one manifest holding one titled layer, and the reference names bytes on its own. Some vendors publish an air-gapped engine bundle differently: one tag, an image index, and one manifest per platform, each carrying that architecture’s tarball as a titled layer.</p>
+<pre><code class="language-text">registry.example.com/vendor/engine:v1.37.1   -&gt; application/vnd.oci.image.index.v1+json
+  |- linux/amd64   layer title "engine.linux-amd64.tar.gz"
+  |- linux/arm64   layer title "engine.linux-arm64.tar.gz"
+</code></pre>
+<p>The reference no longer names one file, so the entry’s own <code>selector.arch</code> picks the platform child out of the index:</p>
+<pre><code class="language-yaml">- source: oci://registry.example.com/vendor/engine:v1.37.1
+  extractPath: bin/engine
+  target: /usr/local/bin/engine
+  executable: true
+  shasum: &lt;sha256 of the extracted member&gt;
+  selector:
+    package: binary
+    arch:
+      - amd64
+</code></pre>
+<p>A file is staged arch-blind during a build - every architecture’s entries go into one tree, keyed on the entry’s position in the list - so <code>selector.arch</code> is the only thing that says which platform an entry meant. An entry naming none of them, or naming several, is therefore <strong>refused</strong> rather than resolved to a guess:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to stage file 0:
+    hauler store ./haul.tar.zst holds oci://registry.example.com/vendor/engine:v1.37.1 for
+    amd64, arm64, and the file entry selects no single architecture: name one in its
+    selector.arch
+</code></pre>
+<p>Write one entry per architecture, each naming its own. A store that holds the reference for some architectures but not the one an entry names is a <a href="#a-partial-store-still-builds">partial store</a>, not an error: that entry falls back to its declared source.</p>
+<p>Note that <strong>a haul synced one architecture at a time can mask this.</strong> A single-platform <code>hauler store sync</code> leaves a bare entry under the same reference in addition to the index, and that entry carries no platform, so it answers for every architecture. A store built up one architecture at a time therefore appears to work for whichever architecture was synced last, while a clean two-platform store resolves per entry as above.</p>
 <h2 id="collecting-a-haul"><a class="header" href="#collecting-a-haul">Collecting a Haul</a></h2>
 <p>On a machine that can reach the upstream registries and URLs, add everything the distro definition declares. <strong>Add files by the same URL the definition names</strong>, because that URL is what the match is made on:</p>
 <pre><code class="language-bash"># The files a definition declares, added by their declared URL
@@ -1993,6 +2042,141 @@ metadata:
 <h2 id="applying"><a class="header" href="#applying">Applying</a></h2>
 <p>Each host in the inventory receives the files its own architecture selects, so a mixed-architecture cluster installs from the one package: an <code>arm64</code> worker gets the <code>arm64</code> binary, an <code>amd64</code> controller gets the <code>amd64</code> one, and both get the entries with no <code>arch</code> selector. Images are likewise exported per host architecture, so each host loads a tarball holding the images built for it.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="declaring-a-file-from-an-oci-registry"><a class="header" href="#declaring-a-file-from-an-oci-registry">Declaring a File From an OCI Registry</a></h1>
+<p>A file a distro definition declares usually comes from an HTTP URL. It can also come from an OCI registry by reference, which is how a growing number of vendors publish air-gapped engine bundles: one tag per release, the artifact’s content as titled layers, usually as an index over one manifest per platform.</p>
+<pre><code class="language-yaml">spec:
+  config:
+    os:
+      files:
+        - name: engine
+          source: oci://registry.example.com/vendor/engine:v1.37.1
+          extractPath: bin/engine
+          target: /usr/local/bin/engine
+          executable: true
+          shasum: &lt;sha256 of the extracted member&gt;
+          selector:
+            package: binary
+            arch:
+              - amd64
+</code></pre>
+<p>This is for a build host that <em>can</em> reach the registry. For a genuinely disconnected build, stage the content into a local bundle and use <a href="#building-from-a-local-content-store"><code>--content-store</code></a> instead - that is the better answer, and it stays the default story.</p>
+<h2 id="which-layer-the-entry-wants"><a class="header" href="#which-layer-the-entry-wants">Which Layer the Entry Wants</a></h2>
+<p>Two artifact shapes are in use, and they are resolved differently, so an entry says which it is rather than cargoship guessing. See <a href="#why-an-oci-file-source-names-its-layer-explicitly"><code>docs/agent/choice-oci-file-source.md</code></a> for why this is a field rather than an inference.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Entry declares</th><th>What cargoship takes</th></tr>
+</thead>
+<tbody>
+<tr><td>neither <code>layer</code> nor <code>extractPath</code></td><td>The artifact’s single layer is the file. More than one layer fails, naming the titles</td></tr>
+<tr><td><code>layer</code></td><td>The layer with that <code>org.opencontainers.image.title</code> annotation is the file</td></tr>
+<tr><td><code>extractPath</code></td><td>The artifact’s single layer is an archive, and that member is extracted out of it</td></tr>
+<tr><td>both</td><td>The named layer is an archive, and that member is extracted out of it</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>One tarball per platform, as a single titled layer.</strong> The whole release arrives as one archive and <code>extractPath</code> names a path inside it:</p>
+<pre><code class="language-text">registry.example.com/vendor/engine:v1.37.1   -&gt; application/vnd.oci.image.index.v1+json
+  |- linux/amd64   one layer, titled "engine.linux-amd64.tar.gz"
+  |- linux/arm64   one layer, titled "engine.linux-arm64.tar.gz"
+</code></pre>
+<pre><code class="language-yaml">- source: oci://registry.example.com/vendor/engine:v1.37.1
+  extractPath: bin/engine
+  target: /usr/local/bin/engine
+  selector:
+    arch:
+      - amd64
+</code></pre>
+<p><strong>Every file in the release as its own titled layer.</strong> There is no archive, and <code>layer</code> names the title:</p>
+<pre><code class="language-text">ghcr.io/cri-o/bundle:d816c7e   -&gt; application/vnd.oci.image.index.v1+json
+  |- linux/amd64   46 layers, titled "cri-o/bin/crio", "cri-o/bin/pinns", "cri-o/README.md", ...
+  |- linux/arm64   the same 46 titles
+</code></pre>
+<pre><code class="language-yaml">- source: oci://ghcr.io/cri-o/bundle:d816c7e
+  layer: cri-o/bin/crio
+  target: /usr/local/bin/crio
+  executable: true
+  selector:
+    arch:
+      - amd64
+</code></pre>
+<p><strong>A layer that is itself an archive.</strong> <code>layer</code> and <code>extractPath</code> compose: name the layer, then the member inside it. A zarf package publishes every component as a titled tarball, so pulling the injector binary out of the init package is both fields at once:</p>
+<pre><code class="language-text">ghcr.io/zarf-dev/packages/init:v0.89.0   -&gt; application/vnd.oci.image.index.v1+json
+  |- multi/amd64      38 layers, titled "components/zarf-injector.tar", "images/index.json", ...
+  |- multi/arm64      the same titles
+  |- multi/skeleton   a source-only child, with no components
+</code></pre>
+<pre><code class="language-yaml">- source: oci://ghcr.io/zarf-dev/packages/init:v0.89.0
+  layer: components/zarf-injector.tar
+  extractPath: zarf-injector/files/0/zarf-injector
+  target: /usr/local/bin/zarf-injector
+  executable: true
+  shasum: 54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119
+  selector:
+    package: binary
+    arch:
+      - amd64
+</code></pre>
+<p>The <code>shasum</code> is the <strong>extracted member’s</strong>, not the layer’s - the same rule any <code>extractPath</code> entry follows.</p>
+<p>An entry naming a layer the artifact does not carry fails and lists the titles it does, so a typo costs one build rather than an afternoon:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to stage file 0 (crio):
+    oci://ghcr.io/cri-o/bundle:d816c7e carries no layer titled "cri-o/bin/conmonrs-typo";
+    it carries cri-o/LICENSE, cri-o/Makefile, cri-o/README.md, cri-o/bin/conmon,
+    cri-o/bin/conmonrs, cri-o/bin/crictl, cri-o/bin/crio,
+    cri-o/bin/crio-credential-provider and 38 more
+</code></pre>
+<h2 id="selectorarch-is-the-platform"><a class="header" href="#selectorarch-is-the-platform"><code>selector.arch</code> Is the Platform</a></h2>
+<p>An artifact published as an image index holds more than one platform under one reference, and the entry’s own <code>selector.arch</code> is what picks the child. It has to be the entry: a file is staged arch-blind during a build - every architecture’s entries land in one tree, keyed on the entry’s position in the list - so nothing else in the build knows which platform an entry meant.</p>
+<p>Write one entry per architecture, each naming its own. An entry that names none, or names several, is refused rather than resolved to a guess:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to stage file 0 (engine):
+    unable to resolve oci://registry.example.com/vendor/engine:v1.37.1: ... not found: no
+    matching manifest was found in the manifest list (the file entry selects no single
+    architecture, so a multi-platform artifact cannot be resolved from it: name one in its
+    selector.arch)
+</code></pre>
+<p>An artifact published as a single manifest carries no platform at all, and an entry for it needs no <code>selector.arch</code> for this reason - nor does an index that holds exactly one manifest, since there is nothing there to be ambiguous about. An entry may of course still want <code>selector.arch</code> for the usual reason, to control which hosts receive the file.</p>
+<p>The architecture is matched regardless of how the artifact spells its platform’s operating system, because there are three spellings in circulation: a vendor publishing binaries writes <code>linux</code>, zarf and cargoship write <code>multi</code> on a package index, and some artifacts record an architecture and no OS. There is no <code>selector.os</code> to write, and nothing to configure. A child naming an OS a linux node cannot run - <code>windows</code>, <code>darwin</code> - is not a candidate, and an architecture available only under one of those is reported with its OS so the message does not read as though the architecture were there:</p>
+<pre><code class="language-text">ERR ... oci://registry.example.com/vendor/tool:v1 holds no amd64 manifest;
+    it holds windows/amd64, windows/arm64
+</code></pre>
+<p>An index child for something that is not an architecture at all is skipped the same way - the zarf init package carries a <code>skeleton</code> child, which is why a miss lists what the reference does hold:</p>
+<pre><code class="language-text">ERR ... oci://ghcr.io/zarf-dev/packages/init:v0.89.0 holds no riscv64 manifest;
+    it holds amd64, arm64, skeleton
+</code></pre>
+<h2 id="shasums-digests-and-redirects"><a class="header" href="#shasums-digests-and-redirects">Shasums, Digests, and Redirects</a></h2>
+<p>The layer is verified against the digest the manifest gives it as it is read, so a truncated or substituted transfer fails whether or not the entry declares a <code>shasum</code>. A declared <code>shasum</code> is still checked, against the file that is finally staged - which for an <code>extractPath</code> entry is the extracted member, not the archive.</p>
+<p><code>shasum</code> is therefore <strong>optional</strong> for an <code>oci://</code> source, exactly as it is for an HTTP URL: the reference is the definition author’s choice, so it carries the trust already placed in the definition.</p>
+<p>That changes when the reference is redirected. <code>--registry-override</code> applies to an <code>oci://</code> file source for the same reason it applies to an image pull:</p>
+<pre><code class="language-bash">cargoship create ./distro-defs \
+  --registry-override registry.example.com=registry.internal.example.net
+</code></pre>
+<p>The bytes now come from a registry the definition’s author never named, so something has to tie them to what upstream published. A redirected entry is refused unless it declares a <code>shasum</code> <strong>or</strong> pins its reference with a digest:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to stage file 0 (engine):
+    registry override registry.example.com=registry.internal.example.net applies to
+    oci://registry.example.com/vendor/engine:v1.37.1, which declares no shasum and is not
+    pinned by digest: refusing to fetch it unverified
+</code></pre>
+<p>Pinning by digest is the better of the two for an artifact you expect to be mirrored, because it is checked by construction:</p>
+<pre><code class="language-yaml">- source: oci://ghcr.io/cri-o/bundle@sha256:fe1f8c9bef946d9a8c819748aae2501394d723edf8b20c8db80dc6ca304b2de0
+  layer: cri-o/bin/pinns
+  target: /usr/local/bin/pinns
+</code></pre>
+<p>Either way, the redirect is recorded in the package’s <code>.build.fileSources</code> beside the declared source, so the package says where each file actually came from.</p>
+<p>Note that <strong><code>--file-override</code> does not apply to an <code>oci://</code> source.</strong> It matches http and https URL prefixes only, so it will silently never fire on one of these entries. A redirect for an OCI reference is a registry override.</p>
+<h2 id="credentials-and-transport"><a class="header" href="#credentials-and-transport">Credentials and Transport</a></h2>
+<p>Registry credentials come from the Docker credential store, the same place every other registry cargoship talks to reads them from - <code>docker login</code> or <code>podman login</code> against the registry is enough. <code>--plain-http</code> and <code>--insecure-skip-tls-verify</code> apply to these fetches too.</p>
+<p>Fetched layers go into the shared blob cache under <code>~/.cache/cargoship/images</code>, keyed by digest, so an artifact’s 43 MiB tarball is fetched once per cache rather than once per build - including when several entries extract different members out of the same archive.</p>
+<h2 id="finding-the-values-to-write"><a class="header" href="#finding-the-values-to-write">Finding the Values to Write</a></h2>
+<p>Reading an artifact’s shape needs no cargoship:</p>
+<pre><code class="language-bash"># the index, and the platforms it covers
+oras manifest fetch ghcr.io/cri-o/bundle:d816c7e | jq '.manifests[] | {digest, platform}'
+
+# the layer titles of one platform child
+oras manifest fetch ghcr.io/cri-o/bundle:d816c7e-amd64 |
+  jq -r '.layers[] | "\(.size)\t\(.annotations["org.opencontainers.image.title"])"'
+</code></pre>
+<p><code>cargoship sha256sum</code> does not yet read an <code>oci://</code> reference, so the <code>shasum</code> for one of these entries is computed by hand for now - see <a href="https://github.com/colonel-byte/cargoship/issues/1041"><code>#1041</code></a>. Remember that for an <code>extractPath</code> entry the digest wanted is the <strong>extracted member’s</strong>, not the archive’s.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="package-values"><a class="header" href="#package-values">Package Values</a></h1>
 <p>A cargoship package ships with a set of values: Helm-style configuration, addressed by dotted paths, that a cluster can override without rebuilding the package. Values reach the engine configuration in two ways – structural <em>mappings</em>, and Go <em>templates</em> that read <code>.Values</code> – and they are also available to the files a package uploads and to the actions that build it.</p>
 <p>This guide covers authoring values in a package, overriding them from a cluster inventory or the command line, and choosing between mappings and templates.</p>
@@ -2304,11 +2488,21 @@ cargoship apply &lt;package&gt; --config inventory.yaml --dry-run
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="registry-override-guide"><a class="header" href="#registry-override-guide">Registry Override Guide</a></h1>
-<p>This guide explains how to redirect the images Cargoship pulls when creating a package, and how to authenticate to the resulting registry at apply time using an Ansible Vault-encrypted credential.</p>
+<p>This guide explains how to redirect what Cargoship pulls from a registry when creating a package, and how to authenticate to the resulting registry at apply time using an Ansible Vault-encrypted credential.</p>
 <p>For the same idea applied to the files and OS packages a distro definition downloads over HTTP, see the <a href="#file-override-guide">file override guide</a>.</p>
 <h2 id="what-a-registry-override-does"><a class="header" href="#what-a-registry-override-does">What a Registry Override Does</a></h2>
 <p>By default, <code>cargoship create</code> pulls images from the registries referenced in your source manifests (e.g. <code>docker.io</code>, <code>ghcr.io</code>). A registry override rewrites the registry portion of an image reference at package-create time, so images are instead pulled from a mirror – for example an internal pull-through cache or an air-gapped registry.</p>
 <p>This only affects where <code>create</code> pulls <em>from</em>. It doesn’t touch the cluster the package is later applied to; for authenticating the cluster’s container engine to a registry, see <a href="#authenticating-to-the-registry">Authenticating to the Registry</a> below.</p>
+<h3 id="it-also-covers-an-oci-file-source"><a class="header" href="#it-also-covers-an-oci-file-source">It Also Covers an <code>oci://</code> File Source</a></h3>
+<p>A file a distro definition declares can name an OCI reference rather than an HTTP URL – see the <a href="#declaring-a-file-from-an-oci-registry">OCI file source guide</a> – and an override rewrites those too, by the same prefix rule. An operator who points a registry somewhere else means it for everything cargoship fetches from there, so there is nothing extra to configure.</p>
+<p>One rule is stricter for a file than for an image. An image reference is resolved through its digest, so an overridden image is verified by construction; a file is not, and an overridden file source is <strong>refused</strong> unless it declares a <code>shasum</code> or pins its reference with a digest:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to stage file 0 (engine):
+    registry override registry.example.com=registry.internal.example.net applies to
+    oci://registry.example.com/vendor/engine:v1.37.1, which declares no shasum and is not
+    pinned by digest: refusing to fetch it unverified
+</code></pre>
+<p>The reasoning is the same as the one behind the <a href="#file-override-guide">file override guide</a>’s mandatory shasum: an override moves the choice of where the bytes come from to whoever runs <code>create</code>, and something has to tie them to what upstream published. A <code>@sha256:...</code> reference does that by itself, which is why it is accepted in place of a declared <code>shasum</code>.</p>
+<p>Note that <code>--file-override</code> does <strong>not</strong> apply to an <code>oci://</code> source – it matches http and https prefixes only. For an OCI reference, this is the mechanism.</p>
 <h2 id="setting-an-override-1"><a class="header" href="#setting-an-override-1">Setting an Override</a></h2>
 <p>Overrides are specified as <code>source=override</code> pairs, either on the command line or in the config file.</p>
 <h3 id="flag-1"><a class="header" href="#flag-1">Flag</a></h3>
@@ -3093,7 +3287,7 @@ $ cargoship create ./distro-defs --reproducible
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
   -o, --output string                           Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package. (default ".")
       --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --registry-override strings               Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --registry-override strings               Redirect what cargoship pulls from a registry, as SOURCE=TARGET pairs of registry prefixes, for example --registry-override docker.io=dockerio-reg.enterprise.intranet. Repeatable. When several sources match, the longest wins. This covers both the images a distro definition declares and any file whose source is an oci:// reference; for a redirected file, the declared shasum is enforced, and one that declares neither a shasum nor a digest in its reference is refused rather than fetched unverified from a mirror.
       --reproducible[=true|false]               Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
       --signing-key string                      Private key for signing packages. Accepts either a local file path or env://ENV_VAR to read the key from an environment variable. Cloud KMS references are not supported.
       --signing-key-pass string                 Password to the private key used for signing packages
@@ -3183,7 +3377,7 @@ $ cargoship dev apply ./distro-defs --config ./inventory.yaml --content-store ./
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --receipt-path string                     Write a structured JSON record of the run to PATH: what ran, against which package, against which fleet, and what changed. The file is written whether the run succeeds or fails, and is created readable only by its owner. PATH may carry the placeholders {command} and {timestamp}, which expand to the command that ran and when it started, so a PATH set once in '.distro.receipt_path' gives every run its own file. It names every host in the cluster configuration, so run 'cargoship dev redact-receipt' over it before attaching it to a ticket.
-      --registry-override strings               Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --registry-override strings               Redirect what cargoship pulls from a registry, as SOURCE=TARGET pairs of registry prefixes, for example --registry-override docker.io=dockerio-reg.enterprise.intranet. Repeatable. When several sources match, the longest wins. This covers both the images a distro definition declares and any file whose source is an oci:// reference; for a redirected file, the declared shasum is enforced, and one that declares neither a shasum nor a digest in its reference is refused rather than fetched unverified from a mirror.
       --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --update-kubeconfig[=true|false]          Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
@@ -5063,6 +5257,7 @@ $ cargoship version -o json
 <tr><td><code>extractPath</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path cargoship extracts from a tarball.</td></tr>
 <tr><td><code>group</code></td><td><code>string</code></td><td>no</td><td></td><td>is the group that owns the file.</td></tr>
 <tr><td><code>isDirectory</code></td><td><code>boolean</code></td><td>no</td><td></td><td>indicates that Target is a directory. Cargoship uses this mainly for image uploads.</td></tr>
+<tr><td><code>layer</code></td><td><code>string</code></td><td>no</td><td></td><td>names which layer of an oci:// source to take, by its org.opencontainers.image.title annotation. It is required when the artifact carries more than one layer, and is ignored for every other kind of source. Combine it with extractPath when the layer it names is itself an archive.</td></tr>
 <tr><td><code>name</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the file entry. It is not the file name on disk.</td></tr>
 <tr><td><code>perm</code></td><td>any</td><td>no</td><td></td><td>sets the permissions cargoship applies to the file. It accepts an octal string or an integer, for example “0644” or 644.</td></tr>
 <tr><td><code>selector</code></td><td><a href="#binaryselector">BinarySelector</a></td><td>no</td><td></td><td>controls whether cargoship uploads this file to a given node.</td></tr>
@@ -8939,6 +9134,9 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-a-multi-arch-package-stores-images-under-one-oci-index"><a class="header" href="#why-a-multi-arch-package-stores-images-under-one-oci-index">Why a multi-arch package stores images under one OCI index</a></h1>
 <p>A cargoship package is fat: one tarball carries every architecture it targets, and the host’s architecture selects what gets uploaded at apply time. Files fall out of that arrangement for free, because <code>fileGrabber</code> keys its output directories by the index of the entry in <code>spec.config.files</code>, so an amd64 entry and an arm64 entry are two list entries and land in two directories without anyone arranging it. Images do not, and the reason is not visible from the code that writes them.</p>
+<blockquote>
+<p><strong>Partly superseded</strong>, as far as files are concerned. The per-entry arrangement above is still how a package <em>stores</em> files, and it is still why the images half needed an index. What does not hold is the implied claim that a file is therefore never subject to the one-tag-many-platforms problem: a vendor-published file artifact can be an image index over one manifest per platform, so a single declared <code>source</code> does hold more than one platform’s bytes. The per-entry model is what resolves it - the entry’s <code>selector.arch</code> picks the child - but the resolver had to stop discarding the architecture first. See <a href="https://github.com/colonel-byte/cargoship/issues/1033">#1033</a>, <code>Store.classifyIndex</code> in <code>pkg/haulerstore</code>, and <code>fileArch</code> in <code>pkg/packager/assemble</code>. Everything below about images is unchanged.</p>
+</blockquote>
 <h2 id="the-oci-store-tags-by-image-reference"><a class="header" href="#the-oci-store-tags-by-image-reference">The OCI store tags by image reference</a></h2>
 <p><code>images.Pull</code> (<code>pkg/images/pull.go</code>) copies each pulled image into an <code>oci.Store</code> rooted at the package’s <code>images</code> directory, and the store is keyed by the image reference it was pulled as. That reference is <code>registry/name:tag</code>. It says nothing about a platform.</p>
 <p>Pull two platforms of <code>registry.k8s.io/pause:3.10</code> and both copies want that one tag. Whichever finishes last wins, the other is left in the layout as unreferenced blobs, and a later <code>Resolve</code> returns a platform nobody chose. The failure is quiet: the tarball is well formed, the upload succeeds, and the node fails later with an exec format error from a container it cannot run.</p>
@@ -9102,6 +9300,74 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>The alternative, dumping <code>nft list ruleset</code> into that file, would capture kube-proxy’s and the CNI’s rules along with cargoship’s and replay them at boot as static rules – stale ones, describing services that may no longer exist. Appending an include leaves the operator’s file otherwise intact, keeps cargoship’s contribution in one identifiable place, and stays correct when cargoship’s ruleset is regenerated. A host with neither conf file gets a warning rather than an error: the rules are loaded for this boot, but nothing will reload them at the next one.</p>
 <h2 id="one-inet-table-rather-than-separate-ip-and-ip6-tables"><a class="header" href="#one-inet-table-rather-than-separate-ip-and-ip6-tables">One <code>inet</code> table rather than separate <code>ip</code> and <code>ip6</code> tables</a></h2>
 <p>The <code>inet</code> family covers IPv4 and IPv6 in a single table, so a plan renders one table, one set of chains, and one transaction regardless of what the cluster’s addressing looks like. The cost is that address matches must name their family explicitly – <code>ip saddr</code> versus <code>ip6 saddr</code> – and that trusted addresses split into two sets, <code>cluster_v4</code> and <code>cluster_v6</code>, since a set has one type. Both are handled in rendering (<code>nftAddrFamily</code>, <code>NftSplitFamilies</code>) and are cheaper than maintaining two parallel tables and deciding which of them a dual-stack plan belongs in.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-an-oci-file-source-names-its-layer-explicitly"><a class="header" href="#why-an-oci-file-source-names-its-layer-explicitly">Why an <code>oci://</code> file source names its layer explicitly</a></h1>
+<p>A file a distro definition declares can come from an <code>oci://</code> reference, and the entry says which layer of that artifact it wants in a <code>layer</code> field rather than having it inferred. The field looks redundant from one artifact and essential from the next, which is the whole reason it exists: there are two shapes in the wild, they resolve differently, and nothing in a reference distinguishes them.</p>
+<h2 id="the-two-shapes"><a class="header" href="#the-two-shapes">The two shapes</a></h2>
+<p>Both of these are real, both are public, and both are what the feature was built and tested against:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Artifact</th><th>Shape</th><th>What names the bytes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>oci://ghcr.io/cri-o/bundle:d816c7e</code></td><td>An index over four platform manifests, each carrying <strong>46</strong> layers, one per file in the release, titled <code>cri-o/bin/crio</code> and the like</td><td>The layer’s own title</td></tr>
+<tr><td><code>oci://ghcr.io/zarf-dev/packages/init:v0.89.0</code></td><td>An index over three manifests, each carrying <strong>38</strong> layers that are themselves archives, titled <code>components/zarf-injector.tar</code></td><td>The title picks the archive, a path picks what is in it</td></tr>
+</tbody>
+</table>
+</div>
+<p>So <code>extractPath</code> cannot answer both. On the second it is a member of an archive; on the first there is no archive at all, and the same string would have to mean a layer title. Both are reachable with no credentials, so anything claimed here can be checked:</p>
+<pre><code class="language-bash">oras manifest fetch ghcr.io/cri-o/bundle:d816c7e-amd64 |
+  jq -r '.layers[].annotations["org.opencontainers.image.title"]' | head
+</code></pre>
+<p>A third shape is a platform manifest carrying a <strong>single</strong> titled archive - the whole release as one <code>rke2.linux-&lt;arch&gt;.tar.gz</code> - where <code>layer</code> can be omitted because there is nothing to choose between. Rancher Carbide publishes RKE2 Government that way, and it is the artifact that prompted this work, but it sits behind a subscription and a reader cannot verify it; the two public artifacts above cover every resolution rule it exercises.</p>
+<h2 id="why-not-infer-it"><a class="header" href="#why-not-infer-it">Why not infer it</a></h2>
+<p>The tempting rule is to try <code>extractPath</code> as a layer title first and fall back to treating a sole layer as an archive. It works for both artifacts above, needs no new field, and is about fifteen lines.</p>
+<p>It was rejected because the field would then mean different things depending on what the registry served, and the two meanings are not distinguishable by reading the definition. A reviewer looking at <code>extractPath: bin/engine</code> cannot tell whether that is a path inside a tarball or a layer title without fetching the artifact, and an operator debugging a failure has to work out which branch they are on before the error makes sense. A vendor who retitles their layers between releases would silently move an entry from one branch to the other.</p>
+<p><code>layer</code> and <code>extractPath</code> are therefore separate, each means one thing, and they compose: name a layer, and extract a member out of it, for an artifact that publishes several tarballs as titled layers.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Entry declares</th><th>What happens</th></tr>
+</thead>
+<tbody>
+<tr><td>neither</td><td>The artifact’s one layer is the file. More than one layer is an error naming the titles</td></tr>
+<tr><td><code>layer</code></td><td>That layer’s bytes are the file</td></tr>
+<tr><td><code>extractPath</code></td><td>The artifact’s one layer is an archive; the member is extracted</td></tr>
+<tr><td>both</td><td>The named layer is an archive; the member is extracted</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="the-platform-comes-from-selectorarch-and-nowhere-else"><a class="header" href="#the-platform-comes-from-selectorarch-and-nowhere-else">The platform comes from <code>selector.arch</code>, and nowhere else</a></h2>
+<p>An entry’s <code>selector.arch</code> is what picks a child out of an index, because it is the only thing that can. A file is staged arch-blind at build time - <code>fileGrabber</code> keys its output on the entry’s position in the list, and <code>selector.arch</code> is not read again until install time - so there is no per-architecture context for the fetch to inherit. An entry naming no single architecture, whose source is an index, is refused and named; see <a href="https://github.com/colonel-byte/cargoship/issues/1033"><code>#1033</code></a>, which is the same conclusion reached from the content-store side.</p>
+<h3 id="three-spellings-of-the-platform-os-and-why-there-is-no-selectoros"><a class="header" href="#three-spellings-of-the-platform-os-and-why-there-is-no-selectoros">Three spellings of the platform OS, and why there is no <code>selector.os</code></a></h3>
+<p>The child is selected by <code>resolveManifest</code> matching on the architecture and accepting any of three operating systems, rather than by handing a platform to <code>oras.Resolve</code>. That is not fussiness - it is the only way to read the artifacts that exist:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Spelling</th><th>Who writes it</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>linux</code></td><td>A vendor publishing real binaries, and what <code>pkg/images</code> asks for when pulling an image</td><td><code>ghcr.io/cri-o/bundle</code></td></tr>
+<tr><td><code>multi</code></td><td>zarf and cargoship, on a package index whose children are package architectures, not host platforms</td><td><code>ghcr.io/zarf-dev/packages/init</code></td></tr>
+<tr><td><code>""</code></td><td>An artifact recording an architecture and no OS at all</td><td></td></tr>
+</tbody>
+</table>
+</div>
+<p>Matching on <code>linux</code> alone cannot read a zarf init package, and matching on <code>multi</code> alone cannot read a vendor bundle - and nothing in a reference says which kind of publisher produced it. <code>oci.PlatformForArch</code> is therefore the wrong helper here despite being the one every other caller in this repository uses: it hardcodes <code>multi</code>, because every other caller is resolving a zarf or cargoship package.</p>
+<p><strong>An explicit <code>selector.os</code> was considered and rejected.</strong> It would let an entry say <code>multi</code>, which reads as configuration for something that is not a choice: the OS a child declares is a property of how the artifact was published, not of what the operator wants, and an operator would have to go and read the manifest to find out which value to write. That is the opposite of the <code>layer</code> field, which exists precisely because there the entry is resolving a genuine ambiguity that cargoship cannot resolve for it.</p>
+<p>The case that would earn the field is an artifact publishing <code>linux/amd64</code> <em>and</em> <code>windows/amd64</code> as file content under one tag. Nothing does today, and until something does it fails loudly - <code>resolveManifest</code>’s <code>default</code> branch reports that the reference holds two manifests for the architecture - rather than silently picking one. A child naming any other OS is not a candidate at all, since what cargoship stages is going to a linux node.</p>
+<h3 id="two-traps-in-staging-the-bytes"><a class="header" href="#two-traps-in-staging-the-bytes">Two traps in staging the bytes</a></h3>
+<ul>
+<li><strong>An extraction identifies an archive by its file name, not its bytes.</strong> <code>archive.Decompress</code> resolves a format by suffix (<code>findArchiver</code>), so the layer is staged under the name the artifact’s title gives it, extension and all. A layer carrying no title and an entry declaring <code>extractPath</code> is refused for that reason, rather than failing inside the extractor with “unsupported archive extension” naming a temporary path.</li>
+<li><strong>An <code>extractPath</code> can collide with its own target.</strong> <code>fileGrabber</code> extracts into the staged file’s parent directory and then renames the member onto the staged name, so an <code>extractPath</code> whose leading segment equals the target’s base name has the extraction create a directory at exactly the rename’s destination. zarf publishes its component tarballs that way - <code>zarf-injector/files/0/zarf-injector</code> for a target of <code>/usr/local/bin/zarf-injector</code> - and the rename failed with <code>file exists</code>, naming a path the definition never mentions. The member is now moved out to a temporary name, the extracted tree removed, and the temporary renamed into place. This was never specific to an <code>oci://</code> source; the same local or HTTP archive had always failed the same way, and nothing in the tree had that shape until one of these artifacts did.</li>
+</ul>
+<h2 id="no-second-endpoint-concept"><a class="header" href="#no-second-endpoint-concept">No second endpoint concept</a></h2>
+<p>There is no <code>ociEndpoint</code>-style config key for file sources. Credentials, TLS, plain-HTTP and mirror rewriting are all configured already for the registry paths cargoship has, and <code>--registry-override</code> applies to an <code>oci://</code> file source for the same reason it applies to an image pull: an operator who redirects a registry means it for everything cargoship fetches from there. A second endpoint surface would duplicate all of it and still not help a disconnected build, which is what <code>--content-store</code> is for.</p>
+<p>One consequence worth knowing: <code>--file-override</code> never matches an <code>oci://</code> source, because <code>pkg/fileoverride</code>’s <code>parseHTTPURL</code> accepts http and https only. A redirect for one of these entries is a registry override.</p>
+<h2 id="what-a-redirected-fetch-has-to-prove"><a class="header" href="#what-a-redirected-fetch-has-to-prove">What a redirected fetch has to prove</a></h2>
+<p>An overridden <code>oci://</code> source is refused unless it declares a <code>shasum</code> or pins its reference with a digest. This is <a href="#why-a-file-override-refuses-a-file-with-no-shasum"><code>choice-file-override-shasum.md</code></a>’s argument applied one layer along: an unrewritten reference is the definition author’s own choice, and carries the trust already placed in the definition, but a rewritten one is a substitution chosen by whoever ran <code>create</code>, and something has to tie the bytes to what upstream published.</p>
+<p>A digest in the reference does that by itself, which is why it is accepted in place of a <code>shasum</code> - a registry serving different bytes under <code>@sha256:...</code> fails the digest check. That is a genuine difference from <code>--file-override</code>, where a URL has no equivalent and the <code>shasum</code> is mandatory with no alternative.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-vendor-carries-four-generated-osv-scannertoml-files"><a class="header" href="#why-vendor-carries-four-generated-osv-scannertoml-files">Why vendor/ carries four generated osv-scanner.toml files</a></h1>
 <p><code>go mod vendor</code> copies four files into <code>vendor/</code> that have nothing to do with Go: a <code>package-lock.json</code> under <code>golang.org/x/telemetry</code>, and a <code>requirements</code> file each under <code>github.com/theupdateframework/go-tuf</code>, <code>github.com/txn2/txeh</code> and <code>go.opentelemetry.io/otel</code>. Next to each of them now sits a generated <code>osv-scanner.toml</code> that tells a scanner to skip that ecosystem. This document records why those four files exist, why they are generated rather than committed by hand, and what they deliberately do not cover.</p>

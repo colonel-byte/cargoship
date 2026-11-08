@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b45b73ba.js";
+            window.path_to_searchindex_js = "../searchindex-2e02d2ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b8270bf1.js"></script>
+        <script src="../toc-096b91be.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -231,6 +231,31 @@
 <p>Those are the same strings a distro definition writes in <code>imageConfig.images</code> and in a file’s <code>source</code>, so matching the two is an exact lookup rather than a guess.</p>
 <p>Image references are canonicalised before the lookup, so every spelling of one image resolves to the same entry: a definition naming <code>nginx:1.27-alpine</code> matches a store that recorded <code>index.docker.io/library/nginx:1.27-alpine</code>.</p>
 <p>Reach for an override instead when the content is behind an internal mirror that the management node <em>can</em> reach, or when you want one specific file swapped and nothing else. The two work together - see <a href="#combining-a-content-store-with-overrides">Combining a Content Store With Overrides</a>.</p>
+<h3 id="a-multi-platform-file-artifact-resolves-per-architecture"><a class="header" href="#a-multi-platform-file-artifact-resolves-per-architecture">A Multi-Platform File Artifact Resolves Per Architecture</a></h3>
+<p>A file in a haul is usually one manifest holding one titled layer, and the reference names bytes on its own. Some vendors publish an air-gapped engine bundle differently: one tag, an image index, and one manifest per platform, each carrying that architecture’s tarball as a titled layer.</p>
+<pre><code class="language-text">registry.example.com/vendor/engine:v1.37.1   -&gt; application/vnd.oci.image.index.v1+json
+  |- linux/amd64   layer title "engine.linux-amd64.tar.gz"
+  |- linux/arm64   layer title "engine.linux-arm64.tar.gz"
+</code></pre>
+<p>The reference no longer names one file, so the entry’s own <code>selector.arch</code> picks the platform child out of the index:</p>
+<pre><code class="language-yaml">- source: oci://registry.example.com/vendor/engine:v1.37.1
+  extractPath: bin/engine
+  target: /usr/local/bin/engine
+  executable: true
+  shasum: &lt;sha256 of the extracted member&gt;
+  selector:
+    package: binary
+    arch:
+      - amd64
+</code></pre>
+<p>A file is staged arch-blind during a build - every architecture’s entries go into one tree, keyed on the entry’s position in the list - so <code>selector.arch</code> is the only thing that says which platform an entry meant. An entry naming none of them, or naming several, is therefore <strong>refused</strong> rather than resolved to a guess:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to stage file 0:
+    hauler store ./haul.tar.zst holds oci://registry.example.com/vendor/engine:v1.37.1 for
+    amd64, arm64, and the file entry selects no single architecture: name one in its
+    selector.arch
+</code></pre>
+<p>Write one entry per architecture, each naming its own. A store that holds the reference for some architectures but not the one an entry names is a <a href="#a-partial-store-still-builds">partial store</a>, not an error: that entry falls back to its declared source.</p>
+<p>Note that <strong>a haul synced one architecture at a time can mask this.</strong> A single-platform <code>hauler store sync</code> leaves a bare entry under the same reference in addition to the index, and that entry carries no platform, so it answers for every architecture. A store built up one architecture at a time therefore appears to work for whichever architecture was synced last, while a clean two-platform store resolves per entry as above.</p>
 <h2 id="collecting-a-haul"><a class="header" href="#collecting-a-haul">Collecting a Haul</a></h2>
 <p>On a machine that can reach the upstream registries and URLs, add everything the distro definition declares. <strong>Add files by the same URL the definition names</strong>, because that URL is what the match is made on:</p>
 <pre><code class="language-bash"># The files a definition declares, added by their declared URL

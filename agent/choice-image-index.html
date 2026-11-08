@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b45b73ba.js";
+            window.path_to_searchindex_js = "../searchindex-2e02d2ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b8270bf1.js"></script>
+        <script src="../toc-096b91be.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,6 +184,9 @@
                     <main>
                         <h1 id="why-a-multi-arch-package-stores-images-under-one-oci-index"><a class="header" href="#why-a-multi-arch-package-stores-images-under-one-oci-index">Why a multi-arch package stores images under one OCI index</a></h1>
 <p>A cargoship package is fat: one tarball carries every architecture it targets, and the host’s architecture selects what gets uploaded at apply time. Files fall out of that arrangement for free, because <code>fileGrabber</code> keys its output directories by the index of the entry in <code>spec.config.files</code>, so an amd64 entry and an arm64 entry are two list entries and land in two directories without anyone arranging it. Images do not, and the reason is not visible from the code that writes them.</p>
+<blockquote>
+<p><strong>Partly superseded</strong>, as far as files are concerned. The per-entry arrangement above is still how a package <em>stores</em> files, and it is still why the images half needed an index. What does not hold is the implied claim that a file is therefore never subject to the one-tag-many-platforms problem: a vendor-published file artifact can be an image index over one manifest per platform, so a single declared <code>source</code> does hold more than one platform’s bytes. The per-entry model is what resolves it - the entry’s <code>selector.arch</code> picks the child - but the resolver had to stop discarding the architecture first. See <a href="https://github.com/colonel-byte/cargoship/issues/1033">#1033</a>, <code>Store.classifyIndex</code> in <code>pkg/haulerstore</code>, and <code>fileArch</code> in <code>pkg/packager/assemble</code>. Everything below about images is unchanged.</p>
+</blockquote>
 <h2 id="the-oci-store-tags-by-image-reference"><a class="header" href="#the-oci-store-tags-by-image-reference">The OCI store tags by image reference</a></h2>
 <p><code>images.Pull</code> (<code>pkg/images/pull.go</code>) copies each pulled image into an <code>oci.Store</code> rooted at the package’s <code>images</code> directory, and the store is keyed by the image reference it was pulled as. That reference is <code>registry/name:tag</code>. It says nothing about a platform.</p>
 <p>Pull two platforms of <code>registry.k8s.io/pause:3.10</code> and both copies want that one tag. Whichever finishes last wins, the other is left in the layout as unreferenced blobs, and a later <code>Resolve</code> returns a platform nobody chose. The failure is quiet: the tarball is well formed, the upload succeeds, and the node fails later with an exec format error from a container it cannot run.</p>
