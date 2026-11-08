@@ -31,14 +31,15 @@ They are separate variables rather than keys of one `cargoship_cluster` dict bec
 
 ## Playbooks
 
-| File                               | What it runs                                                                                                      |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `playbooks/apply.yml`              | `cargoship apply`. Installs or converges the whole cluster, with profiles, a registry mirror, and package values. |
-| `playbooks/prepare.yml`            | `cargoship prepare`. Stages the package and readies the hosts ahead of a maintenance window.                      |
-| `playbooks/engine-config-sync.yml` | `cargoship engine-config-sync`. The run to put on a schedule, and the one whose `changed` is worth acting on.     |
-| `playbooks/kube-config.yml`        | `cargoship kube-config`, then `kubernetes.core.k8s_info` against what it fetched.                                 |
-| `playbooks/reset.yml`              | `cargoship reset`. Removes the cluster, behind a guard that has to be typed.                                      |
-| `playbooks/modules-direct.yml`     | The same work without the role: `run_once`, `delegate_to`, `no_log`, and `roleGroups` spelled out.                |
+| File                               | What it runs                                                                                                                                 |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `playbooks/bootstrap.yml`          | Makes a staged binary and collection usable by Ansible: installs both, creates the five module symlinks. Not needed after a package install. |
+| `playbooks/apply.yml`              | `cargoship apply`. Installs or converges the whole cluster, with profiles, a registry mirror, and package values.                            |
+| `playbooks/prepare.yml`            | `cargoship prepare`. Stages the package and readies the hosts ahead of a maintenance window.                                                 |
+| `playbooks/engine-config-sync.yml` | `cargoship engine-config-sync`. The run to put on a schedule, and the one whose `changed` is worth acting on.                                |
+| `playbooks/kube-config.yml`        | `cargoship kube-config`, then `kubernetes.core.k8s_info` against what it fetched.                                                            |
+| `playbooks/reset.yml`              | `cargoship reset`. Removes the cluster, behind a guard that has to be typed.                                                                 |
+| `playbooks/modules-direct.yml`     | The same work without the role: `run_once`, `delegate_to`, `no_log`, and `roleGroups` spelled out.                                           |
 
 Run one against an inventory:
 
