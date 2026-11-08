@@ -8,6 +8,9 @@
     "-tags=mage"
   ],
   "git.ignoreLimitWarning": true,
+  "python.analysis.extraPaths": [
+    "hack"
+  ],
   "gopls": {
     "directoryFilters": [
       "-thirdparty-src",
