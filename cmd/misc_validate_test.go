@@ -144,7 +144,7 @@ func TestValidateNeedsAKindForAConfigFile(t *testing.T) {
 
 	_, _, err := runValidate(t, path)
 	require.ErrorContains(t, err, "declares no kind")
-	require.ErrorContains(t, err, "--kind config|inventory|package")
+	require.ErrorContains(t, err, "--kind config|hostvars|inventory|package")
 
 	_, stderr, err := runValidate(t, "--kind", "config", path)
 	require.NoError(t, err)

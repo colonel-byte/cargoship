@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=../../../../../schema/ansible-hostvars-schema.json
 # A host reached through a jump host. Cargoship does not parse ansible_ssh_common_args, so an
 # inventory that reaches this node through a bastion for Ansible's own sake has to say so again
 # here. The shape is the same SSH block as a host's own.

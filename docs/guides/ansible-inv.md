@@ -142,6 +142,47 @@ A variable under the `cargoship_` prefix that cargoship does not read is an erro
 
 Variables under the `ansible_` prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible's own connection plugins, and they are not cargoship's to police.
 
+That error arrives at install time, which is the latest useful moment rather than the earliest. The section below moves it into the editor.
+
+## Editor completion for host and group variables
+
+Cargoship publishes a JSON Schema for the variables above, so an editor completes them as you type and reports a misspelling on the line that holds it. It is the same arrangement the [inventory guide](setup-inv.md) describes for a `Cluster` document, pointed at a different file.
+
+```sh
+cargoship schema hostvars -o ./cargoship-hostvars.schema.json
+```
+
+The schema is served out of the binary, so this needs no network -- which is the point, on a management node that has none. Then reference it from the top of each `host_vars` or `group_vars` file:
+
+```yaml
+---
+# yaml-language-server: $schema=../../cargoship-hostvars.schema.json
+cargoship_profile: infra
+cargoship_profile_spec:
+  engine:
+    taints:
+      - adrp.xyz/infra=true:NoSchedule
+```
+
+Each variable is typed against the field it configures, so `cargoship_host` completes as a host configuration, `cargoship_profile_spec` as a profile, and `cargoship_bastion` as an SSH block -- the same definitions the cluster schema publishes. A misspelled `cargoship_profil`, or a `cargoship_host_key` that cargoship has never read, is reported as `Property cargoship_profil is not allowed` rather than surviving to install time.
+
+Variables belonging to other roles are left alone. A `host_vars` file legitimately carries settings for everything in the play, so anything outside the `cargoship_` and `ansible_` names above is accepted without comment. Only a key under the `cargoship_` prefix that cargoship does not read is refused, which is the same rule the translation applies, moved earlier.
+
+### Where the schema file may live, and where it must not
+
+**Do not put the `.json` file inside an inventory directory.** Ansible's `yaml_valid_extensions` includes `.json` by default, and two of the three obvious placements break -- one of them silently.
+
+| Location                                       | What Ansible does with it                                                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Beside the inventory, outside it               | Nothing. This is the one to use.                                                                                                                                                                        |
+| The inventory root, next to `hosts.yml`        | Parses it as an **inventory source**. A schema's top-level keys become groups, so you get a group named `properties` and warnings like `Skipping '$schema' as this is not a valid group definition`.    |
+| A flat `host_vars/` or `group_vars/` directory | Nothing. The vars plugin matches files by entity name, and no host is called `cargoship-hostvars.schema`. Safe, but it is safe by accident -- a file named after a host would be read as its variables. |
+| A per-host directory, `host_vars/<hostname>/`  | **Loads it as variables, silently.** Ansible reads every file in a per-host directory, so `$schema`, `type`, `properties` and `$defs` all become variables on that host. There is no warning.           |
+
+The last row is the one worth remembering. Cargoship itself is unharmed -- the action plugin forwards only `ansible_` and `cargoship_` names, so the junk never reaches the module, and nothing in the generated inventory changes -- but every other role in the play sees those variables, and nothing anywhere says so.
+
+Keep the schema out of the inventory entirely and reference it by relative path. The example inventory does this: `ansible/examples/inventories/fleet/host_vars/kw03.yml` points five levels up at the repository's own `schema/` directory.
+
 ## Checking the result
 
 The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.

@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=../../../../../schema/ansible-hostvars-schema.json
 cargoship_profile: worker
 
 # The worker profile overrides nothing, so its body is empty. It is still written out, because a

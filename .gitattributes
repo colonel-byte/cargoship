@@ -7,6 +7,9 @@ pkg/engineconfig/gen/**/zz_*.go linguist-generated
 
 # mage generate:schema
 schema/*.json linguist-generated
+# The same target writes a second, byte-identical copy here, because go:embed cannot reach
+# outside its own package directory. Both are generated; only one was marked.
+pkg/schema/embedded/*.json linguist-generated
 
 # mage generate:completion
 hack/completion/* linguist-generated

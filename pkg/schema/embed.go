@@ -40,6 +40,11 @@ const (
 	KindPackage Kind = "package"
 	// KindConfig is a cargoship CLI configuration file.
 	KindConfig Kind = "config"
+	// KindHostVars is an Ansible host_vars or group_vars file holding the variables cargoship
+	// reads. It describes a file Ansible owns rather than one cargoship writes, so it allows
+	// keys it does not know -- a host_vars file carries variables for every role in the play --
+	// while still refusing a misspelled one under the cargoship_ prefix.
+	KindHostVars Kind = "hostvars"
 )
 
 // fileNames maps a kind onto the generated document that describes it. The names are
@@ -49,6 +54,7 @@ var fileNames = map[Kind]string{
 	KindInventory: "cluster-v1alpha1-schema.json",
 	KindPackage:   "distro-v1alpha1-schema.json",
 	KindConfig:    "config-distro-schema.json",
+	KindHostVars:  "ansible-hostvars-schema.json",
 }
 
 // Kinds returns every kind that can be served, sorted, for flag validation and shell

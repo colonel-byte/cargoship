@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=../../../../../schema/ansible-hostvars-schema.json
 # A host with no cargoship_profile takes one named for its role, so these three would be
 # `controller` without this. The profile is named `control` here to show that the two names are
 # independent.

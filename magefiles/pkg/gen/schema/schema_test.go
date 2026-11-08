@@ -42,7 +42,7 @@ func TestGenerateV1Alpha1Schema(t *testing.T) {
 
 func TestSchemaTargets(t *testing.T) {
 	targets := schema.Targets()
-	require.Len(t, targets, 3)
+	require.Len(t, targets, 4)
 
 	for _, target := range targets {
 		assert.NotEmpty(t, target.SchemaPath)

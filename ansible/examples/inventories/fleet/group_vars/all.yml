@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=../../../../../schema/ansible-hostvars-schema.json
 # Connection details come from the Ansible variables you already set. Cargoship reads four of
 # them -- ansible_host, ansible_user, ansible_port, ansible_ssh_private_key_file -- and ignores
 # every other ansible_ variable, because they belong to Ansible's own connection plugins and
