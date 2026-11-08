@@ -12,3 +12,20 @@ _cargoship_package_actions:
   - apply
   - engine_config_sync
   - prepare
+
+# The actions that read an encrypted value and so take an age identity. The other three accept no
+# age_identity_file parameter at all -- a parameter offered to a module that has no use for it is
+# an error naming it -- so the identity files are passed only to these two.
+_cargoship_identity_actions:
+  - apply
+  - engine_config_sync
+
+# The parameters the role assembles itself. cargoship_args is merged last and would otherwise
+# override one of these silently, while the same collision given to a module directly is an error
+# naming the parameter. The assert in tasks/main.yml holds cargoship_args to the same rule.
+_cargoship_reserved_args:
+  - age_identity_file
+  - age_recipient
+  - inventory_path
+  - log_file
+  - package

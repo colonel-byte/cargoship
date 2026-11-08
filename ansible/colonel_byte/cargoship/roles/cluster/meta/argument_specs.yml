@@ -59,17 +59,19 @@ argument_specs:
         default: []
         description:
           - "Paths to age identity files, or SSH private keys, used to decrypt registry credentials at apply time."
+          - "Only C(apply) and C(engine_config_sync) read an encrypted value, so only those two are given the identities. The other three actions accept no such parameter and are not passed one, which makes setting this fleet-wide in C(group_vars) safe whichever action a play runs."
       cargoship_log_file:
         type: bool
-        default: false
         description:
           - "Whether to always write a full-verbosity debug log to a file, regardless of log level."
+          - "Unset by default. The module then renders no flag and whatever C(cargoship-config.yaml) says still applies; a literal C(false) is a decision that overrules a config file asking for the log."
       cargoship_args:
         type: dict
         default: {}
         description:
           - "Everything else the chosen module takes, passed through verbatim."
           - "See the generated module pages for the parameters of each module."
+          - "A parameter the role assembles from a variable of its own -- C(package), C(inventory_path), C(log_file), C(age_recipient), C(age_identity_file) -- is refused here rather than silently overriding it. Set the matching role variable instead."
       cargoship_delegate_to:
         type: str
         default: localhost
