@@ -545,10 +545,27 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 
 	if file.ExtractPath != "" {
 		// Make sure dst reflects the actual file or directory.
-		updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
-		if updatedExtractedFileOrDir != dst {
-			if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
+		extracted := filepath.Join(destinationDir, file.ExtractPath)
+		if extracted != dst {
+			// Moved out to a temporary name first, because the extraction can have created a
+			// directory occupying dst itself: an extractPath whose leading segment matches
+			// the target's base name does exactly that, and zarf publishes its component
+			// tarballs that way -- "zarf-injector/files/0/zarf-injector" extracted for a
+			// target of /usr/local/bin/zarf-injector. Renaming straight onto dst then fails
+			// with "file exists" naming a path the definition never mentions.
+			staged := dst + ".extracted"
+			if err := os.Rename(extracted, staged); err != nil {
 				return nil, fmt.Errorf(zlang.ErrWritingFile, dst, err)
+			}
+			// Clear whatever tree the extraction left behind before taking its name. Only
+			// the leading segment is removed, which is the only part that can collide.
+			if root, _, nested := strings.Cut(filepath.ToSlash(file.ExtractPath), "/"); nested {
+				if err := os.RemoveAll(filepath.Join(destinationDir, root)); err != nil {
+					return nil, errors.Join(fmt.Errorf(zlang.ErrWritingFile, dst, err), os.RemoveAll(staged))
+				}
+			}
+			if err := os.Rename(staged, dst); err != nil {
+				return nil, errors.Join(fmt.Errorf(zlang.ErrWritingFile, dst, err), os.RemoveAll(staged))
 			}
 		}
 	}

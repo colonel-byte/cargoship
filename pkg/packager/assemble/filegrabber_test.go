@@ -626,3 +626,48 @@ func TestFileGrabberFallsBackWhenStoreLacksTheFile(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, grabbedPayload, string(got))
 }
+
+// An extractPath whose leading segment is the target's own base name used to fail, because the
+// extraction creates a directory at exactly the path the staged member is then renamed onto:
+//
+//	os/0/zarf-injector/files/0/zarf-injector  ->  os/0/zarf-injector
+//
+// The rename reported "file exists" naming a path the definition never mentions. zarf
+// publishes every component tarball that way, so the first real case of it was pulling the
+// injector out of ghcr.io/zarf-dev/packages/init. It has nothing to do with where the archive
+// came from -- it is the shared tail of fileGrabber -- so it is asserted here over a local
+// source, which is the cheapest way to reach it.
+func TestFileGrabberExtractPathSharingTheTargetName(t *testing.T) {
+	buildPath := t.TempDir()
+	distroPath := t.TempDir()
+
+	archive := tarGz(t, tarGzEntry{name: "zarf-injector/files/0/zarf-injector", content: grabbedPayload})
+	require.NoError(t, os.WriteFile(filepath.Join(distroPath, "component.tar.gz"), archive, 0o600))
+
+	file := v1alpha1.File{
+		Source:      "component.tar.gz",
+		ExtractPath: "zarf-injector/files/0/zarf-injector",
+		Target:      "/usr/local/bin/zarf-injector",
+		Executable:  true,
+		Shasum:      payloadShasum(),
+	}
+
+	_, err := fileGrabber(context.Background(), string(config.OSDir), buildPath, distroPath, 0, file, nil, nil)
+	require.NoError(t, err)
+
+	staged := filepath.Join(buildPath, string(config.OSDir), "0", "zarf-injector")
+	got, err := os.ReadFile(staged)
+	require.NoError(t, err)
+	require.Equal(t, grabbedPayload, string(got))
+
+	info, err := os.Stat(staged)
+	require.NoError(t, err)
+	require.False(t, info.IsDir(), "the staged target must be the extracted file, not the directory the extraction created")
+
+	// Nothing of the extracted tree may survive beside it: buildPath is walked to generate the
+	// package checksums, so a leftover directory would ship.
+	entries, err := os.ReadDir(filepath.Join(buildPath, string(config.OSDir), "0"))
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "the extraction left something behind beside the staged file")
+	require.Equal(t, "zarf-injector", entries[0].Name())
+}
