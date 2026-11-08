@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-87efbee9.js";
+            window.path_to_searchindex_js = "../searchindex-2d9393e6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-74e20e70.js"></script>
@@ -266,7 +266,27 @@ cargoship validate --kind config ./cargoship-config.yaml
           taints:
             - CriticalOnly=True:NoExecute
 </code></pre>
-<h2 id="target-hosts"><a class="header" href="#target-hosts">Target Hosts</a></h2>
+<h3 id="inheriting-from-another-profile"><a class="header" href="#inheriting-from-another-profile">Inheriting from another profile</a></h3>
+<p>A host selects one profile, and a profile’s settings apply only where the host left them empty. That means a cluster whose profiles differ in one field each has to spell every one of them out in full, and the <code>profiles</code> block grows with the number of combinations rather than with the fleet. <code>inherit</code> is how to write the difference instead of the whole:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    profiles:
+      base:
+        host:
+          ports:
+            - port: "6443"
+              protocol: tcp
+        engine:
+          labels:
+            adrp.xyz/tier: "standard"
+      infra:
+        inherit: base
+        engine:
+          taints:
+            - adrp.xyz/infra=true:NoSchedule
+</code></pre>
+<p><code>infra</code> opens the same port and carries the same label as <code>base</code>, because it said nothing about either. It adds a taint. Had it named labels of its own they would have replaced <code>base</code>’s entirely rather than being added to – the same whole-field rule a host’s settings follow against a profile’s.</p>
+<p>A chain may be any length, and the nearest ancestor to set a field is the one that wins. Cargoship folds the chain in when it loads the document, so every phase sees a profile that already carries what it inherits. An <code>inherit</code> naming a profile the cluster does not define is refused, and so is a cycle, both naming the profiles involved.</p>
 <p>The <code>.spec.hosts</code> array is the main body of the inventory. It defines each host node, its connection details, role, and profile:</p>
 <pre><code class="language-yaml">spec:
   hosts:

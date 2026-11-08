@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-87efbee9.js";
+            window.path_to_searchindex_js = "../searchindex-2d9393e6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-74e20e70.js"></script>
@@ -487,6 +487,7 @@
 <tr><td><code>concurrency</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>limits how many hosts using this profile cargoship processes at once, e.g.<br>draining, upgrading, initializing, or uninstalling. It accepts a fixed count (“1”) or a<br>percentage of the hosts sharing this profile (“25%”). Empty falls back to the phase’s<br>default concurrency.</td></tr>
 <tr><td><code>engine</code></td><td><a href="#hostengine">HostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides applied to a host that selects this profile.</td></tr>
 <tr><td><code>host</code></td><td><a href="#hostconfig">HostConfig</a></td><td>no</td><td></td><td>holds the configuration overrides applied to a host that selects this profile.</td></tr>
+<tr><td><code>inherit</code></td><td><code>string</code></td><td>no</td><td></td><td>names another profile this one starts from. The settings here win, and anything this profile leaves empty is taken from the named one, which may itself inherit. Without it a cluster whose profiles differ in one field each has to spell every one of them out in full, which is how a profiles block grows faster than the fleet does.</td></tr>
 </tbody>
 </table>
 </div>

@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-87efbee9.js";
+            window.path_to_searchindex_js = "searchindex-2d9393e6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-74e20e70.js"></script>
@@ -1103,6 +1103,7 @@ cargoship validate ./inventory.yaml
 <tr><td><code>ssh.bastion</code></td><td><code>cargoship_bastion</code></td><td>unset</td></tr>
 <tr><td><code>hostname</code></td><td><code>cargoship_hostname</code></td><td>the inventory hostname</td></tr>
 <tr><td><code>profile</code></td><td><code>cargoship_profile</code></td><td>the host’s role</td></tr>
+<tr><td>(a profile’s body)</td><td><code>cargoship_profile_spec</code></td><td>unset</td></tr>
 <tr><td><code>privateAddress</code></td><td><code>cargoship_private_address</code></td><td>unset</td></tr>
 <tr><td><code>privateInterface</code></td><td><code>cargoship_private_interface</code></td><td>unset</td></tr>
 <tr><td><code>engine.labels</code></td><td><code>cargoship_node_labels</code></td><td>unset</td></tr>
@@ -1135,6 +1136,21 @@ cargoship_bastion:
   port: 22
 </code></pre>
 <p>A bastion is declared as its own variable rather than read out of <code>ansible_ssh_common_args</code>. Cargoship does not parse SSH argument strings, and an inventory that reaches its fleet through a jump host via <code>ansible_ssh_common_args</code> has to say so again here.</p>
+<h3 id="a-profile-can-be-declared-where-it-is-selected"><a class="header" href="#a-profile-can-be-declared-where-it-is-selected">A profile can be declared where it is selected</a></h3>
+<p><code>cargoship_profile</code> says which profile a host takes, and <code>cargoship_profile_spec</code> says what that profile is. The second is optional: a profile’s body may also be written in the playbook’s cluster block, under <code>profiles</code>, which is where it had to go before.</p>
+<p>Writing it here is what keeps the two together. <code>cargoship_profile</code> belongs in the <code>group_vars</code> of the group that carries the profile, so without the spec the selection is in one file and the body is in another, and adding a node group means editing both. With it, <code>group_vars/controller.yml</code> is the whole truth about controllers:</p>
+<pre><code class="language-yaml">cargoship_profile: control
+cargoship_profile_spec:
+  host:
+    ports:
+      - port: "6443"
+        protocol: tcp
+  engine:
+    labels:
+      adrp.xyz/purpose-control: "true"
+</code></pre>
+<p>The spec takes the shape the inventory schema documents for <code>.spec.config.profiles[&lt;name&gt;]</code> – <code>host</code>, <code>engine</code>, and <code>concurrency</code> – and it lands under the name the host selects. A host that names no profile takes one named for its role, so a spec in <code>group_vars/worker.yml</code> with no <code>cargoship_profile</code> beside it defines the <code>worker</code> profile.</p>
+<p>A profile defined twice with different bodies is an error naming both sources, whether the second is another host or the cluster block. There is no correct body to pick, and picking one silently would configure nodes in a way nobody wrote down – the same reason a host in two groups that disagree about its role is refused rather than resolved. Two definitions that agree are not a conflict, so repeating a spec across several <code>group_vars</code> files is safe, and so is leaving a copy in the cluster block while one is being moved out of it.</p>
 <h3 id="misspelled-variables-are-errors"><a class="header" href="#misspelled-variables-are-errors">Misspelled variables are errors</a></h3>
 <p>A variable under the <code>cargoship_</code> prefix that cargoship does not read is an error, and so is an unknown key inside one of the structured variables. Ansible has no notion of a variable belonging to anyone, so a misspelled <code>cargoship_profil</code> would otherwise sit in <code>hostvars</code> looking set and doing nothing, and a misspelled key would be dropped on the way in. A misspelled variable and an unset one are indistinguishable at install time, which is too late to find out.</p>
 <p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
@@ -3248,7 +3264,27 @@ cargoship validate --kind config ./cargoship-config.yaml
           taints:
             - CriticalOnly=True:NoExecute
 </code></pre>
-<h2 id="target-hosts"><a class="header" href="#target-hosts">Target Hosts</a></h2>
+<h3 id="inheriting-from-another-profile"><a class="header" href="#inheriting-from-another-profile">Inheriting from another profile</a></h3>
+<p>A host selects one profile, and a profile’s settings apply only where the host left them empty. That means a cluster whose profiles differ in one field each has to spell every one of them out in full, and the <code>profiles</code> block grows with the number of combinations rather than with the fleet. <code>inherit</code> is how to write the difference instead of the whole:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    profiles:
+      base:
+        host:
+          ports:
+            - port: "6443"
+              protocol: tcp
+        engine:
+          labels:
+            adrp.xyz/tier: "standard"
+      infra:
+        inherit: base
+        engine:
+          taints:
+            - adrp.xyz/infra=true:NoSchedule
+</code></pre>
+<p><code>infra</code> opens the same port and carries the same label as <code>base</code>, because it said nothing about either. It adds a taint. Had it named labels of its own they would have replaced <code>base</code>’s entirely rather than being added to – the same whole-field rule a host’s settings follow against a profile’s.</p>
+<p>A chain may be any length, and the nearest ancestor to set a field is the one that wins. Cargoship folds the chain in when it loads the document, so every phase sees a profile that already carries what it inherits. An <code>inherit</code> naming a profile the cluster does not define is refused, and so is a cycle, both naming the profiles involved.</p>
 <p>The <code>.spec.hosts</code> array is the main body of the inventory. It defines each host node, its connection details, role, and profile:</p>
 <pre><code class="language-yaml">spec:
   hosts:
@@ -5364,6 +5400,7 @@ $ cargoship version -o json
 <tr><td><code>concurrency</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>limits how many hosts using this profile cargoship processes at once, e.g.<br>draining, upgrading, initializing, or uninstalling. It accepts a fixed count (“1”) or a<br>percentage of the hosts sharing this profile (“25%”). Empty falls back to the phase’s<br>default concurrency.</td></tr>
 <tr><td><code>engine</code></td><td><a href="#hostengine">HostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides applied to a host that selects this profile.</td></tr>
 <tr><td><code>host</code></td><td><a href="#hostconfig">HostConfig</a></td><td>no</td><td></td><td>holds the configuration overrides applied to a host that selects this profile.</td></tr>
+<tr><td><code>inherit</code></td><td><code>string</code></td><td>no</td><td></td><td>names another profile this one starts from. The settings here win, and anything this profile leaves empty is taken from the named one, which may itself inherit. Without it a cluster whose profiles differ in one field each has to spell every one of them out in full, which is how a profiles block grows faster than the fleet does.</td></tr>
 </tbody>
 </table>
 </div>

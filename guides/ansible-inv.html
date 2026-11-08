@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-87efbee9.js";
+            window.path_to_searchindex_js = "../searchindex-2d9393e6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-74e20e70.js"></script>
@@ -245,6 +245,7 @@ cargoship validate ./inventory.yaml
 <tr><td><code>ssh.bastion</code></td><td><code>cargoship_bastion</code></td><td>unset</td></tr>
 <tr><td><code>hostname</code></td><td><code>cargoship_hostname</code></td><td>the inventory hostname</td></tr>
 <tr><td><code>profile</code></td><td><code>cargoship_profile</code></td><td>the host’s role</td></tr>
+<tr><td>(a profile’s body)</td><td><code>cargoship_profile_spec</code></td><td>unset</td></tr>
 <tr><td><code>privateAddress</code></td><td><code>cargoship_private_address</code></td><td>unset</td></tr>
 <tr><td><code>privateInterface</code></td><td><code>cargoship_private_interface</code></td><td>unset</td></tr>
 <tr><td><code>engine.labels</code></td><td><code>cargoship_node_labels</code></td><td>unset</td></tr>
@@ -277,6 +278,21 @@ cargoship_bastion:
   port: 22
 </code></pre>
 <p>A bastion is declared as its own variable rather than read out of <code>ansible_ssh_common_args</code>. Cargoship does not parse SSH argument strings, and an inventory that reaches its fleet through a jump host via <code>ansible_ssh_common_args</code> has to say so again here.</p>
+<h3 id="a-profile-can-be-declared-where-it-is-selected"><a class="header" href="#a-profile-can-be-declared-where-it-is-selected">A profile can be declared where it is selected</a></h3>
+<p><code>cargoship_profile</code> says which profile a host takes, and <code>cargoship_profile_spec</code> says what that profile is. The second is optional: a profile’s body may also be written in the playbook’s cluster block, under <code>profiles</code>, which is where it had to go before.</p>
+<p>Writing it here is what keeps the two together. <code>cargoship_profile</code> belongs in the <code>group_vars</code> of the group that carries the profile, so without the spec the selection is in one file and the body is in another, and adding a node group means editing both. With it, <code>group_vars/controller.yml</code> is the whole truth about controllers:</p>
+<pre><code class="language-yaml">cargoship_profile: control
+cargoship_profile_spec:
+  host:
+    ports:
+      - port: "6443"
+        protocol: tcp
+  engine:
+    labels:
+      adrp.xyz/purpose-control: "true"
+</code></pre>
+<p>The spec takes the shape the inventory schema documents for <code>.spec.config.profiles[&lt;name&gt;]</code> – <code>host</code>, <code>engine</code>, and <code>concurrency</code> – and it lands under the name the host selects. A host that names no profile takes one named for its role, so a spec in <code>group_vars/worker.yml</code> with no <code>cargoship_profile</code> beside it defines the <code>worker</code> profile.</p>
+<p>A profile defined twice with different bodies is an error naming both sources, whether the second is another host or the cluster block. There is no correct body to pick, and picking one silently would configure nodes in a way nobody wrote down – the same reason a host in two groups that disagree about its role is refused rather than resolved. Two definitions that agree are not a conflict, so repeating a spec across several <code>group_vars</code> files is safe, and so is leaving a copy in the cluster block while one is being moved out of it.</p>
 <h3 id="misspelled-variables-are-errors"><a class="header" href="#misspelled-variables-are-errors">Misspelled variables are errors</a></h3>
 <p>A variable under the <code>cargoship_</code> prefix that cargoship does not read is an error, and so is an unknown key inside one of the structured variables. Ansible has no notion of a variable belonging to anyone, so a misspelled <code>cargoship_profil</code> would otherwise sit in <code>hostvars</code> looking set and doing nothing, and a misspelled key would be dropped on the way in. A misspelled variable and an unset one are indistinguishable at install time, which is too late to find out.</p>
 <p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
