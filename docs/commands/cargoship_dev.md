@@ -6,7 +6,7 @@ Commands for working on a definition or on cargoship itself
 
 ### Synopsis
 
-Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. They build and apply a definition in one step, report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.
+Groups the commands that serve someone authoring a distro definition, or working on cargoship, rather than someone operating a fleet. They render a definition from templates, build and apply one in one step, report and reclaim the shared build cache, checksum an artifact, and make a run receipt safe to attach to a ticket.
 
 They are grouped rather than sitting at the root because the root is the operator's surface -- create, apply, prepare, reset -- and a command that is only ever reached for while editing a definition or filing a bug does not belong in that list.
 
@@ -31,5 +31,6 @@ They are grouped rather than sitting at the root because the root is the operato
 * [cargoship dev apply](./cargoship_dev_apply.md)	 - Builds a distro definition and applies it in one step
 * [cargoship dev clean-cache](./cargoship_dev_clean-cache.md)	 - Reports what the shared cache holds, and removes it
 * [cargoship dev redact-receipt](./cargoship_dev_redact-receipt.md)	 - Rewrites a run receipt so it can be attached to an issue
+* [cargoship dev render](./cargoship_dev_render.md)	 - Renders package definition templates into a distro.yaml and the files beside it
 * [cargoship dev sha256sum](./cargoship_dev_sha256sum.md)	 - Generates a SHA256SUM for the given file
 

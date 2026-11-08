@@ -66,6 +66,7 @@ type Option func(*options)
 type options struct {
 	createFuncs bool
 	ctx         context.Context
+	extraFuncs  template.FuncMap
 }
 
 // WithCreateFuncs exposes the helpers that reach the local filesystem and the
@@ -86,6 +87,29 @@ func WithCreateFuncs(ctx context.Context) Option {
 	return func(o *options) {
 		o.createFuncs = true
 		o.ctx = ctx
+	}
+}
+
+// WithFuncs adds caller-supplied template functions on top of the default map.
+//
+// This is for a caller that generates package definitions rather than rendering
+// one: the example generator hashes remote artifacts and names hauler store
+// entries from inside its templates, which is its own vocabulary and no part of
+// what a package author may call.
+//
+// These are applied last, so one may override a default of the same name - which
+// is what the example generator's `base` relies on - and so one may also put back
+// a function deniedFuncs removed. That is not a hole, because the two are aimed
+// at different things: deniedFuncs keeps a *package author's* template from
+// reading the operator's host, while this option is a decision made in Go by the
+// program doing the rendering. Do not read the denylist as a boundary that holds
+// against an in-process caller; it is not one, and it does not need to be.
+func WithFuncs(fm template.FuncMap) Option {
+	return func(o *options) {
+		if o.extraFuncs == nil {
+			o.extraFuncs = template.FuncMap{}
+		}
+		maps.Copy(o.extraFuncs, fm)
 	}
 }
 
@@ -117,6 +141,7 @@ func FuncMap(opts ...Option) template.FuncMap {
 	if o.createFuncs {
 		addCreateFuncs(o.ctx, fm)
 	}
+	maps.Copy(fm, o.extraFuncs)
 
 	return fm
 }

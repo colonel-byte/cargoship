@@ -22,30 +22,29 @@
 package examples
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
+	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/engineconfig"
+	"github.com/colonel-byte/cargoship/pkg/distrogen"
+	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 )
 
-// parseExampleTemplate parses a distro's example template, wiring in the functions its remote
-// file entries are hashed with: sha256 for a whole file, sha256member for one extracted out of
-// an archive.
-func parseExampleTemplate(spec exampleDistroSpec, sums *exampleShasums) (*template.Template, error) {
-	tmpl, err := template.New(filepath.Base(spec.template)).
-		Funcs(template.FuncMap{
-			"sha256":       sums.get,
-			"sha256member": sums.member,
-		}).
-		ParseFiles(spec.template)
-	if err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", spec.template, err)
-	}
-	return tmpl, nil
+// exampleFuncs is the vocabulary an example template has on top of the shared function map:
+// sha256 for the digest of a whole remote file, sha256member for one extracted out of an
+// archive.
+//
+// shortcut: these are mage-only and `cargoship dev render` ships neither, because both fetch
+// and hash remote artifacts against the committed cache. Revisit if operators ask for remote
+// hashing from their own templates.
+func exampleFuncs(sums *exampleShasums) helmvalues.Option {
+	return helmvalues.WithFuncs(template.FuncMap{
+		"sha256":       sums.get,
+		"sha256member": sums.member,
+	})
 }
 
 // writeExample renders one tag into <flavor dir>/<minor>/<tag>/distro.yaml, creating the
@@ -57,7 +56,7 @@ func parseExampleTemplate(spec exampleDistroSpec, sums *exampleShasums) (*templa
 // pointing at RPM URLs that 404 cannot be built, so keeping it only invites someone to try.
 // The git tag surviving is what makes these renderable in the first place, so it is the
 // distro's own artifacts that get checked.
-func writeExample(tmpl *template.Template, repoURL, tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) (string, error) {
+func writeExample(funcs helmvalues.Option, repoURL, tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) (string, error) {
 	v, err := newExampleVersion(tag, spec, f)
 	if err != nil {
 		return "", err
@@ -89,61 +88,37 @@ func writeExample(tmpl *template.Template, repoURL, tag string, spec exampleDist
 		}
 	}
 
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, v); err != nil {
-		return "", err
-	}
-
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
-	}
-
-	path := filepath.Join(dir, "distro.yaml")
-	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
-		return "", err
-	}
-
-	if err := writeExampleValues(dir, f, v); err != nil {
-		return "", err
-	}
-	if err := writeExampleContentManifests(dir, spec, f, v, sums); err != nil {
-		return "", err
-	}
-	return path, nil
-}
-
-// writeExampleValues renders a flavor's values templates next to its distro.yaml, under the
-// name the distro.yaml refers to them by -- the template's own name without the .tmpl.
-//
-// The values a package ships are files beside its definition rather than part of it, so a
-// flavor that exposes any has more than one file to render. They are rendered from the same
-// data as the definition, so a value that has to agree with the definition can be written
-// once and used in both.
-func writeExampleValues(dir string, f exampleFlavor, v exampleVersion) error {
 	// The schema suggests addons.disabled values from the extracted vocabulary, so a flavor
 	// whose version has none would ship a values file an editor can offer nothing for. That
 	// is a version whose source was never pulled rather than a package with no addons, so it
 	// is a failure to report here. Pull that version's source (mage
 	// generate:pullEngineSource) and regenerate.
 	if len(f.values) > 0 && len(v.Addons) == 0 {
-		return fmt.Errorf("no generated addon vocabulary for %s %s: run mage generate:pullEngineSource and mage generate:engineConfig for that minor line", v.Name, v.Version)
+		return "", fmt.Errorf("no generated addon vocabulary for %s %s: run mage generate:pullEngineSource and mage generate:engineConfig for that minor line", v.Name, v.Version)
 	}
 
+	// The values a package ships are files beside its definition rather than part of it, so a
+	// flavor that exposes any has more than one file to render. They are rendered from the same
+	// data as the definition, so a value that has to agree with the definition can be written
+	// once and used in both.
+	files := []distrogen.File{{Template: spec.template, Name: config.DistroYAML}}
 	for _, path := range f.values {
-		tmpl, err := template.New(filepath.Base(path)).ParseFiles(path)
-		if err != nil {
-			return fmt.Errorf("parsing %s: %w", path, err)
-		}
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, v); err != nil {
-			return fmt.Errorf("rendering %s: %w", path, err)
-		}
-		name := strings.TrimSuffix(filepath.Base(path), ".tmpl")
-		if err := os.WriteFile(filepath.Join(dir, name), buf.Bytes(), 0o644); err != nil {
-			return err
-		}
+		files = append(files, distrogen.File{Template: path})
 	}
-	return nil
+
+	rendered, err := distrogen.Render(files, v, funcs)
+	if err != nil {
+		return "", err
+	}
+	paths, err := distrogen.Write(dir, rendered)
+	if err != nil {
+		return "", err
+	}
+
+	if err := writeExampleContentManifests(dir, spec, f, v, sums); err != nil {
+		return "", err
+	}
+	return paths[0], nil
 }
 
 // removeExample deletes an example directory, and the minor line directory with it if that

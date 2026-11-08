@@ -17,10 +17,11 @@ package examples
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/colonel-byte/cargoship/pkg/distrogen"
+	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 )
 
 // ArchByName is the architecture this version targets under name, for a template that writes
@@ -179,24 +180,30 @@ func writeExampleContentManifests(dir string, spec exampleDistroSpec, f exampleF
 		return nil
 	}
 
+	funcs := helmvalues.WithFuncs(template.FuncMap{
+		"haulerName":   haulerName,
+		"base":         base,
+		"sha256":       sums.get,
+		"trimRegistry": trimRegistry,
+	})
+
+	files := make([]distrogen.File, 0, len(templates))
 	for _, path := range templates {
-		tmpl, err := template.New(filepath.Base(path)).
-			Funcs(template.FuncMap{"haulerName": haulerName, "base": base, "sha256": sums.get, "trimRegistry": trimRegistry}).
-			ParseFiles(path)
-		if err != nil {
-			return fmt.Errorf("parsing %s: %w", path, err)
+		files = append(files, distrogen.File{Template: path})
+	}
+	rendered, err := distrogen.Render(files, v, funcs)
+	if err != nil {
+		return err
+	}
+
+	keep := make([]distrogen.Rendered, 0, len(rendered))
+	for _, r := range rendered {
+		if declaresManifest(r.Content) {
+			keep = append(keep, r)
 		}
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, v); err != nil {
-			return fmt.Errorf("rendering %s: %w", path, err)
-		}
-		if !declaresManifest(buf.Bytes()) {
-			continue
-		}
-		name := strings.TrimSuffix(filepath.Base(path), ".tmpl")
-		if err := os.WriteFile(filepath.Join(dir, name), buf.Bytes(), 0o644); err != nil {
-			return err
-		}
+	}
+	if _, err := distrogen.Write(dir, keep); err != nil {
+		return err
 	}
 	return nil
 }

@@ -31,6 +31,7 @@ func newDevCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(newDevApplyCommand())
+	cmd.AddCommand(newDevRenderCommand())
 	cmd.AddCommand(newSha256SumCommand())
 	cmd.AddCommand(newCleanCacheCommand())
 	cmd.AddCommand(newRedactReceiptCommand())

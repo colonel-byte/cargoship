@@ -22,15 +22,14 @@
 package examples
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"text/template"
 
+	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/engineconfig"
+	"github.com/colonel-byte/cargoship/pkg/distrogen"
 )
 
 const (
@@ -224,18 +223,9 @@ func newUpstreamVersion(tag string, cni upstreamCNI, cache *upstreamRepoCache, s
 	return v, nil
 }
 
-// parseUpstreamTemplate parses upstream-distro.yaml.tmpl.
-func parseUpstreamTemplate() (*template.Template, error) {
-	tmpl, err := template.New(filepath.Base(upstreamTemplate)).ParseFiles(upstreamTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", upstreamTemplate, err)
-	}
-	return tmpl, nil
-}
-
 // renderOneUpstreamExample fetches and writes one tag's
 // example/upstream-<cni>/<minor>/<version>/distro.yaml, and reports the path it wrote.
-func renderOneUpstreamExample(tmpl *template.Template, tag string, f upstreamCNIFlavor, cni upstreamCNI, cache *upstreamRepoCache, sums *exampleShasums) (string, error) {
+func renderOneUpstreamExample(tag string, f upstreamCNIFlavor, cni upstreamCNI, cache *upstreamRepoCache, sums *exampleShasums) (string, error) {
 	v, err := newUpstreamVersion(tag, cni, cache, sums)
 	if err != nil {
 		return "", fmt.Errorf("generating upstream example for %s: %w", tag, err)
@@ -247,18 +237,15 @@ func renderOneUpstreamExample(tmpl *template.Template, tag string, f upstreamCNI
 	}
 	dir := filepath.Join(f.dir, minor, "v"+v.Version)
 
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, v); err != nil {
+	rendered, err := distrogen.Render([]distrogen.File{{Template: upstreamTemplate, Name: config.DistroYAML}}, v)
+	if err != nil {
 		return "", fmt.Errorf("rendering upstream example for %s: %w", tag, err)
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	paths, err := distrogen.Write(dir, rendered)
+	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(dir, "distro.yaml")
-	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
-		return "", err
-	}
-	return path, nil
+	return paths[0], nil
 }
 
 // renderUpstreamExamples renders example/upstream-<cni>/<minor>/<version>/distro.yaml for every
@@ -273,11 +260,6 @@ func renderOneUpstreamExample(tmpl *template.Template, tag string, f upstreamCNI
 func renderUpstreamExamples(pinned []string, sums *exampleShasums) error {
 	spec := exampleDistroSpec{name: "upstream"}
 
-	tmpl, err := parseUpstreamTemplate()
-	if err != nil {
-		return err
-	}
-
 	cnis, err := resolveUpstreamCNIs(sums)
 	if err != nil {
 		return err
@@ -291,7 +273,7 @@ func renderUpstreamExamples(pinned []string, sums *exampleShasums) error {
 		}
 
 		for _, tag := range tags {
-			path, err := renderOneUpstreamExample(tmpl, tag, f, cnis[f.cni], cache, sums)
+			path, err := renderOneUpstreamExample(tag, f, cnis[f.cni], cache, sums)
 			if err != nil {
 				return err
 			}
@@ -335,11 +317,6 @@ func renderUpstreamLine(repoURL, prefix string, sums *exampleShasums) error {
 		return fmt.Errorf("no upstream releases on %s at or above the %s floor", prefix, exampleMinorFloor)
 	}
 
-	tmpl, err := parseUpstreamTemplate()
-	if err != nil {
-		return err
-	}
-
 	cnis, err := resolveUpstreamCNIs(sums)
 	if err != nil {
 		return err
@@ -348,7 +325,7 @@ func renderUpstreamLine(repoURL, prefix string, sums *exampleShasums) error {
 	cache := newUpstreamRepoCache()
 	for _, f := range upstreamCNIFlavors {
 		for _, tag := range tags {
-			path, err := renderOneUpstreamExample(tmpl, tag, f, cnis[f.cni], cache, sums)
+			path, err := renderOneUpstreamExample(tag, f, cnis[f.cni], cache, sums)
 			if err != nil {
 				return err
 			}

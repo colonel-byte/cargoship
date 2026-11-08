@@ -22,7 +22,8 @@
       "extra-files": [
         "ansible/colonel_byte/cargoship/galaxy.yml",
         "docs/guides/ansible-container.md",
-        "docs/guides/ansible-module.md"
+        "docs/guides/ansible-module.md",
+        "docs/guides/rendering-in-ci.md"
       ],
       "extra-label": "e2e-cluster,docker"
     }
