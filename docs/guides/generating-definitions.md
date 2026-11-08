@@ -58,11 +58,11 @@ A values file must be `.yaml` or `.yml`, and its top level must be a mapping - v
 
 The template functions are the ones a package's own values templates get: the [sprig](https://masterminds.github.io/sprig/) set, plus Helm's serialization helpers, minus the functions that read host state. `upper`, `printf`, `default`, `toYaml`, `range` and the rest are all available.
 
-| Not available                                           | Why                                                                                                                                                                 |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `env`, `expandenv`, `getHostByName`                     | A definition that reads the generating machine's environment or DNS produces a different package on the next machine. Put the value in a values file instead        |
-| `fileExists`, `downloadToCache`, `cachedFilePath`       | These belong to a package's `onCreate` actions, which run at build time. A render touches no network and reads nothing but its own inputs                           |
-| `sha256`, `sha256member`                                | The digest helpers the examples under `example/` use fetch and hash remote artifacts against a committed cache. They are part of this repository's generator, not of `dev render` - put digests in a values file |
+| Not available                                     | Why                                                                                                                                                                                                              |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `env`, `expandenv`, `getHostByName`               | A definition that reads the generating machine's environment or DNS produces a different package on the next machine. Put the value in a values file instead                                                     |
+| `fileExists`, `downloadToCache`, `cachedFilePath` | These belong to a package's `onCreate` actions, which run at build time. A render touches no network and reads nothing but its own inputs                                                                        |
+| `sha256`, `sha256member`                          | The digest helpers the examples under `example/` use fetch and hash remote artifacts against a committed cache. They are part of this repository's generator, not of `dev render` - put digests in a values file |
 
 A function a template names and the renderer does not have is a parse error, so a template reaching for one of these fails loudly rather than rendering an empty string.
 

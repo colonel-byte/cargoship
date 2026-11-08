@@ -27,11 +27,11 @@ A definitions repository holds the inputs and the outputs side by side:
 
 The workflow renders every directory under `packages/` from the matching file under `versions/`, and opens a pull request if the result differs from what is committed. Three properties are worth deciding on deliberately, because each one is a decision the pull request model makes for you:
 
-| Property                                  | Why it matters                                                                                                                                                                                                                    |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The render opens a pull request           | A definition is what installs a cluster. A render that pushed to the default branch would make an upstream change into a fleet change with nobody reading the diff                                                                |
-| The rendered tree is committed            | A package build, an air-gapped transfer and a `git bisect` all want the definition that was used, not the one a template would produce today. Rendering at build time instead means the artifact has no reviewable source         |
-| One fixed branch, force-pushed            | Successive runs collapse into a single open pull request rather than accumulating one per week. The branch is output: an edit made on it is lost on the next run, which is the intent                                             |
+| Property                        | Why it matters                                                                                                                                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The render opens a pull request | A definition is what installs a cluster. A render that pushed to the default branch would make an upstream change into a fleet change with nobody reading the diff                                                        |
+| The rendered tree is committed  | A package build, an air-gapped transfer and a `git bisect` all want the definition that was used, not the one a template would produce today. Rendering at build time instead means the artifact has no reviewable source |
+| One fixed branch, force-pushed  | Successive runs collapse into a single open pull request rather than accumulating one per week. The branch is output: an edit made on it is lost on the next run, which is the intent                                     |
 
 ## Getting the Binary onto the Runner
 
@@ -216,12 +216,12 @@ The first is redundant with the render for a definition written by this run and 
 
 What **not** to put in this workflow:
 
-| Don't                                            | Why                                                                                                                                                                                             |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cargoship create` on every render               | A build fetches every image and file the definition declares, which is gigabytes per package and the thing a hosted runner's disk runs out of. Build on the release path, not on the render path |
-| `--no-validate`                                  | The flag is for a template under active edit at a terminal. In CI it turns the one check this workflow gets for free back off                                                                   |
-| A publish step                                   | Rendering and publishing have different blast radii and different credentials. Keep the push to a registry on the release workflow, reading whatever is on the default branch                   |
-| A commit straight to the default branch          | See the table at the top: an unreviewed render is an unreviewed fleet change                                                                                                                   |
+| Don't                                   | Why                                                                                                                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cargoship create` on every render      | A build fetches every image and file the definition declares, which is gigabytes per package and the thing a hosted runner's disk runs out of. Build on the release path, not on the render path |
+| `--no-validate`                         | The flag is for a template under active edit at a terminal. In CI it turns the one check this workflow gets for free back off                                                                    |
+| A publish step                          | Rendering and publishing have different blast radii and different credentials. Keep the push to a registry on the release workflow, reading whatever is on the default branch                    |
+| A commit straight to the default branch | See the table at the top: an unreviewed render is an unreviewed fleet change                                                                                                                     |
 
 ## The Token, and Why the Pull Request May Look Inert
 
