@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.40.0](https://github.com/colonel-byte/cargoship/compare/v0.39.0...v0.40.0) (2026-11-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sha256sum:** compute the digest of a file in an oci:// artifact ([#1046](https://github.com/colonel-byte/cargoship/issues/1046))
+* **assemble:** let a file source name an oci:// reference ([#1045](https://github.com/colonel-byte/cargoship/issues/1045))
+
+### Features
+
+* **assemble:** let a file source name an oci:// reference ([#1045](https://github.com/colonel-byte/cargoship/issues/1045)) ([54aabb6](https://github.com/colonel-byte/cargoship/commit/54aabb67deee7767716adba57b3b314cf7c827f5))
+* **assemble:** record and pin the digest an oci:// file source resolved to ([#1051](https://github.com/colonel-byte/cargoship/issues/1051)) ([bb27376](https://github.com/colonel-byte/cargoship/commit/bb27376e6e3c2330a8b716f383d3b0deee766ae4))
+* **coci:** take a file out of a single-layer container image ([#1050](https://github.com/colonel-byte/cargoship/issues/1050)) ([696a97b](https://github.com/colonel-byte/cargoship/commit/696a97b376a44d491acc199be161c4a370161b00))
+* **create:** read several content stores as one ([#1057](https://github.com/colonel-byte/cargoship/issues/1057)) ([02f48c3](https://github.com/colonel-byte/cargoship/commit/02f48c3e7cb35f721762793c153e82309cebf0a0))
+* **examples:** render a k3s flavor whose binary comes from the k3s image ([#1052](https://github.com/colonel-byte/cargoship/issues/1052)) ([925643e](https://github.com/colonel-byte/cargoship/commit/925643e875bf052c3b4df0fb07d008780df4acad))
+* **render:** share one definition generator between mage and a dev render subcommand ([#1054](https://github.com/colonel-byte/cargoship/issues/1054)) ([95f82cb](https://github.com/colonel-byte/cargoship/commit/95f82cba5e77efc06c2a9a30be9fecba6c573af9))
+* **sha256sum:** compute the digest of a file in an oci:// artifact ([#1046](https://github.com/colonel-byte/cargoship/issues/1046)) ([b009975](https://github.com/colonel-byte/cargoship/commit/b0099758ea3b8a2321430e05a066a19e180bc32b))
+
+
+### Bug Fixes
+
+* **assemble:** stage an extractPath that collides with its target name ([#1043](https://github.com/colonel-byte/cargoship/issues/1043)) ([e9c363c](https://github.com/colonel-byte/cargoship/commit/e9c363c0549eabb1175d1b31e7bf7006823af835))
+* **contentstore:** match an oci:// file source against the bare ref a store records ([#1055](https://github.com/colonel-byte/cargoship/issues/1055)) ([62794b9](https://github.com/colonel-byte/cargoship/commit/62794b95e368b698cac2d2700a50d261fcbce421))
+* **haulerstore:** resolve a multi-platform file artifact per architecture ([#1044](https://github.com/colonel-byte/cargoship/issues/1044)) ([06056d0](https://github.com/colonel-byte/cargoship/commit/06056d01bc55bc21a09c94aa43fda763688eb393))
+* **images:** stop a partly-covering content store from dropping architectures ([#1056](https://github.com/colonel-byte/cargoship/issues/1056)) ([4150d6c](https://github.com/colonel-byte/cargoship/commit/4150d6c011be1ad642662302c32beb137b458bef))
+
+
+### Documentation
+
+* **commands:** regenerate the command reference for pflag v1.1.0 ([#1042](https://github.com/colonel-byte/cargoship/issues/1042)) ([23070bc](https://github.com/colonel-byte/cargoship/commit/23070bc4b679ded7a4c0bf7810c79ff65a1ead5b))
+
+
+### Miscellaneous
+
+* **deps:** update rancher distro pins to v1.37.2, v1.36.6, v1.35.10 ([#1040](https://github.com/colonel-byte/cargoship/issues/1040)) ([4c2b9a9](https://github.com/colonel-byte/cargoship/commit/4c2b9a93b50b18b5e83385c5ef0d4479f5385ebd))
+* **examples:** add the rendered k3s-oci examples ([#1053](https://github.com/colonel-byte/cargoship/issues/1053)) ([ce3fe1d](https://github.com/colonel-byte/cargoship/commit/ce3fe1d9d640d28af1480d180cdce04e93680c1a))
+
+
+### Build
+
+* **deps:** bump github.com/Azure/azure-sdk-for-go/sdk/azcore from 1.23.3 to 1.24.0 in the cloud-kms group ([#1035](https://github.com/colonel-byte/cargoship/issues/1035)) ([55b5ab3](https://github.com/colonel-byte/cargoship/commit/55b5ab3c8e52c37d53ec52f940f19fb595d13930))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.1.7 to 4.1.8 ([#1038](https://github.com/colonel-byte/cargoship/issues/1038)) ([6befcaa](https://github.com/colonel-byte/cargoship/commit/6befcaadc445aa8401cacb373313907065b1efac))
+* **deps:** bump github.com/spf13/pflag from 1.0.10 to 1.1.0 ([#1037](https://github.com/colonel-byte/cargoship/issues/1037)) ([b79856c](https://github.com/colonel-byte/cargoship/commit/b79856c74ea3934e9f6f038aa79095d451b83646))
+* **deps:** bump the core group with 3 updates ([#1036](https://github.com/colonel-byte/cargoship/issues/1036)) ([0197fda](https://github.com/colonel-byte/cargoship/commit/0197fda71bc81f7928d1b67ab04f59657753ad82))
+
 ## [0.39.0](https://github.com/colonel-byte/cargoship/compare/v0.38.0...v0.39.0) (2026-11-06)
 
 
