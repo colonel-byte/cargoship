@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-54dbc39b.js";
+            window.path_to_searchindex_js = "../searchindex-04df51fc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-74e20e70.js"></script>
@@ -234,7 +234,7 @@
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>content_store</code></td><td><code>string</code></td><td>no</td><td></td><td>is a local content bundle that images and files are resolved from instead<br>of being fetched over the network: a hauler store (https://github.com/hauler-dev/hauler)<br>as either a store directory or an archive written by <code>hauler store save</code>, or a built<br>zarf package (https://github.com/zarf-dev/zarf). Which format it is is read from the<br>bundle itself, not from the path. Content the store does not hold still comes from the<br>source the distro definition declared, so a partial store works. A file is accepted<br>from the store only when the definition declares a shasum for it, since nothing else<br>would verify bytes the definition’s author never saw. Honoured by <code>cargoship create</code>.</td></tr>
+<tr><td><code>content_store</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>is a local content bundle that images and files are resolved from instead<br>of being fetched over the network: a hauler store (https://github.com/hauler-dev/hauler)<br>as either a store directory or an archive written by <code>hauler store save</code>, or a built<br>zarf package (https://github.com/zarf-dev/zarf). Which format it is is read from the<br>bundle itself, not from the path. Content the store does not hold still comes from the<br>source the distro definition declared, so a partial store works. A file is accepted<br>from the store only when the definition declares a shasum for it, since nothing else<br>would verify bytes the definition’s author never saw. Honoured by <code>cargoship create</code>.<br><br>Several bundles may be listed, and they are read as one: a zarf package carries a<br>single architecture by construction, so a build targeting two needs one package per<br>architecture. A file entry is answered by the first bundle holding that entry’s<br>architecture, and an image reference by every bundle holding it at once.</td></tr>
 <tr><td><code>file_override</code></td><td><a href="#fileoverridemap">FileOverrideMap</a></td><td>no</td><td></td><td>maps a source URL prefix to the location cargoship downloads from<br>instead, for example {“https://rpm.rancher.io”: “https://mirror.example.com/rpm-rancher”}.<br>The value may also be a local directory, for builds from pre-staged assets.</td></tr>
 <tr><td><code>hauler_store</code></td><td><code>string</code></td><td>no</td><td></td><td>is the former spelling of ContentStore, which reads a hauler store and<br>nothing else.<br><br>Deprecated: set content_store instead, which reads the same hauler stores plus zarf<br>packages. This key is still honoured when content_store is unset.</td></tr>
 <tr><td><code>registry_override</code></td><td><a href="#registryoverridemap">RegistryOverrideMap</a></td><td>no</td><td></td><td>maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {“docker.io”: “mirror.example.com”}</td></tr>

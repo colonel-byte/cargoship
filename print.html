@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-54dbc39b.js";
+            window.path_to_searchindex_js = "searchindex-04df51fc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-74e20e70.js"></script>
@@ -1376,17 +1376,32 @@ components:
 <p>Charts, manifests, git repositories and data injections in a zarf package are not read - see <a href="#what-a-store-carries-that-cargoship-ignores">What a Store Carries That Cargoship Ignores</a>.</p>
 <h3 id="a-zarf-package-covers-one-architecture"><a class="header" href="#a-zarf-package-covers-one-architecture">A Zarf Package Covers One Architecture</a></h3>
 <p>A zarf package carries a single <code>metadata.architecture</code>, so one package holds one architecture’s images and files. A hauler store has no equivalent limit - <code>hauler store sync</code> merges any number of manifests, across architectures, into one store.</p>
-<p><code>--content-store</code> takes one path, so <strong>a build that targets two architectures cannot currently be satisfied from zarf packages alone</strong>. Two things follow, and the second is the one to watch:</p>
-<ul>
-<li>
-<p>Build a single-architecture package, naming the architecture so the definition and the store agree:</p>
+<p>A build that targets two architectures therefore needs <strong>one package per architecture</strong>, and <code>--content-store</code> is repeatable so it can have them:</p>
+<pre><code class="language-bash">cargoship create ./distro-defs \
+  --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst \
+  --content-store ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
+</code></pre>
+<p>Several stores are read as one, and the two halves merge differently because the two kinds of content are shaped differently. A <strong>file</strong> entry already names one architecture, so the store holding that architecture answers it. An <strong>image</strong> reference covers every architecture at once, so the stores holding it are merged into a single view and the build takes each platform from whichever store has it. Mixing formats is fine: a hauler store and a zarf package side by side read as one.</p>
+<p>The same list works in the config file:</p>
+<pre><code class="language-yaml">distro:
+  create:
+    content_store:
+      - ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
+      - ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
+</code></pre>
+<p>One further thing to watch:</p>
+<p>Or build for one architecture, naming it so the definition and the store agree:</p>
 <pre><code class="language-bash">zarf package create ./zarf-amd64.yaml --confirm
 cargoship create ./distro-defs --architecture amd64 \
   --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
 </code></pre>
-</li>
+<ul>
 <li>
-<p><strong>Without <code>--architecture</code>, a multi-architecture definition built against a single-architecture store silently produces a package missing the other architecture.</strong> The store is consulted per image reference rather than per platform, so it answers for both architectures and supplies only the one it has. The package is written, is named as a multi-architecture package, and holds one architecture’s image layers. This is tracked as <a href="https://github.com/colonel-byte/cargoship/issues/1012">#1012</a>; until it is fixed, pass <code>--architecture</code> whenever the store covers fewer architectures than the definition declares.</p>
+<p><strong>A store covering fewer architectures than the definition is not used for those images.</strong> The store is consulted per platform, so one holding only amd64 cannot stand in for the registry on a build that also wants arm64. The image falls back to its registry and says so, naming what the store could serve:</p>
+<pre><code class="language-text">WRN image held by the local image source for only some architectures, falling back to its registry
+    image=registry.k8s.io/pause:3.10 held=amd64 missing=arm64
+</code></pre>
+<p>On a node with no route to that registry the build then fails naming the image, which is the documented behaviour for content that is in neither place. This used to be silent: the reference was held, so the store answered for it, and the architectures it could not serve were dropped without a word - producing a package named as multi-architecture that held one architecture’s layers.</p>
 </li>
 </ul>
 <p>The generated examples follow this: <code>example/rke2-cilium-vsphere</code> is the flavor that ships zarf definitions, because it is amd64-only and so cannot want a second package. The multi-architecture flavors ship hauler manifests instead.</p>
@@ -3722,7 +3737,7 @@ $ cargoship create ./distro-defs --reproducible
 <h3 id="options-2"><a class="header" href="#options-2">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
   -c, --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
-      --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it.
+      --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Repeatable, and comma-separated values are accepted: several stores are read as one, which is what a multi-architecture build needs when each zarf package carries a single architecture. Content no store holds still comes from its declared source, so a partial store works. A file is taken from a store only when the definition declares a shasum for it.
       --file-override strings                   Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
   -h, --help[=true|false]                       help for create
       --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
@@ -3808,7 +3823,7 @@ $ cargoship dev apply ./distro-defs --config ./inventory.yaml --content-store ./
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
       --confirm[=true|false]                    Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
-      --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Content the store does not hold still comes from its declared source, so a partial store works. A file is taken from the store only when the definition declares a shasum for it.
+      --content-store PATH                      PATH of a local content store to resolve the images and files a distro definition declares from, instead of fetching them over the network. Either a hauler store -- a store directory or an archive written by hauler store save -- or a built zarf package. The format is read from the store, not from the path. Repeatable, and comma-separated values are accepted: several stores are read as one, which is what a multi-architecture build needs when each zarf package carries a single architecture. Content no store holds still comes from its declared source, so a partial store works. A file is taken from a store only when the definition declares a shasum for it.
       --dry-run[=true|false]                    Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
       --file-override strings                   Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
   -F, --firewall[=true|false]                   Whether to update every host node's firewall configuration.
@@ -5539,7 +5554,7 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>content_store</code></td><td><code>string</code></td><td>no</td><td></td><td>is a local content bundle that images and files are resolved from instead<br>of being fetched over the network: a hauler store (https://github.com/hauler-dev/hauler)<br>as either a store directory or an archive written by <code>hauler store save</code>, or a built<br>zarf package (https://github.com/zarf-dev/zarf). Which format it is is read from the<br>bundle itself, not from the path. Content the store does not hold still comes from the<br>source the distro definition declared, so a partial store works. A file is accepted<br>from the store only when the definition declares a shasum for it, since nothing else<br>would verify bytes the definition’s author never saw. Honoured by <code>cargoship create</code>.</td></tr>
+<tr><td><code>content_store</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>is a local content bundle that images and files are resolved from instead<br>of being fetched over the network: a hauler store (https://github.com/hauler-dev/hauler)<br>as either a store directory or an archive written by <code>hauler store save</code>, or a built<br>zarf package (https://github.com/zarf-dev/zarf). Which format it is is read from the<br>bundle itself, not from the path. Content the store does not hold still comes from the<br>source the distro definition declared, so a partial store works. A file is accepted<br>from the store only when the definition declares a shasum for it, since nothing else<br>would verify bytes the definition’s author never saw. Honoured by <code>cargoship create</code>.<br><br>Several bundles may be listed, and they are read as one: a zarf package carries a<br>single architecture by construction, so a build targeting two needs one package per<br>architecture. A file entry is answered by the first bundle holding that entry’s<br>architecture, and an image reference by every bundle holding it at once.</td></tr>
 <tr><td><code>file_override</code></td><td><a href="#fileoverridemap">FileOverrideMap</a></td><td>no</td><td></td><td>maps a source URL prefix to the location cargoship downloads from<br>instead, for example {“https://rpm.rancher.io”: “https://mirror.example.com/rpm-rancher”}.<br>The value may also be a local directory, for builds from pre-staged assets.</td></tr>
 <tr><td><code>hauler_store</code></td><td><code>string</code></td><td>no</td><td></td><td>is the former spelling of ContentStore, which reads a hauler store and<br>nothing else.<br><br>Deprecated: set content_store instead, which reads the same hauler stores plus zarf<br>packages. This key is still honoured when content_store is unset.</td></tr>
 <tr><td><code>registry_override</code></td><td><a href="#registryoverridemap">RegistryOverrideMap</a></td><td>no</td><td></td><td>maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {“docker.io”: “mirror.example.com”}</td></tr>

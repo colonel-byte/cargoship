@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-54dbc39b.js";
+            window.path_to_searchindex_js = "../searchindex-04df51fc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-74e20e70.js"></script>
@@ -299,17 +299,32 @@ components:
 <p>Charts, manifests, git repositories and data injections in a zarf package are not read - see <a href="#what-a-store-carries-that-cargoship-ignores">What a Store Carries That Cargoship Ignores</a>.</p>
 <h3 id="a-zarf-package-covers-one-architecture"><a class="header" href="#a-zarf-package-covers-one-architecture">A Zarf Package Covers One Architecture</a></h3>
 <p>A zarf package carries a single <code>metadata.architecture</code>, so one package holds one architecture’s images and files. A hauler store has no equivalent limit - <code>hauler store sync</code> merges any number of manifests, across architectures, into one store.</p>
-<p><code>--content-store</code> takes one path, so <strong>a build that targets two architectures cannot currently be satisfied from zarf packages alone</strong>. Two things follow, and the second is the one to watch:</p>
-<ul>
-<li>
-<p>Build a single-architecture package, naming the architecture so the definition and the store agree:</p>
+<p>A build that targets two architectures therefore needs <strong>one package per architecture</strong>, and <code>--content-store</code> is repeatable so it can have them:</p>
+<pre><code class="language-bash">cargoship create ./distro-defs \
+  --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst \
+  --content-store ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
+</code></pre>
+<p>Several stores are read as one, and the two halves merge differently because the two kinds of content are shaped differently. A <strong>file</strong> entry already names one architecture, so the store holding that architecture answers it. An <strong>image</strong> reference covers every architecture at once, so the stores holding it are merged into a single view and the build takes each platform from whichever store has it. Mixing formats is fine: a hauler store and a zarf package side by side read as one.</p>
+<p>The same list works in the config file:</p>
+<pre><code class="language-yaml">distro:
+  create:
+    content_store:
+      - ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
+      - ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
+</code></pre>
+<p>One further thing to watch:</p>
+<p>Or build for one architecture, naming it so the definition and the store agree:</p>
 <pre><code class="language-bash">zarf package create ./zarf-amd64.yaml --confirm
 cargoship create ./distro-defs --architecture amd64 \
   --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
 </code></pre>
-</li>
+<ul>
 <li>
-<p><strong>Without <code>--architecture</code>, a multi-architecture definition built against a single-architecture store silently produces a package missing the other architecture.</strong> The store is consulted per image reference rather than per platform, so it answers for both architectures and supplies only the one it has. The package is written, is named as a multi-architecture package, and holds one architecture’s image layers. This is tracked as <a href="https://github.com/colonel-byte/cargoship/issues/1012">#1012</a>; until it is fixed, pass <code>--architecture</code> whenever the store covers fewer architectures than the definition declares.</p>
+<p><strong>A store covering fewer architectures than the definition is not used for those images.</strong> The store is consulted per platform, so one holding only amd64 cannot stand in for the registry on a build that also wants arm64. The image falls back to its registry and says so, naming what the store could serve:</p>
+<pre><code class="language-text">WRN image held by the local image source for only some architectures, falling back to its registry
+    image=registry.k8s.io/pause:3.10 held=amd64 missing=arm64
+</code></pre>
+<p>On a node with no route to that registry the build then fails naming the image, which is the documented behaviour for content that is in neither place. This used to be silent: the reference was held, so the store answered for it, and the architectures it could not serve were dropped without a word - producing a package named as multi-architecture that held one architecture’s layers.</p>
 </li>
 </ul>
 <p>The generated examples follow this: <code>example/rke2-cilium-vsphere</code> is the flavor that ships zarf definitions, because it is amd64-only and so cannot want a second package. The multi-architecture flavors ship hauler manifests instead.</p>
