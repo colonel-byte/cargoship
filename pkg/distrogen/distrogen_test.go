@@ -105,26 +105,96 @@ func TestRenderRejectsAMissingKey(t *testing.T) {
 	}
 }
 
-func TestRenderPerFileDataAndExtraFuncs(t *testing.T) {
-	first := writeTemplate(t, "a.yaml.tmpl", "{{ shout .name }}\n")
-	second := writeTemplate(t, "b.yaml.tmpl", "{{ shout .name }}\n")
+func TestRenderWithInjectedFuncs(t *testing.T) {
+	path := writeTemplate(t, "a.yaml.tmpl", "{{ shout .name }}\n")
 
 	funcs := helmvalues.WithFuncs(template.FuncMap{
 		"shout": func(s string) string { return strings.ToUpper(s) + "!" },
 	})
 
-	rendered, err := Render([]File{
-		{Template: first},
-		{Template: second, Data: map[string]any{"name": "theirs"}},
-	}, map[string]any{"name": "shared"}, funcs)
+	rendered, err := Render([]File{{Template: path}}, map[string]any{"name": "shared"}, funcs)
 	if err != nil {
 		t.Fatalf("Render() returned %v", err)
 	}
 	if got, want := string(rendered[0].Content), "SHARED!\n"; got != want {
-		t.Fatalf("first content = %q, want %q", got, want)
+		t.Fatalf("content = %q, want %q", got, want)
 	}
-	if got, want := string(rendered[1].Content), "THEIRS!\n"; got != want {
-		t.Fatalf("second content = %q, want %q", got, want)
+}
+
+// A template that renders to its own path is overwritten by its own output, and the read
+// happens first, so without this check it succeeds and the template is gone.
+func TestCheckOutputsRefusesToWriteOverATemplate(t *testing.T) {
+	path := writeTemplate(t, "distro.yaml", "kind: Distro\n")
+	dir := filepath.Dir(path)
+
+	cases := []struct {
+		name  string
+		dir   string
+		files []File
+		want  bool
+	}{
+		{
+			name: "an output landing on its own template",
+			dir:  dir,
+			files: []File{
+				{Template: path},
+			},
+			want: false,
+		},
+		{
+			name: "the same template rendered elsewhere",
+			dir:  t.TempDir(),
+			files: []File{
+				{Template: path},
+			},
+			want: true,
+		},
+		{
+			name: "two templates colliding on one name",
+			dir:  t.TempDir(),
+			files: []File{
+				{Template: filepath.Join("a", "values.yaml.tmpl")},
+				{Template: filepath.Join("b", "values.yaml.tmpl")},
+			},
+			want: false,
+		},
+		{
+			name: "a collision the declared names avoid",
+			dir:  t.TempDir(),
+			files: []File{
+				{Template: filepath.Join("a", "values.yaml.tmpl"), Name: "a-values.yaml"},
+				{Template: filepath.Join("b", "values.yaml.tmpl")},
+			},
+			want: true,
+		},
+		{
+			name: "a template whose whole name is the suffix",
+			dir:  t.TempDir(),
+			files: []File{
+				{Template: ".tmpl"},
+			},
+			want: false,
+		},
+		{
+			name: "a name that would escape the output directory",
+			dir:  t.TempDir(),
+			files: []File{
+				{Template: "distro.yaml.tmpl", Name: filepath.Join("..", "distro.yaml")},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := CheckOutputs(tc.dir, tc.files)
+			if tc.want && err != nil {
+				t.Fatalf("CheckOutputs() refused a safe render: %v", err)
+			}
+			if !tc.want && err == nil {
+				t.Fatal("CheckOutputs() accepted a render that would lose a file")
+			}
+		})
 	}
 }
 

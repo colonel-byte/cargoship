@@ -101,6 +101,56 @@ func TestDevRenderNoValidateWritesAnyway(t *testing.T) {
 	}
 }
 
+// The hazard --out's default creates: a template named for what it renders to.
+func TestDevRenderRefusesToOverwriteItsTemplate(t *testing.T) {
+	dir := t.TempDir()
+	tmpl := filepath.Join(dir, config.DistroYAML)
+	if err := os.WriteFile(tmpl, []byte(renderTemplate), 0o600); err != nil {
+		t.Fatalf("unable to write the template: %v", err)
+	}
+	vals := filepath.Join(dir, "values.yaml")
+	if err := os.WriteFile(vals, []byte("name: k3s\nversion: 1.36.4-k3s1\n"), 0o600); err != nil {
+		t.Fatalf("unable to write the values: %v", err)
+	}
+
+	cmd := newDevRenderCommand()
+	cmd.SetOut(&strings.Builder{})
+	cmd.SetArgs([]string{"--template", tmpl, "--values", vals, "--out", dir})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("render wrote its own output over the template")
+	}
+
+	b, err := os.ReadFile(tmpl)
+	if err != nil {
+		t.Fatalf("unable to read the template back: %v", err)
+	}
+	if string(b) != renderTemplate {
+		t.Fatalf("the template was modified:\n%s", b)
+	}
+}
+
+// A template not named distro.yaml is not a package definition, so nothing validates it -
+// which the run has to say, or an operator reads the silence as a pass.
+func TestDevRenderSaysWhenNothingWasValidated(t *testing.T) {
+	_, vals, out := writeRenderInputs(t, "name: k3s\nversion: 1.36.4-k3s1\n")
+
+	other := filepath.Join(filepath.Dir(vals), "notes.yaml.tmpl")
+	if err := os.WriteFile(other, []byte("version: {{ .version }}\n"), 0o600); err != nil {
+		t.Fatalf("unable to write the template: %v", err)
+	}
+
+	stdout := &strings.Builder{}
+	cmd := newDevRenderCommand()
+	cmd.SetOut(stdout)
+	cmd.SetArgs([]string{"--template", other, "--values", vals, "--out", out})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("render returned %v", err)
+	}
+	if !strings.Contains(stdout.String(), "nothing was checked against the package schema") {
+		t.Fatalf("render did not report that it validated nothing:\n%s", stdout.String())
+	}
+}
+
 func TestDevRenderMergesValuesFilesInOrder(t *testing.T) {
 	tmpl, vals, out := writeRenderInputs(t, "name: k3s\nversion: 1.36.4-k3s1\n")
 

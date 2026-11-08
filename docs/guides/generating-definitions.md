@@ -21,6 +21,8 @@ Each `--template` renders to its own base name with the `.tmpl` suffix dropped, 
 | `values.schema.json.tmpl` | `values.schema.json` |
 | `distro.yaml`             | `distro.yaml`        |
 
+A template with no `.tmpl` suffix renders to its own name, so `--out` has to name a directory other than the one the templates are in - rendering a template onto itself is refused rather than silently overwriting it, as is two templates whose output names collide.
+
 Every template in one invocation renders against the same merged values, which is the point of passing more than one. A package's [values file and its schema](package-values.md) sit beside its definition rather than inside it, so a value that has to agree between the two - a chart name the definition maps and the schema enumerates - is written once and used in both:
 
 ```bash

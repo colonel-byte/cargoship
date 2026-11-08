@@ -37,8 +37,8 @@ import (
 // sha256 for the digest of a whole remote file, sha256member for one extracted out of an
 // archive.
 //
-// shortcut: these are mage-only and `cargoship render` ships neither, because both fetch and
-// hash remote artifacts against the committed cache. Revisit if operators ask for remote
+// shortcut: these are mage-only and `cargoship dev render` ships neither, because both fetch
+// and hash remote artifacts against the committed cache. Revisit if operators ask for remote
 // hashing from their own templates.
 func exampleFuncs(sums *exampleShasums) helmvalues.Option {
 	return helmvalues.WithFuncs(template.FuncMap{

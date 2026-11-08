@@ -93,6 +93,12 @@ func (o *renderOptions) run(cmd *cobra.Command) error {
 		files = append(files, distrogen.File{Template: path})
 	}
 
+	// Before anything is read: --out defaults to the working directory, so a template named
+	// for what it renders to would otherwise be overwritten by its own output.
+	if err := distrogen.CheckOutputs(o.out, files); err != nil {
+		return err
+	}
+
 	rendered, err := distrogen.Render(files, values)
 	if err != nil {
 		return err
@@ -101,6 +107,7 @@ func (o *renderOptions) run(cmd *cobra.Command) error {
 	// Checked before anything is written, so a definition that renders but cannot be built does
 	// not land on disk looking finished.
 	if !o.noValidate {
+		checked := 0
 		for _, r := range rendered {
 			if r.Name != config.DistroYAML {
 				continue
@@ -108,6 +115,13 @@ func (o *renderOptions) run(cmd *cobra.Command) error {
 			if err := distrogen.ValidateDistro(r.Name, r.Content); err != nil {
 				return err
 			}
+			checked++
+		}
+		// Only a file named distro.yaml is a package definition there is a schema for, so a
+		// run that rendered none validated nothing. Said out loud, because the alternative is
+		// an operator believing a template named anything else was checked.
+		if checked == 0 {
+			fmt.Fprintf(cmd.OutOrStdout(), "No %s rendered, so nothing was checked against the package schema\n", config.DistroYAML)
 		}
 	}
 

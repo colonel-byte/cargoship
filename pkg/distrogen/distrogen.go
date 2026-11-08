@@ -15,9 +15,9 @@
 // Package distrogen renders package definitions - a distro.yaml and whatever files sit beside
 // it - from Go templates.
 //
-// It is the generator both callers share: `cargoship render`, where an operator brings their
-// own template and a values file, and mage's example targets, which derive their data from
-// engine pins and render the committed examples under example/. The templates are evaluated
+// It is the generator both callers share: `cargoship dev render`, where an operator brings
+// their own template and a values file, and mage's example targets, which derive their data
+// from engine pins and render the committed examples under example/. The templates are evaluated
 // with the same function map a package's own values templates get (pkg/helmvalues), so a
 // template written for one renders the same way in the other.
 //
@@ -39,7 +39,6 @@ import (
 type File struct {
 	Template string // path to the template
 	Name     string // output name; "" means the template's base name without .tmpl
-	Data     any    // data for this file alone; nil means the Render call's data
 }
 
 // Rendered is one template's output, before anything has been written.
@@ -48,8 +47,8 @@ type Rendered struct {
 	Content []byte
 }
 
-// Render evaluates each file's template against its data, or against data where the file names
-// none. The returned slice is in the order the files were given.
+// Render evaluates each file's template against data. The returned slice is in the order the
+// files were given.
 func Render(files []File, data any, opts ...helmvalues.Option) ([]Rendered, error) {
 	out := make([]Rendered, 0, len(files))
 	for _, f := range files {
@@ -57,11 +56,7 @@ func Render(files []File, data any, opts ...helmvalues.Option) ([]Rendered, erro
 		if err != nil {
 			return nil, err
 		}
-		d := f.Data
-		if d == nil {
-			d = data
-		}
-		content, err := helmvalues.RenderTemplate(string(b), d, opts...)
+		content, err := helmvalues.RenderTemplate(string(b), data, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("rendering %s: %w", f.Template, err)
 		}
@@ -77,6 +72,50 @@ func (f File) OutputName() string {
 		return f.Name
 	}
 	return strings.TrimSuffix(filepath.Base(f.Template), ".tmpl")
+}
+
+// CheckOutputs reports whether rendering files into dir would write somewhere it must not.
+//
+// Two of these have eaten a file in practice. An output that lands on one of the templates
+// being rendered overwrites it with its own output - `dev render -t ./distro.yaml` with no
+// --out is the whole of it, since reading happens before writing and nothing fails. Two
+// templates whose names collide write to one path, and the first result is lost behind the
+// second while both are reported as rendered.
+//
+// Called before Render rather than before Write so that nothing is read, let alone written,
+// when the request cannot be satisfied.
+func CheckOutputs(dir string, files []File) error {
+	seen := make(map[string]string, len(files))
+	templates := make(map[string]string, len(files))
+
+	for _, f := range files {
+		abs, err := filepath.Abs(f.Template)
+		if err != nil {
+			return err
+		}
+		templates[abs] = f.Template
+	}
+
+	for _, f := range files {
+		name := f.OutputName()
+		if name == "" || name == "." || strings.ContainsRune(name, filepath.Separator) {
+			return fmt.Errorf("%s renders to %q, which is not a file name", f.Template, name)
+		}
+
+		abs, err := filepath.Abs(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+		if other, ok := templates[abs]; ok {
+			return fmt.Errorf("rendering %s would write over %s, the template itself: name an --out directory that is not the one the templates are in", f.Template, other)
+		}
+		if other, ok := seen[abs]; ok {
+			return fmt.Errorf("%s and %s both render to %s", other, f.Template, name)
+		}
+		seen[abs] = f.Template
+	}
+
+	return nil
 }
 
 // Write writes rendered output into dir, creating it if it does not exist, and returns the
