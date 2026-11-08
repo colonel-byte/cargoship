@@ -136,6 +136,12 @@ class CargoshipActionBase(ActionBase):
             status_fd, status_file = tempfile.mkstemp(prefix="cargoship-status-", suffix=".json")
             os.close(status_fd)
             # Export via environment for the executed module subprocess.
+            #
+            # shortcut: os.environ is process-wide, so two cargoship tasks running concurrently in
+            # one worker would share whichever file was written last. The role sets run_once on
+            # every task and Ansible runs each host's action plugin in its own fork, so there is no
+            # arrangement today in which two reach this line together. Pass the path through the
+            # module arguments instead if one ever can.
             os.environ["CARGOSHIP_STATUS_FILE"] = status_file
 
             def monitor_status():
@@ -182,7 +188,12 @@ class CargoshipActionBase(ActionBase):
                                         % (formatted_idx, formatted_total, phase),
                                         color=C.COLOR_ERROR,
                                     )
-                    except Exception:
+                    except (OSError, ValueError):
+                        # The file is written by another process, so a read landing mid-write sees
+                        # truncated JSON. Both are expected and transient: the next tick re-reads.
+                        # Anything else is a bug in this loop and is left to surface in the thread
+                        # rather than being swallowed into "no progress", which is what a bare
+                        # except made every failure look like.
                         pass
                     stop_monitor.wait(0.5)
 

@@ -18,6 +18,22 @@
   run_once: true
   delegate_to: "{{ cargoship_delegate_to }}"
 
+# cargoship_args is merged last, so a key the role sets itself would be overridden by it without
+# anything being said. A module rejects the same parameter given twice by name, and this holds
+# cargoship_args to that rule rather than letting the role be the one place a collision is silent.
+- name: Check that cargoship_args claims no parameter the role sets itself
+  ansible.builtin.assert:
+    that:
+      - cargoship_args.keys() | list | intersect(_cargoship_reserved_args) | length == 0
+    fail_msg: >-
+      cargoship_args sets
+      {{ cargoship_args.keys() | list | intersect(_cargoship_reserved_args) | sort | join(', ') }},
+      which the role assembles from its own variables. Set the matching role variable instead --
+      cargoship_package, cargoship_inventory_path, cargoship_log_file, cargoship_age_recipients,
+      or cargoship_age_identity_files.
+  run_once: true
+  delegate_to: "{{ cargoship_delegate_to }}"
+
 # groups and hostvars are deliberately absent. The action plugin fills them in from the play's own
 # task variables, which is the whole reason it exists.
 #
@@ -36,9 +52,9 @@
         {}
         | combine({'inventory_path': cargoship_inventory_path} if cargoship_inventory_path else {})
         | combine({'package': cargoship_package} if cargoship_action in _cargoship_package_actions else {})
-        | combine({'log_file': cargoship_log_file | bool} if cargoship_log_file is defined and cargoship_log_file is not none and (cargoship_log_file | string | length > 0) else {})
+        | combine({'log_file': cargoship_log_file | bool} if cargoship_log_file is defined and cargoship_log_file is not none else {})
         | combine({'age_recipient': ([cargoship_age_recipients] if cargoship_age_recipients is string else cargoship_age_recipients)} if cargoship_age_recipients else {})
-        | combine({'age_identity_file': ([cargoship_age_identity_files] if cargoship_age_identity_files is string else cargoship_age_identity_files)} if cargoship_age_identity_files else {})
+        | combine({'age_identity_file': ([cargoship_age_identity_files] if cargoship_age_identity_files is string else cargoship_age_identity_files)} if cargoship_age_identity_files and cargoship_action in _cargoship_identity_actions else {})
         | combine(cargoship_args)
       }}
   run_once: true

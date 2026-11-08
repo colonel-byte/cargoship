@@ -37,10 +37,7 @@
           name: "{{ cluster_name }}"
           loadbalancer: bubbles-kc.test.com
         cargoship_args:
+          # Naming the distro is not optional in practice. Left unset, cargoship picks one, and a
+          # reset scoped to the wrong engine removes less than it reports.
           distro: rke2
-
-          # Undo the host changes the install made. Left unset they are left alone, which is what
-          # you want when the nodes are going to be rebuilt anyway.
-          hosts: true
-          firewall: true
         cargoship_show_result: true
