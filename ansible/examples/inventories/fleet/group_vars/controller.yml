@@ -1,9 +1,23 @@
 ---
 # A host with no cargoship_profile takes one named for its role, so these three would be
-# `controller` without this. The profile is named `control` here to match the profiles the
-# playbook defines in its cluster block; a profile a host selects has to be one the cluster
-# defines.
+# `controller` without this. The profile is named `control` here to show that the two names are
+# independent.
 cargoship_profile: control
+
+# And this is what the `control` profile is. Declaring it beside the selection is what keeps
+# group_vars/controller.yml the whole truth about controllers: without cargoship_profile_spec the
+# body would have to live in the playbook's cluster block, two files away from the line that
+# selects it, and a disagreement between them would surface well into a run.
+#
+# It takes the shape the inventory schema documents for `.spec.config.profiles[<name>]`.
+cargoship_profile_spec:
+  host:
+    ports:
+      - port: "6443"
+        protocol: tcp
+  engine:
+    labels:
+      adrp.xyz/purpose-control: "true"
 
 # Labels set here apply to every host in the group. A host that sets cargoship_node_labels of its
 # own replaces this rather than adding to it: Ansible merges variables between levels only when

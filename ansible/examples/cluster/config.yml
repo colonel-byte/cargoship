@@ -7,22 +7,11 @@
 # playbook take the registries from here and state its own package and timeout. One dict could not
 # be split that way: Ansible replaces a dict between precedence levels rather than merging it.
 
-# A host selects a profile by name with cargoship_profile. The inventory in ../inventories/fleet
-# selects control, worker, and infra, so all three are here.
-cargoship_cluster_profiles:
-  control:
-    host:
-      ports:
-        - port: "6443"
-          protocol: tcp
-    engine:
-      labels:
-        adrp.xyz/purpose-control: "true"
-  worker: {}
-  infra:
-    engine:
-      taints:
-        - adrp.xyz/infra=true:NoSchedule
+# There is no cargoship_cluster_profiles here, and that is the point: the inventory in
+# ../inventories/fleet declares each profile with cargoship_profile_spec, beside the line that
+# selects it. control and worker are in group_vars, infra in kw03's host_vars. Set this variable
+# instead for a profile that belongs to no group in particular; a profile defined in both places
+# with different bodies is an error naming both.
 
 # The mirror the engine pulls from, and the credentials for it. `name` is the registry the images
 # were originally referenced from. See docs/guides/registry-override.md.
