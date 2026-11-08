@@ -330,8 +330,11 @@ cargoship vault rekey ./cargoship-config.yaml --new-vault-password-file ./new-pa
 ### 10. Validate a File, or Write Its Schema
 
 ```bash
-# Check an inventory, package definition, or config file against its schema
-cargoship validate ./cargoship-config.yaml
+# Check an inventory or package definition against its schema; the kind is read from the document
+cargoship validate ./cluster.yaml
+
+# A config file declares no kind, so name the schema for it
+cargoship validate --kind config ./cargoship-config.yaml
 
 # Write the JSON Schema for one of cargoship's own file formats: inventory, package, or config
 cargoship schema inventory -o ./inventory.schema.json
@@ -460,6 +463,8 @@ Both spellings are accepted, in any combination, and a document using the old on
 | Package kind   | `ZarfDistro`        | `Distro`                    |
 
 Everything cargoship writes itself - `cargoship inventory from-ansible`, the Ansible collection, the OpenTofu provider, the generated example packages - now emits the new spelling. No removal date is set for the old one; when one is, it will be announced in a release before it lands.
+
+---
 
 ## Exit Codes
 

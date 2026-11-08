@@ -52,6 +52,7 @@ func newValidateCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "validate FILE...",
+		GroupID: lang.RootGroupConfigID,
 		Args:    cobra.MinimumNArgs(1),
 		Short:   lang.CmdValidateShort,
 		Long:    lang.CmdValidateLong,

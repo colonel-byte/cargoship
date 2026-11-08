@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadRegistryOverridesDottedKeys(t *testing.T) {
@@ -171,5 +172,91 @@ func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("writeFile failed: %v", err)
+	}
+}
+
+// TestFindConfigFilePrefersYAMLOverEveryOtherExtension is the reason discovery is not left to
+// viper. Its SupportedExts puts "json" first, so a stray cargoship-config.json took precedence
+// over the cargoship-config.yaml that the sample config, the README, the generated schema and the
+// Ansible role documentation all name - with nothing in the output to say which had been read.
+func TestFindConfigFilePrefersYAMLOverEveryOtherExtension(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{
+		configFileName + ".json",
+		configFileName + ".toml",
+		configFileName + ".ini",
+		configFileName + ".yaml",
+		configFileName + ".yml",
+	} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("{}"), 0o600))
+	}
+	require.Equal(t, filepath.Join(dir, configFileName+".yaml"), findConfigFile([]string{dir}))
+}
+
+// TestFindConfigFileAcceptsYml keeps the narrowing honest: viper read a .yml before this change
+// and it is the same format, so it must keep working when no .yaml is present.
+func TestFindConfigFileAcceptsYml(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, configFileName+".yml"), []byte("{}"), 0o600))
+
+	require.Equal(t, filepath.Join(dir, configFileName+".yml"), findConfigFile([]string{dir}))
+}
+
+// TestFindConfigFileIgnoresUnsupportedFormats covers the half that changed behaviour, and
+// TestUnreadableConfigFile covers what the operator is told about it.
+func TestFindConfigFileIgnoresUnsupportedFormats(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, configFileName+".json"), []byte("{}"), 0o600))
+
+	require.Empty(t, findConfigFile([]string{dir}))
+}
+
+func TestUnreadableConfigFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		present []string
+		want    string
+	}{
+		{
+			name:    "an unsupported format is named",
+			present: []string{configFileName + ".json"},
+			want:    configFileName + ".json",
+		},
+		{
+			name:    "a readable file is not reported",
+			present: []string{configFileName + ".yaml"},
+			want:    "",
+		},
+		{
+			name:    "yml counts as readable",
+			present: []string{configFileName + ".yml"},
+			want:    "",
+		},
+		{
+			name:    "an unrelated file is not reported",
+			present: []string{"values.json"},
+			want:    "",
+		},
+		{
+			name:    "nothing present",
+			present: nil,
+			want:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			for _, name := range tt.present {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("{}"), 0o600))
+			}
+
+			got := unreadableConfigFile([]string{dir})
+			if tt.want == "" {
+				require.Empty(t, got)
+				return
+			}
+			require.Equal(t, filepath.Join(dir, tt.want), got)
+		})
 	}
 }

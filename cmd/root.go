@@ -143,6 +143,10 @@ var (
 			ID:    lang.RootGroupInstallID,
 			Title: lang.RootGroupInstallTitle,
 		},
+		{
+			ID:    lang.RootGroupConfigID,
+			Title: lang.RootGroupConfigTitle,
+		},
 	}
 )
 
@@ -160,6 +164,7 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:           lang.RootCmdUse,
 		Short:         lang.RootCmdShort,
+		Long:          lang.RootCmdLong,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -176,6 +181,22 @@ func NewCargoshipCommand() *cobra.Command {
 		return fmt.Errorf("%w: %w\n\trun '%s --help' for the flags this command takes",
 			ErrUsage, err, c.CommandPath())
 	})
+
+	// Version is what makes "cargoship --version" work. The version subcommand stays, and carries
+	// the build detail and -o json|yaml; this is the spelling people try first.
+	//
+	// The template is overridden because cobra's default prints "cargoship version <v>" while the
+	// version subcommand prints the bare string, and two spellings of one question should not give
+	// a script two different answers.
+	//
+	// The flag is registered here rather than left to cobra for two reasons. Cobra's
+	// InitDefaultVersionFlag takes -v when it is free, which would reserve that letter for good --
+	// a later --verbose could not have it, and removing a shipped shorthand is a breaking change.
+	// And the markdown generator calls InitDefaultHelpFlag but never InitDefaultVersionFlag, so a
+	// flag left to cobra is missing from docs/commands/cargoship.md entirely.
+	rootCmd.Version = config.CLIVersion
+	rootCmd.SetVersionTemplate("{{.Version}}\n")
+	rootCmd.Flags().Bool("version", false, lang.RootCmdFlagVersion)
 
 	for _, g := range groups {
 		rootCmd.AddGroup(g)
@@ -215,7 +236,7 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
 
-	// Last, so that they reach every command and subcommand registered above.
+	// Last, so that it reaches every command and subcommand registered above.
 	tagUsageArgs(rootCmd)
 	registerUsageTemplate(rootCmd)
 
@@ -343,7 +364,34 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	}
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
 		l.Info("using config file", "location", cfgFile)
+		return nil
 	}
+
+	// Said out loud rather than passed over in silence. Printing nothing made "there is no config
+	// file" look exactly like "there is one and it was ignored", which is the state an operator
+	// whose settings are not taking effect is actually trying to tell apart. At debug so it does
+	// not add a line to every ordinary run.
+	// Expanded for display: configSearchPaths holds viper's literal "$HOME/.zarf", and a message
+	// whose whole job is to say where cargoship looked should not leave the reader to do it.
+	searched := make([]string, 0, len(configSearchPaths()))
+	for _, path := range configSearchPaths() {
+		searched = append(searched, os.ExpandEnv(path))
+	}
+
+	// At warn, not debug: a file sitting there under an extension cargoship does not read is a
+	// setting the operator wrote and cargoship is not honouring, and viper read some of those
+	// before. A debug line would not be seen at the default level, which is where this would
+	// otherwise be discovered by its consequences.
+	if other := unreadableConfigFile(configSearchPaths()); other != "" {
+		l.Warn("ignoring a config file whose format is not supported",
+			"path", other,
+			"read", strings.Join(configFileExts(), ", "))
+	}
+
+	l.Debug("no config file found",
+		"searched", strings.Join(searched, ", "),
+		"name", configFileName+configFileExt,
+		"override", "CARGOSHIP_CONFIG")
 	return nil
 }
 

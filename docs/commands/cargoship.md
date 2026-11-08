@@ -4,6 +4,14 @@
 
 CLI for cargoship installs
 
+### Synopsis
+
+Builds offline Kubernetes distro packages, and runs the cluster lifecycle -- prepare, apply, kube-config, reset -- against target hosts over SSH. It runs from a management node and opens the connections itself; nothing is installed on a target host that a phase did not upload.
+
+Settings come from flags, then the environment, then a config file, in that order of precedence. The config file is 'cargoship-config.yaml' -- YAML is the only format read, and '.yml' is accepted too -- looked for in the current directory and then $HOME/.zarf, or at the exact path in CARGOSHIP_CONFIG. Every key is also settable in the environment under the DISTRO_ prefix with dots as underscores, so '.distro.publish.signing_key' is DISTRO_DISTRO_PUBLISH_SIGNING_KEY.
+
+Run 'cargoship validate --kind config <file>' to check a config file, and 'cargoship schema config' to write its JSON Schema for an editor.
+
 ```
 cargoship COMMAND [flags]
 ```
@@ -16,6 +24,7 @@ cargoship COMMAND [flags]
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
+      --version[=true|false]    Print the version of the running binary and exit.
 ```
 
 ### SEE ALSO

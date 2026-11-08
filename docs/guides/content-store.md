@@ -152,6 +152,12 @@ cargoship create ./distro-defs \
   --content-store ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
 ```
 
+Comma-separated values work too, so the same two stores can be given in one flag. It is the spelling to reach for when the list comes from a variable rather than being typed - though the value is parsed as CSV, so a path containing a comma or a double quote has to use the repeated flag above:
+
+```bash
+cargoship create ./distro-defs --content-store "$AMD64_STORE,$ARM64_STORE"
+```
+
 Several stores are read as one, and the two halves merge differently because the two kinds of content are shaped differently. A **file** entry already names one architecture, so the store holding that architecture answers it. An **image** reference covers every architecture at once, so the stores holding it are merged into a single view and the build takes each platform from whichever store has it. Mixing formats is fine: a hauler store and a zarf package side by side read as one.
 
 The same list works in the config file:

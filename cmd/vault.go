@@ -23,9 +23,10 @@ import (
 // configuration. It takes no arguments of its own, so running it bare prints the group's help.
 func newVaultCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "vault",
-		Short: lang.CmdVaultShort,
-		Long:  lang.CmdVaultLong,
+		Use:     "vault",
+		GroupID: lang.RootGroupConfigID,
+		Short:   lang.CmdVaultShort,
+		Long:    lang.CmdVaultLong,
 	}
 
 	cmd.AddCommand(newVaultEncryptCommand())

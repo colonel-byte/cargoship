@@ -25,9 +25,10 @@ func newInventoryCommand() *cobra.Command {
 	f := &keyFlags{}
 
 	cmd := &cobra.Command{
-		Use:   "inventory",
-		Short: lang.CmdInventoryShort,
-		Long:  lang.CmdInventoryLong,
+		Use:     "inventory",
+		GroupID: lang.RootGroupConfigID,
+		Short:   lang.CmdInventoryShort,
+		Long:    lang.CmdInventoryLong,
 	}
 
 	cmd.PersistentFlags().StringVar(&f.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
