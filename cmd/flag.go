@@ -59,6 +59,17 @@ func newTempDirFlagSet(ctx context.Context) *pflag.FlagSet {
 	return fs
 }
 
+// newCacheFlagSet returns the package-cache flag on its own. It is split out of newBuildFlagSet
+// for the same reason newTempDirFlagSet is: clean-cache reads the cache path and nothing else, so
+// taking the whole build set made its help advertise an --architecture and a --tmpdir that change
+// nothing about what it does.
+func newCacheFlagSet(ctx context.Context) *pflag.FlagSet {
+	fs := pflag.NewFlagSet("cache", pflag.ContinueOnError)
+	fs.StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(ctx, resolvedConfig.CachePath), zlang.RootCmdFlagCachePath)
+	annotateFlagGroup(fs, buildFlagGroupTitle)
+	return fs
+}
+
 // newBuildFlagSet returns the flags shared by every command that creates or loads a package
 // layout: the target architecture, the package cache, and the staging directory.
 func newBuildFlagSet(ctx context.Context) *pflag.FlagSet {
@@ -77,8 +88,8 @@ func newBuildFlagSet(ctx context.Context) *pflag.FlagSet {
 func newRegistryFlagSet() *pflag.FlagSet {
 	fs := pflag.NewFlagSet("registry", pflag.ContinueOnError)
 
-	fs.BoolVar(&plainHTTP, "plain-http", v.GetBool(RootPlainHTTP), zlang.RootCmdFlagPlainHTTP)
-	fs.BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(RootInsecureSkipTLSVerify), zlang.RootCmdFlagInsecureSkipTLSVerify)
+	fs.BoolVar(&plainHTTP, "plain-http", v.GetBool(RootPlainHTTP), lang.CmdFlagPlainHTTP)
+	fs.BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(RootInsecureSkipTLSVerify), lang.CmdFlagInsecureSkipTLSVerify)
 
 	annotateFlagGroup(fs, registryFlagGroupTitle)
 	return fs
@@ -87,6 +98,11 @@ func newRegistryFlagSet() *pflag.FlagSet {
 // addTempDirFlags registers the staging-directory flag on cmd.
 func addTempDirFlags(cmd *cobra.Command) {
 	cmd.Flags().AddFlagSet(newTempDirFlagSet(cmd.Context()))
+}
+
+// addCacheFlags registers only the package-cache flag on cmd.
+func addCacheFlags(cmd *cobra.Command) {
+	cmd.Flags().AddFlagSet(newCacheFlagSet(cmd.Context()))
 }
 
 // addBuildFlags registers the package build flags on cmd, along with shell completion for

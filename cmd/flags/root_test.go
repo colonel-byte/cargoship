@@ -25,12 +25,15 @@ import (
 
 func TestGetLogLevel(t *testing.T) {
 	values := getLogLevel()
-	require.Len(t, values, 5)
-	require.Contains(t, values[0], config.RootFlagLogLevelTrace)
-	require.Contains(t, values[1], config.RootFlagLogLevelDebug)
-	require.Contains(t, values[2], config.RootFlagLogLevelInfo)
-	require.Contains(t, values[3], config.RootFlagLogLevelWarn)
-	require.Contains(t, values[4], config.RootFlagLogLevelError)
+	require.Len(t, values, 4)
+	require.Contains(t, values[0], config.RootFlagLogLevelDebug)
+	require.Contains(t, values[1], config.RootFlagLogLevelInfo)
+	require.Contains(t, values[2], config.RootFlagLogLevelWarn)
+	require.Contains(t, values[3], config.RootFlagLogLevelError)
+	// trace stays accepted but unadvertised: the logger maps it to debug.
+	for _, v := range values {
+		require.NotContains(t, v, config.RootFlagLogLevelTrace)
+	}
 }
 
 func TestRegisterLogLevel(t *testing.T) {

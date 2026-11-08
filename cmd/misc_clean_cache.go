@@ -46,7 +46,9 @@ func newCleanCacheCommand() *cobra.Command {
 	cmd.Flags().DurationVar(&o.olderThan, "older-than", 0, lang.CmdCleanCacheFlagOlderThan)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdCleanCacheFlagDryRun)
 
-	addBuildFlags(cmd)
+	// Only the cache flag: run reads the cache path and nothing else, so the full build set
+	// advertised an --architecture and a --tmpdir that did not affect it.
+	addCacheFlags(cmd)
 
 	return cmd
 }

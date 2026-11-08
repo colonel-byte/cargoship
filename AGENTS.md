@@ -196,6 +196,56 @@ Not every flag qualifies. `--confirm` and `--dry-run` are decisions about one in
 
 **Where the key goes is a question for the person, not a guess.** The section a field lands in is the key an operator types, it ships in a generated schema, and moving it later breaks every config file that set it - while from inside the code two or three placements usually look equally defensible. Say which one you think is right and why, show the YAML it produces, and ask before writing it.
 
+## Help text has a budget, and flag help has a hard cap
+
+`--help` is the whole interface. Cargoship runs from a terminal on an air-gapped management node - there is no UI, no hosted docs to tab over to, and often no second screen - so what `--help` prints is what an operator has. It is also the one surface nothing tests: a 600-character flag description compiles, generates clean documentation, and passes every hook.
+
+### Flag help: 125 characters, hard cap
+
+One sentence. It has to fit the hanging-indent column of an 80-column terminal, which is about a line and a half. Over the cap, the detail goes into a guide under `docs/guides/` and the flag string names it:
+
+```go
+// Good: one sentence, then where the rest lives.
+CmdPackageCreateFlagContentStore = "`PATH` of a content store to resolve images and files from instead of the network. See docs/guides/content-store.md."
+```
+
+**The trap is that the cap is invisible from where the string is written.** The same constant feeds `--help` and the generated page under `docs/commands/`, and the page renders 600 characters as a tidy paragraph. Nobody writing one of these was being careless - they were reading the Markdown. So check the terminal, not the page:
+
+```sh
+COLUMNS=80 go run . create --help
+```
+
+Twenty-eight strings were over the cap when it was introduced, the worst at 662 characters - eight wrapped lines for one flag. Every one of them had its content already written up in a guide, so nothing was lost by truncating them. Check the guide actually says what you are about to delete before you delete it; one of them turned out not to mention comma-separated values at all, and that sentence had to move into the guide first.
+
+Three descriptions come from `vendor/github.com/zarf-dev/zarf/src/config/lang`, written for zarf's help output and well over the cap. `vendor/` cannot be edited, so the fix is a constant in `config/lang/` and a changed reference - see `CmdFlagPlainHTTP`, `CmdFlagInsecureSkipTLSVerify` and `CmdPackageSignFlagOutput`, which exist only for this.
+
+Two more things about the measurement:
+
+- **Cobra appends `(default ...)` to the rendered line**, so a string at 120 characters can still produce a 130-character line. Where the default is long or machine-specific, leave room for it.
+- **The constant name is not a reliable filter.** Four of the twenty-eight are `CmdInstallAllowDowngrade`, `CmdInstallAllowUnmanagedNodes`, `CmdInstallLabelNodes` and `CmdInstallKubeConfigPath` - flag help with no `Flag` in the name, which a grep for `Flag\w* = "` misses entirely. Measure the rendered `--help`, which cannot be fooled.
+
+### `Long` and `Example`: a budget, not a number
+
+These are deliberately not capped. A `Long` has real work to do, and several in this tree are good prose that would lose information if trimmed to fit an arbitrary count. What matters is whether the whole of `--help` can be read without scrolling, because what gets scrolled past does not get read.
+
+- **Aim for the whole `--help` under about 45 lines.** Check it after changing a `Long`, an `Example`, or a flag string - the number to watch is the total, not any one part. `create` was 56 lines before the truncations above.
+- **Three to five examples.** `create` had seven, two of them near-identical `--file-override` variants that are one example plus a sentence in `docs/guides/file-override.md`. Pick the common cases; an example per flag combination belongs in a guide. The house form is two lines each, a `#` comment then a runnable `$ cargoship ...` line, and it is worth keeping.
+- **`Long` says what the command does and what an operator must know before running it.** A walkthrough, a worked scenario, or an enumeration of how several flags interact is a guide. `dev sha256sum` is the cautionary example: the interplay of `--layer`, `--arch` and `--extract-path` was documented only in Go comments in `cmd/misc_sha.go` and crammed into three flag strings, on the one leaf command that has no `Long` at all.
+
+### None of this is enforced in CI, on purpose
+
+The same reasoning as the binary size budget above: a gate would be raised the first time it blocked something urgent, and the useful behaviour is a person noticing. Measure it when you touch it:
+
+```sh
+go run . <command> --help | sed -n 's/^  *-\{1,2\}[^ ]*.*  \{2,\}\(.*\)$/\1/p' | awk 'length > 125'
+```
+
+## Exit codes are a compatibility promise
+
+`cmd/exit.go` maps an error to a process exit code, and `README.md` publishes the table. Cargoship is driven from scripts on the management node, and `5` in particular tells a wrapper that nothing on any host was touched and a retry is safe - so the numbers are an interface, not an implementation detail.
+
+Adding a classification means adding a code. Do not repurpose or renumber an existing one, and update `ExitCode`, the `README.md` table and `TestExitCode` together. A new error that nobody classified falls through to `1`, which is the right default: a caller sees "something failed" rather than a wrong promise.
+
 ## Pinned versions, digests, and checksums
 
 Pins live all over the tree - container image digests in `containers/*/Dockerfile`, `dnf` package versions, upstream distro tags in `thirdparty-src/pins.json`, cloud image checksums in Go constants - but the machinery that moves them is mage and Dependabot. Every pin needs one of those owning it, or a written bump procedure where neither fits. Before adding a pinned value anywhere, read the rule and the worked examples in [`magefiles/AGENTS.md`](magefiles/AGENTS.md#every-pin-needs-an-owner).
