@@ -91,6 +91,22 @@ ghcr.io/zarf-dev/packages/init:v0.89.0   -> application/vnd.oci.image.index.v1+j
 
 The `shasum` is the **extracted member's**, not the layer's - the same rule any `extractPath` entry follows.
 
+**A container image built `FROM scratch`.** An image's layers carry no titles - nothing names the files inside a root filesystem - but a single-layer image is still one archive, and its media type says what the bytes are. So an entry needs no `layer`, and `extractPath` names a path inside the rootfs:
+
+```yaml
+- source: oci://docker.io/rancher/k3s:v1.37.2-k3s1
+  extractPath: bin/k3s
+  target: /usr/local/bin/k3s
+  executable: true
+  shasum: 83aaf1cd78a0dd78ed398dc7007c73a7e6eabb5184af90224a8cf8c34dbc9a81
+  selector:
+    package: binary
+    arch:
+      - amd64
+```
+
+This works because that image has exactly one layer. An image with several is **refused**, and deliberately: layers of a multi-layer image are overlay diffs, so taking a file out of one of them is not the same as taking it out of the filesystem the image describes - whiteouts and later layers can replace or delete what an earlier one holds. Reading one layer of such an image would be wrong more often than it was right, so cargoship will not guess which.
+
 An entry naming a layer the artifact does not carry fails and lists the titles it does, so a typo costs one build rather than an afternoon:
 
 ```text

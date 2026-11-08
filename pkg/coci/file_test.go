@@ -335,7 +335,13 @@ func pushTarArtifact(t *testing.T, addr, repoName, tag, title string, members ma
 		return desc
 	}
 
-	layer := push("application/gzip", buf.Bytes(), map[string]string{ocispec.AnnotationTitle: title})
+	mediaType, annotations := "application/gzip", map[string]string{ocispec.AnnotationTitle: title}
+	if title == "" {
+		// An untitled layer is what a container image's root filesystem is, and its media
+		// type is the only thing that says what the bytes are.
+		mediaType, annotations = ocispec.MediaTypeImageLayerGzip, nil
+	}
+	layer := push(mediaType, buf.Bytes(), annotations)
 	cfg := push(ocispec.MediaTypeImageConfig, []byte(`{}`), nil)
 	manifestBytes, err := json.Marshal(ocispec.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
@@ -470,5 +476,107 @@ func TestFetchFileExtractPathUnknownExtension(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "engine.linux-amd64.bin") {
 		t.Errorf("error %q does not name the archive it could not open", err)
+	}
+}
+
+// A layer's staged file name decides how its format is identified. A titled layer keeps its
+// own name; a container image's root filesystem layer has no title - nothing names the files
+// inside a rootfs - so the media type answers instead, which is what lets a single-layer image
+// like docker.io/rancher/k3s be extracted from.
+func TestArchiveName(t *testing.T) {
+	const ref = "oci://registry.example.com/vendor/engine:v1"
+
+	for _, tc := range []struct {
+		name      string
+		layer     ocispec.Descriptor
+		want      string
+		wantErrIn string
+	}{
+		{
+			name: "a titled layer keeps its own name",
+			layer: ocispec.Descriptor{
+				MediaType:   ocispec.MediaTypeImageLayerGzip,
+				Annotations: map[string]string{ocispec.AnnotationTitle: "engine.linux-amd64.tar.gz"},
+			},
+			want: "engine.linux-amd64.tar.gz",
+		},
+		{
+			name: "a title carrying a path keeps only its base",
+			layer: ocispec.Descriptor{
+				MediaType:   ocispec.MediaTypeImageLayerGzip,
+				Annotations: map[string]string{ocispec.AnnotationTitle: "components/zarf-injector.tar"},
+			},
+			want: "zarf-injector.tar",
+		},
+		{
+			name:  "an untitled OCI gzip layer",
+			layer: ocispec.Descriptor{MediaType: ocispec.MediaTypeImageLayerGzip},
+			want:  "layer.tar.gz",
+		},
+		{
+			name:  "an untitled OCI zstd layer",
+			layer: ocispec.Descriptor{MediaType: ocispec.MediaTypeImageLayerZstd},
+			want:  "layer.tar.zst",
+		},
+		{
+			name:  "an untitled uncompressed OCI layer",
+			layer: ocispec.Descriptor{MediaType: ocispec.MediaTypeImageLayer},
+			want:  "layer.tar",
+		},
+		{
+			name:  "docker's spelling, which older tooling still pushes",
+			layer: ocispec.Descriptor{MediaType: "application/vnd.docker.image.rootfs.diff.tar.gzip"},
+			want:  "layer.tar.gz",
+		},
+		{
+			name:      "a media type declaring no archive format",
+			layer:     ocispec.Descriptor{MediaType: "application/vnd.oci.image.config.v1+json"},
+			wantErrIn: "application/vnd.oci.image.config.v1+json",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := archiveName(ref, tc.layer)
+			if tc.wantErrIn != "" {
+				if err == nil {
+					t.Fatalf("archiveName returned %q, want an error", got)
+				}
+				if !strings.Contains(err.Error(), tc.wantErrIn) {
+					t.Errorf("error %q does not name the media type it could not use", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("archiveName: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("archiveName = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// The shape of a single-layer container image: one untitled gzipped tar holding a root
+// filesystem, which is what docker.io/rancher/k3s publishes and what a component extracting a
+// binary out of an image has to read.
+func TestFetchFileFromAnUntitledImageLayer(t *testing.T) {
+	addr := test.SetupInMemoryRegistry(t)
+	pushTarGzArtifact(t, addr, "rancher/k3s", "v1", "", map[string]string{
+		"bin/k3s":              "k3s binary\n",
+		"etc/ssl/certs/ca.crt": "certs\n",
+	})
+
+	dst := filepath.Join(t.TempDir(), "k3s")
+	err := FetchFile(context.Background(), "oci://"+addr+"/rancher/k3s:v1",
+		FileSelector{ExtractPath: "bin/k3s"}, dst,
+		FileOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	if err != nil {
+		t.Fatalf("FetchFile from an untitled layer: %v", err)
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("reading staged member: %v", err)
+	}
+	if string(got) != "k3s binary\n" {
+		t.Errorf("staged %q, want the bin/k3s member", got)
 	}
 }
