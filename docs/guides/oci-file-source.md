@@ -184,4 +184,77 @@ oras manifest fetch ghcr.io/cri-o/bundle:d816c7e-amd64 |
   jq -r '.layers[] | "\(.size)\t\(.annotations["org.opencontainers.image.title"])"'
 ```
 
-`cargoship sha256sum` does not yet read an `oci://` reference, so the `shasum` for one of these entries is computed by hand for now - see [`#1041`](https://github.com/colonel-byte/cargoship/issues/1041). Remember that for an `extractPath` entry the digest wanted is the **extracted member's**, not the archive's.
+The `shasum` an entry declares comes from `cargoship dev sha256sum`, which takes the same three selectors the entry does:
+
+```bash
+# a titled layer
+cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e \
+  --layer cri-o/bin/pinns --arch amd64
+
+# a member of a layer that is itself an archive
+cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
+  --layer components/zarf-injector.tar \
+  --extract-path zarf-injector/files/0/zarf-injector --arch amd64
+```
+
+It resolves the artifact exactly as a build does - same index descent, same layer selection, same extraction - so what it prints is the digest of the bytes `create` would stage. For an `extractPath` entry that is the **extracted member's** digest, not the archive's, which is what the entry has to declare.
+
+`--arch` is **not** defaulted to the architecture of the machine you run it on. The digest is going into an entry that names its own `selector.arch`, and an operator on an arm64 workstation filling in an amd64 entry would otherwise get a plausible wrong answer with nothing to notice. A reference that resolves to a real index says so and names the flag:
+
+```text
+ERR unable to compute the SHA256SUM hash
+    oci://ghcr.io/cri-o/bundle:d816c7e is an index over amd64, arm64, ppc64le, s390x:
+    no single architecture was selected: give one with --arch
+```
+
+An artifact published as a single manifest needs no `--arch` at all.
+
+Tab completion on `--arch` reads the reference you are checksumming and offers the architectures that artifact actually holds, which is usually not the list cargoship itself builds for:
+
+```console
+$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --arch <TAB>
+amd64    linux/amd64
+arm64    linux/arm64
+ppc64le  linux/ppc64le
+s390x    linux/s390x
+
+$ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 --arch <TAB>
+amd64     multi/amd64
+arm64     multi/arm64
+skeleton  multi/skeleton
+```
+
+The description is the platform as the artifact declares it, so a zarf package reading `multi/amd64` where a vendor bundle reads `linux/amd64` is visible rather than surprising. Anything that stops the reference from being read - a local path, an unreachable registry, credentials you do not have, a reference resolving to a single manifest - falls back to cargoship's own architectures, and the read is given three seconds before it does.
+
+`--layer` completes the same way, from the titles the artifact carries:
+
+```console
+$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --arch amd64 --layer cri-o/bin/<TAB>
+cri-o/bin/conmon    cri-o/bin/crictl  cri-o/bin/crio-credential-provider  cri-o/bin/pinns
+cri-o/bin/conmonrs  cri-o/bin/crio    cri-o/bin/crun                      cri-o/bin/runc
+```
+
+**Give `--arch` first.** A layer title is entirely a property of the artifact, so unlike `--arch` there is no generic list to fall back to - and on a reference that is an index over several architectures, there is no one manifest to read titles from until you say which. Rather than offer nothing, cargoship reads the first one and says so:
+
+```console
+$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --layer <TAB>
+cri-o/LICENSE   (from the amd64 manifest; pass --arch)
+cri-o/Makefile  (from the amd64 manifest; pass --arch)
+cri-o/README.md (from the amd64 manifest; pass --arch)
+...
+```
+
+The note is said twice, through two channels, because neither reaches every shell. bash and zsh also show it once as a non-selectable hint line; fish does not, because cobra's generated fish script runs the completion with ActiveHelp switched off. The description carried on each entry is what fish renders.
+
+Once both `--arch` and `--layer` are settled, `--extract-path` completes from the members of that layer:
+
+```console
+$ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
+    --arch amd64 --layer components/zarf-registry.tar --extract-path <TAB>
+zarf-registry/charts/docker-registry-1.0.3.tgz        zarf-registry/manifests/registry-connect-0.yaml
+zarf-registry/manifests/kep-1755-registry-annotation-0.yaml  zarf-registry/values/docker-registry-1.0.3-0
+```
+
+This one reads the **layer itself** rather than a manifest - 43 MiB for that artifact - which is why it waits for both other flags and offers nothing until it has them. Two things make that reasonable: it is the same blob the command you are completing is about to fetch, into the same cache, so following the suggestion through costs nothing extra; and a second tab is served from that cache without touching the network. An abandoned transfer is dropped rather than cached, because the blob is verified against its digest before the cache commits it. On a link slow enough that three seconds is not enough, you get no suggestions rather than a wait.
+
+That is a good guess rather than an answer. Every artifact this has been tried against titles its layers identically across platforms, so in practice the suggestions are right - but they need not be. The zarf init package is the counter-example: its `skeleton` child carries `components/k3s.tar` and `components/zarf-registry.tar`, which its `amd64` child does not carry at all. Nothing is decided by the suggestion either way, because the title is resolved for real against the architecture you actually request when the digest is computed, and a title that is not there fails with the full list.

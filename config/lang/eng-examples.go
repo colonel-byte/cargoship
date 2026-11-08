@@ -183,6 +183,13 @@ $ cargoship dev sha256sum https://example.com/artifact.tar.gz
 # Checksum one file inside an archive, for use with a component's files.extractPath
 $ cargoship dev sha256sum ./artifact.tar.gz --extract-path ./bin/tool
 
+# Checksum one layer of an OCI artifact, for use with a file entry's oci:// source
+$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --layer cri-o/bin/crio --arch amd64
+
+# Checksum a member of a layer that is itself a tarball
+$ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
+    --layer components/zarf-injector.tar --extract-path zarf-injector/files/0/zarf-injector
+
 # Same thing, using the shorter alias
 $ cargoship dev sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst`
 

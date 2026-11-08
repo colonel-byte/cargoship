@@ -5,7 +5,7 @@
 Generates a SHA256SUM for the given file
 
 ```
-cargoship dev sha256sum [ FILE | URL ] [flags]
+cargoship dev sha256sum [ FILE | URL | OCI_REF ] [flags]
 ```
 
 ### Examples
@@ -20,6 +20,13 @@ $ cargoship dev sha256sum https://example.com/artifact.tar.gz
 # Checksum one file inside an archive, for use with a component's files.extractPath
 $ cargoship dev sha256sum ./artifact.tar.gz --extract-path ./bin/tool
 
+# Checksum one layer of an OCI artifact, for use with a file entry's oci:// source
+$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --layer cri-o/bin/crio --arch amd64
+
+# Checksum a member of a layer that is itself a tarball
+$ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
+    --layer components/zarf-injector.tar --extract-path zarf-injector/files/0/zarf-injector
+
 # Same thing, using the shorter alias
 $ cargoship dev sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 ```
@@ -27,9 +34,13 @@ $ cargoship dev sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 ### Options
 
 ```
-  -e, --extract-path string   The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")
-  -h, --help[=true|false]     help for sha256sum
-      --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
+      --arch selector.arch                      For an oci:// reference that resolves to an image index, the architecture whose manifest to read (i.e. for use with a file entry's selector.arch). It is not defaulted to this host's architecture: the digest is going into an entry that names its own architecture, and guessing here would give a plausible wrong answer. An artifact published as a single manifest needs none.
+  -e, --extract-path extractPath                The path inside of an archive to use to calculate the sha256sum (i.e. for use with a file entry's extractPath). For an oci:// reference it is a path inside the layer --layer names. Shell completion lists that layer's members once both --layer and --arch are given, which it needs because listing them reads the layer itself.
+  -h, --help[=true|false]                       help for sha256sum
+      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --layer layer                             For an oci:// reference, the layer to take, by its org.opencontainers.image.title annotation (i.e. for use with a file entry's layer). Required when the artifact carries more than one layer. Combine it with --extract-path when the named layer is itself an archive. Shell completion offers the titles the artifact carries, and reads them from the architecture --arch names, so give that first.
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
 ```
 
 ### Options inherited from parent commands

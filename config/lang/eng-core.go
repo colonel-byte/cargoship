@@ -166,7 +166,11 @@ const (
 	// CmdSha256SumShort sha256sum short
 	CmdSha256SumShort = "Generates a SHA256SUM for the given file"
 	// CmdSha256SumFlagExtractPath flag description
-	CmdSha256SumFlagExtractPath = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdSha256SumFlagExtractPath = "The path inside of an archive to use to calculate the sha256sum (i.e. for use with a file entry's `extractPath`). For an oci:// reference it is a path inside the layer --layer names. Shell completion lists that layer's members once both --layer and --arch are given, which it needs because listing them reads the layer itself."
+	// CmdSha256SumFlagLayer flag description
+	CmdSha256SumFlagLayer = "For an oci:// reference, the layer to take, by its org.opencontainers.image.title annotation (i.e. for use with a file entry's `layer`). Required when the artifact carries more than one layer. Combine it with --extract-path when the named layer is itself an archive. Shell completion offers the titles the artifact carries, and reads them from the architecture --arch names, so give that first."
+	// CmdSha256SumFlagArch flag description
+	CmdSha256SumFlagArch = "For an oci:// reference that resolves to an image index, the architecture whose manifest to read (i.e. for use with a file entry's `selector.arch`). It is not defaulted to this host's architecture: the digest is going into an entry that names its own architecture, and guessing here would give a plausible wrong answer. An artifact published as a single manifest needs none."
 	// CmdVaultShort vault short
 	CmdVaultShort = "Encrypts and decrypts cluster configuration values with Ansible Vault or age"
 	// CmdVaultLong vault long

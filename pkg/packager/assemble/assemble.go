@@ -544,7 +544,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	}
 
 	if helpers.IsOCIURL(source) {
-		if err := fetchOCIFile(ctx, source, file, fileArch(file), dst, destinationDir, ociOpts); err != nil {
+		if err := fetchOCIFile(ctx, source, file, fileArch(file), dst, ociOpts); err != nil {
 			return nil, err
 		}
 	} else if helpers.IsURL(source) {
@@ -601,7 +601,9 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 		}
 	}
 
-	if file.ExtractPath != "" {
+	// The oci:// branch writes the file it was asked for straight to dst, so only the branches
+	// that extract into destinationDir have anything left to move.
+	if file.ExtractPath != "" && !helpers.IsOCIURL(source) {
 		// Make sure dst reflects the actual file or directory.
 		extracted := filepath.Join(destinationDir, file.ExtractPath)
 		if extracted != dst {
