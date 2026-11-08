@@ -43,6 +43,7 @@ type exampleFlavor struct {
 	cloudProvider     string             // rancher-vsphere -- the bundled cloud provider it selects; none when empty
 	arches            []string           // the architectures its examples target; amd64 alone when empty
 	minors            []string           // v1_36 -- the minor lines it renders, all of them when empty
+	binaryOCI         bool               // whether the engine binary is taken out of an OCI artifact rather than a release download
 }
 
 // exampleImageList is one of upstream's airgap image manifests, and the chart entries that

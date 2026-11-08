@@ -162,7 +162,25 @@ spec:
         # One binary per architecture, each landing at the same target. The selector decides
         # which one a host receives; an entry without an arch selector goes to every host.
 {{- end }}
+{{- if .BinaryOCI }}
+        # The binary comes out of the published k3s image, which is built FROM scratch -- so
+        # its one layer is the root filesystem, and extractPath names a path inside it. The
+        # reference is pinned to the digest its tag resolved to when this was rendered, which
+        # is what verifies the bytes; a shasum of the extracted file would add nothing.
+{{- end }}
 {{- range $arch := .Arches }}
+{{- if $.BinaryOCI }}
+        - source: {{ $.BinaryOCIRef }}
+          extractPath: bin/k3s
+          target: /usr/local/bin/k3s
+          executable: true
+          selector:
+            package: binary
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- else }}
         - source: {{ $arch.BinaryURL }}
           target: /usr/local/bin/k3s
           executable: true
@@ -172,6 +190,7 @@ spec:
 {{- if $.MultiArch }}
             arch:
               - {{ $arch.Arch }}
+{{- end }}
 {{- end }}
 {{- end }}
         - source: ../../../k3s/core/killall.sh

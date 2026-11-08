@@ -28,16 +28,23 @@ import (
 // exampleVersion is what the templates render against. Every field is derived from one tag
 // and the flavor being rendered, so a whole example follows from pins.json plus the flavor.
 type exampleVersion struct {
-	Version           string   // 1.36.4-rke2r1 -- metadata.version and spec.version
-	Minor             string   // 1.36 -- the channel in the rpm.rancher.io paths
-	RPMVersion        string   // 1.36.4~rke2r1 -- RPM file names
-	TagURL            string   // v1.36.4%2Brke2r1 -- the release download path segment
-	CNI               string   // cilium
-	Name              string   // flannel -- what the example's metadata.name ends in
-	ReplacesKubeProxy bool     // whether to set disable-kube-proxy
-	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
-	CoreImages        []string // the release's own image manifest
-	CNIImages         []string // the flavor's own manifests, concatenated, for the lists no chart claims
+	Version           string // 1.36.4-rke2r1 -- metadata.version and spec.version
+	Minor             string // 1.36 -- the channel in the rpm.rancher.io paths
+	RPMVersion        string // 1.36.4~rke2r1 -- RPM file names
+	TagURL            string // v1.36.4%2Brke2r1 -- the release download path segment
+	CNI               string // cilium
+	Name              string // flannel -- what the example's metadata.name ends in
+	ReplacesKubeProxy bool   // whether to set disable-kube-proxy
+	CloudProvider     string // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
+
+	// BinaryOCI says the engine binary is taken out of an OCI artifact rather than
+	// downloaded from a release, and BinaryOCIRef is the reference it comes from - pinned to
+	// the digest the tag resolved to, so the example names bytes rather than a moving tag.
+	// One reference serves every architecture: the entry's arch selector picks the platform.
+	BinaryOCI    bool
+	BinaryOCIRef string
+	CoreImages   []string // the release's own image manifest
+	CNIImages    []string // the flavor's own manifests, concatenated, for the lists no chart claims
 	// ChartImages maps a chart entry's name to the images it declares under
 	// spec.config.engine.manifest. A chart that is disabled has none of them uploaded, so an
 	// image belongs here rather than in CNIImages whenever a chart owns it.
@@ -107,6 +114,7 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 		RPMVersion:        strings.ReplaceAll(trimmed, "+", "~"),
 		TagURL:            strings.ReplaceAll(tag, "+", "%2B"),
 		CNI:               f.cni,
+		BinaryOCI:         f.binaryOCI,
 		Name:              f.flavorName(),
 		ReplacesKubeProxy: f.replacesKubeProxy,
 		CloudProvider:     f.cloudProvider,
