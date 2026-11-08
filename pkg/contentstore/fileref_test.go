@@ -129,3 +129,51 @@ func TestFileRefRejectsEmptyInput(t *testing.T) {
 	_, err = FileRef("harbor.internal", "")
 	require.ErrorContains(t, err, "no source")
 }
+
+// A bundle records a registry reference bare and a definition has to write oci:// in front of
+// it, so the two spellings of one artifact differ by exactly that prefix. Everything else is
+// part of what the bundle recorded and is left alone.
+func TestCanonicalFileRef(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		src  string
+		want string
+	}{
+		{
+			name: "an oci reference loses the scheme a definition must write",
+			src:  "oci://registry.example.com/vendor/engine:v1.37.1",
+			want: "registry.example.com/vendor/engine:v1.37.1",
+		},
+		{
+			name: "a reference pinned by digest",
+			src:  "oci://registry.example.com/vendor/engine@sha256:abc",
+			want: "registry.example.com/vendor/engine@sha256:abc",
+		},
+		{
+			name: "a reference a bundle already recorded bare",
+			src:  "registry.example.com/vendor/engine:v1.37.1",
+			want: "registry.example.com/vendor/engine:v1.37.1",
+		},
+		{
+			name: "an https URL keeps its scheme, which the bundle recorded",
+			src:  "https://get.rke2.io/install.sh",
+			want: "https://get.rke2.io/install.sh",
+		},
+		{
+			name: "a local path",
+			src:  "./rke2.linux-amd64.tar.gz",
+			want: "./rke2.linux-amd64.tar.gz",
+		},
+		{
+			name: "no source at all",
+			src:  "",
+			want: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := CanonicalFileRef(tc.src); got != tc.want {
+				t.Errorf("CanonicalFileRef(%q) = %q, want %q", tc.src, got, tc.want)
+			}
+		})
+	}
+}

@@ -193,7 +193,7 @@ func (s *Store) load(ctx context.Context, dir string) error {
 				continue
 			}
 			for arch, entry := range held {
-				s.files[fileKey{ref: ref, arch: arch}] = entry
+				s.files[fileKey{ref: contentstore.CanonicalFileRef(ref), arch: arch}] = entry
 			}
 			continue
 		}
@@ -202,7 +202,7 @@ func (s *Store) load(ctx context.Context, dir string) error {
 			return err
 		}
 		if isFile {
-			s.files[fileKey{ref: ref}] = entry
+			s.files[fileKey{ref: contentstore.CanonicalFileRef(ref)}] = entry
 			continue
 		}
 		s.images[contentstore.CanonicalImageRef(ref)] = desc
@@ -368,16 +368,19 @@ func (s *Store) File(req contentstore.FileRequest) (string, bool, error) {
 
 // file resolves a request against the index built at load time.
 func (s *Store) file(req contentstore.FileRequest) (file, bool, error) {
-	if f, ok := s.files[fileKey{ref: req.Source, arch: req.Arch}]; ok {
+	// A definition writes oci:// in front of a reference and a bundle records it bare, so
+	// both sides are keyed on the one spelling they share -- see contentstore.CanonicalFileRef.
+	ref := contentstore.CanonicalFileRef(req.Source)
+	if f, ok := s.files[fileKey{ref: ref, arch: req.Arch}]; ok {
 		return s.layer(f, req)
 	}
 	// A file artifact published as a single manifest carries no platform and answers for
 	// every architecture, including a request that names one.
-	if f, ok := s.files[fileKey{ref: req.Source}]; ok {
+	if f, ok := s.files[fileKey{ref: ref}]; ok {
 		return s.layer(f, req)
 	}
 	if req.Arch == "" {
-		if arches := s.fileArches(req.Source); len(arches) > 0 {
+		if arches := s.fileArches(ref); len(arches) > 0 {
 			return file{}, false, fmt.Errorf("%s holds %s for %s, and the file entry selects no single architecture: name one in its selector.arch", s.source, req.Source, strings.Join(arches, ", "))
 		}
 	}
