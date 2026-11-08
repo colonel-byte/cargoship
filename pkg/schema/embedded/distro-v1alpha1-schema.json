@@ -249,6 +249,10 @@
           "description": "indicates that Target is a directory. Cargoship uses this mainly for image uploads.",
           "type": "boolean"
         },
+        "layer": {
+          "description": "names which layer of an oci:// source to take, by its org.opencontainers.image.title annotation. It is required when the artifact carries more than one layer, and is ignored for every other kind of source. Combine it with extractPath when the layer it names is itself an archive.",
+          "type": "string"
+        },
         "name": {
           "description": "identifies the file entry. It is not the file name on disk.",
           "type": "string"

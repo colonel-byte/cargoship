@@ -118,6 +118,10 @@ type FileRequest struct {
 	// names none or several. A bundle holding one platform of a file answers without it; a
 	// bundle holding several cannot, and refuses rather than choosing.
 	Arch string
+	// Layer is the layer title the entry names, and is empty when it names none. A file
+	// artifact that carries every file in a release as its own titled layer needs it; one
+	// carrying a single layer does not.
+	Layer string
 }
 
 // Unpack makes the content bundle at path readable as a directory, returning the directory to

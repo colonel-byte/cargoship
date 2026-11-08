@@ -161,6 +161,34 @@ distro:
 
 See [Building From a Local Content Store](guides/content-store.md) for the collect-and-carry workflow, what each format must contain, and how this compares with `--registry-override` and `--file-override`.
 
+Where the build host can reach a registry, a file can also name an OCI reference directly, which is how a growing number of vendors publish air-gapped engine bundles. The entry says which layer it wants and `selector.arch` supplies the platform, so one tag covering several architectures resolves per entry:
+
+```yaml
+spec:
+  config:
+    os:
+      files:
+        # one tarball per platform, published as a single titled layer
+        - source: oci://registry.example.com/vendor/engine:v1.37.1
+          extractPath: bin/engine
+          target: /usr/local/bin/engine
+          executable: true
+          selector:
+            arch:
+              - amd64
+
+        # every file in the release as its own titled layer
+        - source: oci://ghcr.io/cri-o/bundle:d816c7e
+          layer: cri-o/bin/crio
+          target: /usr/local/bin/crio
+          executable: true
+          selector:
+            arch:
+              - amd64
+```
+
+`--registry-override` redirects these the way it redirects an image pull. See [Declaring a File From an OCI Registry](guides/oci-file-source.md).
+
 A build caches what it fetches under `~/.cache/cargoship`, so a rebuild of the same definition reaches the network for little or nothing. Nothing expires that cache -- it has no size limit and grows for as long as definitions name new versions -- so `clean-cache` is what reclaims it:
 
 ```bash

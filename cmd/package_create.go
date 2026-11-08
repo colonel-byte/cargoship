@@ -100,7 +100,7 @@ func newPackageCreateCommand() *cobra.Command {
 	// hauler_store in a config file keeps getting it until they rename it.
 	cmd.Flags().StringVar(&o.haulerStore, "hauler-store", resolvedConfig.DistroOpts.CreateOpts.HaulerStore, lang.CmdPackageCreateFlagHaulerStore) //nolint:staticcheck // SA1019: deprecated on purpose
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
-	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, zlang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, lang.CmdPackageFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageCreateFlagSigningKeyPassword)

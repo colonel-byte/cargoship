@@ -1,0 +1,62 @@
+# A definition whose file source is an oci:// reference, for the test that proves cargoship can
+# read a real vendor-published file artifact rather than a synthetic one.
+#
+# The reference is ghcr.io/cri-o/bundle, pinned by the digest of its image index. That artifact
+# is an index over four platform manifests, each carrying every file in the release as its own
+# titled layer -- so this definition exercises three things at once: descending the index,
+# selecting the child that matches selector.arch, and selecting a layer by its title.
+#
+# cri-o/bin/pinns is the layer chosen because it is the smallest one that differs between
+# platforms: 794592 bytes on amd64 and 663232 on arm64. Every small layer in that artifact
+# (cri-o/README.md and the other text files) is byte-identical across all four platforms and
+# would prove nothing about platform selection. The declared shasum is the amd64 one, so
+# resolving the wrong child fails the build rather than passing quietly.
+#
+# The second entry is the zarf init package, which covers three things the cri-o one does not:
+# an index whose children spell their platform OS "multi" rather than "linux", a layer that is
+# itself a tarball so `layer` and `extractPath` compose, and an extractPath whose leading
+# segment ("zarf-injector") is the target's own base name -- which is what the staged rename in
+# fileGrabber used to collide with. It also carries a "skeleton" child, so selecting by
+# architecture has to skip a sibling that is not one.
+#
+# Unlike every other fixture here, this one IS contacted: the test reaches ghcr.io. It is
+# skipped when CARGOSHIP_E2E_SKIP_NETWORK is set.
+
+---
+# yaml-language-server: $schema=../../../../../schema/distro-v1alpha1-schema.json
+apiVersion: colonel-byte.dev/v1alpha1
+kind: Distro
+metadata:
+  name: e2e-oci-file
+  version: 0.0.1
+  architecture: amd64
+spec:
+  type: rke2
+  version: 1.35.0-rke2r1
+  config:
+    files:
+      - name: pinns
+        source: oci://ghcr.io/cri-o/bundle@sha256:fe1f8c9bef946d9a8c819748aae2501394d723edf8b20c8db80dc6ca304b2de0
+        layer: cri-o/bin/pinns
+        target: /usr/local/bin/pinns
+        shasum: 055b0f31258293f0ebbfc48e5b26fea552f0a540bfd902902ef1501ff25b41a5
+        executable: true
+        selector:
+          package: binary
+          arch:
+            - amd64
+      - name: zarf-injector
+        source: oci://ghcr.io/zarf-dev/packages/init@sha256:ca5e0218c045bd3b7c33cb461b2c7aef3dd46d669ece7a1c373e3fd6b307bc99
+        layer: components/zarf-injector.tar
+        extractPath: zarf-injector/files/0/zarf-injector
+        target: /usr/local/bin/zarf-injector
+        shasum: 54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119
+        executable: true
+        selector:
+          package: binary
+          arch:
+            - amd64
+    engine:
+      config:
+        cluster-cidr: 10.42.0.0/16
+        cluster-domain: cluster.local

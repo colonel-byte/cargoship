@@ -40,6 +40,8 @@ type File struct {
 	ExtractPath string `json:"extractPath,omitempty"`
 	// Group is the group that owns the file.
 	Group string `json:"group,omitempty"`
+	// Layer names which layer of an oci:// source to take, by its org.opencontainers.image.title annotation. It is required when the artifact carries more than one layer, and is ignored for every other kind of source. Combine it with extractPath when the layer it names is itself an archive.
+	Layer string `json:"layer,omitempty"`
 	// Name identifies the file entry. It is not the file name on disk.
 	Name string `json:"name,omitempty"`
 	// PermMode sets the permissions cargoship applies to the file. It accepts an octal string or an integer, for example "0644" or 644.
