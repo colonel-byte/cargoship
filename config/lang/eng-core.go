@@ -254,12 +254,21 @@ const (
 	RootCmdFlagLogFormat = "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'."
 	// RootCmdFlagLogLevel log level
 	RootCmdFlagLogLevel = "Log level when running cargoship. One of: error, warn, info, debug."
+	// RootCmdFlagVersion version flag. Registered explicitly rather than left to cobra, so that
+	// it reaches the generated docs and does not claim the -v shorthand. See cmd/root.go.
+	RootCmdFlagVersion = "Print the version of the running binary and exit."
 	// RootCmdFlagNoColor no color
 	RootCmdFlagNoColor = "Disable terminal color codes in logging and stdout prints."
 	// RootCmdFlagLogFile log file
 	RootCmdFlagLogFile = "Always write a full-verbosity debug log to a file, regardless of --log-level."
 	// RootCmdShort root short
 	RootCmdShort = "CLI for cargoship installs"
+	// RootCmdLong root long. Bare "cargoship" previously printed a command list and nothing about
+	// where settings come from, which is the first thing an operator needs and the one thing no
+	// subcommand's help covers.
+	RootCmdLong = "Builds offline Kubernetes distro packages, and runs the cluster lifecycle -- prepare, apply, kube-config, reset -- against target hosts over SSH. It runs from a management node and opens the connections itself; nothing is installed on a target host that a phase did not upload.\n\n" +
+		"Settings come from flags, then the environment, then a config file, in that order of precedence. The config file is 'cargoship-config.yaml' -- YAML is the only format read, and '.yml' is accepted too -- looked for in the current directory and then $HOME/.zarf, or at the exact path in CARGOSHIP_CONFIG. Every key is also settable in the environment under the DISTRO_ prefix with dots as underscores, so '.distro.publish.signing_key' is DISTRO_DISTRO_PUBLISH_SIGNING_KEY.\n\n" +
+		"Run 'cargoship validate --kind config <file>' to check a config file, and 'cargoship schema config' to write its JSON Schema for an editor."
 	// RootCmdUse root use
 	RootCmdUse = "cargoship COMMAND"
 	// RootGroupInstallID subcommand for install id
@@ -270,6 +279,12 @@ const (
 	RootGroupPackageID = "package"
 	// RootGroupPackageTitle subcommand for package id
 	RootGroupPackageTitle = "Package Commands:"
+	// RootGroupConfigID subcommand for config id
+	RootGroupConfigID = "config"
+	// RootGroupConfigTitle subcommand for config title. These used to fall into cobra's
+	// "Additional Commands" bucket, which read as leftovers rather than as the group an operator
+	// authoring a configuration wants.
+	RootGroupConfigTitle = "Configuration Commands:"
 	// CmdPackageFlagVerify flag
 	CmdPackageFlagVerify = "Verify the Cargoship package signature."
 	// CmdPackageFlagSigningKey signing key flag

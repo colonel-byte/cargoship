@@ -46,6 +46,7 @@ func newSchemaCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:       "schema KIND",
+		GroupID:   lang.RootGroupConfigID,
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: pkgschema.Kinds(),
 		Short:     lang.CmdSchemaShort,

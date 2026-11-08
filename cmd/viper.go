@@ -18,7 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/config"
@@ -43,6 +45,82 @@ var (
 	resolvedConfig types.DistroConfig
 )
 
+// configFileName is the base name looked for, without its extension.
+const configFileName = "cargoship-config"
+
+// configFileExt is the documented extension, and the one every other mention in the tree uses: the
+// sample at the repository root, the generated schema, the README, and the Ansible collection's
+// role documentation all name cargoship-config.yaml.
+const configFileExt = ".yaml"
+
+// configFileExts is every extension read, in precedence order. Both spell YAML, which is the only
+// format cargoship supports for this file.
+//
+// Discovery is done here rather than left to viper, whose searchInPath walks all twelve extensions
+// it supports with json ahead of yaml -- so a stray cargoship-config.json in the working directory
+// took precedence over the file all of those documents name, with nothing in the output to say
+// which one had been read. ".yml" stays readable because viper accepted it before this change and
+// it is the same format; dropping it would have quietly stopped reading a file that works today.
+func configFileExts() []string {
+	return []string{configFileExt, ".yml"}
+}
+
+// configSearchPaths is where the config file is looked for when CARGOSHIP_CONFIG does not name one
+// outright, in the order searched.
+//
+// It is a function rather than two lines inside initViper so that PrintViperConfigUsed can report
+// the same list it searched. The two had no reason to agree before, and an operator whose config
+// was not being picked up had nothing to read.
+//
+// $HOME/.zarf is inherited from the zarf ancestry rather than chosen, and is kept because moving it
+// would silently stop reading a file that operators already have.
+func configSearchPaths() []string {
+	return []string{".", "$HOME/.zarf"}
+}
+
+// findConfigFile returns the first readable configFileName+configFileExt across the search paths,
+// or "" when there is none.
+func findConfigFile(paths []string) string {
+	for _, dir := range paths {
+		for _, ext := range configFileExts() {
+			candidate := filepath.Join(os.ExpandEnv(dir), configFileName+ext)
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate
+			}
+		}
+	}
+	return ""
+}
+
+// unreadableConfigFile returns a file in the search paths named configFileName carrying an
+// extension cargoship does not read, or "" when there is none.
+//
+// It exists so that a run can name the file the operator probably meant. viper used to read a
+// cargoship-config.json or .toml sitting there; now it does not, and being told only that no
+// config file was found would leave nothing to work from.
+func unreadableConfigFile(paths []string) string {
+	readable := configFileExts()
+
+	for _, dir := range paths {
+		expanded := os.ExpandEnv(dir)
+		entries, err := os.ReadDir(expanded)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if entry.IsDir() || !strings.HasPrefix(name, configFileName+".") {
+				continue
+			}
+			if slices.Contains(readable, filepath.Ext(name)) {
+				continue
+			}
+			return filepath.Join(expanded, name)
+		}
+	}
+	return ""
+}
+
 func initViper() error {
 	// Already initialized by some other command
 	if v != nil {
@@ -56,12 +134,11 @@ func initViper() error {
 	if cfgFile != "" {
 		// Use config file from the flag.
 		v.SetConfigFile(cfgFile)
-	} else {
-		// Search config paths (order matters!)
-		v.AddConfigPath(".")
-		v.AddConfigPath("$HOME/.zarf")
-		v.SetConfigName("cargoship-config")
-		v.SetConfigType("yaml")
+	} else if found := findConfigFile(configSearchPaths()); found != "" {
+		// Named outright rather than handed to viper's own search, for the reason on
+		// configFileExt. When nothing is found, viper is left with no config file at all and
+		// ReadInConfig returns the not-found error the caller below already tolerates.
+		v.SetConfigFile(found)
 	}
 
 	v.SetEnvPrefix("distro")
