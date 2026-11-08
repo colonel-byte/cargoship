@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2e02d2ef.js";
+            window.path_to_searchindex_js = "searchindex-2b92acd7.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-096b91be.js"></script>
+        <script src="toc-aad83525.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2175,7 +2175,57 @@ oras manifest fetch ghcr.io/cri-o/bundle:d816c7e | jq '.manifests[] | {digest, p
 oras manifest fetch ghcr.io/cri-o/bundle:d816c7e-amd64 |
   jq -r '.layers[] | "\(.size)\t\(.annotations["org.opencontainers.image.title"])"'
 </code></pre>
-<p><code>cargoship sha256sum</code> does not yet read an <code>oci://</code> reference, so the <code>shasum</code> for one of these entries is computed by hand for now - see <a href="https://github.com/colonel-byte/cargoship/issues/1041"><code>#1041</code></a>. Remember that for an <code>extractPath</code> entry the digest wanted is the <strong>extracted member’s</strong>, not the archive’s.</p>
+<p>The <code>shasum</code> an entry declares comes from <code>cargoship dev sha256sum</code>, which takes the same three selectors the entry does:</p>
+<pre><code class="language-bash"># a titled layer
+cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e \
+  --layer cri-o/bin/pinns --arch amd64
+
+# a member of a layer that is itself an archive
+cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
+  --layer components/zarf-injector.tar \
+  --extract-path zarf-injector/files/0/zarf-injector --arch amd64
+</code></pre>
+<p>It resolves the artifact exactly as a build does - same index descent, same layer selection, same extraction - so what it prints is the digest of the bytes <code>create</code> would stage. For an <code>extractPath</code> entry that is the <strong>extracted member’s</strong> digest, not the archive’s, which is what the entry has to declare.</p>
+<p><code>--arch</code> is <strong>not</strong> defaulted to the architecture of the machine you run it on. The digest is going into an entry that names its own <code>selector.arch</code>, and an operator on an arm64 workstation filling in an amd64 entry would otherwise get a plausible wrong answer with nothing to notice. A reference that resolves to a real index says so and names the flag:</p>
+<pre><code class="language-text">ERR unable to compute the SHA256SUM hash
+    oci://ghcr.io/cri-o/bundle:d816c7e is an index over amd64, arm64, ppc64le, s390x:
+    no single architecture was selected: give one with --arch
+</code></pre>
+<p>An artifact published as a single manifest needs no <code>--arch</code> at all.</p>
+<p>Tab completion on <code>--arch</code> reads the reference you are checksumming and offers the architectures that artifact actually holds, which is usually not the list cargoship itself builds for:</p>
+<pre><code class="language-console">$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --arch &lt;TAB&gt;
+amd64    linux/amd64
+arm64    linux/arm64
+ppc64le  linux/ppc64le
+s390x    linux/s390x
+
+$ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 --arch &lt;TAB&gt;
+amd64     multi/amd64
+arm64     multi/arm64
+skeleton  multi/skeleton
+</code></pre>
+<p>The description is the platform as the artifact declares it, so a zarf package reading <code>multi/amd64</code> where a vendor bundle reads <code>linux/amd64</code> is visible rather than surprising. Anything that stops the reference from being read - a local path, an unreachable registry, credentials you do not have, a reference resolving to a single manifest - falls back to cargoship’s own architectures, and the read is given three seconds before it does.</p>
+<p><code>--layer</code> completes the same way, from the titles the artifact carries:</p>
+<pre><code class="language-console">$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --arch amd64 --layer cri-o/bin/&lt;TAB&gt;
+cri-o/bin/conmon    cri-o/bin/crictl  cri-o/bin/crio-credential-provider  cri-o/bin/pinns
+cri-o/bin/conmonrs  cri-o/bin/crio    cri-o/bin/crun                      cri-o/bin/runc
+</code></pre>
+<p><strong>Give <code>--arch</code> first.</strong> A layer title is entirely a property of the artifact, so unlike <code>--arch</code> there is no generic list to fall back to - and on a reference that is an index over several architectures, there is no one manifest to read titles from until you say which. Rather than offer nothing, cargoship reads the first one and says so:</p>
+<pre><code class="language-console">$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --layer &lt;TAB&gt;
+cri-o/LICENSE   (from the amd64 manifest; pass --arch)
+cri-o/Makefile  (from the amd64 manifest; pass --arch)
+cri-o/README.md (from the amd64 manifest; pass --arch)
+...
+</code></pre>
+<p>The note is said twice, through two channels, because neither reaches every shell. bash and zsh also show it once as a non-selectable hint line; fish does not, because cobra’s generated fish script runs the completion with ActiveHelp switched off. The description carried on each entry is what fish renders.</p>
+<p>Once both <code>--arch</code> and <code>--layer</code> are settled, <code>--extract-path</code> completes from the members of that layer:</p>
+<pre><code class="language-console">$ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
+    --arch amd64 --layer components/zarf-registry.tar --extract-path &lt;TAB&gt;
+zarf-registry/charts/docker-registry-1.0.3.tgz        zarf-registry/manifests/registry-connect-0.yaml
+zarf-registry/manifests/kep-1755-registry-annotation-0.yaml  zarf-registry/values/docker-registry-1.0.3-0
+</code></pre>
+<p>This one reads the <strong>layer itself</strong> rather than a manifest - 43 MiB for that artifact - which is why it waits for both other flags and offers nothing until it has them. Two things make that reasonable: it is the same blob the command you are completing is about to fetch, into the same cache, so following the suggestion through costs nothing extra; and a second tab is served from that cache without touching the network. An abandoned transfer is dropped rather than cached, because the blob is verified against its digest before the cache commits it. On a link slow enough that three seconds is not enough, you get no suggestions rather than a wait.</p>
+<p>That is a good guess rather than an answer. Every artifact this has been tried against titles its layers identically across platforms, so in practice the suggestions are right - but they need not be. The zarf init package is the counter-example: its <code>skeleton</code> child carries <code>components/k3s.tar</code> and <code>components/zarf-registry.tar</code>, which its <code>amd64</code> child does not carry at all. Nothing is decided by the suggestion either way, because the title is resolved for real against the architecture you actually request when the digest is computed, and a title that is not there fails with the full list.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="package-values"><a class="header" href="#package-values">Package Values</a></h1>
 <p>A cargoship package ships with a set of values: Helm-style configuration, addressed by dotted paths, that a cluster can override without rebuilding the package. Values reach the engine configuration in two ways – structural <em>mappings</em>, and Go <em>templates</em> that read <code>.Values</code> – and they are also available to the files a package uploads and to the actions that build it.</p>
@@ -3476,7 +3526,7 @@ $ cargoship dev redact-receipt ./apply-20260928-143000.json -o ./share.json
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-dev-sha256sum"><a class="header" href="#cargoship-dev-sha256sum">cargoship dev sha256sum</a></h2>
 <p>Generates a SHA256SUM for the given file</p>
-<pre><code>cargoship dev sha256sum [ FILE | URL ] [flags]
+<pre><code>cargoship dev sha256sum [ FILE | URL | OCI_REF ] [flags]
 </code></pre>
 <h3 id="examples-5"><a class="header" href="#examples-5">Examples</a></h3>
 <pre><code># Checksum a local file
@@ -3488,13 +3538,24 @@ $ cargoship dev sha256sum https://example.com/artifact.tar.gz
 # Checksum one file inside an archive, for use with a component's files.extractPath
 $ cargoship dev sha256sum ./artifact.tar.gz --extract-path ./bin/tool
 
+# Checksum one layer of an OCI artifact, for use with a file entry's oci:// source
+$ cargoship dev sha256sum oci://ghcr.io/cri-o/bundle:d816c7e --layer cri-o/bin/crio --arch amd64
+
+# Checksum a member of a layer that is itself a tarball
+$ cargoship dev sha256sum oci://ghcr.io/zarf-dev/packages/init:v0.89.0 \
+    --layer components/zarf-injector.tar --extract-path zarf-injector/files/0/zarf-injector
+
 # Same thing, using the shorter alias
 $ cargoship dev sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
 </code></pre>
 <h3 id="options-7"><a class="header" href="#options-7">Options</a></h3>
-<pre><code>  -e, --extract-path string   The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")
-  -h, --help[=true|false]     help for sha256sum
-      --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
+<pre><code>      --arch selector.arch                      For an oci:// reference that resolves to an image index, the architecture whose manifest to read (i.e. for use with a file entry's selector.arch). It is not defaulted to this host's architecture: the digest is going into an entry that names its own architecture, and guessing here would give a plausible wrong answer. An artifact published as a single manifest needs none.
+  -e, --extract-path extractPath                The path inside of an archive to use to calculate the sha256sum (i.e. for use with a file entry's extractPath). For an oci:// reference it is a path inside the layer --layer names. Shell completion lists that layer's members once both --layer and --arch are given, which it needs because listing them reads the layer itself.
+  -h, --help[=true|false]                       help for sha256sum
+      --insecure-skip-tls-verify[=true|false]   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --layer layer                             For an oci:// reference, the layer to take, by its org.opencontainers.image.title annotation (i.e. for use with a file entry's layer). Required when the artifact carries more than one layer. Combine it with --extract-path when the named layer is itself an archive. Shell completion offers the titles the artifact carries, and reads them from the architecture --arch names, so give that first.
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-6"><a class="header" href="#options-inherited-from-parent-commands-6">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
@@ -9362,6 +9423,9 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <li><strong>An extraction identifies an archive by its file name, not its bytes.</strong> <code>archive.Decompress</code> resolves a format by suffix (<code>findArchiver</code>), so the layer is staged under the name the artifact’s title gives it, extension and all. A layer carrying no title and an entry declaring <code>extractPath</code> is refused for that reason, rather than failing inside the extractor with “unsupported archive extension” naming a temporary path.</li>
 <li><strong>An <code>extractPath</code> can collide with its own target.</strong> <code>fileGrabber</code> extracts into the staged file’s parent directory and then renames the member onto the staged name, so an <code>extractPath</code> whose leading segment equals the target’s base name has the extraction create a directory at exactly the rename’s destination. zarf publishes its component tarballs that way - <code>zarf-injector/files/0/zarf-injector</code> for a target of <code>/usr/local/bin/zarf-injector</code> - and the rename failed with <code>file exists</code>, naming a path the definition never mentions. The member is now moved out to a temporary name, the extracted tree removed, and the temporary renamed into place. This was never specific to an <code>oci://</code> source; the same local or HTTP archive had always failed the same way, and nothing in the tree had that shape until one of these artifacts did.</li>
 </ul>
+<h2 id="one-reader-two-callers"><a class="header" href="#one-reader-two-callers">One reader, two callers</a></h2>
+<p>The artifact reading - resolving the reference, descending an index, selecting the layer, extracting a member - is <code>coci.FetchFile</code>, and both a package build and <code>cargoship dev sha256sum</code> go through it. That is deliberate rather than incidental: the command exists to produce the <code>shasum</code> an entry declares, and the build refuses the entry when the digest does not match, so two readers that resolved an artifact even slightly differently would produce a digest that is correct and rejected. The e2e walk asserts the command’s output against the shasum in the fixture for exactly that reason.</p>
+<p>It cost one thing worth knowing. <code>coci</code> is generic and has no idea what a distro definition looks like, so the two things a caller must supply - an architecture for an index, a title for a multi-layer manifest - are reported as the exported <code>ErrArchRequired</code> and <code>ErrLayerRequired</code>, and each caller wraps them with the name of its own surface: <code>selector.arch</code> and the <code>layer</code> field for a definition, <code>--arch</code> and <code>--layer</code> for the command. An error that said only “no architecture was selected” would be true and useless.</p>
 <h2 id="no-second-endpoint-concept"><a class="header" href="#no-second-endpoint-concept">No second endpoint concept</a></h2>
 <p>There is no <code>ociEndpoint</code>-style config key for file sources. Credentials, TLS, plain-HTTP and mirror rewriting are all configured already for the registry paths cargoship has, and <code>--registry-override</code> applies to an <code>oci://</code> file source for the same reason it applies to an image pull: an operator who redirects a registry means it for everything cargoship fetches from there. A second endpoint surface would duplicate all of it and still not help a disconnected build, which is what <code>--content-store</code> is for.</p>
 <p>One consequence worth knowing: <code>--file-override</code> never matches an <code>oci://</code> source, because <code>pkg/fileoverride</code>’s <code>parseHTTPURL</code> accepts http and https only. A redirect for one of these entries is a registry override.</p>
@@ -9646,6 +9710,49 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p><code>apply</code> and <code>prepare</code> used to bind <code>-f/--fapolicyd</code>, and no phase read it – <code>PrepareFapolicy</code> has no <code>Enabled</code> field and <code>PrepareOptions</code> has no fapolicyd member. That flag has since been removed rather than wired up, along with its config key, schema entry and Ansible parameter, for the reason this paragraph gives. <code>CHANGELOG.md</code> records the matching cleanup on the phase side, <code>drop the unused InstallFapolicy phase</code>. A flag is not one flag: it is <code>types/config.go</code>, <code>cmd/root.go</code>, <code>cmd/viper.go</code>, both <code>cmd/install_*.go</code> files, <code>internal/ansiblemod/params.go</code>, and the <code>DOCUMENTATION</code> block in both Ansible action plugins. Adding that surface for a toggle nothing threads through is how the dead <code>-f</code> happened. An operator who does not want the policy applied removes it from the package, which is where it is declared.</p>
 <h2 id="dry-run"><a class="header" href="#dry-run">Dry run</a></h2>
 <p>The phase is classified <code>DryRunSkip</code>, like <code>PrepareSelinux</code> and <code>PrepareFapolicy</code> beside it: a dry run reports it and does not run it. Its mutations are still wrapped in <code>GenericPhase.Wet</code>, which under that classification never executes, and the wrapping is there so the phase does not have to be rewritten if it ever declares a dry-run path. <code>Wet</code> now takes only that function: the host and message it also used to accept were never read, and the second function it would have run during a dry run was never passed by anybody, so the per-operation account they promised did not exist. A phase that wants to say what it would do says it through <code>ClassifyDryRun</code> and <code>DryRunNote</code>, once for the phase. Claiming <code>readOnly</code> would be wrong – the phase changes hosts – and a <code>DryRun()</code> that reported the commands it would run would have to re-derive the host filtering against live hosts to say anything true, which is work with no caller asking for it yet.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-an-archive-is-extracted-once-per-build-not-once-per-file-entry"><a class="header" href="#why-an-archive-is-extracted-once-per-build-not-once-per-file-entry">Why an archive is extracted once per build, not once per file entry</a></h1>
+<p>A distro definition commonly takes several files out of one archive. An engine release is the usual case: the binary, a killall script, an uninstall script and two unit files all come out of <code>rke2.linux-amd64.tar.gz</code>, and a definition targeting two architectures does that twice over - ten entries, two archives.</p>
+<p>Each of those entries used to be staged on its own, and staging one meant walking the whole archive. The fetch was never the problem: an <code>oci://</code> source is served by the layer cache and a URL source by <code>utils.CachedArchive</code>, so the bytes arrive once either way. What was repeated was the decompression, and on a tarball of this size that is roughly 0.6s of CPU per entry.</p>
+<p>Measured on a ten-entry definition - the five members above out of <code>rke2.linux-amd64.tar.gz</code> and <code>rke2.linux-arm64.tar.gz</code>, from the public <code>rancher/rke2</code> v1.37.1+rke2r1 release - with both archives already in the shared cache so the figure isolates the extraction:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>wall</th><th>CPU</th></tr>
+</thead>
+<tbody>
+<tr><td>one extraction per entry</td><td>6.11s</td><td>6.23s</td></tr>
+<tr><td>one extraction per archive</td><td>2.80s</td><td>2.89s</td></tr>
+</tbody>
+</table>
+</div>
+<p>The staged output is byte for byte identical.</p>
+<h2 id="the-extractor-already-supported-it"><a class="header" href="#the-extractor-already-supported-it">The extractor already supported it</a></h2>
+<p><code>archive.DecompressOpts.Files</code> is a set, and <code>filterHandler</code> pulls every match out of a single walk. The capability was always there; what did not use it was the call structure, because <code>fileGrabber</code> stages one entry at a time and an entry names one member.</p>
+<p>So the change is not to the extraction. It is to decide what each archive will be asked for <em>before</em> staging anything: <code>newArchiveExtractor</code> walks both file lists, groups the entries that share an archive, and records every member wanted from it. The first entry to need a member then triggers one fetch and one decompression covering all of them, and every later entry reads what that produced.</p>
+<h2 id="what-counts-as-the-same-archive"><a class="header" href="#what-counts-as-the-same-archive">What counts as the same archive</a></h2>
+<p><code>archiveKey</code> is <code>{source, layer, arch}</code>, taken from the entry as the definition wrote it rather than from the resolved source. That is deliberate and it is sound: the resolution is a function of exactly those three fields. An override matches on the declared source, and a content store is searched by source, architecture and layer - so two entries that agree on all three resolve to the same bytes, whatever redirection is in play.</p>
+<p>The architecture is in the key because one reference legitimately holds several. A vendor-published <code>oci://</code> artifact resolves to a different platform child per architecture, so treating the two as one archive would stage an arm64 binary for an amd64 entry. The layer is in the key for the same reason one tag can carry several.</p>
+<h2 id="what-this-removed"><a class="header" href="#what-this-removed">What this removed</a></h2>
+<p>The staged member is now <strong>copied</strong> out of the extraction directory into the entry’s target path, where it used to be extracted beside the target and renamed into place. That rename had a defect of its own - an <code>extractPath</code> whose leading segment matched the target’s base name created a directory at exactly the rename’s destination, which is how a zarf component tarball failed with <code>file exists</code> naming a path the definition never mentions. Copying cannot collide that way, because the extraction never writes anything at the target path.</p>
+<p>The fix for that is still a separate change with its own test, and the test still guards the behaviour. This supersedes the mechanism rather than the requirement.</p>
+<h2 id="between-builds-the-member-itself-is-cached"><a class="header" href="#between-builds-the-member-itself-is-cached">Between builds, the member itself is cached</a></h2>
+<p>The extraction directory lives for one build, so on its own this leaves a rebuild decompressing again. For an <code>oci://</code> source it does not have to: the layer descriptor carries a content digest the registry verifies on fetch, so <code>utils.CacheMember</code> files each extracted member under that digest plus the path taken out of it, and the next build reads it back without staging the archive at all - no fetch, no decompression.</p>
+<p>This needs its own measurement rather than another row on the table above, because that definition is URL-sourced and a URL-sourced archive is deliberately excluded - see below. Measured instead on four members of <code>components/k3s.tar</code>, a 248 MiB layer of the public <code>ghcr.io/zarf-dev/packages/init:v0.89.0</code>, with the layer already in the blob cache either way:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>wall</th><th>CPU</th></tr>
+</thead>
+<tbody>
+<tr><td>one extraction per archive</td><td>1.33s</td><td>0.73s</td></tr>
+<tr><td>rebuild, members cached</td><td>0.81s</td><td>0.50s</td></tr>
+</tbody>
+</table>
+</div>
+<p>What remains is unavoidable: the package still copies each member into its tree and checksums everything in it, and one of these four members is 176 MiB on its own.</p>
+<p>A URL-sourced archive gets none of this, deliberately. It carries no digest of its own - the entry’s <code>shasum</code> is the digest of the extracted <em>member</em>, not of the archive - so there is nothing trustworthy to key a member on, and filing one under the URL would be weaker than what <a href="#todo-persist-archives-fetched-for-an-extractpath-file"><code>todo-extractpath-archive-cache.md</code></a> already settled for the download. The archive is still cached there; only the extraction is repeated.</p>
+<p>The cache is not re-verified on read, which is the same position <code>CachedArchive</code> takes and for the same reason: the member is still checked against the shasum the definition declares, and an entry declaring none is equally unverified whether or not a cache was involved. The difference worth noting is the key - a verified content digest rather than a URL - so an entry here cannot be served for an archive that merely shares a name.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-pkgsigning-stopped-being-a-wrapper-around-cosigns-cli"><a class="header" href="#why-pkgsigning-stopped-being-a-wrapper-around-cosigns-cli">Why <code>pkg/signing</code> stopped being a wrapper around cosign’s CLI</a></h1>
 <p>Cargoship signs and verifies the <code>distro.yaml</code> blob with cosign, and until this change it did so through <code>github.com/zarf-dev/zarf/src/pkg/signing</code>. That package is a thin wrapper over cosign’s CLI command structs, which is exactly what cargoship wants, so importing it rather than reimplementing it was the right call. The reason it is now a fork is not a disagreement about the wrapper. It is five blank imports’ worth of binary, and then the command structs behind them.</p>
@@ -10017,7 +10124,9 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="todo-persist-archives-fetched-for-an-extractpath-file"><a class="header" href="#todo-persist-archives-fetched-for-an-extractpath-file">TODO: persist archives fetched for an <code>extractPath</code> file</a></h1>
 <blockquote>
-<p><strong>Superseded.</strong> The cache described below exists: <code>utils.CachedArchive</code> keys an <code>extractPath</code> archive on a digest of its resolved URL and stores it under <code>&lt;cache&gt;/files</code> with a <code>url-</code> prefix, and the per-build <code>downloadCache</code> this document analyses has been deleted along with it. The second of the two shapes in <a href="#what-to-do-about-it">What to do about it</a> is what landed; the first – letting a <code>files</code> entry declare the archive’s own digest – is still open and is still the stronger option. The reasoning here is kept because it is the record of <em>why</em> the archive has no digest to key on, which the code comment points back to.</p>
+<p><strong>Superseded.</strong> The cache described below exists: <code>utils.CachedArchive</code> keys an <code>extractPath</code> archive on a digest of its resolved URL and stores it under <code>&lt;cache&gt;/files</code> with a <code>url-</code> prefix, and the per-build <code>downloadCache</code> this document analyses has been deleted along with it. The second of the two shapes in <a href="#what-to-do-about-it">What to do about it</a> is what landed; the first – letting a <code>files</code> entry declare the archive’s own digest – is still open for a URL source and is still the stronger option.</p>
+<p><strong>An <code>oci://</code> source now has it.</strong> An OCI layer carries a content digest that the registry verifies on fetch, so the question this document is about – what to key on when the archive has no digest – does not arise there. <code>utils.CacheMember</code> files each extracted member under that digest plus the path taken out of it, and a rebuild serves it without fetching or decompressing anything. That is the stronger option, for the one source kind that can have it. See <a href="#why-an-archive-is-extracted-once-per-build-not-once-per-file-entry"><code>choice-shared-archive-extraction.md</code></a>.</p>
+<p>The reasoning here is kept because it is the record of <em>why</em> a URL-sourced archive has no digest to key on, which both code comments point back to.</p>
 </blockquote>
 <p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. Every walk of the cluster suite builds its own package, each <code>distro.yaml</code> names an <code>etcd</code> release to pull <code>etcdctl</code> out of, and none of those archives is ever cached between runs - so a cluster walk downloads them again every time and a momentary DNS failure fails the walk at the package build. That accounted for three failed runs out of five in one session, at <code>Test_00_UpgradePackage</code> and <code>Test_00_JoinMachine</code>, neither of which has anything to do with the phases under test.</p>
 <h2 id="why-they-are-not-cached"><a class="header" href="#why-they-are-not-cached">Why they are not cached</a></h2>

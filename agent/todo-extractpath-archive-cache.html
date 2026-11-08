@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2e02d2ef.js";
+            window.path_to_searchindex_js = "../searchindex-2b92acd7.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-096b91be.js"></script>
+        <script src="../toc-aad83525.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,9 @@
                     <main>
                         <h1 id="todo-persist-archives-fetched-for-an-extractpath-file"><a class="header" href="#todo-persist-archives-fetched-for-an-extractpath-file">TODO: persist archives fetched for an <code>extractPath</code> file</a></h1>
 <blockquote>
-<p><strong>Superseded.</strong> The cache described below exists: <code>utils.CachedArchive</code> keys an <code>extractPath</code> archive on a digest of its resolved URL and stores it under <code>&lt;cache&gt;/files</code> with a <code>url-</code> prefix, and the per-build <code>downloadCache</code> this document analyses has been deleted along with it. The second of the two shapes in <a href="#what-to-do-about-it">What to do about it</a> is what landed; the first – letting a <code>files</code> entry declare the archive’s own digest – is still open and is still the stronger option. The reasoning here is kept because it is the record of <em>why</em> the archive has no digest to key on, which the code comment points back to.</p>
+<p><strong>Superseded.</strong> The cache described below exists: <code>utils.CachedArchive</code> keys an <code>extractPath</code> archive on a digest of its resolved URL and stores it under <code>&lt;cache&gt;/files</code> with a <code>url-</code> prefix, and the per-build <code>downloadCache</code> this document analyses has been deleted along with it. The second of the two shapes in <a href="#what-to-do-about-it">What to do about it</a> is what landed; the first – letting a <code>files</code> entry declare the archive’s own digest – is still open for a URL source and is still the stronger option.</p>
+<p><strong>An <code>oci://</code> source now has it.</strong> An OCI layer carries a content digest that the registry verifies on fetch, so the question this document is about – what to key on when the archive has no digest – does not arise there. <code>utils.CacheMember</code> files each extracted member under that digest plus the path taken out of it, and a rebuild serves it without fetching or decompressing anything. That is the stronger option, for the one source kind that can have it. See <a href="choice-shared-archive-extraction.html"><code>choice-shared-archive-extraction.md</code></a>.</p>
+<p>The reasoning here is kept because it is the record of <em>why</em> a URL-sourced archive has no digest to key on, which both code comments point back to.</p>
 </blockquote>
 <p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. Every walk of the cluster suite builds its own package, each <code>distro.yaml</code> names an <code>etcd</code> release to pull <code>etcdctl</code> out of, and none of those archives is ever cached between runs - so a cluster walk downloads them again every time and a momentary DNS failure fails the walk at the package build. That accounted for three failed runs out of five in one session, at <code>Test_00_UpgradePackage</code> and <code>Test_00_JoinMachine</code>, neither of which has anything to do with the phases under test.</p>
 <h2 id="why-they-are-not-cached"><a class="header" href="#why-they-are-not-cached">Why they are not cached</a></h2>
