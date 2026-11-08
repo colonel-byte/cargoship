@@ -19,9 +19,13 @@
 package examples
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/colonel-byte/cargoship/pkg/coci"
 )
 
 const (
@@ -244,9 +248,27 @@ var exampleDistros = []exampleDistroSpec{
 				minors: exampleMultiMinors,
 				values: exampleK3sValues,
 			},
+			{
+				// The same flavor, taking the binary out of the published k3s image
+				// instead of the release download. The image is built FROM scratch, so
+				// its one layer is the root filesystem the binary sits in.
+				cni:       "flannel",
+				name:      "oci",
+				dir:       "example/k3s-oci",
+				arches:    exampleMultiArches,
+				minors:    exampleMultiMinors,
+				values:    exampleK3sValues,
+				binaryOCI: true,
+			},
 		},
 		derive: func(v *exampleVersion) {
 			v.SelinuxRPM = exampleK3sSelinuxRPM
+			if v.BinaryOCI {
+				// One reference for every architecture; the arch selector picks the
+				// platform manifest out of it.
+				v.BinaryOCIRef = exampleK3sImageRef(v.Version)
+				return
+			}
 			for i := range v.Arches {
 				a := &v.Arches[i]
 				a.BinaryURL = fmt.Sprintf("https://github.com/k3s-io/k3s/releases/download/%s/%s",
@@ -318,6 +340,9 @@ func exampleK3sBinary(arch string) string {
 // in the one file that tracks digests, rather than caching whole checksum assets beside the
 // image manifests in example/assets.json.
 func fetchK3sBinarySHA(v *exampleVersion, repoURL string, sums *exampleShasums) error {
+	if v.BinaryOCI {
+		return resolveK3sImage(v, sums)
+	}
 	for i := range v.Arches {
 		a := &v.Arches[i]
 		key := archiveKey(a.BinaryURL)
@@ -340,6 +365,58 @@ func fetchK3sBinarySHA(v *exampleVersion, repoURL string, sums *exampleShasums) 
 	}
 	return nil
 }
+
+// exampleK3sImage is the repository the k3s image is published to.
+const exampleK3sImage = "oci://docker.io/rancher/k3s"
+
+// exampleK3sImageRef is the image tag matching a release version. The release tag spells the
+// build with a plus -- v1.37.2+k3s1 -- which a registry cannot carry, so the image uses a
+// hyphen and the version field already holds that spelling.
+func exampleK3sImageRef(version string) string {
+	return fmt.Sprintf("%s:v%s", exampleK3sImage, version)
+}
+
+// resolveK3sImage pins the image reference to the digest its tag resolves to, so the rendered
+// example names bytes rather than a tag that can be re-pushed.
+//
+// Only manifests are read: the index, and the platform manifest the architecture selects.
+// Neither is large and the layer itself is never fetched, so rendering an example line costs
+// no more than reading a release checksum file does.
+func resolveK3sImage(v *exampleVersion, sums *exampleShasums) error {
+	ref := exampleK3sImageRef(v.Version)
+	if e, ok := sums.lookupKey(ref, ref); ok {
+		v.BinaryOCIRef = exampleK3sPinned(ref, e.SHA256)
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), exampleOCITimeout)
+	defer cancel()
+
+	// Any architecture the flavor renders resolves the same index digest; the first is as
+	// good as another, and resolving one also proves the layer selection works.
+	arch := "amd64"
+	if len(v.Arches) > 0 {
+		arch = v.Arches[0].Arch
+	}
+	resolution, err := coci.Resolve(ctx, ref, coci.FileSelector{Arch: arch}, coci.FileOptions{})
+	if err != nil {
+		return fmt.Errorf("resolving %s: %w", ref, err)
+	}
+
+	digest := strings.TrimPrefix(resolution.Reference[strings.LastIndex(resolution.Reference, "@")+1:], "sha256:")
+	v.BinaryOCIRef = resolution.Reference
+	sums.storeKey(ref, ref, digest)
+	return nil
+}
+
+// exampleK3sPinned rebuilds a pinned reference from a cached digest.
+func exampleK3sPinned(ref, digest string) string {
+	return fmt.Sprintf("%s@sha256:%s", ref[:strings.LastIndex(ref, ":")], digest)
+}
+
+// exampleOCITimeout bounds the manifest reads a render makes, so a registry that is slow or
+// unreachable fails the render rather than hanging it.
+const exampleOCITimeout = 30 * time.Second
 
 // k3sBinarySHA picks one binary's digest out of a release checksum file's lines.
 func k3sBinarySHA(lines []string, binary string) (string, error) {
