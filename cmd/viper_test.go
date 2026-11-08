@@ -118,7 +118,12 @@ func TestExpandHomePaths(t *testing.T) {
 				SigningKey: "env://COSIGN_PRIVATE_KEY",
 			},
 			CreateOpts: types.DistroCreateOptions{
-				ContentStore: "~/packages/zarf-package-foo-amd64.tar.zst",
+				// Several bundles, so the expansion has to reach every element rather than
+				// a single field.
+				ContentStore: []string{
+					"~/packages/zarf-package-foo-amd64.tar.zst",
+					"~/packages/zarf-package-foo-arm64.tar.zst",
+				},
 				// The deprecated key is still read when content_store is unset, so it has
 				// to keep being expanded too. Asserting on it is the point here, so the
 				// deprecation is suppressed rather than avoided.
@@ -148,8 +153,11 @@ func TestExpandHomePaths(t *testing.T) {
 				SigningKey: "env://COSIGN_PRIVATE_KEY",
 			},
 			CreateOpts: types.DistroCreateOptions{
-				ContentStore: filepath.Join(home, "packages", "zarf-package-foo-amd64.tar.zst"),
-				HaulerStore:  filepath.Join(home, "hauls", "haul.tar.zst"), //nolint:staticcheck // deprecated on purpose
+				ContentStore: []string{
+					filepath.Join(home, "packages", "zarf-package-foo-amd64.tar.zst"),
+					filepath.Join(home, "packages", "zarf-package-foo-arm64.tar.zst"),
+				},
+				HaulerStore: filepath.Join(home, "hauls", "haul.tar.zst"), //nolint:staticcheck // deprecated on purpose
 			},
 		},
 	}

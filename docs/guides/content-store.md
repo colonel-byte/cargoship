@@ -144,15 +144,35 @@ Charts, manifests, git repositories and data injections in a zarf package are no
 
 A zarf package carries a single `metadata.architecture`, so one package holds one architecture's images and files. A hauler store has no equivalent limit - `hauler store sync` merges any number of manifests, across architectures, into one store.
 
-`--content-store` takes one path, so **a build that targets two architectures cannot currently be satisfied from zarf packages alone**. Two things follow, and the second is the one to watch:
+A build that targets two architectures therefore needs **one package per architecture**, and `--content-store` is repeatable so it can have them:
 
-- Build a single-architecture package, naming the architecture so the definition and the store agree:
+```bash
+cargoship create ./distro-defs \
+  --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst \
+  --content-store ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
+```
 
-  ```bash
-  zarf package create ./zarf-amd64.yaml --confirm
-  cargoship create ./distro-defs --architecture amd64 \
-    --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
-  ```
+Several stores are read as one, and the two halves merge differently because the two kinds of content are shaped differently. A **file** entry already names one architecture, so the store holding that architecture answers it. An **image** reference covers every architecture at once, so the stores holding it are merged into a single view and the build takes each platform from whichever store has it. Mixing formats is fine: a hauler store and a zarf package side by side read as one.
+
+The same list works in the config file:
+
+```yaml
+distro:
+  create:
+    content_store:
+      - ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
+      - ./zarf-package-rke2-content-arm64-1.35.0-rke2r1.tar.zst
+```
+
+One further thing to watch:
+
+Or build for one architecture, naming it so the definition and the store agree:
+
+```bash
+zarf package create ./zarf-amd64.yaml --confirm
+cargoship create ./distro-defs --architecture amd64 \
+  --content-store ./zarf-package-rke2-content-amd64-1.35.0-rke2r1.tar.zst
+```
 
 - **A store covering fewer architectures than the definition is not used for those images.** The store is consulted per platform, so one holding only amd64 cannot stand in for the registry on a build that also wants arm64. The image falls back to its registry and says so, naming what the store could serve:
 

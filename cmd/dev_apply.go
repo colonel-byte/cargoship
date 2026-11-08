@@ -36,7 +36,7 @@ type devApplyOptions struct {
 	installApplyOptions
 	registryOverrides []string
 	fileOverrides     []string
-	contentStore      string
+	contentStore      []string
 	ociConcurrency    int
 }
 
@@ -77,7 +77,7 @@ func newDevApplyCommand() *cobra.Command {
 	slices.Sort(fileOverrideDefaults)
 
 	cmd.Flags().StringSliceVar(&o.fileOverrides, "file-override", fileOverrideDefaults, lang.CmdPackageCreateFlagFileOverride)
-	cmd.Flags().StringVar(&o.contentStore, "content-store", resolvedConfig.DistroOpts.CreateOpts.ContentStore, lang.CmdPackageCreateFlagContentStore)
+	cmd.Flags().StringSliceVar(&o.contentStore, "content-store", resolvedConfig.DistroOpts.CreateOpts.ContentStore, lang.CmdPackageCreateFlagContentStore)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, lang.CmdPackageCreateFlagRegistryOverride)
 
 	// apply does not register these, because loading a built package reaches no registry.

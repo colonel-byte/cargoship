@@ -52,12 +52,15 @@
       },
       "properties": {
         "content_store": {
-          "description": "is a local content bundle that images and files are resolved from instead\nof being fetched over the network: a hauler store (https://github.com/hauler-dev/hauler)\nas either a store directory or an archive written by `hauler store save`, or a built\nzarf package (https://github.com/zarf-dev/zarf). Which format it is is read from the\nbundle itself, not from the path. Content the store does not hold still comes from the\nsource the distro definition declared, so a partial store works. A file is accepted\nfrom the store only when the definition declares a shasum for it, since nothing else\nwould verify bytes the definition's author never saw. Honoured by `cargoship create`.",
-          "examples": [
-            "/opt/hauls/haul.tar.zst",
-            "~/packages/zarf-package-foo-amd64.tar.zst"
-          ],
-          "type": "string"
+          "description": "is a local content bundle that images and files are resolved from instead\nof being fetched over the network: a hauler store (https://github.com/hauler-dev/hauler)\nas either a store directory or an archive written by `hauler store save`, or a built\nzarf package (https://github.com/zarf-dev/zarf). Which format it is is read from the\nbundle itself, not from the path. Content the store does not hold still comes from the\nsource the distro definition declared, so a partial store works. A file is accepted\nfrom the store only when the definition declares a shasum for it, since nothing else\nwould verify bytes the definition's author never saw. Honoured by `cargoship create`.\n\nSeveral bundles may be listed, and they are read as one: a zarf package carries a\nsingle architecture by construction, so a build targeting two needs one package per\narchitecture. A file entry is answered by the first bundle holding that entry's\narchitecture, and an image reference by every bundle holding it at once.",
+          "items": {
+            "examples": [
+              "/opt/hauls/haul.tar.zst",
+              "~/packages/zarf-package-foo-amd64.tar.zst"
+            ],
+            "type": "string"
+          },
+          "type": "array"
         },
         "file_override": {
           "$ref": "#/$defs/FileOverrideMap",

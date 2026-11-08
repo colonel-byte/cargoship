@@ -56,7 +56,7 @@ type packageCreateOptions struct {
 	signingKeyPath     string
 	signingKeyPassword string
 	tag                string
-	contentStore       string
+	contentStore       []string
 	haulerStore        string
 }
 
@@ -95,7 +95,7 @@ func newPackageCreateCommand() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().StringSliceVar(&o.fileOverrides, "file-override", fileOverrideDefaults, lang.CmdPackageCreateFlagFileOverride)
-	cmd.Flags().StringVar(&o.contentStore, "content-store", resolvedConfig.DistroOpts.CreateOpts.ContentStore, lang.CmdPackageCreateFlagContentStore)
+	cmd.Flags().StringSliceVar(&o.contentStore, "content-store", resolvedConfig.DistroOpts.CreateOpts.ContentStore, lang.CmdPackageCreateFlagContentStore)
 	// Reading the deprecated key is the whole job of the deprecated flag: an operator who set
 	// hauler_store in a config file keeps getting it until they rename it.
 	cmd.Flags().StringVar(&o.haulerStore, "hauler-store", resolvedConfig.DistroOpts.CreateOpts.HaulerStore, lang.CmdPackageCreateFlagHaulerStore) //nolint:staticcheck // SA1019: deprecated on purpose
@@ -185,10 +185,10 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	// spelling wins outright rather than the two being merged or refused: an operator mid-rename
 	// has both set, and the one they just typed is the one they meant.
 	contentStore := o.contentStore
-	if contentStore == "" && o.haulerStore != "" {
+	if len(contentStore) == 0 && o.haulerStore != "" {
 		l.Warn("hauler_store is deprecated; set content_store instead, which reads a hauler store or a zarf package",
 			"store", o.haulerStore)
-		contentStore = o.haulerStore
+		contentStore = []string{o.haulerStore}
 	}
 
 	opt := distro.CreateOptions{

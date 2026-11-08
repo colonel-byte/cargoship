@@ -61,7 +61,7 @@ type CreateOptions struct {
 	// ContentStore is the path to a local content bundle that images and files are resolved
 	// from before the network: a hauler store directory or archive, or a built zarf package.
 	// The format is read from the bundle, not from the path. Empty means no store.
-	ContentStore string
+	ContentStore []string
 	// SigningKeyPath and SigningKeyPassword sign the package as part of creation
 	// when set. Empty values are a no-op -- see DistroLayout.SignPackage.
 	SigningKeyPath     string
@@ -103,8 +103,8 @@ func Build(ctx context.Context, distroPath string, opts CreateOptions) (*layout.
 	// The store is opened once for the whole build and closed with it, because opening an
 	// archive unpacks it and every file and image staged below reads from that one copy.
 	var store assemble.ContentStore
-	if opts.ContentStore != "" {
-		opened, closeStore, err := openContentStore(ctx, opts.ContentStore)
+	if len(opts.ContentStore) > 0 {
+		opened, closeStore, err := openContentStores(ctx, opts.ContentStore)
 		if err != nil {
 			return nil, err
 		}
@@ -211,4 +211,34 @@ const zarfDefinition = "zarf.yaml"
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// openContentStores opens every bundle the build was given and presents them as one.
+//
+// They are opened together because a build may need all of them at once: a zarf package
+// carries a single architecture, so a two-architecture build is satisfied by one package per
+// architecture rather than by either alone. The returned cleanup removes whatever each archive
+// was unpacked into, and runs for every bundle even when one of them fails to open.
+func openContentStores(ctx context.Context, paths []string) (assemble.ContentStore, func() error, error) {
+	var (
+		stores   []assemble.ContentStore
+		cleanups []func() error
+	)
+	cleanup := func() error {
+		var errs []error
+		for _, c := range cleanups {
+			errs = append(errs, c())
+		}
+		return errors.Join(errs...)
+	}
+
+	for _, path := range paths {
+		store, closeStore, err := openContentStore(ctx, path)
+		if err != nil {
+			return nil, nil, errors.Join(err, cleanup())
+		}
+		stores = append(stores, store)
+		cleanups = append(cleanups, closeStore)
+	}
+	return assemble.NewCompositeStore(stores...), cleanup, nil
 }

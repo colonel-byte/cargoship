@@ -162,7 +162,12 @@ type DistroCreateOptions struct {
 	// source the distro definition declared, so a partial store works. A file is accepted
 	// from the store only when the definition declares a shasum for it, since nothing else
 	// would verify bytes the definition's author never saw. Honoured by `cargoship create`.
-	ContentStore string `json:"content_store,omitempty" mapstructure:"content_store" jsonschema:"example=/opt/hauls/haul.tar.zst,example=~/packages/zarf-package-foo-amd64.tar.zst"`
+	//
+	// Several bundles may be listed, and they are read as one: a zarf package carries a
+	// single architecture by construction, so a build targeting two needs one package per
+	// architecture. A file entry is answered by the first bundle holding that entry's
+	// architecture, and an image reference by every bundle holding it at once.
+	ContentStore []string `json:"content_store,omitempty" mapstructure:"content_store" jsonschema:"example=/opt/hauls/haul.tar.zst,example=~/packages/zarf-package-foo-amd64.tar.zst"`
 	// HaulerStore is the former spelling of ContentStore, which reads a hauler store and
 	// nothing else.
 	//
