@@ -36,6 +36,18 @@ import (
 //
 // The field types are the real ones, so `cargoship_host` completes as a HostConfig and
 // `cargoship_profile_spec` as a Profiles, out of the same $defs the cluster schema publishes.
+//
+// ansible_port is the one field whose Go type is narrower than what is accepted, and the
+// oneof_type tag on it is not decoration. portVar takes a number or a string, because an INI
+// inventory gives every variable as a string and a YAML one gives a number, and both are ordinary
+// ways to write an inventory -- so the schema has to permit both or it would flag a working file.
+// The int here is what portVar returns, not a claim about what it reads.
+//
+// The port inside cargoship_bastion is deliberately not the same. That variable is decoded whole
+// into rig's ssh.Config, whose Port is an int with no such leniency, so a quoted "22" there fails
+// the decode with `cannot unmarshal string into Go struct field .port of type int`. The schema
+// says integer for it and string-or-integer for ansible_port, which is the asymmetry the code
+// actually has rather than a tidier one.
 type HostVars struct {
 	// Address cargoship opens the SSH connection to. Defaults to the name the inventory knows the host by, which is the common shape.
 	AnsibleHost string `json:"ansible_host,omitempty"`

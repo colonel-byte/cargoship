@@ -77,6 +77,41 @@ func TestHostVarsCoverAnsibleVariables(t *testing.T) {
 	}, declared, "HostVars and the ansible_ constants in vars.go describe different variables")
 }
 
+// TestPortAcceptsBothFormsTheSchemaPermits pins ansible_port's two accepted forms to the
+// oneof_type tag that advertises them.
+//
+// The tag is the only thing stopping an editor flagging a working inventory, and nothing else
+// would fail if portVar lost its string case or the tag were dropped: the schema and the code
+// would simply disagree, and the symptom would be a red line under a file that installs fine.
+func TestPortAcceptsBothFormsTheSchemaPermits(t *testing.T) {
+	field, ok := reflect.TypeOf(HostVars{}).FieldByName("AnsiblePort")
+	require.True(t, ok)
+	require.Contains(t, field.Tag.Get("jsonschema"), "oneof_type=string;integer",
+		"the schema must permit both forms portVar reads")
+
+	// Both, through the real translation. float64 is the form that actually arrives, since both
+	// entry points decode JSON and every JSON number is a float64; the int case is defensive.
+	for _, port := range []any{2222, "2222", float64(2222)} {
+		host, err := translateOne(t, map[string]any{VarAnsiblePort: port})
+		require.NoError(t, err, "port %v (%T) is permitted by the schema and must translate", port, port)
+		require.Equal(t, 2222, host.ConnectionConfig.SSH.Port)
+	}
+}
+
+// TestBastionPortIsIntegerOnly records the asymmetry with ansible_port above.
+//
+// cargoship_bastion is decoded whole into rig's ssh.Config rather than read field by field, and
+// that struct's Port has no string case, so the schema says integer for it. If this ever starts
+// passing a string, the bastion port's schema has to gain the same oneof_type tag or an editor
+// will flag a file that works.
+func TestBastionPortIsIntegerOnly(t *testing.T) {
+	_, err := translateOne(t, map[string]any{
+		VarBastion: map[string]any{"address": "10.0.0.1", "port": "22"},
+	})
+	require.ErrorContains(t, err, "cannot unmarshal string into Go struct field")
+	require.ErrorContains(t, err, VarBastion)
+}
+
 // TestUnknownPrefixedPatternMatchesOnlyUnknowns checks the lookahead the generated schema rejects
 // unknown variables with, in Go's regexp dialect's nearest equivalent -- Go's RE2 has no
 // lookahead, so the pattern itself cannot be compiled here. What is checked instead is that the
