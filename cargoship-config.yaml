@@ -61,8 +61,12 @@ distro:
   #   Which format it is is read from the store, not from the path. Images and files are
   #   matched against what the store recorded each artifact was collected from, and anything
   #   the store does not hold still comes from its declared source. A file is taken from the
-  #   store only when the distro definition declares a shasum for it.
-  #   content_store: ~/hauls/haul.tar.zst
+  #   store only when the distro definition declares a shasum for it. Several stores may be
+  #   listed and are read as one, which is what a multi-architecture build needs when each
+  #   zarf package carries a single architecture.
+  #   content_store:
+  #     - ~/hauls/haul.tar.zst
+  #     - ~/packages/zarf-package-foo-arm64.tar.zst
   #   Deprecated: the former name for content_store, reading a hauler store and nothing else.
   #   Still honoured when content_store is unset.
   #   hauler_store: ~/hauls/haul.tar.zst

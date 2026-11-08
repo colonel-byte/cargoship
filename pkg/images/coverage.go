@@ -24,6 +24,25 @@ import (
 	"oras.land/oras-go/v2/content"
 )
 
+// DescriptorPlatform fills in the platform of a manifest descriptor, reading the image config
+// when the descriptor does not carry one. It returns nil for an artifact that names no
+// architecture, which is not an error: a signature or an SBOM has no platform to report.
+//
+// It is exported for a caller that merges several sources into one view of a reference and so
+// has to know which platform each one's copy answers for.
+func DescriptorPlatform(ctx context.Context, src content.Fetcher, desc ocispec.Descriptor) (*ocispec.Platform, error) {
+	withPlatform, err := ensurePlatform(ctx, src, desc)
+	if err != nil {
+		//nolint:nilerr // an artifact naming no architecture is not a failure, it has no platform
+		return nil, nil
+	}
+	if withPlatform.Platform == nil || withPlatform.Platform.Architecture == "" {
+		return nil, nil
+	}
+	platform := *withPlatform.Platform
+	return &platform, nil
+}
+
 // sourceCoverage is what a local image source holds for one reference, measured against what
 // the build asked for.
 type sourceCoverage struct {
