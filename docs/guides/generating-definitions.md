@@ -27,7 +27,7 @@ Every template in one invocation renders against the same merged values, which i
 
 ```bash
 cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl -t ./values.schema.json.tmpl \
-  -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+  --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 ```
 
 ## The Values Files
@@ -51,7 +51,7 @@ binarySHA: 0f7a...
 ```
 
 ```bash
-cargoship dev render -t ./distro.yaml.tmpl -f ./common.yaml -f ./v1.36.4.yaml -o ./packages/v1.36.4
+cargoship dev render -t ./distro.yaml.tmpl --values ./common.yaml --values ./v1.36.4.yaml -o ./packages/v1.36.4
 ```
 
 A values file must be `.yaml` or `.yml`, and its top level must be a mapping - values are addressed by key, and a document that is a list or a bare scalar has no keys to address. An empty file is fine.
@@ -93,14 +93,14 @@ The same applies to a `{{- if }}` block meant for build time. This is what the s
 A value path that resolves to nothing is an error, not a placeholder in the output. Go templates print `<no value>` for a key the values do not set, which would otherwise ship a definition carrying that literal string:
 
 ```console
-$ cargoship dev render -t ./distro.yaml.tmpl -f ./v1.36.4.yaml -o ./out
+$ cargoship dev render -t ./distro.yaml.tmpl --values ./v1.36.4.yaml -o ./out
 ERR rendering ./distro.yaml.tmpl: template "..." resolved a missing key to "<no value>"
 ```
 
 An output named `distro.yaml` is then checked against the package schema, and **nothing is written unless it passes** - so a failed render leaves no half-finished definition on disk to be mistaken for a good one:
 
 ```console
-$ cargoship dev render -t ./distro.yaml.tmpl -f ./broken.yaml -o ./out
+$ cargoship dev render -t ./distro.yaml.tmpl --values ./broken.yaml -o ./out
 ERR distro.yaml does not match the package schema:
   spec.config: Additional property images is not allowed
 ```
@@ -116,7 +116,7 @@ Because the inputs are files, a line of releases is a shell loop and nothing mor
 ```bash
 for v in 1.36.3-k3s1 1.36.4-k3s1 1.37.1-k3s1; do
   cargoship dev render -t ./distro.yaml.tmpl -t ./values.yaml.tmpl \
-    -f ./common.yaml -f "./versions/$v.yaml" -o "./packages/$v"
+    --values ./common.yaml --values "./versions/$v.yaml" -o "./packages/$v"
 done
 ```
 

@@ -111,7 +111,7 @@ func newInstallApplyCommand() *cobra.Command {
 // so a --key there could only ever be accepted and ignored.
 func addInstallApplyFlags(cmd *cobra.Command, o *installApplyOptions) {
 	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
-	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().StringVarP(&o.config, InstallConfig, "f", "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	registerFlagReceiptPath(cmd, &o.receiptPath)

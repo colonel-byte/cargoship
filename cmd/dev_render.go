@@ -67,7 +67,7 @@ func newDevRenderCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringArrayVarP(&o.templates, DevRenderTemplate, "t", nil, lang.CmdDevRenderFlagTemplate)
-	cmd.Flags().StringArrayVarP(&o.values, DevRenderValues, "f", nil, lang.CmdDevRenderFlagValues)
+	cmd.Flags().StringArrayVar(&o.values, DevRenderValues, nil, lang.CmdDevRenderFlagValues)
 	cmd.Flags().StringVarP(&o.out, DevRenderOut, "o", ".", lang.CmdDevRenderFlagOut)
 	cmd.Flags().BoolVar(&o.noValidate, DevRenderNoValidate, false, lang.CmdDevRenderFlagNoValidate)
 

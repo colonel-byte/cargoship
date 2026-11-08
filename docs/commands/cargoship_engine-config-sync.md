@@ -43,7 +43,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
       --allow-downgrade[=true|false]      Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
   -a, --architecture string               Architecture for OCI images and Zarf packages
   -c, --concurrency int                   Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string                     Config file used to bootstrap a cluster.
+  -f, --config string                     Config file used to bootstrap a cluster.
       --confirm[=true|false]              Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run[=true|false]              Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help[=true|false]                 help for engine-config-sync

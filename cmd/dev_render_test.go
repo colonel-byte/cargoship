@@ -161,7 +161,7 @@ func TestDevRenderMergesValuesFilesInOrder(t *testing.T) {
 
 	cmd := newDevRenderCommand()
 	cmd.SetOut(&strings.Builder{})
-	cmd.SetArgs([]string{"-t", tmpl, "-f", vals, "-f", override, "-o", out})
+	cmd.SetArgs([]string{"-t", tmpl, "--values", vals, "--values", override, "-o", out})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("render returned %v", err)
 	}

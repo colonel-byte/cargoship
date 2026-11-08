@@ -39,7 +39,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
 ```
   -a, --architecture string     Architecture for OCI images and Zarf packages
   -c, --concurrency int         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string           Config file used to bootstrap a cluster.
+  -f, --config string           Config file used to bootstrap a cluster.
       --confirm[=true|false]    Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run[=true|false]    Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -F, --firewall[=true|false]   Whether to update every host node's firewall configuration.
