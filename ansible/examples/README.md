@@ -8,13 +8,26 @@ Every module parameter is in the [collection reference](../../docs/ansible/cargo
 
 ## Inventories
 
-| File                            | What it shows                                                                                                             |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `inventories/fleet.ini`         | The smallest inventory that installs a cluster: two groups, one variable each.                                            |
-| `inventories/fleet/`            | The same fleet with `group_vars` and `host_vars`: profiles, labels, taints, a bastion, uploaded files, a pinned host key. |
-| `inventories/custom-groups.yml` | Groups not named `controller` and `worker`, plus a host that is not part of the cluster.                                  |
+| File                            | What it shows                                                                                              |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `inventories/fleet.ini`         | The smallest inventory that installs a cluster: two groups, one variable each.                             |
+| `inventories/fleet/`            | The same fleet with `group_vars` and `host_vars`: profiles, labels, taints, a bastion, and uploaded files. |
+| `inventories/custom-groups.yml` | Groups not named `controller` and `worker`, plus a host that is not part of the cluster.                   |
 
 Roles come from group membership. By default the group named `controller` supplies the control plane and the group named `worker` supplies the rest; `custom-groups.yml` needs a `roleGroups` mapping, which `playbooks/modules-direct.yml` supplies. Host order is load-bearing: controllers are written first and the first controller bootstraps the cluster.
+
+## The cluster block
+
+An Ansible inventory describes hosts. It has no way to carry the settings that belong to the cluster rather than to any one node -- its name, its load balancer, the profiles its hosts select, the registries it pulls from, the package values it overrides -- and those are what the `cargoship_cluster_*` variables supply.
+
+| File                   | What it holds                                                                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cluster/identity.yml` | `cargoship_cluster_name` and `cargoship_cluster_loadbalancer`. Which cluster. Every playbook here reads this one.                                            |
+| `cluster/config.yml`   | `cargoship_cluster_profiles`, `cargoship_cluster_registries`, `cargoship_cluster_values`. How it is built. Read by the three actions that install something. |
+
+They are separate variables rather than keys of one `cargoship_cluster` dict because Ansible replaces a dict between variable precedence levels rather than merging it. One dict has to be written at one level, which on a cluster of any size means a single long block restated in every playbook -- and it is why `reset.yml` used to repeat a load balancer address it has no use for. Separate variables combine, so a playbook reads the files it needs and states only what is its own. `reset.yml` reads `identity.yml` and not `config.yml`, which is also why it needs none of the mirror credentials that file templates.
+
+`cargoship_cluster` still takes the whole block as one dict, unchanged, and a variable that was set wins over the matching key inside it. Use whichever reads better; nothing requires the split until the block starts being copied.
 
 ## Playbooks
 

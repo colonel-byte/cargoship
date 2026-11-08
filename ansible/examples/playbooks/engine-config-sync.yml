@@ -18,6 +18,18 @@
   connection: local
   gather_facts: false
 
+  # The same two files apply.yml reads. This action writes engine configuration, so it needs the
+  # registries and the profiles as well as the identity.
+  vars_files:
+    - ../cluster/identity.yml
+    - ../cluster/config.yml
+
+  vars:
+    # ../cluster/config.yml templates the mirror credentials, and a template is resolved where it
+    # is used. Supplying them is the job of whichever playbook reads that file.
+    mirror_user: "{{ lookup('ansible.builtin.env', 'MIRROR_USER') }}"
+    mirror_password: "{{ lookup('ansible.builtin.env', 'MIRROR_PASSWORD') }}"
+
   tasks:
     - name: Synchronise engine configuration across the fleet
       ansible.builtin.include_role:
@@ -25,9 +37,6 @@
       vars:
         cargoship_action: engine_config_sync
         cargoship_package: /srv/staging/rke2-1.31.tar.zst
-        cargoship_cluster:
-          name: bubbles
-          loadbalancer: bubbles-kc.test.com
         cargoship_args:
           vault_password_file: /srv/staging/vault-pass
           timeout: 20m

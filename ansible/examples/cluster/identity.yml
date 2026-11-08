@@ -1,0 +1,10 @@
+---
+# Which cluster. Every playbook against this fleet needs these two and nothing else of the block:
+# a reset and a kube-config do not care what the profiles are or where the mirror is.
+#
+# They are two variables rather than two keys of `cargoship_cluster` because Ansible replaces a
+# dict between variable precedence levels rather than merging it, so a playbook that wrote the
+# block itself could not also read half of it from a file. Separate variables combine; one dict
+# does not.
+cargoship_cluster_name: bubbles
+cargoship_cluster_loadbalancer: bubbles-kc.test.com

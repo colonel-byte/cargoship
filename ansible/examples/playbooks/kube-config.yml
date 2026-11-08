@@ -16,6 +16,11 @@
   connection: local
   gather_facts: false
 
+  # Which cluster, and nothing else. Fetching a kubeconfig has no use for the profiles or the
+  # mirror, so this does not read ../cluster/config.yml beside it.
+  vars_files:
+    - ../cluster/identity.yml
+
   vars:
     kubeconfig_path: /srv/staging/bubbles.kubeconfig
 
@@ -25,9 +30,6 @@
         name: colonel_byte.cargoship.cluster
       vars:
         cargoship_action: kube_config
-        cargoship_cluster:
-          name: bubbles
-          loadbalancer: bubbles-kc.test.com
         cargoship_args:
           distro: rke2
           kubeconfig: "{{ kubeconfig_path }}"

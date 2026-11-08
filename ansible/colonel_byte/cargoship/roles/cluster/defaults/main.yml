@@ -9,7 +9,25 @@ cargoship_package: ""
 # The settings that belong to the cluster rather than to any host. name and loadbalancer are
 # required; profiles, registries, and values are optional and take the shape the inventory schema
 # documents. See docs/guides/setup-inv.md.
+#
+# This is one dict, so it has to be written at one variable precedence level: Ansible replaces a
+# dict between levels rather than merging it, so a cargoship_cluster in group_vars/all.yml and
+# another in a play are not combined -- the play's replaces the other entirely. The five variables
+# below are the way out of that. Each is separate, so each can live wherever it belongs.
 cargoship_cluster: {}
+
+# The five keys of cargoship_cluster, settable one at a time. A registry list every cluster shares
+# belongs in group_vars/all.yml, the values in a per-environment group_vars file, and the name in
+# the play -- which is impossible while they are one dict and straightforward once they are not.
+#
+# Each of these wins over the matching key inside cargoship_cluster when both are set: the whole
+# block is the coarse statement and these are the specific one. Left empty, each changes nothing,
+# so a playbook that writes only cargoship_cluster behaves exactly as it did.
+cargoship_cluster_name: ""
+cargoship_cluster_loadbalancer: ""
+cargoship_cluster_profiles: {}
+cargoship_cluster_registries: []
+cargoship_cluster_values: {}
 
 # The mapping from a cargoship role onto the Ansible groups that carry it, for an inventory that
 # does not name its groups controller and worker. Left empty, the default mapping applies.

@@ -1,0 +1,43 @@
+---
+# How the cluster is built: the profiles its hosts select, the mirror its engine pulls from, and
+# the package values it overrides. The actions that install something read this file; `reset` and
+# `kube-config` read only identity.yml beside it, because neither has any use for a profile.
+#
+# Each of these is its own variable rather than a key of `cargoship_cluster`, which is what lets a
+# playbook take the registries from here and state its own package and timeout. One dict could not
+# be split that way: Ansible replaces a dict between precedence levels rather than merging it.
+
+# A host selects a profile by name with cargoship_profile. The inventory in ../inventories/fleet
+# selects control, worker, and infra, so all three are here.
+cargoship_cluster_profiles:
+  control:
+    host:
+      ports:
+        - port: "6443"
+          protocol: tcp
+    engine:
+      labels:
+        adrp.xyz/purpose-control: "true"
+  worker: {}
+  infra:
+    engine:
+      taints:
+        - adrp.xyz/infra=true:NoSchedule
+
+# The mirror the engine pulls from, and the credentials for it. `name` is the registry the images
+# were originally referenced from. See docs/guides/registry-override.md.
+#
+# The credentials are templates, and a template is resolved where it is used rather than where it
+# is written -- so the playbook that reads this file is what has to supply mirror_user and
+# mirror_password, from a vault or from the environment.
+cargoship_cluster_registries:
+  - name: docker.io
+    proxy:
+      url: https://mirror.test.com:5000
+    auth:
+      user: "{{ mirror_user }}"
+      pass: "{{ mirror_password }}"
+
+# Overrides for the values the package was built with.
+cargoship_cluster_values:
+  cluster_domain: bubbles.test.com
