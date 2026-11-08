@@ -59,6 +59,11 @@ func newPackageVerifyCommand() *cobra.Command {
 	// the same reason: the full set would carry --verify along with it.
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", resolvedConfig.DistroOpts.PublicKey, zlang.CmdPackageFlagFlagPublicKey)
 
+	// run reads all three of config.CLIArch, config.CommonOptions.CachePath and
+	// config.CommonOptions.TempDirectory, so the build set belongs here as it does on every
+	// sibling that loads a layout. Without it --architecture was unsettable and a multi-arch
+	// package was always verified at whatever the config file defaulted to.
+	addBuildFlags(cmd)
 	addRegistryFlags(cmd)
 
 	return cmd
