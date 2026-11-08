@@ -235,11 +235,11 @@ func (p *Package) loadFiles(ctx context.Context, definition zarfapi.Package) {
 				continue
 			}
 			name := path.Base(filepath.ToSlash(f.Destination))
-			if previous, duplicated := p.files[f.Source]; duplicated {
+			if previous, duplicated := p.files[contentstore.CanonicalFileRef(f.Source)]; duplicated {
 				l.Debug("zarf package declares one source in more than one component; using the last",
 					"package", p.source, "declared", f.Source, "previous", previous.member)
 			}
-			p.files[f.Source] = file{
+			p.files[contentstore.CanonicalFileRef(f.Source)] = file{
 				// The path zarf gives a component file inside its tarball:
 				// <component>/files/<index>/<basename of destination>.
 				member:  path.Join(component.Name, filesDir, strconv.Itoa(idx), name),
@@ -308,7 +308,7 @@ func (p *Package) HasImage(ref string) bool {
 // one reference -- a hauler store holding a vendor-published index -- has anything to answer
 // here.
 func (p *Package) File(req contentstore.FileRequest) (string, bool, error) {
-	f, ok := p.files[req.Source]
+	f, ok := p.files[contentstore.CanonicalFileRef(req.Source)]
 	return f.name, ok, nil
 }
 
@@ -324,7 +324,7 @@ func (p *Package) Describe() string {
 
 // Fetch writes the component file declared as coming from req.Source to dst, creating it.
 func (p *Package) Fetch(ctx context.Context, req contentstore.FileRequest, dst string) (err error) {
-	src := req.Source
+	src := contentstore.CanonicalFileRef(req.Source)
 	f, ok := p.files[src]
 	if !ok {
 		return fmt.Errorf("%s does not hold the file %s", p.source, src)

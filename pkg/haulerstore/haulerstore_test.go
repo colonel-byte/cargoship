@@ -726,3 +726,80 @@ func TestMixedIndexIsRefused(t *testing.T) {
 		t.Errorf("error %q does not name the mixed index as the reason", err)
 	}
 }
+
+// bareFileRef is a registry reference as a bundle records one: no scheme, because that is what
+// a registry client was handed.
+const bareFileRef = "registry.example.com/vendor/engine:v1.37.1"
+
+// A definition names an artifact `oci://registry/repo:tag`; hauler records the same artifact
+// as `registry/repo:tag`, because that is what it handed a registry client. The two have to
+// resolve to one entry or a store holding the file reports it as not held - which is what
+// `--content-store` did for every oci:// entry until the two spellings were reconciled.
+func TestOCIReferenceMatchesTheBareRefAStoreRecords(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "store")
+	entry := multiPlatformFileEntry(t, dir, bareFileRef, "engine", map[string][]byte{
+		"amd64": []byte("amd64 engine"),
+		"arm64": []byte("arm64 engine"),
+	})
+	writeIndex(t, dir, []ocispec.Descriptor{entry})
+
+	s, err := Open(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	for _, src := range []string{"oci://" + bareFileRef, bareFileRef} {
+		t.Run(src, func(t *testing.T) {
+			name, ok, err := s.File(contentstore.FileRequest{Source: src, Arch: "amd64"})
+			if err != nil {
+				t.Fatalf("File: %v", err)
+			}
+			if !ok {
+				t.Fatalf("File(%q) not held; the scheme decided the lookup", src)
+			}
+			if name != "engine.linux-amd64" {
+				t.Errorf("file name %q, want engine.linux-amd64", name)
+			}
+
+			dst := filepath.Join(t.TempDir(), name)
+			if err := s.Fetch(context.Background(), contentstore.FileRequest{Source: src, Arch: "amd64"}, dst); err != nil {
+				t.Fatalf("Fetch: %v", err)
+			}
+			got, err := os.ReadFile(dst)
+			if err != nil {
+				t.Fatalf("reading fetched file: %v", err)
+			}
+			if string(got) != "amd64 engine" {
+				t.Errorf("fetched %q, want the amd64 child", got)
+			}
+		})
+	}
+}
+
+// The refusal an ambiguous entry gets must name the architectures too, whichever spelling the
+// definition used to ask.
+func TestOCIReferenceAmbiguityIsReportedForEitherSpelling(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "store")
+	entry := multiPlatformFileEntry(t, dir, bareFileRef, "engine", map[string][]byte{
+		"amd64": []byte("amd64 engine"),
+		"arm64": []byte("arm64 engine"),
+	})
+	writeIndex(t, dir, []ocispec.Descriptor{entry})
+
+	s, err := Open(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	_, _, err = s.File(contentstore.FileRequest{Source: "oci://" + bareFileRef})
+	if err == nil {
+		t.Fatal("an entry selecting no architecture was not refused")
+	}
+	for _, want := range []string{"amd64", "arm64", "selector.arch"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %q", err, want)
+		}
+	}
+}

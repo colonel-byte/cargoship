@@ -106,6 +106,24 @@ func CanonicalImageRef(ref string) string {
 	return parsed.Name()
 }
 
+// CanonicalFileRef puts a file source into the one spelling a bundle and a definition share.
+//
+// A bundle records what it collected from, and for an artifact pulled out of a registry that
+// is a bare reference: hauler writes `registry.example.com/vendor/engine:v1.37.1` into
+// `hauler.dev/original-ref`, with no scheme, because that is what a registry client was given.
+// A distro definition has to write `oci://` in front of the same string, since `source` also
+// takes URLs and paths and the scheme is what tells them apart.
+//
+// So the two spellings of one artifact differ by exactly the prefix, and a file staged from a
+// store would otherwise never be found. Everything that is not an OCI reference is returned
+// unchanged: a URL keeps its scheme, because that is part of what a bundle recorded.
+func CanonicalFileRef(src string) string {
+	return strings.TrimPrefix(src, ociURLPrefix)
+}
+
+// ociURLPrefix is the scheme a distro definition marks an OCI reference with.
+const ociURLPrefix = "oci://"
+
 // FileRequest is what a distro definition's file entry asks a content bundle for. It is a
 // struct rather than a reference string because one reference is not always enough to name
 // the bytes: a vendor-published file artifact is commonly an image index over one manifest
