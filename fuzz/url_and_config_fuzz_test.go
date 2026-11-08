@@ -57,9 +57,10 @@ func FuzzExtractBasePathFromURL(f *testing.F) {
 // arbitrary bytes into a DistroConfig, whatever a cargoship config file on disk holds.
 //
 // ReadByteStrict is the entry point the CLI's own config file is read through (wrapped by
-// unmarshalAndValidateConfig in cmd/root.go): it tries a strict goccy/go-yaml unmarshal first and
-// falls back to a lenient one, both third-party decode paths taking bytes with no assumed shape
-// straight from an operator's or CI's edit.
+// unmarshalAndValidateConfig in cmd/root.go): a single strict goccy/go-yaml unmarshal, a
+// third-party decode path taking bytes with no assumed shape straight from an operator's or CI's
+// edit. An unknown key is an error rather than a warning, so this target exercises the one decode
+// that now decides whether the CLI starts at all.
 func FuzzReadByteStrictDistroConfigNoPanic(f *testing.F) {
 	f.Add([]byte(""))
 	f.Add([]byte("zarf_cache: /tmp/cache\n"))

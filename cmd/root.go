@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/cmd/flags"
@@ -235,16 +236,59 @@ func Execute(ctx context.Context) error {
 		}
 	}
 
-	err := configLoadError
-	if err == nil {
-		_, err = rootCmd.ExecuteContextC(ctx)
+	if err := configLoadError; err != nil && !describesItself(os.Args[1:]) {
+		// Already written to stderr by emitConfigError during init. Returning it without a second
+		// report keeps one copy of what is now a multi-line message -- goccy annotates an unknown
+		// key with the offending line and a caret, and printing that twice buries it. It also
+		// avoids logger.Default(), which has no --no-color or terminal check applied: preRun never
+		// ran on this path, so a redirected run would get escape sequences from it alone.
+		return err
 	}
+
+	_, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return nil
 	}
 	// Use default logger in case there was an error prior to the logger being setup
 	logger.Default().Error(err.Error())
 	return err
+}
+
+// describesItself reports whether args ask cargoship only to describe itself rather than to do
+// anything with a cluster or a package.
+//
+// Those invocations run even when the config file cannot be used. An unknown key is fatal, which
+// is the point -- but it must not take the help with it: the message tells the operator to run
+// "cargoship validate --kind config", and until this existed, the help that would have shown them
+// that command exited 3 and printed nothing. Being locked out of the documentation by the thing
+// the documentation explains is a poor trade for consistency.
+//
+// Nothing here reads the config, so none of them can act on a bad one. It matches on the raw
+// argument vector because flags are not parsed yet at this point in Execute.
+//
+// A help flag counts wherever it appears. A subcommand name counts only in the first non-flag
+// position, so "cargoship create --tag version" is not mistaken for the version command. A flag
+// value sitting in that position ("--log-level debug version") is not recognised, which errors on
+// the bad config as before -- the safe direction to be wrong in.
+func describesItself(args []string) bool {
+	for _, a := range args {
+		if a == "-h" || a == "--help" {
+			return true
+		}
+	}
+
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		switch a {
+		case "help", "completion", "version", "v":
+			return true
+		}
+		return false
+	}
+
+	return false
 }
 
 // configLoadError is a config file that was found and could not be used. It is met during package
@@ -322,18 +366,22 @@ func loadViperConfig() error {
 
 	err = unmarshalAndValidateConfig(configFile, &distroCfg)
 	if err != nil {
-		return err
+		// The caller already names the file, so add only what the operator does next. validate
+		// reports every bad key at once where a decode stops at the first, which is one run
+		// instead of one per typo.
+		return fmt.Errorf("%w\n\trun 'cargoship validate --kind config %s' to see every problem in the file",
+			err, v.ConfigFileUsed())
 	}
 
 	return nil
 }
 
+// unmarshalAndValidateConfig decodes the config file strictly, to reject a key the struct does not
+// define. The decoded value is deliberately discarded: resolvedConfig in viper.go is what supplies
+// flag defaults, and distroCfg exists only so that the file is parsed against the real type. The
+// decode is the validation.
 func unmarshalAndValidateConfig(configFile []byte, distroCfg *types.DistroConfig) error {
-	err := utils.ReadByteStrict(configFile, &distroCfg)
-	if err != nil {
-		return err
-	}
-	return nil
+	return utils.ReadByteStrict(configFile, distroCfg)
 }
 
 func preRun(cmd *cobra.Command, _ []string) error {
