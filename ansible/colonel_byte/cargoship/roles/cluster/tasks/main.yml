@@ -21,6 +21,41 @@
 # cargoship_args is merged last, so a key the role sets itself would be overridden by it without
 # anything being said. A module rejects the same parameter given twice by name, and this holds
 # cargoship_args to that rule rather than letting the role be the one place a collision is silent.
+# cargoship_cluster is one dict, and Ansible replaces a dict between precedence levels rather than
+# merging it, so the whole block has to be written at one level. The five cargoship_cluster_*
+# variables are separate, so each can be set wherever it belongs -- the registries fleet-wide, the
+# values per environment, the name in the play. A sibling that was set wins over the same key
+# inside the block; one left at its default changes nothing.
+- name: Combine cargoship_cluster with the variables that set its keys one at a time
+  ansible.builtin.set_fact:
+    _cargoship_cluster: >-
+      {{
+        cargoship_cluster
+        | combine({'name': cargoship_cluster_name} if cargoship_cluster_name else {})
+        | combine({'loadbalancer': cargoship_cluster_loadbalancer} if cargoship_cluster_loadbalancer else {})
+        | combine({'profiles': cargoship_cluster_profiles} if cargoship_cluster_profiles else {})
+        | combine({'registries': cargoship_cluster_registries} if cargoship_cluster_registries else {})
+        | combine({'values': cargoship_cluster_values} if cargoship_cluster_values else {})
+      }}
+  run_once: true
+
+# The two required keys are checked here rather than in the argument spec, because either may
+# arrive from cargoship_cluster or from its sibling and the spec can only see one of the two.
+# Translation refuses a document missing either, so this is the same refusal moved earlier, where
+# it can name both ways of supplying it.
+- name: Check that the cluster was named and given a load balancer
+  ansible.builtin.assert:
+    that:
+      - _cargoship_cluster.name | default('', true) | length > 0
+      - _cargoship_cluster.loadbalancer | default('', true) | length > 0
+    fail_msg: >-
+      The cluster needs a name and a loadbalancer. Set them inside cargoship_cluster, or as
+      cargoship_cluster_name and cargoship_cluster_loadbalancer. Got name
+      "{{ _cargoship_cluster.name | default('') }}" and loadbalancer
+      "{{ _cargoship_cluster.loadbalancer | default('') }}".
+  run_once: true
+  delegate_to: "{{ cargoship_delegate_to }}"
+
 - name: Check that cargoship_args claims no parameter the role sets itself
   ansible.builtin.assert:
     that:
@@ -44,7 +79,7 @@
   ansible.builtin.set_fact:
     _cargoship_inventory: >-
       {{
-        {'cluster': cargoship_cluster}
+        {'cluster': _cargoship_cluster}
         | combine({'roleGroups': cargoship_role_groups} if cargoship_role_groups else {})
       }}
     _cargoship_parameters: >-

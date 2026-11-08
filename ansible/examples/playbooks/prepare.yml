@@ -15,6 +15,17 @@
   connection: local
   gather_facts: false
 
+  # The same two files apply.yml reads. Nothing here restates the name, the load balancer or the
+  # profiles, because a prepare and an apply of this cluster give the same answer to all three and
+  # a second copy is a second thing to keep in step.
+  vars_files:
+    - ../cluster/identity.yml
+    - ../cluster/config.yml
+
+  vars:
+    mirror_user: "{{ lookup('ansible.builtin.env', 'MIRROR_USER') }}"
+    mirror_password: "{{ lookup('ansible.builtin.env', 'MIRROR_PASSWORD') }}"
+
   tasks:
     - name: Upload the package and ready the hosts
       ansible.builtin.include_role:
@@ -22,9 +33,6 @@
       vars:
         cargoship_action: prepare
         cargoship_package: /srv/staging/rke2-1.31.tar.zst
-        cargoship_cluster:
-          name: bubbles
-          loadbalancer: bubbles-kc.test.com
         cargoship_args:
           # The three host switches. Each one is left unset by default, and unset means the module
           # passes no flag at all, so whatever your cargoship configuration file says still

@@ -15,27 +15,29 @@
   connection: local
   gather_facts: false
 
+  # Which cluster, and nothing else. A reset has no use for the profiles or the mirror, so it does
+  # not read ../cluster/config.yml and does not need the mirror credentials that file templates.
+  # Splitting the block into separate variables is what makes taking half of it possible.
+  vars_files:
+    - ../cluster/identity.yml
+
   vars:
-    cluster_name: bubbles
     reset_confirmed: ""
 
   tasks:
     - name: Check that the cluster to remove was named
       ansible.builtin.assert:
         that:
-          - reset_confirmed == cluster_name
+          - reset_confirmed == cargoship_cluster_name
         fail_msg: >-
-          This removes the {{ cluster_name }} cluster from every host in the inventory.
-          Re-run with -e reset_confirmed={{ cluster_name }} if that is what you meant.
+          This removes the {{ cargoship_cluster_name }} cluster from every host in the inventory.
+          Re-run with -e reset_confirmed={{ cargoship_cluster_name }} if that is what you meant.
 
     - name: Reset the fleet
       ansible.builtin.include_role:
         name: colonel_byte.cargoship.cluster
       vars:
         cargoship_action: reset
-        cargoship_cluster:
-          name: "{{ cluster_name }}"
-          loadbalancer: bubbles-kc.test.com
         cargoship_args:
           # Naming the distro is not optional in practice. Left unset, cargoship picks one, and a
           # reset scoped to the wrong engine removes less than it reports.

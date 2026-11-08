@@ -15,6 +15,14 @@
   connection: local
   gather_facts: false
 
+  # Everything an Ansible inventory has no way to carry. These set the same fields `.spec.config`
+  # takes in a hand-written inventory; see docs/guides/setup-inv.md. They are two files rather
+  # than a block here because every playbook against this fleet gives the same answer to all of
+  # it, and because reset and kube-config need the first file and not the second.
+  vars_files:
+    - ../cluster/identity.yml
+    - ../cluster/config.yml
+
   vars:
     # Credentials come from somewhere that is not this file. A vault-encrypted group_vars file is
     # the usual arrangement on a management node; the environment is the shorter answer for a
@@ -37,45 +45,12 @@
         # exactly what the fleet gets.
         cargoship_inventory_path: /srv/staging/generated-inventory.yaml
 
-        # Everything an Ansible inventory has no way to carry. These are the same fields
-        # `.spec.config` takes in a hand-written inventory; see docs/guides/setup-inv.md.
-        cargoship_cluster:
-          name: bubbles
-          loadbalancer: bubbles-kc.test.com
-
-          # A host selects a profile by name with cargoship_profile. The inventory in
-          # ../inventories/fleet selects control, worker, and infra, so all three are here.
-          profiles:
-            control:
-              host:
-                ports:
-                  - port: "6443"
-                    protocol: tcp
-              engine:
-                labels:
-                  adrp.xyz/purpose-control: "true"
-            worker: {}
-            infra:
-              engine:
-                taints:
-                  - adrp.xyz/infra=true:NoSchedule
-
-          # The mirror the engine pulls from, and the credentials for it. `name` is the registry
-          # the images were originally referenced from. See docs/guides/registry-override.md.
-          registries:
-            - name: docker.io
-              proxy:
-                url: https://mirror.test.com:5000
-              auth:
-                user: "{{ mirror_user }}"
-                pass: "{{ mirror_password }}"
-
-          # Overrides for the values the package was built with.
-          values:
-            cluster_domain: bubbles.test.com
-
         # Everything else the module takes, passed through as-is. See docs/ansible/cargoship/module_apply.md
         # for the parameter list, or docs/ansible/cargoship/modules.md for the other four.
+        #
+        # A parameter the role assembles from a variable of its own -- package, inventory_path,
+        # log_file, age_recipient, age_identity_file -- is refused here rather than silently
+        # overriding it. Set the matching cargoship_ variable instead.
         cargoship_args:
           vault_password_file: /srv/staging/vault-pass
           timeout: 45m

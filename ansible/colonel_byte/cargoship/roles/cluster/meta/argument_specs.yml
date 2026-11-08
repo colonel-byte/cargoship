@@ -44,17 +44,20 @@ argument_specs:
         # "load_balancer" or "profile" would otherwise reach Go as a key nobody set and be reported
         # some way into the module's run; declared here, ansible-core refuses it by name before the
         # module is reached at all.
+        # name and loadbalancer are required but are not marked so here, because either may arrive
+        # from C(cargoship_cluster_name) or C(cargoship_cluster_loadbalancer) instead and the spec
+        # cannot see those. The role asserts on the combined result, where both sources are visible.
         options:
           name:
             type: str
-            required: true
             description:
               - "The cluster name. It becomes C(metadata.name), and the kubeconfig context name."
+              - "Required, here or as C(cargoship_cluster_name)."
           loadbalancer:
             type: str
-            required: true
             description:
               - "The hostname clients use to reach the cluster control plane."
+              - "Required, here or as C(cargoship_cluster_loadbalancer)."
           profiles:
             type: dict
             description:
@@ -69,6 +72,37 @@ argument_specs:
             type: dict
             description:
               - "Overrides for the values the distro package was built with. It must still satisfy the package's values schema."
+      cargoship_cluster_name:
+        type: str
+        default: ""
+        description:
+          - "The cluster name, as a variable of its own rather than a key inside C(cargoship_cluster)."
+          - "Wins over C(cargoship_cluster.name) when both are set. Left empty it changes nothing."
+      cargoship_cluster_loadbalancer:
+        type: str
+        default: ""
+        description:
+          - "The hostname clients use to reach the control plane, as a variable of its own."
+          - "Wins over C(cargoship_cluster.loadbalancer) when both are set. Left empty it changes nothing."
+      cargoship_cluster_profiles:
+        type: dict
+        default: {}
+        description:
+          - "The cluster's profiles, as a variable of its own."
+          - "Wins over C(cargoship_cluster.profiles) when both are set. Left empty it changes nothing."
+      cargoship_cluster_registries:
+        type: list
+        elements: dict
+        default: []
+        description:
+          - "The cluster's registries, as a variable of its own. This is the one most fleets have a single answer to, so it is the one worth putting in C(group_vars/all.yml)."
+          - "Wins over C(cargoship_cluster.registries) when both are set. Left empty it changes nothing."
+      cargoship_cluster_values:
+        type: dict
+        default: {}
+        description:
+          - "The package value overrides, as a variable of its own."
+          - "Wins over C(cargoship_cluster.values) when both are set. Left empty it changes nothing."
       cargoship_role_groups:
         type: dict
         default: {}
