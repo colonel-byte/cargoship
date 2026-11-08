@@ -309,6 +309,14 @@
           "description": "is the source the distro definition named.",
           "type": "string"
         },
+        "layerDigest": {
+          "description": "is the digest of the layer the bytes were read from, which the registry\nverified them against on fetch. It is empty for every other kind of source.",
+          "type": "string"
+        },
+        "manifestDigest": {
+          "description": "is the digest of the manifest an oci:// source resolved to for this\nentry's architecture. It is empty for every other kind of source.",
+          "type": "string"
+        },
         "override": {
           "description": "is the Source prefix of the override that matched, which is the one that won\nwhen several could have. It is empty when the bytes came from a local content store.",
           "type": "string"
@@ -322,7 +330,7 @@
           "type": "string"
         },
         "shasum": {
-          "description": "is the checksum the bytes were verified against. Neither an override nor a\ncontent store is accepted for a file that declares none, so this is never empty.",
+          "description": "is the checksum the bytes were verified against. Neither an override nor a\ncontent store is accepted for a file that declares none, so this is empty only for a\nfile read from a registry, which is verified by the digests below instead.",
           "type": "string"
         },
         "store": {

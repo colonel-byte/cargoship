@@ -40,6 +40,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/coci"
 	"github.com/colonel-byte/cargoship/pkg/contentstore"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
@@ -226,6 +227,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 			return nil, fmt.Errorf("unable to stage file %d (%s): %w", filesIdx, file, err)
 		}
 		if provenance != nil {
+			pinOCISource(file, *provenance)
 			fileSources = append(fileSources, *provenance)
 		}
 	}
@@ -235,6 +237,7 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 			return nil, fmt.Errorf("unable to stage os file %d (%s): %w", filesIdx, file, err)
 		}
 		if provenance != nil {
+			pinOCISource(file, *provenance)
 			fileSources = append(fileSources, *provenance)
 		}
 	}
@@ -555,6 +558,31 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 				Shasum:   file.Shasum,
 			}
 		}
+	}
+
+	// An oci:// source is resolved before anything is fetched, and the fetch then names the
+	// digest rather than the tag. That removes the window in which a tag re-pushed between
+	// the two would swap the bytes, and it is what lets the build record -- and pin -- the
+	// artifact it actually read.
+	if helpers.IsOCIURL(source) {
+		resolution, err := coci.Resolve(ctx, source, coci.FileSelector{
+			Arch:  fileArch(file),
+			Layer: file.Layer,
+		}, ociOpts.FileOptions)
+		if err != nil {
+			return nil, ociFieldHint(err)
+		}
+		source = resolution.Reference
+		if provenance == nil {
+			provenance = &distro.FileSource{
+				Path:     filepath.ToSlash(rel),
+				Declared: file.Source,
+				Shasum:   file.Shasum,
+			}
+		}
+		provenance.Resolved = resolution.Reference
+		provenance.ManifestDigest = resolution.ManifestDigest
+		provenance.LayerDigest = resolution.LayerDigest
 	}
 
 	// An entry with an extractPath takes one member out of an archive that several entries

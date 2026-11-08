@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2/registry"
 )
 
 // FileSelector narrows an OCI artifact to the one file a caller wants out of it.
@@ -185,6 +186,85 @@ func archiveName(ref string, layer ocispec.Descriptor) (string, error) {
 	}
 	return "", fmt.Errorf("the layer selected in %s carries no %s annotation and its media type %q declares no archive format, so it cannot be extracted from",
 		ref, ocispec.AnnotationTitle, layer.MediaType)
+}
+
+// Resolution is what a reference and selector resolved to, for a caller that wants to record
+// or re-pin what it read.
+type Resolution struct {
+	// Reference is ref with its tag replaced by the digest it resolved to, so re-resolving it
+	// can only ever return the same bytes. For an index it is the index's own digest, which
+	// keeps the selector doing the same job it did for the tag.
+	Reference string
+	// ManifestDigest is the digest of the manifest the architecture selected, which for an
+	// index is one of its children and otherwise is the root itself.
+	ManifestDigest string
+	// LayerDigest is the digest of the layer the selector picked out of that manifest.
+	LayerDigest string
+}
+
+// Resolve reports what ref and sel name, without fetching any layer.
+//
+// It costs one reference resolution and, for an index, one manifest read - both of which a
+// fetch would do anyway and both of which are small and cached. A caller that resolves first
+// and then fetches by Reference also closes the window between the two: a tag re-pushed
+// in between cannot swap the bytes underneath it.
+func Resolve(ctx context.Context, ref string, sel FileSelector, opts FileOptions) (Resolution, error) {
+	remote, err := fileRemote(ctx, ref, sel.Arch, opts)
+	if err != nil {
+		return Resolution{}, err
+	}
+	repo := remote.Repo()
+	root, err := repo.Resolve(ctx, repo.Reference.Reference)
+	if err != nil {
+		return Resolution{}, fmt.Errorf("unable to resolve %s: %w", ref, err)
+	}
+	manifest, err := resolveManifest(ctx, remote, ref, sel.Arch)
+	if err != nil {
+		return Resolution{}, err
+	}
+	layer, err := selectLayer(ref, sel, manifest)
+	if err != nil {
+		return Resolution{}, err
+	}
+
+	// The manifest the architecture selected is not the root when the root is an index, and
+	// oci.Manifest carries no descriptor of its own - so it is recovered by digesting the
+	// bytes the index named, which is what resolveManifest walked.
+	manifestDigest := root.Digest.String()
+	if isImageIndex(root) {
+		index, err := fetchIndex(ctx, remote, root)
+		if err != nil {
+			return Resolution{}, fmt.Errorf("unable to read the index of %s: %w", ref, err)
+		}
+		child, _, err := layerListingChild(ref, index, sel.Arch)
+		if err != nil {
+			return Resolution{}, err
+		}
+		manifestDigest = child.Digest.String()
+	}
+
+	return Resolution{
+		Reference:      PinReference(ref, root.Digest.String()),
+		ManifestDigest: manifestDigest,
+		LayerDigest:    layer.Digest.String(),
+	}, nil
+}
+
+// PinReference returns ref with whatever tag it carries replaced by digest, leaving a
+// reference that resolves to the same bytes forever. A reference already naming a digest is
+// returned unchanged.
+func PinReference(ref, digest string) string {
+	trimmed := strings.TrimPrefix(ref, helpers.OCIURLPrefix)
+	parsed, err := registry.ParseReference(trimmed)
+	if err != nil {
+		return ref
+	}
+	parsed.Reference = digest
+	pinned := parsed.String()
+	if strings.HasPrefix(ref, helpers.OCIURLPrefix) {
+		return helpers.OCIURLPrefix + pinned
+	}
+	return pinned
 }
 
 // LayerDigest returns the digest of the layer ref and sel select, without fetching it.

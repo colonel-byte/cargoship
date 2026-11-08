@@ -179,6 +179,40 @@ Pinning by digest is the better of the two for an artifact you expect to be mirr
 
 Either way, the redirect is recorded in the package's `.build.fileSources` beside the declared source, so the package says where each file actually came from.
 
+## What the Package Records, and Why It Pins
+
+A tag is mutable. An air-gapped package may be rebuilt a long way from when it was first cut, by which time `:v1.37.2-k3s1` need not point where it did - so a build resolves the tag once, fetches by the digest it got, and writes both facts down.
+
+**Every `oci://` entry gets a `.build.fileSources` record**, redirected or not:
+
+```yaml
+build:
+  fileSources:
+    - path: os/0/k3s
+      declared: oci://docker.io/rancher/k3s:v1.37.2-k3s1
+      resolved: oci://docker.io/rancher/k3s@sha256:21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c030dc005e7e88c4332
+      manifestDigest: sha256:bc340b84540f351ae23a1cef63b93d05bab20e12318d8186d60ce127c10d2124
+      layerDigest: sha256:e5c2411b57696ea0a9e7348ff26bdfa2d19c1ac98d60170d3a442e5ba27b6007
+```
+
+`manifestDigest` is the platform manifest the entry's architecture selected, so two entries sharing a reference record different ones - that is the per-architecture statement. `layerDigest` is the blob the bytes came out of, which the registry verified them against on fetch.
+
+**The definition inside the package names the digest**, where the one on disk names the tag:
+
+```yaml
+# ./distro.yaml, which you maintain
+- source: oci://docker.io/rancher/k3s:v1.37.2-k3s1
+
+# distro.yaml inside the built package
+- source: oci://docker.io/rancher/k3s@sha256:21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c030dc005e7e88c4332
+```
+
+It pins to the digest the **reference** resolved to - the index's own, where the artifact is an index - so `selector.arch` goes on doing exactly the job it did for the tag. Rebuilding from the packaged definition therefore resolves what this build resolved, for every architecture, rather than whatever the tag has become.
+
+A **redirected** entry is left naming its tag. The digest would be just as valid, since a digest is content and a mirror serving the same bytes has the same one, but the reference would then name an internal registry inside an artifact that travels. The override, the mirror and both digests are all in `.build.fileSources` for anyone auditing what was read.
+
+One consequence worth knowing: resolving costs a round trip, so a build against a registry makes one per `oci://` entry even when the layer is already cached. A build from a `--content-store` makes none - the store answers before the reference is ever resolved.
+
 Note that **`--file-override` does not apply to an `oci://` source.** It matches http and https URL prefixes only, so it will silently never fire on one of these entries. A redirect for an OCI reference is a registry override.
 
 ## Credentials and Transport
