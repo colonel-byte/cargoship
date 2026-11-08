@@ -38,6 +38,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"golang.org/x/term"
 )
 
 const (
@@ -220,6 +221,20 @@ func Execute(ctx context.Context) error {
 	// before main, so an os.Exit there ends an Ansible module run before the module has written
 	// the one JSON object Ansible reads, and Ansible reports a module failure of its own devising
 	// instead of the reason.
+	// logger.Default is the fallback used below for an error met before preRun installed the real
+	// logger -- an unparsed flag, a wrong argument count. Its ConfigDefault hardcodes Color: true,
+	// so without this an error on that path wrote escape sequences into a redirected stream even
+	// though every other line respected the terminal. --no-color cannot be consulted yet (flags
+	// are unparsed), but NO_COLOR and the terminal check can, and they are what the redirect case
+	// turns on.
+	if !colorEnabled() {
+		cfg := logger.ConfigDefault()
+		cfg.Color = false
+		if l, lerr := logger.New(cfg); lerr == nil {
+			logger.SetDefault(l)
+		}
+	}
+
 	err := configLoadError
 	if err == nil {
 		_, err = rootCmd.ExecuteContextC(ctx)
@@ -327,8 +342,10 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		logFilePath = defaultLogFilePath()
 	}
 
-	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
-	l, f, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled, logFilePath)
+	// Configure logger and add it to cmd context. setupLogger wants "isColor", which is the
+	// inverse of the flag plus the two conditions colorEnabled covers.
+	isColor := colorEnabled()
+	l, f, err := setupLogger(LogLevelCLI, LogFormat, isColor, logFilePath)
 	if err != nil {
 		return err
 	}
@@ -336,8 +353,9 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
 
-	// if --no-color is set, disable PTerm color in message prints
-	if IsColorDisabled {
+	// Keep PTerm's message prints on the same decision as the logger, so a redirected run has
+	// no escape sequences from either.
+	if !isColor {
 		pterm.DisableColor()
 	}
 
@@ -353,6 +371,20 @@ func preRun(cmd *cobra.Command, _ []string) error {
 
 	l.Debug("using temporary directory", "tmpDir", config.CommonOptions.TempDirectory)
 	return nil
+}
+
+// colorEnabled reports whether to emit terminal color codes. Three things turn color off, and
+// any one of them is enough: --no-color (or its config key), the NO_COLOR environment variable
+// per https://no-color.org, and stderr not being a terminal.
+//
+// Stderr is the stream that decides it because every log line goes there -- a run redirected to
+// a file or piped into a pager previously left ANSI escapes in the output, since console-slog
+// honours only the option it is handed and never looks at the file descriptor itself.
+func colorEnabled() bool {
+	if IsColorDisabled || os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	return term.IsTerminal(int(os.Stderr.Fd()))
 }
 
 // setupLogger handles creating a logger and setting it as the global default. When logFilePath
