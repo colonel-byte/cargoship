@@ -27,10 +27,10 @@ components:
 
 **A new field is the part that needs deciding, because two artifact shapes are in use and one field cannot serve both.**
 
-| Shape                                          | Example                                        | What names the bytes                                   |
-| ---------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
-| Every file in the release as its own titled layer | `ghcr.io/cri-o/bundle`                       | The layer's `org.opencontainers.image.title`          |
-| Layers that are themselves archives            | `ghcr.io/zarf-dev/packages/init`             | The title picks the archive, `extractPath` what is in it |
+| Shape                                             | Example                          | What names the bytes                                     |
+| ------------------------------------------------- | -------------------------------- | -------------------------------------------------------- |
+| Every file in the release as its own titled layer | `ghcr.io/cri-o/bundle`           | The layer's `org.opencontainers.image.title`             |
+| Layers that are themselves archives               | `ghcr.io/zarf-dev/packages/init` | The title picks the archive, `extractPath` what is in it |
 
 If `extractPath` alone had to mean both, it would be a path inside an archive for one artifact and a layer title for the other, decided by what the registry happened to serve - so a reviewer could not tell which from reading the component. A separate `layer` field keeps each meaning to itself and lets the two compose, which is what the zarf init package needs.
 

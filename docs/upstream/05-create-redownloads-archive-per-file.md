@@ -48,10 +48,10 @@ The cost scales with the number of files, not with the number of archives: a com
 ### Visual Proof (screenshots, videos, text, etc)
 Measured on code structurally identical to the loop above - ten files out of two archives, every download already local, so the figure isolates the repeated decompression alone:
 
-| | wall | CPU |
-| ------------------------- | ------ | ------ |
-| one extraction per file | 11.70s | 7.43s |
-| one extraction per archive | 4.11s | 3.19s |
+|                            | wall   | CPU   |
+| -------------------------- | ------ | ----- |
+| one extraction per file    | 11.70s | 7.43s |
+| one extraction per archive | 4.11s  | 3.19s |
 
 With the downloads included rather than pre-cached, the first row grows by nine further transfers of the same bytes.
 
