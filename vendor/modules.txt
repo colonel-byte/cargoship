@@ -12,11 +12,11 @@ atomicgo.dev/keyboard/keys
 # atomicgo.dev/schedule v0.1.0
 ## explicit; go 1.18
 atomicgo.dev/schedule
-# cloud.google.com/go/auth v0.24.2
+# cloud.google.com/go/auth v0.24.3
 ## explicit; go 1.26.0
 # cloud.google.com/go/kms v1.36.1
 ## explicit; go 1.26.0
-# cloud.google.com/go/longrunning v1.4.1
+# cloud.google.com/go/longrunning v1.5.0
 ## explicit; go 1.26.0
 # dario.cat/mergo v1.0.2
 ## explicit; go 1.13
@@ -117,7 +117,7 @@ github.com/ProtonMail/go-crypto/openpgp/x448
 # github.com/STARRY-S/zip v0.2.3
 ## explicit; go 1.23
 github.com/STARRY-S/zip
-# github.com/andybalholm/brotli v1.2.7
+# github.com/andybalholm/brotli v1.2.8
 ## explicit; go 1.22
 github.com/andybalholm/brotli
 github.com/andybalholm/brotli/matchfinder
@@ -245,7 +245,7 @@ github.com/digitorus/timestamp
 # github.com/distribution/reference v0.6.0
 ## explicit; go 1.20
 github.com/distribution/reference
-# github.com/docker/cli v29.9.2+incompatible
+# github.com/docker/cli v29.9.3+incompatible
 ## explicit
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
@@ -375,7 +375,7 @@ github.com/go-git/go-git/v5/utils/merkletrie/internal/frame
 github.com/go-git/go-git/v5/utils/merkletrie/noder
 github.com/go-git/go-git/v5/utils/sync
 github.com/go-git/go-git/v5/utils/trace
-# github.com/go-jose/go-jose/v4 v4.1.8
+# github.com/go-jose/go-jose/v4 v4.1.9
 ## explicit; go 1.24.0
 github.com/go-jose/go-jose/v4
 github.com/go-jose/go-jose/v4/cipher
@@ -789,7 +789,7 @@ github.com/mholt/archives
 # github.com/mikelolasagasti/xz v1.0.1
 ## explicit; go 1.15
 github.com/mikelolasagasti/xz
-# github.com/minio/minlz v1.2.3
+# github.com/minio/minlz v1.2.4
 ## explicit; go 1.25
 github.com/minio/minlz
 github.com/minio/minlz/internal/race
@@ -819,7 +819,7 @@ github.com/nao1215/markdown/internal
 # github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 ## explicit
 github.com/nozzle/throttler
-# github.com/nwaples/rardecode/v2 v2.4.5
+# github.com/nwaples/rardecode/v2 v2.4.6
 ## explicit; go 1.21
 github.com/nwaples/rardecode/v2
 # github.com/oklog/ulid/v2 v2.1.2
@@ -1013,7 +1013,7 @@ github.com/sigstore/rekor-tiles/v2/pkg/verifier/certificate
 github.com/sigstore/rekor-tiles/v2/pkg/verifier/identity
 github.com/sigstore/rekor-tiles/v2/pkg/verifier/publickey
 github.com/sigstore/rekor-tiles/v2/pkg/verify
-# github.com/sigstore/sigstore v1.11.2
+# github.com/sigstore/sigstore v1.11.3
 ## explicit; go 1.27
 github.com/sigstore/sigstore/pkg/cryptoutils
 github.com/sigstore/sigstore/pkg/cryptoutils/goodkey
@@ -1327,7 +1327,7 @@ golang.org/x/net/trace
 ## explicit; go 1.26.0
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sync v0.24.0
+# golang.org/x/sync v0.25.0
 ## explicit; go 1.26.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
