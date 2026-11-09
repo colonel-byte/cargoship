@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.41.0](https://github.com/colonel-byte/cargoship/compare/v0.40.0...v0.41.0) (2026-11-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** make -c always concurrency and -f always the config file ([#1071](https://github.com/colonel-byte/cargoship/issues/1071))
+
+### Features
+
+* **ansible:** declare a profile in the group_vars that selects it ([#1063](https://github.com/colonel-byte/cargoship/issues/1063)) ([72b215f](https://github.com/colonel-byte/cargoship/commit/72b215f1b7692bc1e32aa89d9ab4efb3d5136d0f))
+* **ansible:** publish a schema for the host variables cargoship reads ([#1077](https://github.com/colonel-byte/cargoship/issues/1077)) ([1da7c36](https://github.com/colonel-byte/cargoship/commit/1da7c36a2b6ec7c9a19b851c86ae6b0fd3e852ec))
+* **ansible:** set the cluster block's keys one variable at a time ([#1062](https://github.com/colonel-byte/cargoship/issues/1062)) ([7130373](https://github.com/colonel-byte/cargoship/commit/7130373221689658e3182434e2a42417da1bbb9d))
+* **ansible:** validate the cargoship_cluster keys before the module runs ([#1061](https://github.com/colonel-byte/cargoship/issues/1061)) ([cc3cf15](https://github.com/colonel-byte/cargoship/commit/cc3cf15953f2da883700834743f8b2991e463663))
+* **cli:** give cargoship a documented exit-code contract ([#1072](https://github.com/colonel-byte/cargoship/issues/1072)) ([0b8635c](https://github.com/colonel-byte/cargoship/commit/0b8635c92c72977cd18ea72fdfbff72157fb35e5))
+* **cli:** make config, version, and command groups discoverable from --help ([#1075](https://github.com/colonel-byte/cargoship/issues/1075)) ([6a9198d](https://github.com/colonel-byte/cargoship/commit/6a9198dda87f50e58669242b995077006f88ece2))
+* **cluster:** let a profile inherit another instead of restating it ([#1064](https://github.com/colonel-byte/cargoship/issues/1064)) ([a74718b](https://github.com/colonel-byte/cargoship/commit/a74718b2c7bd152f79cf4dd227d63b9256bb79cf))
+
+
+### Bug Fixes
+
+* **ansible:** stop the role sending parameters the action does not take ([#1060](https://github.com/colonel-byte/cargoship/issues/1060)) ([47624d5](https://github.com/colonel-byte/cargoship/commit/47624d5860dfee5e9bbc5ed73f54e699d52e8827))
+* **cli:** decide on color from the terminal, NO_COLOR, and the flag ([#1067](https://github.com/colonel-byte/cargoship/issues/1067)) ([3de29b0](https://github.com/colonel-byte/cargoship/commit/3de29b0298bd098637f38865540f1ba76af0da84))
+* **cli:** make -c always concurrency and -f always the config file ([#1071](https://github.com/colonel-byte/cargoship/issues/1071)) ([fa29b05](https://github.com/colonel-byte/cargoship/commit/fa29b05091df7076d27732caa9f8d22080c2b6df))
+* **config:** reject a config key the schema does not define ([#1068](https://github.com/colonel-byte/cargoship/issues/1068)) ([fe8e09f](https://github.com/colonel-byte/cargoship/commit/fe8e09fa27cd41483d9f301a5af860c788a2bc07))
+* **phase:** report progress and stop discarding rig's log output ([#1073](https://github.com/colonel-byte/cargoship/issues/1073)) ([5ea5082](https://github.com/colonel-byte/cargoship/commit/5ea5082a8f5e464f5453edaccc0140f6cac5a6c3))
+* **phase:** stop retrying rejected SSH credentials for the full timeout ([#1070](https://github.com/colonel-byte/cargoship/issues/1070)) ([65479c5](https://github.com/colonel-byte/cargoship/commit/65479c5926ce8f1947a73ffb2c80a4e678f12221))
+* **verify:** register the architecture, cache, and tmpdir flags it reads ([#1069](https://github.com/colonel-byte/cargoship/issues/1069)) ([a37f7e9](https://github.com/colonel-byte/cargoship/commit/a37f7e911d3bea2d20a67b4186db3257c1ccf4e5))
+
+
+### Documentation
+
+* **ansible:** add a playbook that links a staged binary into the collection ([#1065](https://github.com/colonel-byte/cargoship/issues/1065)) ([d4ba6c4](https://github.com/colonel-byte/cargoship/commit/d4ba6c4b1b51df80a411f7456006cdbb55e3497b))
+* **cli:** cap flag help at 125 characters and render the flag groups ([#1074](https://github.com/colonel-byte/cargoship/issues/1074)) ([cc1998b](https://github.com/colonel-byte/cargoship/commit/cc1998b9b0446d38bf13d054e100f7c66d94f712))
+
+
+### Build
+
+* **deps:** bump github.com/andybalholm/brotli from 1.2.7 to 1.2.8 ([#1090](https://github.com/colonel-byte/cargoship/issues/1090)) ([61f1fdd](https://github.com/colonel-byte/cargoship/commit/61f1fdd479cf195f4eedfad0b4dc8cbdc3eba175))
+* **deps:** bump github.com/docker/cli from 29.9.2+incompatible to 29.9.3+incompatible in the docker group ([#1085](https://github.com/colonel-byte/cargoship/issues/1085)) ([1f6b917](https://github.com/colonel-byte/cargoship/commit/1f6b917c4f4c1eb4865ef686b1934a68cf601933))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.1.8 to 4.1.9 ([#1092](https://github.com/colonel-byte/cargoship/issues/1092)) ([c0f224a](https://github.com/colonel-byte/cargoship/commit/c0f224aef078a1a06b96a6bd222ed2757527dfd9))
+* **deps:** bump github.com/minio/minlz from 1.2.3 to 1.2.4 ([#1091](https://github.com/colonel-byte/cargoship/issues/1091)) ([63b41e7](https://github.com/colonel-byte/cargoship/commit/63b41e7fab24bf0e0990b18ad00f138a4c112d42))
+* **deps:** bump github.com/nwaples/rardecode/v2 from 2.4.5 to 2.4.6 ([#1088](https://github.com/colonel-byte/cargoship/issues/1088)) ([6947993](https://github.com/colonel-byte/cargoship/commit/6947993a4bdb5ffcf398c23d15941e009e6a1f56))
+* **deps:** bump github.com/sigstore/sigstore from 1.11.2 to 1.11.3 in the sigstore group ([#1083](https://github.com/colonel-byte/cargoship/issues/1083)) ([2b940c4](https://github.com/colonel-byte/cargoship/commit/2b940c44a3231a1456ecc7c510f266d9a537bf45))
+* **deps:** bump golang.org/x/sync from 0.24.0 to 0.25.0 in the golang group ([#1084](https://github.com/colonel-byte/cargoship/issues/1084)) ([f42a54d](https://github.com/colonel-byte/cargoship/commit/f42a54d2b5b2be507cb844d378b64ed0bc56048c))
+* **deps:** bump google.golang.org/api from 0.310.0 to 0.311.0 ([#1089](https://github.com/colonel-byte/cargoship/issues/1089)) ([98d92aa](https://github.com/colonel-byte/cargoship/commit/98d92aab06774ee8f3d9df0a10552e5b37b10695))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit from v0.17.3 to 0.17.4 ([#1081](https://github.com/colonel-byte/cargoship/issues/1081)) ([03dd270](https://github.com/colonel-byte/cargoship/commit/03dd2700d0c689c35a035246445386503e620e3b))
+* **deps:** bump library/debian from `f6b08b0` to `a72b443` in /containers/deb ([#1082](https://github.com/colonel-byte/cargoship/issues/1082)) ([01973c9](https://github.com/colonel-byte/cargoship/commit/01973c937d3793fff7304d78de1ecb73f6284169))
+* **deps:** bump the cloud-kms group with 2 updates ([#1086](https://github.com/colonel-byte/cargoship/issues/1086)) ([7f7d003](https://github.com/colonel-byte/cargoship/commit/7f7d003ad4d40baea6724d2e53e23dacec7c6ca9))
+* **deps:** bump the core group with 5 updates ([#1087](https://github.com/colonel-byte/cargoship/issues/1087)) ([90eab3a](https://github.com/colonel-byte/cargoship/commit/90eab3a993693a939577bd175cfb173b0cf0b0c9))
+* resolve the collection's own import path for Python language servers ([#1059](https://github.com/colonel-byte/cargoship/issues/1059)) ([9162a10](https://github.com/colonel-byte/cargoship/commit/9162a10de4809181bd7d882f0b3d38a60e264b7a))
+
 ## [0.40.0](https://github.com/colonel-byte/cargoship/compare/v0.39.0...v0.40.0) (2026-11-08)
 
 
