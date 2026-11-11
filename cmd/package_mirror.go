@@ -18,7 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 
 	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
@@ -28,6 +30,8 @@ import (
 	"github.com/colonel-byte/cargoship/internal/zarfstate"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/tunnel"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -67,7 +71,6 @@ func newPackageMirrorCommand() *cobra.Command {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
 	}
 	cmd.MarkFlagsMutuallyExclusive("images", "files")
-	cmd.MarkFlagsMutuallyExclusive(InstallConfig, "from-zarf-state")
 	addVerifyFlags(cmd, &o.packageVerifyFlags)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
@@ -85,6 +88,7 @@ func (o *packageMirrorOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	defer dst.release()
 
 	if err := checkPackageSource(args[0]); err != nil {
 		return err
@@ -119,6 +123,7 @@ func (o *packageMirrorOptions) run(ctx context.Context, args []string) error {
 		Files:          o.files,
 		Username:       dst.username,
 		Password:       dst.password,
+		DialContext:    dst.dial,
 	})
 }
 
@@ -129,6 +134,17 @@ type mirrorTarget struct {
 	registry string
 	username string
 	password string
+	// dial carries the push when the registry is one only a cluster node can reach, and close
+	// releases whatever it is carried over. Both are nil for a registry this machine can dial.
+	dial  func(ctx context.Context, network, addr string) (net.Conn, error)
+	close func()
+}
+
+// release closes a tunnel the target opened, and is safe on a target that has none.
+func (t mirrorTarget) release() {
+	if t.close != nil {
+		t.close()
+	}
 }
 
 // resolveTarget decides which registry the package's contents are pushed to, and with which
@@ -194,12 +210,12 @@ func (o *packageMirrorOptions) zarfStateTarget(ctx context.Context, explicit str
 	if err != nil {
 		return mirrorTarget{}, err
 	}
-	return targetFromZarfRegistry(reg, explicit)
+	return o.targetFromZarfRegistry(ctx, reg, explicit)
 }
 
 // targetFromZarfRegistry is the decision zarfStateTarget makes once the state has been read,
 // split out so it can be exercised without a cluster.
-func targetFromZarfRegistry(reg zarfstate.Registry, explicit string) (mirrorTarget, error) {
+func (o *packageMirrorOptions) targetFromZarfRegistry(ctx context.Context, reg zarfstate.Registry, explicit string) (mirrorTarget, error) {
 	if reg.UsesMTLS() {
 		return mirrorTarget{}, fmt.Errorf("the zarf registry is configured for zarf-managed mTLS (%s), and a push with a client certificate is not supported", reg.MTLSStrategy)
 	}
@@ -214,13 +230,89 @@ func targetFromZarfRegistry(reg zarfstate.Registry, explicit string) (mirrorTarg
 	}
 
 	if !reg.IsExternal() {
-		return mirrorTarget{}, fmt.Errorf("the zarf registry runs in the cluster (mode %q, recorded as %q), which is an address only a node can reach; name the address this machine reaches it on as oci://REGISTRY -- a node address and port %d -- and keep --from-zarf-state for the credentials", reg.Mode, reg.Address, reg.Port)
+		// The registry is at a node-local address. With a cluster configuration to name the
+		// nodes, the SSH connection cargoship already relies on is the route to it.
+		if o.config != "" {
+			return o.tunnelledTarget(ctx, reg)
+		}
+		return mirrorTarget{}, fmt.Errorf("the zarf registry runs in the cluster (mode %q, recorded as %q), which is an address only a node can reach; either name the address this machine reaches it on as oci://REGISTRY -- a node address and port %d -- or pass --%s so the push is tunnelled through a node. Either way --from-zarf-state supplies the credentials", reg.Mode, reg.Address, reg.Port, InstallConfig)
 	}
 	if reg.Address == "" {
 		return mirrorTarget{}, errors.New("the zarf state records no registry address; name one as oci://REGISTRY")
 	}
 	dst.registry = reg.Address
 	return dst, nil
+}
+
+// tunnelledTarget pushes to a node-local registry address by carrying the push over an SSH
+// channel to one of the cluster's controllers.
+//
+// The registry's own recorded address does double duty, and that is what makes this correct
+// rather than merely workable: it is the address every node reaches the registry on, so it is
+// both the service the tunnel opens onto and the reference host the images are pushed under.
+// One value in both roles means the mirror cannot be populated at an address a node will not
+// ask for -- the same property reading the destination from a cluster configuration has.
+func (o *packageMirrorOptions) tunnelledTarget(ctx context.Context, reg zarfstate.Registry) (mirrorTarget, error) {
+	cluster, err := initCluster(ctx, InstallCommon{config: o.config})
+	if err != nil {
+		return mirrorTarget{}, err
+	}
+
+	service := reg.Address
+	if _, _, splitErr := net.SplitHostPort(service); splitErr != nil {
+		if reg.Port == 0 {
+			return mirrorTarget{}, fmt.Errorf("the zarf state records the registry as %q with no port, so there is nothing to tunnel to", reg.Address)
+		}
+		service = net.JoinHostPort(service, strconv.Itoa(reg.Port))
+	}
+
+	host, err := firstControllerWithSSH(cluster)
+	if err != nil {
+		return mirrorTarget{}, err
+	}
+
+	dialer, err := tunnel.To(ctx, host.ConnectionConfig.SSH, service)
+	if err != nil {
+		// Joined so that a push that never reached a host is classified the way every other
+		// unreachable-fleet failure is. See cmd/exit.go.
+		return mirrorTarget{}, errors.Join(phase.ErrConnect, err)
+	}
+
+	logger.From(ctx).Info("tunnelling the mirror through a node",
+		"host", host.ConnectionConfig.SSH.Address, "registry", service)
+
+	return mirrorTarget{
+		registry: service,
+		username: reg.PushUsername,
+		password: reg.PushPassword,
+		dial:     dialer.DialContext,
+		close:    dialer.Close,
+	}, nil
+}
+
+// firstControllerWithSSH picks the node the tunnel is opened through.
+//
+// Any controller will do -- a NodePort answers on every node, and a proxy-mode host port is
+// served on each one -- so this takes the first rather than asking the operator to choose
+// between equivalents. Only an `ssh:` host can carry a channel: rig's openssh protocol, which
+// shells out to the ssh binary, implements no Dial, so a fleet configured that way is refused
+// by name rather than failing later with something less obvious.
+func firstControllerWithSSH(c clusterapi.Cluster) (*clusterapi.Host, error) {
+	var sawController bool
+	for _, h := range c.Spec.Hosts {
+		if !h.IsController() {
+			continue
+		}
+		sawController = true
+		if h.ConnectionConfig.SSH != nil {
+			return h, nil
+		}
+	}
+
+	if sawController {
+		return nil, fmt.Errorf("%w: no controller in the configuration has an `ssh:` block, and cargoship can only tunnel over its own ssh connection", tunnel.ErrNoSSH)
+	}
+	return nil, errors.New("the cluster configuration names no controller to tunnel through")
 }
 
 // mirrorTargetFromCluster picks the one proxied registry in a cluster configuration and returns

@@ -41,7 +41,7 @@ const (
 		"This is not 'cargoship publish'. That uploads the package as one artifact, to be pulled back as a package. This unpacks it: each image is pushed under the same repository path and tag it had upstream with only the registry host swapped, because that is exactly what a node asks a mirror for once cargoship has written the mirror into its containerd configuration. An image the package carries for several architectures is pushed as an index, so the registry holds every architecture the package did.\n\n" +
 		"Each file is pushed as a single-layer OCI artifact named after the file and tagged with a digest of the source URL the definition declared, which keeps two releases of the same filename apart.\n\n" +
 		"Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give --config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.\n\n" +
-		"--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Zarf's in-cluster registry records an address only a node can reach, so pair it with an oci:// address this machine reaches."
+		"--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches."
 	// CmdPackageMirrorExample mirror example
 	CmdPackageMirrorExample = "\n" +
 		"# Mirror everything the package carries into a registry:\n" +
@@ -50,8 +50,8 @@ const (
 		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --config ./cluster.yaml\n\n" +
 		"# Mirror only the images, over plain HTTP:\n" +
 		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:5000 --images --plain-http\n\n" +
-		"# Mirror into a zarf deployment's registry, authenticating with the credentials zarf generated:\n" +
-		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://node1.internal:31999 --from-zarf-state --plain-http\n"
+		"# Mirror into a zarf deployment's in-cluster registry, tunnelled over ssh to a node:\n" +
+		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --config ./cluster.yaml\n"
 	// CmdPackageMirrorFlagConfig mirror flag config
 	CmdPackageMirrorFlagConfig = "`PATH` of a cluster configuration to read the destination registry from. See docs/guides/mirror-registry.md."
 	// CmdPackageMirrorFlagImages mirror flag images

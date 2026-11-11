@@ -300,13 +300,13 @@ cargoship mirror ./build/cargoship-distro-amd64.tar.zst --config ./cluster.yaml
 # Only the images, against a registry on plain HTTP
 cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:5000 --images --plain-http
 
-# Or into a Zarf deployment's registry, with the push credentials Zarf generated
-cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://node1.internal:31999 --from-zarf-state --context prod --plain-http
+# Or into a Zarf deployment's in-cluster registry, tunnelled over SSH to a node
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst --from-zarf-state --config ./cluster.yaml
 ```
 
 An image keeps its repository path and its tag, and only the registry host changes: `registry.k8s.io/pause:3.10` is pushed as `harbor.internal/pause:3.10`. That is not cosmetic - it is exactly what a node asks a mirror for, because `apply` writes that same proxy address into each host's containerd configuration from `spec.config.registries[].proxy.url`. Passing `--config` reads the destination from that one field, so what gets pushed and what the nodes ask for cannot drift apart.
 
-`--from-zarf-state` reads the destination registry and its push credentials from a Zarf deployment's own state secret, over `--context` or the current kubeconfig context. Zarf's in-cluster registry records an address only a node can reach, so pair the flag with an `oci://` address this machine reaches it on and the credentials still come from state.
+`--from-zarf-state` reads the destination registry and its push credentials from a Zarf deployment's own state secret, over `--context` or the current kubeconfig context. Zarf's in-cluster registry sits at an address only a node can reach, so add `--config` and the push is carried over an SSH channel to one of the cluster's controllers - no API port, no Kubernetes port-forward, and nothing installed on the node. Naming an `oci://` address this machine reaches works too, with the credentials still coming from state.
 
 See [Mirroring to a Registry](docs/guides/mirror-registry.md) for the naming rules, and how this compares with `--registry-override` and `--content-store`.
 

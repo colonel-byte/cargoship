@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -58,6 +59,10 @@ type MirrorOptions struct {
 	// Empty falls back to the Docker configuration file.
 	Username string
 	Password string
+	// DialContext opens the connections both halves travel over, which is how a mirror reaches
+	// a registry only a cluster node can see. See images.ClientOptions.DialContext and
+	// pkg/tunnel.
+	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 }
 
 // Mirror publishes the contents of a built package into target, a registry host optionally
@@ -121,6 +126,7 @@ func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, op
 		Retries:               opts.Retries,
 		Username:              opts.Username,
 		Password:              opts.Password,
+		DialContext:           opts.DialContext,
 	})
 }
 
@@ -138,6 +144,7 @@ func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, opt
 	client, err := images.NewRegistryClient(ctx, []string{host}, images.ClientOptions{
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Credential:            images.StaticCredential(host, opts.Username, opts.Password),
+		DialContext:           opts.DialContext,
 	})
 	if err != nil {
 		return err

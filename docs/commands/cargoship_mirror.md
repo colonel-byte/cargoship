@@ -14,7 +14,7 @@ Each file is pushed as a single-layer OCI artifact named after the file and tagg
 
 Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give --config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.
 
---from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Zarf's in-cluster registry records an address only a node can reach, so pair it with an oci:// address this machine reaches.
+--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches.
 
 ```
 cargoship mirror [Package] [REPOSITORY] [flags]
@@ -33,8 +33,8 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --config ./cluster.yaml
 # Mirror only the images, over plain HTTP:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:5000 --images --plain-http
 
-# Mirror into a zarf deployment's registry, authenticating with the credentials zarf generated:
-$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://node1.internal:31999 --from-zarf-state --plain-http
+# Mirror into a zarf deployment's in-cluster registry, tunnelled over ssh to a node:
+$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --config ./cluster.yaml
 
 ```
 

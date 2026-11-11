@@ -20,6 +20,8 @@ import (
 
 	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/zarfstate"
+	"github.com/k0sproject/rig/v2/protocol/openssh"
+	rigssh "github.com/k0sproject/rig/v2/protocol/ssh"
 	"github.com/stretchr/testify/require"
 )
 
@@ -164,6 +166,83 @@ func TestResolveTarget(t *testing.T) {
 	})
 }
 
+// TestFirstControllerWithSSH covers which node a tunnel is opened through. Any controller will
+// do -- a NodePort answers on every node -- so the only real decisions are skipping workers and
+// refusing a fleet whose hosts cargoship cannot open a channel to.
+func TestFirstControllerWithSSH(t *testing.T) {
+	sshHost := func(role, addr string) *clusterapi.Host {
+		h := &clusterapi.Host{Role: role}
+		h.ConnectionConfig.SSH = &rigssh.Config{Address: addr}
+		return h
+	}
+	openSSHHost := func(role, addr string) *clusterapi.Host {
+		h := &clusterapi.Host{Role: role}
+		h.ConnectionConfig.OpenSSH = &openssh.Config{Address: addr}
+		return h
+	}
+
+	tests := []struct {
+		name    string
+		hosts   []*clusterapi.Host
+		want    string
+		wantErr string
+	}{
+		{
+			name: "the first controller is taken",
+			hosts: []*clusterapi.Host{
+				sshHost(clusterapi.RoleWorker, "worker1"),
+				sshHost(clusterapi.RoleController, "control1"),
+				sshHost(clusterapi.RoleController, "control2"),
+			},
+			want: "control1",
+		},
+		{
+			name: "a single-role host counts as a controller",
+			hosts: []*clusterapi.Host{
+				sshHost(clusterapi.RoleSingle, "solo"),
+			},
+			want: "solo",
+		},
+		{
+			name: "a controller with no ssh block is skipped for one that has it",
+			hosts: []*clusterapi.Host{
+				openSSHHost(clusterapi.RoleController, "control1"),
+				sshHost(clusterapi.RoleController, "control2"),
+			},
+			want: "control2",
+		},
+		{
+			name: "a fleet cargoship cannot open a channel to is refused by name",
+			hosts: []*clusterapi.Host{
+				openSSHHost(clusterapi.RoleController, "control1"),
+			},
+			wantErr: "ssh",
+		},
+		{
+			name: "workers alone leave nothing to tunnel through",
+			hosts: []*clusterapi.Host{
+				sshHost(clusterapi.RoleWorker, "worker1"),
+			},
+			wantErr: "names no controller",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := clusterapi.Cluster{}
+			c.Spec.Hosts = tt.hosts
+
+			got, err := firstControllerWithSSH(c)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got.ConnectionConfig.SSH.Address)
+		})
+	}
+}
+
 // TestTargetFromZarfRegistry covers how a zarf deployment's state becomes a destination. The
 // credentials always come from state; the address only does when a machine other than a node
 // can reach it.
@@ -260,7 +339,8 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := targetFromZarfRegistry(tt.reg, tt.explicit)
+			o := &packageMirrorOptions{}
+			got, err := o.targetFromZarfRegistry(context.Background(), tt.reg, tt.explicit)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				return

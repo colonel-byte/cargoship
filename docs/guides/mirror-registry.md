@@ -61,7 +61,7 @@ cargoship mirror ./package.tar.zst --config ./cluster.yaml
 
 Prefer this. It is the same field `apply` writes into every host, so what gets pushed and what the nodes ask for are read from one place and cannot drift. The scheme is dropped, and a path becomes the repository prefix.
 
-The argument and `--config` are alternatives rather than layers: passing both is an error, because silently preferring one would mirror to an address you did not name. A configuration declaring more than one proxy is also an error -- which mirror a package belongs in is not a question the command can answer, and guessing would populate the wrong one quietly.
+The argument and `--config` are alternatives rather than layers: passing both is an error, because silently preferring one would mirror to an address you did not name. (`--config` does compose with `--from-zarf-state`, where it names the nodes rather than the destination -- see below.) A configuration declaring more than one proxy is also an error -- which mirror a package belongs in is not a question the command can answer, and guessing would populate the wrong one quietly.
 
 ### Reading It from a Zarf Deployment
 
@@ -75,15 +75,31 @@ The push credentials always come from there, and that is the half worth having: 
 
 The **address** only comes from there when the registry is external, which is the one mode whose recorded address is routable from somewhere other than a cluster node:
 
-| `registryMode` | What the address is                        | What `--from-zarf-state` does                  |
-| -------------- | ------------------------------------------ | ---------------------------------------------- |
-| `external`     | A registry outside the cluster             | Uses it, and the credentials                   |
-| `nodeport`     | A node-local address behind a NodePort     | Refuses, naming the port; give an `oci://` one |
-| `proxy`        | A per-node host port served by a DaemonSet | Refuses, naming the port; give an `oci://` one |
+| `registryMode` | What the address is                        | What `--from-zarf-state` does               |
+| -------------- | ------------------------------------------ | ------------------------------------------- |
+| `external`     | A registry outside the cluster             | Uses it, and the credentials                |
+| `nodeport`     | A node-local address behind a NodePort     | Tunnels with `--config`, else names the fix |
+| `proxy`        | A per-node host port served by a DaemonSet | Tunnels with `--config`, else names the fix |
 
-Zarf reaches its own in-cluster registry by tunnelling to it. Cargoship has no tunnel, and inventing one for a management node that may not have API access at all would be the wrong place to solve this -- so for an internal registry you name the address this machine reaches it on and `--from-zarf-state` supplies only the credentials. The error says which port to use.
+There are two ways to reach an internal registry, and the error names both.
 
-A port-forward is the usual way to get such an address, and a `127.0.0.1` one works exactly as any other:
+#### Tunnelling through a node
+
+Pass `--config` alongside `--from-zarf-state` and the push is carried over an SSH channel to one of the cluster's controllers:
+
+```
+cargoship mirror ./package.tar.zst --from-zarf-state --config ./cluster.yaml
+```
+
+Nothing else is needed: cargoship already holds SSH to every host, so a `direct-tcpip` channel reaches `127.0.0.1:31999` on a node without the API port, a Kubernetes port-forward, or any tooling on the node itself. The registry's recorded address does double duty here, which is what makes it correct rather than merely workable -- it is both the service the channel opens onto and the reference host the images are pushed under, so the mirror cannot be populated at an address a node will not ask for.
+
+Any controller will do, since a NodePort answers on every node and a proxy-mode host port is served on each one, so the first one in the configuration is used. A fleet whose hosts are configured with `openSSH:` rather than `ssh:` is refused: rig's OpenSSH protocol shells out to the `ssh` binary and offers no way to open a channel.
+
+Two things to know about it. Throughput is whatever one SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push -- `--oci-concurrency` opens more channels but they share the one TCP connection. And the state itself is still read through your kubeconfig, not the tunnel, so this solves reaching the registry rather than reaching the cluster.
+
+#### Naming a reachable address yourself
+
+The alternative is to give the address this machine reaches the registry on and let `--from-zarf-state` supply only the credentials. A port-forward is the usual way to get one, and a `127.0.0.1` address works exactly as any other:
 
 ```
 kubectl port-forward -n zarf svc/zarf-docker-registry 5000:5000 &
@@ -94,7 +110,7 @@ The loopback address is not treated specially -- it is a destination like any ot
 
 One sharp edge, which applies to every destination and not just this one: if the package's images already name the registry you are mirroring **to**, a repository prefix on the destination is silently dropped and the images are pushed back to their own references. That is zarf's `ImageTransformHostWithoutChecksum` treating the push as already done. It does not arise for a package built against upstream registries, which is the normal case.
 
-`--context` picks the kubeconfig context to read, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the `kubeconfig` setting (`KUBECONFIG`, else the standard location). `--context` without `--from-zarf-state` is an error rather than being ignored, since nothing else here reads a cluster.
+`--context` picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the `kubeconfig` setting (`KUBECONFIG`, else the standard location). `--context` without `--from-zarf-state` is an error rather than being ignored, since nothing else here reads a cluster.
 
 A registry configured for Zarf-managed mTLS is refused: the push would need a client certificate, which this does not read.
 
