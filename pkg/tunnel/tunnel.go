@@ -42,30 +42,21 @@ import (
 // `ssh:` block.
 var ErrNoSSH = errors.New("host has no ssh configuration to tunnel through")
 
-// Dialer opens connections to one service address inside a cluster, carrying each over an SSH
-// channel to a node.
-//
-// A Dialer is bound to a single service address at construction, and DialContext sends every
-// connection there regardless of the address it is asked for. That redirection is the whole
-// point rather than a quirk: it is what lets the reference an image is pushed under -- the one
-// a node will later ask a mirror for -- be decided separately from the route the bytes take.
-type Dialer struct {
-	conn    *ssh.Connection
-	service string
+// Conn is an SSH connection to a node, able to reach any number of services inside the cluster
+// through it. One connection serves them all: a mirror reaches both the Kubernetes API, to read
+// where the registry is, and the registry itself, without authenticating twice.
+type Conn struct {
+	conn *ssh.Connection
 }
 
-// To opens an SSH connection described by cfg and returns a Dialer that reaches service through
-// it. service is an address as the node sees it, so "127.0.0.1:31999" for a NodePort.
+// Open connects to the host cfg describes.
 //
-// The connection is a second one to the host rather than the live one a phase is already holding:
-// rig keeps its protocol connection unexported with no accessor (rig/v2/client.go:55), so there
-// is nothing to borrow. Close releases it.
-func To(ctx context.Context, cfg *ssh.Config, service string) (*Dialer, error) {
+// The connection is a second one to the host rather than the live one a phase may already be
+// holding: rig keeps its protocol connection unexported with no accessor (rig/v2/client.go:55),
+// so there is nothing to borrow. Close releases it.
+func Open(ctx context.Context, cfg *ssh.Config) (*Conn, error) {
 	if cfg == nil {
 		return nil, ErrNoSSH
-	}
-	if service == "" {
-		return nil, errors.New("a service address to tunnel to is required")
 	}
 
 	// A copy, because Connect mutates the config it is handed -- SetDefaults fills the port and
@@ -79,7 +70,33 @@ func To(ctx context.Context, cfg *ssh.Config, service string) (*Dialer, error) {
 		return nil, fmt.Errorf("unable to connect to %s to tunnel through it: %w", cfg.Address, err)
 	}
 
-	return &Dialer{conn: conn, service: service}, nil
+	return &Conn{conn: conn}, nil
+}
+
+// Address is the host this connection reaches, for logging.
+func (c *Conn) Address() string {
+	return c.conn.Address
+}
+
+// To returns a Dialer that reaches service over this connection. service is an address as the
+// node sees it, so "127.0.0.1:31999" for a NodePort.
+func (c *Conn) To(service string) (*Dialer, error) {
+	if service == "" {
+		return nil, errors.New("a service address to tunnel to is required")
+	}
+	return &Dialer{conn: c.conn, service: service}, nil
+}
+
+// Dialer opens connections to one service address inside a cluster, carrying each over an SSH
+// channel to a node.
+//
+// A Dialer is bound to a single service address, and DialContext sends every connection there
+// regardless of the address it is asked for. That redirection is the whole point rather than a
+// quirk: it is what lets a name be decided separately from the route taken to reach it -- the
+// reference an image is pushed under, or the hostname a server certificate is validated against.
+type Dialer struct {
+	conn    *ssh.Connection
+	service string
 }
 
 // DialContext opens one connection to the Dialer's service address over the SSH channel.
@@ -106,7 +123,8 @@ func (d *Dialer) Service() string {
 	return d.service
 }
 
-// Close releases the SSH connection. Connections already opened through it are closed with it.
-func (d *Dialer) Close() {
-	d.conn.Disconnect()
+// Close releases the SSH connection, and with it every connection opened through any Dialer it
+// handed out.
+func (c *Conn) Close() {
+	c.conn.Disconnect()
 }

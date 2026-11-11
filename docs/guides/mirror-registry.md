@@ -91,11 +91,15 @@ Pass `--config` alongside `--from-zarf-state` and the push is carried over an SS
 cargoship mirror ./package.tar.zst --from-zarf-state --config ./cluster.yaml
 ```
 
-Nothing else is needed: cargoship already holds SSH to every host, so a `direct-tcpip` channel reaches `127.0.0.1:31999` on a node without the API port, a Kubernetes port-forward, or any tooling on the node itself. The registry's recorded address does double duty here, which is what makes it correct rather than merely workable -- it is both the service the channel opens onto and the reference host the images are pushed under, so the mirror cannot be populated at an address a node will not ask for.
+**Port 22 is the only port this needs.** One SSH connection to a controller carries both halves of the job: the Kubernetes API is read through it to find the registry, and then the push travels through it. No API port, no Kubernetes port-forward, no `kubectl`, and nothing installed on the node.
 
-Any controller will do, since a NodePort answers on every node and a proxy-mode host port is served on each one, so the first one in the configuration is used. A fleet whose hosts are configured with `openSSH:` rather than `ssh:` is refused: rig's OpenSSH protocol shells out to the `ssh` binary and offers no way to open a channel.
+Your kubeconfig is still required, but only for **identity** -- the client credentials and the CA. Its server URL is deliberately left untouched, so TLS validates against the hostname it names while the bytes travel through SSH to the node. That means no certificate needs a SAN for the address actually dialled, and a kubeconfig whose server this machine cannot route to works fine. The port to tunnel to is read from that same URL rather than assumed, so a cluster serving the API somewhere other than 6443 needs no extra flag.
 
-Two things to know about it. Throughput is whatever one SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push -- `--oci-concurrency` opens more channels but they share the one TCP connection. And the state itself is still read through your kubeconfig, not the tunnel, so this solves reaching the registry rather than reaching the cluster.
+For the registry, the recorded address does double duty, which is what makes this correct rather than merely workable: it is both the service the channel opens onto and the reference host the images are pushed under, so the mirror cannot be populated at an address a node will not ask for.
+
+Any controller will do, since the API server listens on loopback on every control-plane node and a NodePort answers on all of them, so the first one in the configuration is used. A fleet whose hosts are configured with `openSSH:` rather than `ssh:` is refused: rig's OpenSSH protocol shells out to the `ssh` binary and offers no way to open a channel.
+
+One thing to know about it: throughput is whatever a single SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push. `--oci-concurrency` opens more channels, but they share the one TCP connection.
 
 #### Naming a reachable address yourself
 
@@ -110,7 +114,7 @@ The loopback address is not treated specially -- it is a destination like any ot
 
 One sharp edge, which applies to every destination and not just this one: if the package's images already name the registry you are mirroring **to**, a repository prefix on the destination is silently dropped and the images are pushed back to their own references. That is zarf's `ImageTransformHostWithoutChecksum` treating the push as already done. It does not arise for a package built against upstream registries, which is the normal case.
 
-`--context` picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the `kubeconfig` setting (`KUBECONFIG`, else the standard location). `--context` without `--from-zarf-state` is an error rather than being ignored, since nothing else here reads a cluster.
+`--context` picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the `kubeconfig` setting (`KUBECONFIG`, else the standard location). `--context` without `--from-zarf-state` is an error rather than being ignored, since nothing else here reads a cluster. Under `--config` the context still chooses which cluster's credentials and API port are used, and the tunnel supplies the route to it.
 
 A registry configured for Zarf-managed mTLS is refused: the push would need a client certificate, which this does not read.
 

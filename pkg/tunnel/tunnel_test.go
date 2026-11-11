@@ -44,10 +44,12 @@ func TestToReachesAServiceOnlyTheNodeCanSee(t *testing.T) {
 	service := echoServer(t)
 	sshAddr := tunnelSSHServer(t)
 
-	d, err := tunnel.To(ctx, sshConfigFor(t, sshAddr), service)
+	conn, err := tunnel.Open(ctx, sshConfigFor(t, sshAddr))
 	require.NoError(t, err)
-	t.Cleanup(d.Close)
+	t.Cleanup(conn.Close)
 
+	d, err := conn.To(service)
+	require.NoError(t, err)
 	require.Equal(t, service, d.Service())
 
 	// An http.Client is the consumer this exists for, so it is what the test uses.
@@ -67,14 +69,45 @@ func TestToReachesAServiceOnlyTheNodeCanSee(t *testing.T) {
 // TestToRefusesAHostItCannotTunnelThrough covers the inventory error. A host configured with
 // `openSSH:` rather than `ssh:` has no config here, and rig's openssh protocol implements no
 // Dial, so there is nothing to fall back to -- which makes saying so the whole remedy.
-func TestToRefusesAHostItCannotTunnelThrough(t *testing.T) {
-	_, err := tunnel.To(context.Background(), nil, "127.0.0.1:31999")
+func TestOpenRefusesAHostItCannotTunnelThrough(t *testing.T) {
+	_, err := tunnel.Open(context.Background(), nil)
 	require.ErrorIs(t, err, tunnel.ErrNoSSH)
 }
 
 func TestToRequiresAServiceAddress(t *testing.T) {
-	_, err := tunnel.To(context.Background(), &rigssh.Config{Address: "127.0.0.1"}, "")
+	sshAddr := tunnelSSHServer(t)
+	conn, err := tunnel.Open(context.Background(), sshConfigFor(t, sshAddr))
+	require.NoError(t, err)
+	t.Cleanup(conn.Close)
+
+	_, err = conn.To("")
 	require.ErrorContains(t, err, "service address")
+}
+
+// TestOneConnectionServesSeveralServices is what the mirror depends on: the Kubernetes API is
+// read through the same connection the push then travels over, so a fleet is authenticated to
+// once rather than twice.
+func TestOneConnectionServesSeveralServices(t *testing.T) {
+	first := echoServer(t)
+	second := echoServer(t)
+
+	sshAddr := tunnelSSHServer(t)
+	conn, err := tunnel.Open(context.Background(), sshConfigFor(t, sshAddr))
+	require.NoError(t, err)
+	t.Cleanup(conn.Close)
+
+	for _, service := range []string{first, second} {
+		d, err := conn.To(service)
+		require.NoError(t, err)
+
+		client := &http.Client{Transport: &http.Transport{DialContext: d.DialContext}}
+		resp, err := client.Get("http://whatever.invalid/" + service) //nolint:noctx
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		require.Equal(t, "pong /"+service, string(body))
+	}
 }
 
 // TestDialContextHonoursACancelledContext pins the one thing DialContext can do about
@@ -83,9 +116,12 @@ func TestDialContextHonoursACancelledContext(t *testing.T) {
 	service := echoServer(t)
 	sshAddr := tunnelSSHServer(t)
 
-	d, err := tunnel.To(context.Background(), sshConfigFor(t, sshAddr), service)
+	conn, err := tunnel.Open(context.Background(), sshConfigFor(t, sshAddr))
 	require.NoError(t, err)
-	t.Cleanup(d.Close)
+	t.Cleanup(conn.Close)
+
+	d, err := conn.To(service)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

@@ -206,88 +206,166 @@ func (o *packageMirrorOptions) resolveTarget(ctx context.Context, args []string)
 // to ask. An explicit oci://REGISTRY always wins, and pairing it with --from-zarf-state is the
 // normal way to mirror into an internal registry.
 func (o *packageMirrorOptions) zarfStateTarget(ctx context.Context, explicit string) (mirrorTarget, error) {
-	reg, err := zarfstate.Load(ctx, resolvedConfig.DistroOpts.KubeConfig, o.kubeContext)
+	// With a cluster configuration, one SSH connection to a controller serves everything that
+	// follows: the API server is read through it to find the registry, and then the push itself
+	// travels through it. Opening it first is what makes a fleet reachable only over SSH work at
+	// all, because the state read would otherwise need the API port open.
+	if o.config != "" {
+		return o.tunnelledTarget(ctx, explicit)
+	}
+
+	reg, err := zarfstate.Load(ctx, zarfstate.Options{
+		Kubeconfig: resolvedConfig.DistroOpts.KubeConfig,
+		Context:    o.kubeContext,
+	})
 	if err != nil {
 		return mirrorTarget{}, err
 	}
-	return o.targetFromZarfRegistry(ctx, reg, explicit)
+	return o.targetFromZarfRegistry(reg, explicit)
 }
 
-// targetFromZarfRegistry is the decision zarfStateTarget makes once the state has been read,
-// split out so it can be exercised without a cluster.
-func (o *packageMirrorOptions) targetFromZarfRegistry(ctx context.Context, reg zarfstate.Registry, explicit string) (mirrorTarget, error) {
+// registryAddress decides what address a mirror pushes to, and whether only a cluster node can
+// reach it. It is pure, and it is where every rule about reading a destination out of zarf state
+// lives.
+//
+// An explicit oci:// argument always wins. Failing that, the state's own address is used when the
+// registry is external, which is the one mode whose recorded address is routable from somewhere
+// other than a node. Anything else is node-local, and the caller decides whether it holds a
+// tunnel that can reach it.
+func registryAddress(reg zarfstate.Registry, explicit string) (addr string, nodeLocal bool, err error) {
 	if reg.UsesMTLS() {
-		return mirrorTarget{}, fmt.Errorf("the zarf registry is configured for zarf-managed mTLS (%s), and a push with a client certificate is not supported", reg.MTLSStrategy)
+		return "", false, fmt.Errorf("the zarf registry is configured for zarf-managed mTLS (%s), and a push with a client certificate is not supported", reg.MTLSStrategy)
 	}
-
-	dst := mirrorTarget{
-		registry: explicit,
-		username: reg.PushUsername,
-		password: reg.PushPassword,
+	if explicit != "" {
+		return explicit, false, nil
 	}
-	if dst.registry != "" {
-		return dst, nil
-	}
-
-	if !reg.IsExternal() {
-		// The registry is at a node-local address. With a cluster configuration to name the
-		// nodes, the SSH connection cargoship already relies on is the route to it.
-		if o.config != "" {
-			return o.tunnelledTarget(ctx, reg)
+	if reg.IsExternal() {
+		if reg.Address == "" {
+			return "", false, errors.New("the zarf state records no registry address; name one as oci://REGISTRY")
 		}
+		return reg.Address, false, nil
+	}
+
+	// A node-local address needs a port to be dialled, and older zarf state recorded one only in
+	// the deprecated field decode already folds in.
+	service := reg.Address
+	if _, _, splitErr := net.SplitHostPort(service); splitErr != nil {
+		if reg.Port == 0 {
+			return "", true, fmt.Errorf("the zarf state records the registry as %q with no port, so there is nothing to reach it on", reg.Address)
+		}
+		service = net.JoinHostPort(service, strconv.Itoa(reg.Port))
+	}
+	return service, true, nil
+}
+
+// targetFromZarfRegistry builds a destination for a registry this machine can dial itself. A
+// node-local one needs the tunnel, which is tunnelledTarget's business.
+func (o *packageMirrorOptions) targetFromZarfRegistry(reg zarfstate.Registry, explicit string) (mirrorTarget, error) {
+	addr, nodeLocal, err := registryAddress(reg, explicit)
+	if err != nil {
+		return mirrorTarget{}, err
+	}
+	if nodeLocal {
 		return mirrorTarget{}, fmt.Errorf("the zarf registry runs in the cluster (mode %q, recorded as %q), which is an address only a node can reach; either name the address this machine reaches it on as oci://REGISTRY -- a node address and port %d -- or pass --%s so the push is tunnelled through a node. Either way --from-zarf-state supplies the credentials", reg.Mode, reg.Address, reg.Port, InstallConfig)
 	}
-	if reg.Address == "" {
-		return mirrorTarget{}, errors.New("the zarf state records no registry address; name one as oci://REGISTRY")
-	}
-	dst.registry = reg.Address
-	return dst, nil
+
+	return mirrorTarget{
+		registry: addr,
+		username: reg.PushUsername,
+		password: reg.PushPassword,
+	}, nil
 }
 
-// tunnelledTarget pushes to a node-local registry address by carrying the push over an SSH
-// channel to one of the cluster's controllers.
+// tunnelledTarget opens one SSH connection to a controller and uses it for both halves of the
+// job: the Kubernetes API is read through it to find the registry, and then the push travels
+// through it.
 //
-// The registry's own recorded address does double duty, and that is what makes this correct
-// rather than merely workable: it is the address every node reaches the registry on, so it is
-// both the service the tunnel opens onto and the reference host the images are pushed under.
-// One value in both roles means the mirror cannot be populated at an address a node will not
-// ask for -- the same property reading the destination from a cluster configuration has.
-func (o *packageMirrorOptions) tunnelledTarget(ctx context.Context, reg zarfstate.Registry) (mirrorTarget, error) {
+// Reading the state through the tunnel rather than over a route of its own is what makes a fleet
+// reachable only on port 22 work. The kubeconfig still supplies the identity and the CA -- its
+// server URL is left untouched, so TLS validates against the hostname it names while the bytes
+// travel through SSH -- and the port to tunnel to is read from that same URL rather than assumed.
+//
+// For the registry the recorded address does double duty, which is what makes this correct rather
+// than merely workable: it is the address every node reaches the registry on, so it is both the
+// service the channel opens onto and the reference host the images are pushed under. One value in
+// both roles means the mirror cannot be populated at an address a node will not ask for -- the
+// same property reading the destination from a cluster configuration has.
+func (o *packageMirrorOptions) tunnelledTarget(ctx context.Context, explicit string) (mirrorTarget, error) {
 	cluster, err := initCluster(ctx, InstallCommon{config: o.config})
 	if err != nil {
 		return mirrorTarget{}, err
 	}
-
-	service := reg.Address
-	if _, _, splitErr := net.SplitHostPort(service); splitErr != nil {
-		if reg.Port == 0 {
-			return mirrorTarget{}, fmt.Errorf("the zarf state records the registry as %q with no port, so there is nothing to tunnel to", reg.Address)
-		}
-		service = net.JoinHostPort(service, strconv.Itoa(reg.Port))
-	}
-
 	host, err := firstControllerWithSSH(cluster)
 	if err != nil {
 		return mirrorTarget{}, err
 	}
 
-	dialer, err := tunnel.To(ctx, host.ConnectionConfig.SSH, service)
+	conn, err := tunnel.Open(ctx, host.ConnectionConfig.SSH)
 	if err != nil {
-		// Joined so that a push that never reached a host is classified the way every other
+		// Joined so that a run that never reached a host is classified the way every other
 		// unreachable-fleet failure is. See cmd/exit.go.
 		return mirrorTarget{}, errors.Join(phase.ErrConnect, err)
 	}
+	// The connection outlives this function only on success, where it is handed to the caller as
+	// the target's closer.
+	handedOver := false
+	defer func() {
+		if !handedOver {
+			conn.Close()
+		}
+	}()
 
-	logger.From(ctx).Info("tunnelling the mirror through a node",
-		"host", host.ConnectionConfig.SSH.Address, "registry", service)
+	reg, err := o.zarfStateThrough(ctx, conn)
+	if err != nil {
+		return mirrorTarget{}, err
+	}
 
-	return mirrorTarget{
-		registry: service,
+	addr, nodeLocal, err := registryAddress(reg, explicit)
+	if err != nil {
+		return mirrorTarget{}, err
+	}
+
+	dst := mirrorTarget{
+		registry: addr,
 		username: reg.PushUsername,
 		password: reg.PushPassword,
-		dial:     dialer.DialContext,
-		close:    dialer.Close,
-	}, nil
+	}
+	if !nodeLocal {
+		// The destination is one this machine can reach, so the push takes the direct route and
+		// the tunnel has already done its job.
+		logger.From(ctx).Debug("the zarf registry is reachable directly, not tunnelling the push", "registry", addr)
+		return dst, nil
+	}
+
+	dialer, err := conn.To(addr)
+	if err != nil {
+		return mirrorTarget{}, err
+	}
+	logger.From(ctx).Info("tunnelling the mirror through a node", "host", conn.Address(), "registry", addr)
+
+	dst.dial = dialer.DialContext
+	dst.close = conn.Close
+	handedOver = true
+	return dst, nil
+}
+
+// zarfStateThrough reads the state secret over the tunnel.
+func (o *packageMirrorOptions) zarfStateThrough(ctx context.Context, conn *tunnel.Conn) (zarfstate.Registry, error) {
+	endpoint, err := zarfstate.APIEndpoint(resolvedConfig.DistroOpts.KubeConfig, o.kubeContext)
+	if err != nil {
+		return zarfstate.Registry{}, err
+	}
+	apiDialer, err := conn.To(endpoint)
+	if err != nil {
+		return zarfstate.Registry{}, err
+	}
+
+	logger.From(ctx).Debug("reading zarf state through the tunnel", "host", conn.Address(), "api", endpoint)
+	return zarfstate.Load(ctx, zarfstate.Options{
+		Kubeconfig: resolvedConfig.DistroOpts.KubeConfig,
+		Context:    o.kubeContext,
+		Dial:       apiDialer.DialContext,
+	})
 }
 
 // firstControllerWithSSH picks the node the tunnel is opened through.

@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -96,14 +98,30 @@ func (r Registry) UsesMTLS() bool {
 	return r.MTLSStrategy != "" && r.MTLSStrategy != "none"
 }
 
-// Load reads the registry half of the zarf-state secret through the given kubeconfig and
-// context. An empty kubeconfig takes the ambient configuration -- KUBECONFIG, else the standard
-// location -- and an empty kubeContext takes whichever context that configuration marks current.
-func Load(ctx context.Context, kubeconfig, kubeContext string) (Registry, error) {
-	restConfig, err := restConfigFor(kubeconfig, kubeContext)
+// Options say which cluster to read, and how to reach it.
+type Options struct {
+	// Kubeconfig is the file to read. Empty takes the ambient configuration -- KUBECONFIG, else
+	// the standard location.
+	Kubeconfig string
+	// Context is the context within it. Empty takes whichever one it marks current.
+	Context string
+	// Dial, when set, carries the connection to the API server, which is how the state of a
+	// cluster whose API this machine cannot route to is read -- see pkg/tunnel.
+	//
+	// The kubeconfig's server URL is deliberately left alone when this is set. TLS still
+	// validates against the hostname it names, using the CA it names, so the credentials keep
+	// working and no certificate SAN has to cover the address actually dialled. The kubeconfig
+	// supplies the identity; Dial supplies the route.
+	Dial func(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+// Load reads the registry half of the zarf-state secret.
+func Load(ctx context.Context, opts Options) (Registry, error) {
+	restConfig, err := restConfigFor(opts.Kubeconfig, opts.Context)
 	if err != nil {
 		return Registry{}, err
 	}
+	restConfig.Dial = opts.Dial
 
 	client, err := dynamic.NewForConfig(restConfig)
 	if err != nil {
@@ -129,6 +147,32 @@ func Load(ctx context.Context, kubeconfig, kubeContext string) (Registry, error)
 	}
 
 	return decode(raw)
+}
+
+// APIEndpoint is the address a tunnel to the API server should open onto, derived from the
+// kubeconfig's own server URL: the loopback address, and the port that URL names.
+//
+// The port is read rather than assumed because it is the one piece of this that varies -- k3s
+// and RKE2 both serve 6443, but a cluster behind a load balancer on another port records that,
+// and guessing would tunnel to a closed port on the node. The host is loopback because the API
+// server listens there on every control-plane node, which is what makes any controller do.
+func APIEndpoint(kubeconfig, kubeContext string) (string, error) {
+	restConfig, err := restConfigFor(kubeconfig, kubeContext)
+	if err != nil {
+		return "", err
+	}
+
+	u, err := url.Parse(restConfig.Host)
+	if err != nil {
+		return "", fmt.Errorf("unable to read the kubeconfig's server address %q: %w", restConfig.Host, err)
+	}
+
+	port := u.Port()
+	if port == "" {
+		// A URL with no port means the scheme's default, and a kubeconfig's is always https.
+		port = "443"
+	}
+	return net.JoinHostPort("127.0.0.1", port), nil
 }
 
 // restConfigFor resolves a kubeconfig path and a context name into a connection.

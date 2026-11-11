@@ -166,6 +166,90 @@ func TestResolveTarget(t *testing.T) {
 	})
 }
 
+// TestRegistryAddress covers the address decision on its own, including the node-local case the
+// non-tunnelled path can only report as an error.
+func TestRegistryAddress(t *testing.T) {
+	tests := []struct {
+		name          string
+		reg           zarfstate.Registry
+		explicit      string
+		wantAddr      string
+		wantNodeLocal bool
+		wantErr       string
+	}{
+		{
+			name: "a nodeport address is used as recorded when it already carries a port",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1:31999",
+				Port:    31999,
+				Mode:    zarfstate.ModeNodePort,
+			},
+			wantAddr:      "127.0.0.1:31999",
+			wantNodeLocal: true,
+		},
+		{
+			name: "a recorded address with no port takes the one from state",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1",
+				Port:    31999,
+				Mode:    zarfstate.ModeNodePort,
+			},
+			wantAddr:      "127.0.0.1:31999",
+			wantNodeLocal: true,
+		},
+		{
+			name: "a proxy-mode host port is node-local too",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1:5000",
+				Port:    5000,
+				Mode:    zarfstate.ModeProxy,
+			},
+			wantAddr:      "127.0.0.1:5000",
+			wantNodeLocal: true,
+		},
+		{
+			name: "no address and no port leaves nothing to dial",
+			reg: zarfstate.Registry{
+				Mode: zarfstate.ModeNodePort,
+			},
+			wantErr: "nothing to reach it on",
+		},
+		{
+			name: "an explicit address is this machine's business, never the tunnel's",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1:31999",
+				Port:    31999,
+				Mode:    zarfstate.ModeNodePort,
+			},
+			explicit:      "node1.internal:31999",
+			wantAddr:      "node1.internal:31999",
+			wantNodeLocal: false,
+		},
+		{
+			name: "an external registry needs no tunnel",
+			reg: zarfstate.Registry{
+				Address: "harbor.internal",
+				Mode:    zarfstate.ModeExternal,
+			},
+			wantAddr:      "harbor.internal",
+			wantNodeLocal: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addr, nodeLocal, err := registryAddress(tt.reg, tt.explicit)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantAddr, addr)
+			require.Equal(t, tt.wantNodeLocal, nodeLocal)
+		})
+	}
+}
+
 // TestFirstControllerWithSSH covers which node a tunnel is opened through. Any controller will
 // do -- a NodePort answers on every node -- so the only real decisions are skipping workers and
 // refusing a fleet whose hosts cargoship cannot open a channel to.
@@ -340,7 +424,7 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			o := &packageMirrorOptions{}
-			got, err := o.targetFromZarfRegistry(context.Background(), tt.reg, tt.explicit)
+			got, err := o.targetFromZarfRegistry(tt.reg, tt.explicit)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				return
