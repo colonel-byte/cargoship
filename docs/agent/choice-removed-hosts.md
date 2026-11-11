@@ -34,6 +34,14 @@ Neither is a bug in reset. The unfiltered list is exactly right when the instruc
 
 The list is read by running `kubectl get nodes -o json` on the leader over the existing SSH connection, which is how every other cluster command in the phases works. `LabelNodes` is the exception: it builds a Kubernetes client dialled at `https://<loadBalancer>:6443` from the machine running cargoship. That was not copied here. A cluster whose firewall admits only SSH from outside is an ordinary deployment for cargoship, and a check that runs on every apply must not be the one thing that needs the API port open. Going through the leader also drops the need for the load balancer address and for reading the admin certificates.
 
+### `LabelNodes` could now stop being the exception
+
+[`pkg/tunnel`](../../pkg/tunnel/tunnel.go) carries arbitrary TCP over an SSH `direct-tcpip` channel, and `rest.Config.Dial` accepts a dialer directly, so a Kubernetes client can reach `127.0.0.1:6443` on the leader without the API port being open from anywhere. `cargoship mirror --from-zarf-state --config` already reads a secret that way. Applied to `dynamicClient` (`pkg/phase/81_label_nodes.go:151`) it is about six lines, and TLS keeps working untouched -- the `Host` stays `https://<loadBalancer>:6443`, so verification still uses the certificate the direct path already verifies against, while the bytes travel through SSH.
+
+It has not been done, deliberately. `LabelNodes` runs on every apply against every fleet, so the question is not whether the tunnel works but what should happen for operators whose API server is already reachable: always tunnel, paying an extra SSH connection per apply, or try direct and fall back, adding a second failure mode and a timeout nobody will tune correctly. That is a change to the apply path rather than a new opt-in, and it was left alone rather than decided in passing. Raised and deferred on 2026-11-11.
+
+What is worth noting either way is that the paragraph above no longer describes a limit of the tooling. It describes a choice about the apply path that is still open.
+
 Two guards keep it from becoming a nuisance, and both exist because a false positive would stop an apply on a working cluster:
 
 - Nodes are matched to hosts by any shared identifier: the node's name or any address it reports, against the host's hostname, private address, or connection address. Names alone are not enough, because an operator can set `node-name` in the engine config, and matching on names would then report every node in the cluster as removed.
