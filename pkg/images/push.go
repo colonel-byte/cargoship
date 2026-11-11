@@ -51,6 +51,24 @@ type PushOptions struct {
 	// Retries is how many times a single image copy is attempted before the push fails.
 	// Zero takes the same default the rest of the OCI paths use.
 	Retries int
+	// Username and Password authenticate the push against the target. Empty, which is the
+	// usual case, falls back to the Docker configuration file.
+	Username string
+	Password string
+}
+
+// StaticCredential turns a username and password into something ClientOptions takes, and
+// returns nil when neither was given -- which NewRegistryClient reads as "use the Docker
+// configuration". It is exported because a mirror pushes files alongside images and both
+// halves have to authenticate the same way.
+func StaticCredential(host, username, password string) auth.CredentialFunc {
+	if username == "" && password == "" {
+		return nil
+	}
+	return auth.StaticCredential(host, auth.Credential{
+		Username: username,
+		Password: password,
+	})
 }
 
 // Push copies every image in imageList out of the OCI layout at sourceDirectory and into target,
@@ -107,7 +125,11 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory, tar
 	}
 
 	// Every destination is the one target host, so one entry pre-authenticates all of them.
-	client, err := NewRegistryClient(ctx, []string{host}, opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
+	client, err := NewRegistryClient(ctx, []string{host}, ClientOptions{
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
+		Credential:            StaticCredential(host, opts.Username, opts.Password),
+	})
 	if err != nil {
 		return err
 	}

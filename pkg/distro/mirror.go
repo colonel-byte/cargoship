@@ -54,6 +54,10 @@ type MirrorOptions struct {
 	// line that named neither asked for.
 	Images bool
 	Files  bool
+	// Username and Password authenticate both halves of the mirror against the target.
+	// Empty falls back to the Docker configuration file.
+	Username string
+	Password string
 }
 
 // Mirror publishes the contents of a built package into target, a registry host optionally
@@ -115,6 +119,8 @@ func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, op
 		PlainHTTP:             opts.PlainHTTP,
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Retries:               opts.Retries,
+		Username:              opts.Username,
+		Password:              opts.Password,
 	})
 }
 
@@ -129,7 +135,10 @@ func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, opt
 
 	// The same client and the same plain-HTTP decision the image half makes. Doing this once
 	// here rather than per file also means one pre-authentication round trip, not one each.
-	client, err := images.NewRegistryClient(ctx, []string{host}, opts.InsecureSkipTLSVerify, 0)
+	client, err := images.NewRegistryClient(ctx, []string{host}, images.ClientOptions{
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		Credential:            images.StaticCredential(host, opts.Username, opts.Password),
+	})
 	if err != nil {
 		return err
 	}

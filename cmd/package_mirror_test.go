@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/internal/zarfstate"
 	"github.com/stretchr/testify/require"
 )
 
@@ -135,7 +136,7 @@ func TestResolveTarget(t *testing.T) {
 		o := &packageMirrorOptions{}
 		got, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "oci://harbor.internal/cargoship"})
 		require.NoError(t, err)
-		require.Equal(t, "harbor.internal/cargoship", got)
+		require.Equal(t, mirrorTarget{registry: "harbor.internal/cargoship"}, got)
 	})
 
 	t.Run("an argument without the oci scheme is refused", func(t *testing.T) {
@@ -155,4 +156,117 @@ func TestResolveTarget(t *testing.T) {
 		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst"})
 		require.ErrorContains(t, err, "no destination registry")
 	})
+
+	t.Run("a context with nothing to read a cluster for is refused, not ignored", func(t *testing.T) {
+		o := &packageMirrorOptions{kubeContext: "prod"}
+		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "oci://harbor.internal"})
+		require.ErrorContains(t, err, "--from-zarf-state")
+	})
+}
+
+// TestTargetFromZarfRegistry covers how a zarf deployment's state becomes a destination. The
+// credentials always come from state; the address only does when a machine other than a node
+// can reach it.
+func TestTargetFromZarfRegistry(t *testing.T) {
+	internal := zarfstate.Registry{
+		Address:      "127.0.0.1:31999",
+		Port:         31999,
+		PushUsername: "zarf-push",
+		PushPassword: "secret",
+		Mode:         zarfstate.ModeNodePort,
+	}
+
+	tests := []struct {
+		name     string
+		reg      zarfstate.Registry
+		explicit string
+		want     mirrorTarget
+		wantErr  string
+	}{
+		{
+			name: "an external registry is taken whole",
+			reg: zarfstate.Registry{
+				Address:      "harbor.internal",
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeExternal,
+			},
+			want: mirrorTarget{
+				registry: "harbor.internal",
+				username: "zarf-push",
+				password: "secret",
+			},
+		},
+		{
+			name: "state written before zarf recorded a mode is external when it names an address",
+			reg: zarfstate.Registry{
+				Address:      "harbor.internal",
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+			},
+			want: mirrorTarget{
+				registry: "harbor.internal",
+				username: "zarf-push",
+				password: "secret",
+			},
+		},
+		{
+			name:     "an explicit address wins, and the credentials still come from state",
+			reg:      internal,
+			explicit: "node1.internal:31999",
+			want: mirrorTarget{
+				registry: "node1.internal:31999",
+				username: "zarf-push",
+				password: "secret",
+			},
+		},
+		{
+			name:    "a nodeport registry with no address given names the fix",
+			reg:     internal,
+			wantErr: "only a node can reach",
+		},
+		{
+			name: "a proxied registry is no more reachable than a nodeport one",
+			reg: zarfstate.Registry{
+				Address:      "127.0.0.1:31999",
+				Port:         31999,
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeProxy,
+			},
+			wantErr: "only a node can reach",
+		},
+		{
+			name: "an external registry with no address at all is an error",
+			reg: zarfstate.Registry{
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeExternal,
+			},
+			wantErr: "records no registry address",
+		},
+		{
+			name: "zarf-managed mTLS is refused rather than attempted",
+			reg: zarfstate.Registry{
+				Address:      "harbor.internal",
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeExternal,
+				MTLSStrategy: "zarf",
+			},
+			wantErr: "mTLS",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := targetFromZarfRegistry(tt.reg, tt.explicit)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

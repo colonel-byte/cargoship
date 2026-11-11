@@ -174,6 +174,15 @@ func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) 
 	return totalSize
 }
 
+// ClientOptions are the transport and credential settings NewRegistryClient needs.
+type ClientOptions struct {
+	InsecureSkipTLSVerify bool
+	ResponseHeaderTimeout time.Duration
+	// Credential authenticates every host the client is used with. Nil, which is the usual
+	// case, reads credentials from the Docker configuration file instead.
+	Credential auth.CredentialFunc
+}
+
 // NewRegistryClient builds the ORAS auth client every registry operation shares, and
 // pre-authenticates it against each host it is about to be used with.
 //
@@ -189,12 +198,8 @@ func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) 
 // It is exported because a mirror pushes files alongside images, and both halves have to
 // authenticate to the target the same way or a credentialled registry takes one and refuses
 // the other.
-func NewRegistryClient(ctx context.Context, hosts []string, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*auth.Client, error) {
-	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get credentials: %w", err)
-	}
-	transport, err := orasTransport(insecureSkipTLSVerify, responseHeaderTimeout)
+func NewRegistryClient(ctx context.Context, hosts []string, opts ClientOptions) (*auth.Client, error) {
+	transport, err := orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +207,32 @@ func NewRegistryClient(ctx context.Context, hosts []string, insecureSkipTLSVerif
 		Client: &http.Client{
 			Transport: transport,
 		},
-		Cache:      auth.NewCache(),
-		Credential: credentials.Credential(credStore),
+		Cache: auth.NewCache(),
 	}
+
+	// A credential given by the caller was read from somewhere that knows which registry it
+	// belongs to -- a zarf state secret, say -- so it answers for that host alone and the
+	// Docker configuration is not consulted at all. Mixing the two would let a stale
+	// docker login shadow the credential the operator just supplied.
+	if opts.Credential != nil {
+		client.Credential = opts.Credential
+		for _, host := range helpers.Unique(hosts) {
+			reg, err := remote.NewRegistry(host)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create registry: %w", err)
+			}
+			reg.Client = client
+			_ = reg.Ping(ctx) //nolint: errcheck
+		}
+		logger.From(ctx).Debug("using credentials supplied by the caller", "hosts", hosts)
+		return client, nil
+	}
+
+	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get credentials: %w", err)
+	}
+	client.Credential = credentials.Credential(credStore)
 
 	if credStore.IsAuthConfigured() {
 		for _, host := range helpers.Unique(hosts) {
