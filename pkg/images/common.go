@@ -26,6 +26,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -151,16 +152,22 @@ func addNameAnnotationsToDesc(desc ocispec.Descriptor, ref string) ocispec.Descr
 	return desc
 }
 
-func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*retry.Transport, error) {
+func orasTransport(opts ClientOptions) (*retry.Transport, error) {
 	transport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
 		return nil, errors.New("could not get default transport")
 	}
 	transport = transport.Clone()
 	// Enable / Disable TLS verification based on the config
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify}
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
-	transport.ResponseHeaderTimeout = responseHeaderTimeout
+	transport.ResponseHeaderTimeout = opts.ResponseHeaderTimeout
+	if opts.DialContext != nil {
+		transport.DialContext = opts.DialContext
+		// A cloned DefaultTransport carries HTTP/2, which negotiates over the dialled
+		// connection and would have to be proxied too. Nothing needs it here.
+		transport.ForceAttemptHTTP2 = false
+	}
 	return retry.NewTransport(transport), nil
 }
 
@@ -181,6 +188,14 @@ type ClientOptions struct {
 	// Credential authenticates every host the client is used with. Nil, which is the usual
 	// case, reads credentials from the Docker configuration file instead.
 	Credential auth.CredentialFunc
+	// DialContext opens the TCP connection every registry request travels over. Nil, which is
+	// the usual case, dials the reference's own host.
+	//
+	// Setting it decouples where the bytes go from what the reference says, which is what lets
+	// a registry be reached through a tunnel: an SSH channel to a cluster node carries the
+	// connection while the references stay the ones a node will ask for. The address the dialer
+	// is handed is the reference's, and a tunnelling dialer is free to ignore it.
+	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 }
 
 // NewRegistryClient builds the ORAS auth client every registry operation shares, and
@@ -199,7 +214,7 @@ type ClientOptions struct {
 // authenticate to the target the same way or a credentialled registry takes one and refuses
 // the other.
 func NewRegistryClient(ctx context.Context, hosts []string, opts ClientOptions) (*auth.Client, error) {
-	transport, err := orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
+	transport, err := orasTransport(opts)
 	if err != nil {
 		return nil, err
 	}

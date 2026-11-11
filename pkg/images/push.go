@@ -23,6 +23,7 @@ package images
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -55,6 +56,8 @@ type PushOptions struct {
 	// usual case, falls back to the Docker configuration file.
 	Username string
 	Password string
+	// DialContext opens the connection the push travels over. See ClientOptions.DialContext.
+	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 }
 
 // StaticCredential turns a username and password into something ClientOptions takes, and
@@ -129,6 +132,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory, tar
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		Credential:            StaticCredential(host, opts.Username, opts.Password),
+		DialContext:           opts.DialContext,
 	})
 	if err != nil {
 		return err
