@@ -31,6 +31,7 @@ import (
 
 	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
@@ -161,13 +162,14 @@ func initCluster(ctx context.Context, opt InstallCommon) (clusterapi.Cluster, er
 // definition in process and brings the layout straight here. Everything below this point is
 // identical either way, which is the point -- a dev loop that resolved values differently from a
 // real apply would be worse than no dev loop.
+//
+// What it still owns is the --values plumbing: reading those files is flag handling, so it stays
+// here rather than moving behind action.NewManager, which takes the merged result.
 func managerFromLayout(ctx context.Context, cluster clusterapi.Cluster, distroLayout *layout.DistroLayout, opt InstallCommon) (*phase.Manager, error) {
-	logger.From(ctx).Debug("distro information", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
-
-	// The cluster file overrides the values the package was built with, --values
-	// overrides both, and the result is checked against the package's schema here,
-	// before any phase runs.
-	overrides := []map[string]any{cluster.Spec.Config.Values}
+	// The cluster file overrides the values the package was built with and --values overrides
+	// both, so the flag files go on last. NewManager merges them after the inventory's own
+	// spec.config.values and checks the result against the package's schema before any phase runs.
+	var overrides []map[string]any
 	if len(opt.values) > 0 {
 		fromFlags, err := helmvalues.LoadFiles(ctx, "", "", opt.values)
 		if err != nil {
@@ -176,30 +178,13 @@ func managerFromLayout(ctx context.Context, cluster clusterapi.Cluster, distroLa
 		overrides = append(overrides, fromFlags)
 	}
 
-	values, err := distroLayout.Values(ctx, overrides...)
-	if err != nil {
-		return nil, err
-	}
-	// Both of these resolve the package against the values before any phase runs: the
-	// first renders and maps the engine configuration, the second renders the contents of
-	// the files the package marked as templates, in place in the extracted package.
-	if err := distroLayout.ApplyValues(values); err != nil {
-		return nil, err
-	}
-	if err := distroLayout.RenderFiles(ctx, values); err != nil {
-		return nil, err
-	}
-
-	return &phase.Manager{
-		Config:            &cluster,
-		Distro:            &distroLayout.Distro,
-		Values:            values,
-		DistroID:          distroLayout.Distro.Spec.Type,
-		TempDirectory:     distroLayout.DirPath(),
-		Concurrency:       opt.concurrency,
-		ConcurrentUploads: opt.concurrency,
-		DryRun:            opt.dryRun,
-	}, nil
+	return action.NewManager(ctx, action.ManagerOptions{
+		Cluster:        cluster,
+		Layout:         distroLayout,
+		ValueOverrides: overrides,
+		Concurrency:    opt.concurrency,
+		DryRun:         opt.dryRun,
+	})
 }
 
 // requireConfirm enforces the --confirm gate for a command that changes the hosts it is pointed at.

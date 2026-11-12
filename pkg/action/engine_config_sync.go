@@ -52,7 +52,7 @@ type EngineConfigSync struct {
 
 // NewEngineConfigSync an engine-config-sync action object
 func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error) {
-	d, err := distroModule(opts.Manager.DistroID)
+	d, err := DistroModule(opts.Manager.DistroID)
 	if err != nil {
 		return nil, err
 	}

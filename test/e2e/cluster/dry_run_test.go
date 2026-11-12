@@ -284,7 +284,7 @@ func (s *DryRunSuite) requireHostsUntouched(hosts apicluster.Hosts) {
 func distroControllerService(t *testing.T) string {
 	t.Helper()
 
-	dis, err := distroModule(distroID())
+	dis, err := action.DistroModule(distroID())
 	if err != nil {
 		t.Fatalf("no distro module for %q: %v", distroID(), err)
 	}

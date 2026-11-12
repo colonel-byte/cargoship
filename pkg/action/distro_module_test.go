@@ -77,7 +77,7 @@ func TestConstructorsRejectADistroTheyCannotBuild(t *testing.T) {
 // TestDistroModuleBuildsARegisteredDistro is the other half: the error paths above are only
 // useful if the success path still returns a module.
 func TestDistroModuleBuildsARegisteredDistro(t *testing.T) {
-	d, err := distroModule("k3s")
+	d, err := DistroModule("k3s")
 	require.NoError(t, err)
 	require.NotNil(t, d)
 }

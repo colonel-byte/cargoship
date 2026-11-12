@@ -57,7 +57,7 @@ type Reset struct {
 
 // NewReset an apply action object
 func NewReset(opts ResetOptions) (*Reset, error) {
-	d, err := distroModule(opts.Manager.DistroID)
+	d, err := DistroModule(opts.Manager.DistroID)
 	if err != nil {
 		return nil, err
 	}

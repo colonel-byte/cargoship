@@ -278,7 +278,7 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 	s.Require().NoError(reconnectHosts(s.ctx, manager))
 	defer disconnectAll(manager.Config.Spec.Hosts)
 
-	dis, err := distroModule(distroID())
+	dis, err := action.DistroModule(distroID())
 	s.Require().NoError(err)
 	service := dis.GetControllerService()
 	for _, host := range manager.Config.Spec.Hosts.Controllers() {
@@ -313,7 +313,7 @@ func (s *ResetSuite) Test_1_Reset() {
 // The paths come from the distro rather than being written out here, so a distro that starts
 // managing another one is covered without this test being touched.
 func (s *ResetSuite) Test_2_ResetRemovesWhatItManages() {
-	dis, err := distroModule(distroID())
+	dis, err := action.DistroModule(distroID())
 	s.Require().NoError(err)
 
 	manager := s.newBareManager(e2e.ClusterConfigPath)

@@ -58,7 +58,7 @@ type KubeConfig struct {
 
 // NewKubeConfig pulls the admin cert from a control-plane node and updates the local kube-config
 func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error) {
-	d, err := distroModule(opts.Manager.DistroID)
+	d, err := DistroModule(opts.Manager.DistroID)
 	if err != nil {
 		return nil, err
 	}
