@@ -80,7 +80,7 @@ type Apply struct {
 
 // NewApply an apply action object
 func NewApply(opts ApplyOptions) (*Apply, error) {
-	d, err := distroModule(opts.Manager.DistroID)
+	d, err := DistroModule(opts.Manager.DistroID)
 	if err != nil {
 		return nil, err
 	}

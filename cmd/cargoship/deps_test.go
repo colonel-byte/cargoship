@@ -36,9 +36,18 @@ import (
 // Prefixes rather than exact paths, so a package added under the tree is covered without this
 // list being updated. One entry per line, because keep-sorted sorts lines: a multi-line struct
 // literal between its markers is reordered into something that does not compile.
+// The Cluster API provider is the second out-of-tree consumer, and the two entries below are its
+// half of the same bargain. Its controllers link sigs.k8s.io/cluster-api and
+// sigs.k8s.io/controller-runtime, which between them pull k8s.io/api and all 59 API groups -- the
+// tree docs/agent/choice-dynamic-kube-client.md prices at roughly 24MB against a 39MiB binary, and
+// the reason this repo uses the dynamic client rather than the typed one. The provider lives in
+// colonel-byte/cluster-api-provider-cargoship and consumes this module as a library, so nothing
+// here should ever reach them; see docs/agent/choice-capi-provider.md.
 var forbiddenDeps = map[string]string{
 	// keep-sorted start
 	"github.com/hashicorp/terraform-plugin": "a plugin framework and its protocol libraries",
+	"sigs.k8s.io/cluster-api":               "the Cluster API types, which link k8s.io/api in full",
+	"sigs.k8s.io/controller-runtime":        "a controller runtime, its manager, caches and webhooks",
 	// keep-sorted end
 }
 

@@ -26,7 +26,7 @@ import (
 // one no module claims.
 var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set distro.type in the cargoship config file")
 
-// distroModule builds the distro module named by id.
+// DistroModule builds the distro module named by id.
 //
 // Every action needs this and each used to inline it, which is how three of them came to drop the
 // error on the floor and hand their caller a nil action to call a method on. Both failures belong
@@ -36,7 +36,7 @@ var ErrNoDistroSelected = errors.New("no distro selected: pass --distro, or set 
 // command invoked with no --distro, outside a directory holding a cargoship config file and with
 // no CARGOSHIP_CONFIG set, reaches here with "", and a module-not-found error does not tell an
 // operator what to pass.
-func distroModule(id string) (distrocfg.Distro, error) {
+func DistroModule(id string) (distrocfg.Distro, error) {
 	if id == "" {
 		return nil, ErrNoDistroSelected
 	}

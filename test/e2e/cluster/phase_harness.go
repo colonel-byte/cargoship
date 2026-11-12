@@ -22,12 +22,12 @@ import (
 
 	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/colonel-byte/cargoship/pkg/riglogger"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
-	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -92,6 +92,10 @@ func cachePath() (string, error) {
 // distro.Load. It returns the distro module alongside it, the value the actions hand to
 // every distro-aware phase.
 //
+// The value resolution the walk depends on -- ApplyValues, RenderFiles, and handing the resolved
+// values to the manager -- is action.NewManager's, which is the point: this harness used to carry
+// its own copy of that ordering and resolved values differently from a real apply.
+//
 // The manager owns the extracted package at manager.TempDirectory. The caller removes it,
 // the way each command does on the way out.
 func newManager(
@@ -114,7 +118,7 @@ func newManager(
 		return nil, nil, err
 	}
 
-	layout, err := distro.Load(ctx, pkgPath, distro.LoadOptions{
+	distroLayout, err := distro.Load(ctx, pkgPath, distro.LoadOptions{
 		CachePath:    cache,
 		Architecture: config.CLIArch,
 		Output:       config.CommonOptions.TempDirectory,
@@ -123,46 +127,19 @@ func newManager(
 		return nil, nil, fmt.Errorf("failed to load distro package %s: %w", pkgPath, err)
 	}
 
-	// Resolve the package against its values before any phase runs, the way cmd/common.go
-	// does: ApplyValues renders and maps the engine configuration, RenderFiles renders the
-	// files the package marked as templates. Without these the walk installs a flavor whose
-	// engine config still holds raw `{{ ... }}`, which reaches the host as invalid YAML -
-	// rke2-multi-cni-cilium's HelmChartConfig did, and the CNI never installed.
-	values, err := layout.Values(ctx, inventory.Spec.Config.Values)
+	manager, err := action.NewManager(ctx, action.ManagerOptions{
+		Cluster:     inventory,
+		Layout:      distroLayout,
+		Concurrency: concurrency,
+		Timeout:     timeout,
+	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to resolve the values for %s: %w", pkgPath, err)
-	}
-	if err := layout.ApplyValues(values); err != nil {
-		return nil, nil, fmt.Errorf("failed to apply the values for %s: %w", pkgPath, err)
-	}
-	if err := layout.RenderFiles(ctx, values); err != nil {
-		return nil, nil, fmt.Errorf("failed to render the templated files of %s: %w", pkgPath, err)
+		return nil, nil, fmt.Errorf("failed to build the phase manager for %s: %w", pkgPath, err)
 	}
 
-	dis, err := distroModule(layout.Distro.Spec.Type)
+	dis, err := action.DistroModule(manager.DistroID)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	if concurrency < 0 {
-		concurrency = 0
-	}
-
-	manager := &phase.Manager{
-		Config:            &inventory,
-		Distro:            &layout.Distro,
-		DistroID:          layout.Distro.Spec.Type,
-		TempDirectory:     layout.DirPath(),
-		Concurrency:       concurrency,
-		ConcurrentUploads: concurrency,
-		// The resolved values, as cmd/common.go hands them over. Without this every
-		// `when`-gated file is skipped for the whole walk, whatever the inventory sets:
-		// the gate reads manager.Values, and a nil map has no path set.
-		Values: values,
-		Writer: os.Stdout,
-	}
-	if timeout > 0 {
-		manager.SetTimeout(timeout)
 	}
 
 	return manager, dis, nil
@@ -181,30 +158,11 @@ func newBareManager(ctx context.Context, configPath, distroID string, concurrenc
 		return nil, fmt.Errorf("failed to load cluster inventory %s: %w", configPath, err)
 	}
 
-	if concurrency < 0 {
-		concurrency = 0
-	}
-
-	return &phase.Manager{
-		Config:            &inventory,
-		DistroID:          distroID,
-		Concurrency:       concurrency,
-		ConcurrentUploads: concurrency,
-		Writer:            os.Stdout,
-	}, nil
-}
-
-// distroModule resolves a distro type to the module the phases are built with.
-func distroModule(distroType string) (distrocfg.Distro, error) {
-	builder, err := registry.GetDistroModuleBuilder(distroType)
-	if err != nil {
-		return nil, fmt.Errorf("no distro module for %q: %w", distroType, err)
-	}
-	dis, ok := builder().(distrocfg.Distro)
-	if !ok {
-		return nil, fmt.Errorf("distro module for %q does not implement distrocfg.Distro", distroType)
-	}
-	return dis, nil
+	return action.NewManager(ctx, action.ManagerOptions{
+		Cluster:     inventory,
+		DistroID:    distroID,
+		Concurrency: concurrency,
+	})
 }
 
 // newPhaseHarness loads pkgPath and configPath into a manager the phase tests can step
