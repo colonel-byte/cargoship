@@ -1,6 +1,6 @@
 module github.com/colonel-byte/cargoship
 
-go 1.27.3
+go 1.27.4
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.1
