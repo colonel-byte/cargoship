@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-86d396b3.js";
+            window.path_to_searchindex_js = "searchindex-24043a17.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-10f08c0d.js"></script>
@@ -921,7 +921,7 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
 <p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
 <p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="#running-cargoship-as-an-ansible-module">ansible-module</a>, and for the inventory they translate, <a href="#generating-an-inventory-from-ansible">ansible-inv</a>. Nothing about either changes inside the container.</p>
 <!-- x-release-please-start-version -->
-<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.41.0
+<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.41.1
 </code></pre>
 <!-- x-release-please-end-version -->
 <p>The image has no <code>ENTRYPOINT</code>, because a run legitimately reaches for <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code> or <code>cargoship</code> itself; name the command you want. The collection is installed to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path, so <code>ansible-playbook</code> resolves <code>colonel_byte.cargoship.cargoship_apply</code> with no configuration. <code>HOME</code> is <code>/home/nonroot</code>, the working directory is <code>/workspace</code>, and the process runs as UID and GID 65532.</p>
@@ -961,7 +961,7 @@ chmod 0644 build/tmp/zarf-config.yaml
   -v "$PWD/build/tmp/zarf-config.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.41.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.41.1 \
   ansible-playbook init.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -975,7 +975,7 @@ chmod 0644 kubeconfig.yaml
   --network host \
   -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.41.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.41.1 \
   cargoship version
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -992,7 +992,7 @@ chmod 0644 kubeconfig.yaml
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.41.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.41.1 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -1005,7 +1005,7 @@ chmod 0644 kubeconfig.yaml
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.41.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.41.1 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -1018,7 +1018,7 @@ podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.41.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.41.1 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -1041,7 +1041,7 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.41.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.41.1 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -1254,9 +1254,9 @@ cargoship apply ./package.tar.zst --config ./inventory.yaml --confirm
 <p>Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.</p>
 <!-- x-release-please-start-version -->
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
-  --bundle colonel_byte-cargoship-0.41.0.tar.gz.sigstore.json \
-  colonel_byte-cargoship-0.41.0.tar.gz
-ansible-galaxy collection install colonel_byte-cargoship-0.41.0.tar.gz
+  --bundle colonel_byte-cargoship-0.41.1.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.41.1.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.41.1.tar.gz
 ./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -3051,7 +3051,7 @@ $ cargoship apply ./package.tar.zst --config ./cargoship-config.yaml --confirm
 <!-- x-release-please-start-version -->
 <pre><code class="language-yaml">- name: Install cargoship
   env:
-    VERSION: v0.41.0
+    VERSION: v0.41.1
   run: |
     set -euo pipefail
     curl -fsSLO "https://github.com/colonel-byte/cargoship/releases/download/${VERSION}/cargoship_Linux_x86_64.tar.gz"
@@ -11077,12 +11077,25 @@ nft add rule inet airgap out oifname enp0s3 drop
 <p>Don’t expand this into re-covering Tier 1/2 logic through a registry “for realism” – that’s duplicated effort for the same reason <code>pkg/action</code>’s punch list (<code>todo-pkg-action-unit-tests.md</code>) says not to re-prove wiring the e2e suite already proves. The value here is specifically the registry-interaction code paths (auth, tagging, index read-modify-write against a real target, oras.Copy semantics) that the Tier 2 fakes cannot exercise.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
+<h2 id="0411-2026-11-12"><a class="header" href="#0411-2026-11-12"><a href="https://github.com/colonel-byte/cargoship/compare/v0.41.0...v0.41.1">0.41.1</a> (2026-11-12)</a></h2>
+<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<ul>
+<li><strong>action:</strong> export the phase manager constructor (<a href="https://github.com/colonel-byte/cargoship/issues/1100">#1100</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/25e145892885d18c6a9582ed2456a909906db1e4">25e1458</a>)</li>
+</ul>
+<h3 id="build"><a class="header" href="#build">Build</a></h3>
+<ul>
+<li><strong>deps:</strong> bump github.com/klauspost/compress from 1.20.3 to 1.20.4 (<a href="https://github.com/colonel-byte/cargoship/issues/1099">#1099</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ec6daa0c749a1765f455d37e090edeb5aa18e1b1">ec6daa0</a>)</li>
+<li><strong>deps:</strong> bump github.com/nao1215/markdown from 1.1.1 to 1.1.2 (<a href="https://github.com/colonel-byte/cargoship/issues/1098">#1098</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/78575ce3511158b5fea56ce950c0ed343445b97f">78575ce</a>)</li>
+<li><strong>deps:</strong> bump library/alpine from <code>be26560</code> to <code>f59abe6</code> in /containers/base (<a href="https://github.com/colonel-byte/cargoship/issues/1095">#1095</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/25203aff224c804c5e22d6e1fab113b22c22cb27">25203af</a>)</li>
+<li><strong>deps:</strong> bump the golang group with 2 updates (<a href="https://github.com/colonel-byte/cargoship/issues/1093">#1093</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/df10d0866917822829b685bdec6ab28ea63485e6">df10d08</a>)</li>
+<li><strong>deps:</strong> bump the golang group with 3 updates (<a href="https://github.com/colonel-byte/cargoship/issues/1097">#1097</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/eaf18059c510bfd97c1bb271e1993323b39419b0">eaf1805</a>)</li>
+</ul>
 <h2 id="0410-2026-11-09"><a class="header" href="#0410-2026-11-09"><a href="https://github.com/colonel-byte/cargoship/compare/v0.40.0...v0.41.0">0.41.0</a> (2026-11-09)</a></h2>
 <h3 id="-breaking-changes"><a class="header" href="#-breaking-changes">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li><strong>cli:</strong> make -c always concurrency and -f always the config file (<a href="https://github.com/colonel-byte/cargoship/issues/1071">#1071</a>)</li>
 </ul>
-<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<h3 id="features-1"><a class="header" href="#features-1">Features</a></h3>
 <ul>
 <li><strong>ansible:</strong> declare a profile in the group_vars that selects it (<a href="https://github.com/colonel-byte/cargoship/issues/1063">#1063</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/72b215f1b7692bc1e32aa89d9ab4efb3d5136d0f">72b215f</a>)</li>
 <li><strong>ansible:</strong> publish a schema for the host variables cargoship reads (<a href="https://github.com/colonel-byte/cargoship/issues/1077">#1077</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1da7c36a2b6ec7c9a19b851c86ae6b0fd3e852ec">1da7c36</a>)</li>
@@ -11107,7 +11120,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>ansible:</strong> add a playbook that links a staged binary into the collection (<a href="https://github.com/colonel-byte/cargoship/issues/1065">#1065</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d4ba6c4b1b51df80a411f7456006cdbb55e3497b">d4ba6c4</a>)</li>
 <li><strong>cli:</strong> cap flag help at 125 characters and render the flag groups (<a href="https://github.com/colonel-byte/cargoship/issues/1074">#1074</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/cc1998b9b0446d38bf13d054e100f7c66d94f712">cc1998b</a>)</li>
 </ul>
-<h3 id="build"><a class="header" href="#build">Build</a></h3>
+<h3 id="build-1"><a class="header" href="#build-1">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/andybalholm/brotli from 1.2.7 to 1.2.8 (<a href="https://github.com/colonel-byte/cargoship/issues/1090">#1090</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/61f1fdd479cf195f4eedfad0b4dc8cbdc3eba175">61f1fdd</a>)</li>
 <li><strong>deps:</strong> bump github.com/docker/cli from 29.9.2+incompatible to 29.9.3+incompatible in the docker group (<a href="https://github.com/colonel-byte/cargoship/issues/1085">#1085</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1f6b917c4f4c1eb4865ef686b1934a68cf601933">1f6b917</a>)</li>
@@ -11129,7 +11142,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>sha256sum:</strong> compute the digest of a file in an oci:// artifact (<a href="https://github.com/colonel-byte/cargoship/issues/1046">#1046</a>)</li>
 <li><strong>assemble:</strong> let a file source name an oci:// reference (<a href="https://github.com/colonel-byte/cargoship/issues/1045">#1045</a>)</li>
 </ul>
-<h3 id="features-1"><a class="header" href="#features-1">Features</a></h3>
+<h3 id="features-2"><a class="header" href="#features-2">Features</a></h3>
 <ul>
 <li><strong>assemble:</strong> let a file source name an oci:// reference (<a href="https://github.com/colonel-byte/cargoship/issues/1045">#1045</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/54aabb67deee7767716adba57b3b314cf7c827f5">54aabb6</a>)</li>
 <li><strong>assemble:</strong> record and pin the digest an oci:// file source resolved to (<a href="https://github.com/colonel-byte/cargoship/issues/1051">#1051</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/bb27376e6e3c2330a8b716f383d3b0deee766ae4">bb27376</a>)</li>
@@ -11155,7 +11168,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>deps:</strong> update rancher distro pins to v1.37.2, v1.36.6, v1.35.10 (<a href="https://github.com/colonel-byte/cargoship/issues/1040">#1040</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4c2b9a93b50b18b5e83385c5ef0d4479f5385ebd">4c2b9a9</a>)</li>
 <li><strong>examples:</strong> add the rendered k3s-oci examples (<a href="https://github.com/colonel-byte/cargoship/issues/1053">#1053</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ce3fe1d9d640d28af1480d180cdce04e93680c1a">ce3fe1d</a>)</li>
 </ul>
-<h3 id="build-1"><a class="header" href="#build-1">Build</a></h3>
+<h3 id="build-2"><a class="header" href="#build-2">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/Azure/azure-sdk-for-go/sdk/azcore from 1.23.3 to 1.24.0 in the cloud-kms group (<a href="https://github.com/colonel-byte/cargoship/issues/1035">#1035</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/55b5ab3c8e52c37d53ec52f940f19fb595d13930">55b5ab3</a>)</li>
 <li><strong>deps:</strong> bump github.com/go-jose/go-jose/v4 from 4.1.7 to 4.1.8 (<a href="https://github.com/colonel-byte/cargoship/issues/1038">#1038</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6befcaadc445aa8401cacb373313907065b1efac">6befcaa</a>)</li>
@@ -11170,7 +11183,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>cmd:</strong> add clean-cache under a new dev group, drop vault-encrypt (<a href="https://github.com/colonel-byte/cargoship/issues/1021">#1021</a>)</li>
 <li><strong>pkg:</strong> allow creation from a zarf package (<a href="https://github.com/colonel-byte/cargoship/issues/1015">#1015</a>)</li>
 </ul>
-<h3 id="features-2"><a class="header" href="#features-2">Features</a></h3>
+<h3 id="features-3"><a class="header" href="#features-3">Features</a></h3>
 <ul>
 <li><strong>api:</strong> reject a registry rewrite referencing an uncaptured group (<a href="https://github.com/colonel-byte/cargoship/issues/1029">#1029</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2642b90b1352453ec8c1df5ce65e2e5badafe9cb">2642b90</a>)</li>
 <li><strong>assemble:</strong> cache the archives an extractPath file is extracted from (<a href="https://github.com/colonel-byte/cargoship/issues/1020">#1020</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c8ed947c96aa534fac5f17c6f4b91377fb3f4208">c8ed947</a>)</li>
@@ -11188,7 +11201,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>examples:</strong> render the hauler manifests with the registry annotation (<a href="https://github.com/colonel-byte/cargoship/issues/1031">#1031</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/57fcadd80702a6674ed50af495edd6e675d7e585">57fcadd</a>)</li>
 </ul>
-<h3 id="build-2"><a class="header" href="#build-2">Build</a></h3>
+<h3 id="build-3"><a class="header" href="#build-3">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump go.yaml.in/yaml/v2 from 2.4.4 to 2.4.5 (<a href="https://github.com/colonel-byte/cargoship/issues/1028">#1028</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/46b6d4206e2fb167ba3341aef47df8d961f70861">46b6d42</a>)</li>
 </ul>
@@ -11198,7 +11211,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>cmd:</strong> add –hauler-store and document the workflow (<a href="https://github.com/colonel-byte/cargoship/issues/981">#981</a>)</li>
 <li><strong>images:</strong> fail an unresolvable image instead of silently dropping it (<a href="https://github.com/colonel-byte/cargoship/issues/985">#985</a>)</li>
 </ul>
-<h3 id="features-3"><a class="header" href="#features-3">Features</a></h3>
+<h3 id="features-4"><a class="header" href="#features-4">Features</a></h3>
 <ul>
 <li><strong>assemble:</strong> resolve images and files from a content store (<a href="https://github.com/colonel-byte/cargoship/issues/980">#980</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f8c43d011a385aa9f00a5e58a805406c68e5704b">f8c43d0</a>)</li>
 <li><strong>cmd:</strong> add –hauler-store and document the workflow (<a href="https://github.com/colonel-byte/cargoship/issues/981">#981</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/fb1e5c25c218dd6704434698ebc5034686cab5dd">fb1e5c2</a>)</li>
@@ -11223,7 +11236,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>examples:</strong> refresh generated examples (<a href="https://github.com/colonel-byte/cargoship/issues/986">#986</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/657222ecd83a89834b9915ea38492b26d9bc9348">657222e</a>)</li>
 <li><strong>examples:</strong> regenerate packages with the pod security exemption values (<a href="https://github.com/colonel-byte/cargoship/issues/1009">#1009</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/bb10bbffd34e6dc2b3adb5e8107211a91a7f1fcc">bb10bbf</a>)</li>
 </ul>
-<h3 id="build-3"><a class="header" href="#build-3">Build</a></h3>
+<h3 id="build-4"><a class="header" href="#build-4">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump chainguard/static from <code>9e2306b</code> to <code>fc42af3</code> in /containers/base (<a href="https://github.com/colonel-byte/cargoship/issues/964">#964</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/606d543527470c358ed0b7574045fabc89bbdc27">606d543</a>)</li>
 <li><strong>deps:</strong> bump github.com/fxamacker/cbor/v2 from 2.9.6 to 2.10.0 (<a href="https://github.com/colonel-byte/cargoship/issues/996">#996</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1d7235f8c7b60d6ddf7de455887f6ea75fe1a2cd">1d7235f</a>)</li>
@@ -11253,7 +11266,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>remove the OpenTofu provider now that it lives in its own repository (<a href="https://github.com/colonel-byte/cargoship/issues/953">#953</a>)</li>
 </ul>
-<h3 id="features-4"><a class="header" href="#features-4">Features</a></h3>
+<h3 id="features-5"><a class="header" href="#features-5">Features</a></h3>
 <ul>
 <li><strong>examples:</strong> commit release image manifests and verify them against upstream (<a href="https://github.com/colonel-byte/cargoship/issues/955">#955</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9e7f2950b5d050e01970d02b8ae7eb14a96e0bfd">9e7f295</a>)</li>
 <li><strong>examples:</strong> expose the vSphere charts’ vCenter, scheduling and CA settings (<a href="https://github.com/colonel-byte/cargoship/issues/956">#956</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2d282ea673dce885e0349e15047c0fb13a5d625c">2d282ea</a>)</li>
@@ -11274,7 +11287,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>deps:</strong> update fast-uri to 3.1.9 (<a href="https://github.com/colonel-byte/cargoship/issues/954">#954</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8003ab9f85be57e9bb7d8c5c813e9d9b4a10a721">8003ab9</a>)</li>
 <li><strong>examples:</strong> regenerate the vSphere examples for the new values surface (<a href="https://github.com/colonel-byte/cargoship/issues/957">#957</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3a997aa4704aa63a8815f0a79bb194b259ba2bbc">3a997aa</a>)</li>
 </ul>
-<h3 id="build-4"><a class="header" href="#build-4">Build</a></h3>
+<h3 id="build-5"><a class="header" href="#build-5">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump almalinux/10-base from <code>ed618ca</code> to <code>f72ef25</code> in /containers/ansible (<a href="https://github.com/colonel-byte/cargoship/issues/949">#949</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f93b70efb9436728c03c2dcf065eaeed53e4c529">f93b70e</a>)</li>
 <li><strong>deps:</strong> bump almalinux/10-base from <code>ed618ca</code> to <code>f72ef25</code> in /containers/ubi (<a href="https://github.com/colonel-byte/cargoship/issues/948">#948</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4971bbc7645fb96aa256359bff41774292ea03d2">4971bbc</a>)</li>
@@ -11284,7 +11297,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>drop mdbook golang docs (<a href="https://github.com/colonel-byte/cargoship/issues/914">#914</a>)</li>
 </ul>
-<h3 id="features-5"><a class="header" href="#features-5">Features</a></h3>
+<h3 id="features-6"><a class="header" href="#features-6">Features</a></h3>
 <ul>
 <li><strong>api:</strong> read a chart manifest wrapper carrying enabled, images, and values (<a href="https://github.com/colonel-byte/cargoship/issues/944">#944</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ad0f03631705f8599dcb11ecbc15afe1d6f57c17">ad0f036</a>)</li>
 <li><strong>examples:</strong> declare each chart’s images under the chart that needs them (<a href="https://github.com/colonel-byte/cargoship/issues/946">#946</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2cd97f81005b2a2afb87767a73ccb1ef41e29f96">2cd97f8</a>)</li>
@@ -11313,7 +11326,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>image:</strong> drop registry1 and pin the base image straight from cgr.dev (<a href="https://github.com/colonel-byte/cargoship/issues/933">#933</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0ab83a44b501dbebe5157cb1b4e4e4fb933fcfae">0ab83a4</a>)</li>
 </ul>
-<h3 id="build-5"><a class="header" href="#build-5">Build</a></h3>
+<h3 id="build-6"><a class="header" href="#build-6">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/andybalholm/brotli from 1.2.6 to 1.2.7 (<a href="https://github.com/colonel-byte/cargoship/issues/936">#936</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c09e093f7f4b1cd793ad523019bd18f02f4b0f8a">c09e093</a>)</li>
 <li><strong>deps:</strong> bump github.com/docker/cli from 29.9.1+incompatible to 29.9.2+incompatible in the docker group (<a href="https://github.com/colonel-byte/cargoship/issues/903">#903</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f4fe458abbdbf6d85af3d244edf73e5de1b82f81">f4fe458</a>)</li>
@@ -11349,7 +11362,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>release:</strong> assemble the provider artifact with oras-go (<a href="https://github.com/colonel-byte/cargoship/issues/645">#645</a>)</li>
 <li><strong>tofu:</strong> converge a cluster through the cargoship_cluster resource (<a href="https://github.com/colonel-byte/cargoship/issues/618">#618</a>)</li>
 </ul>
-<h3 id="features-6"><a class="header" href="#features-6">Features</a></h3>
+<h3 id="features-7"><a class="header" href="#features-7">Features</a></h3>
 <ul>
 <li><strong>docs:</strong> generate a provider reference from the tofu schemas (<a href="https://github.com/colonel-byte/cargoship/issues/644">#644</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a7da3dd3847bcd318bf4df34495f403aa2c32fbb">a7da3dd</a>)</li>
 <li><strong>package:</strong> import an OCI Image Layout as a native package (<a href="https://github.com/colonel-byte/cargoship/issues/876">#876</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c5b99d32b4cd5c888a73bba2684bb35ddeb96ce1">c5b99d3</a>)</li>
@@ -11392,7 +11405,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>go:</strong> update from 1.27.2 to 1.27.3 (<a href="https://github.com/colonel-byte/cargoship/issues/893">#893</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f1698f788f3b1674d96145a6b78bd2acaaace576">f1698f7</a>)</li>
 </ul>
-<h3 id="build-6"><a class="header" href="#build-6">Build</a></h3>
+<h3 id="build-7"><a class="header" href="#build-7">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/gabriel-vasile/mimetype from 1.4.15 to 1.4.16 (<a href="https://github.com/colonel-byte/cargoship/issues/874">#874</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/122b4e2d922f4b93999d3f1ccfe4bcf535743143">122b4e2</a>)</li>
 <li><strong>deps:</strong> bump github.com/zarf-dev/zarf from 0.87.0 to 0.88.0 (<a href="https://github.com/colonel-byte/cargoship/issues/872">#872</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/237c3d8f0d717f7a2124d4feaee33d44e66f0b42">237c3d8</a>)</li>
@@ -11406,7 +11419,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>deps:</strong> cut the binary from 100 MiB to 39 MiB, and drop keyless signing (<a href="https://github.com/colonel-byte/cargoship/issues/847">#847</a>)</li>
 <li><strong>ansible:</strong> remove the zarf collection, now released from its own repository (<a href="https://github.com/colonel-byte/cargoship/issues/823">#823</a>)</li>
 </ul>
-<h3 id="features-7"><a class="header" href="#features-7">Features</a></h3>
+<h3 id="features-8"><a class="header" href="#features-8">Features</a></h3>
 <ul>
 <li><strong>distro:</strong> add selector.when to make a file’s upload conditional on a value (<a href="https://github.com/colonel-byte/cargoship/issues/834">#834</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a4d14f5b220f8765d26e6df8cf15da3a8f9554a5">a4d14f5</a>)</li>
 <li><strong>distro:</strong> bring the container runtime up for an upstream apply (<a href="https://github.com/colonel-byte/cargoship/issues/841">#841</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7f8a965f2372c0993173439f78327a34e440ba97">7f8a965</a>)</li>
@@ -11438,7 +11451,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add gitignore for build (<a href="https://github.com/colonel-byte/cargoship/issues/830">#830</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/51235ae7f983e1865a382e016cca4848a39450e6">51235ae</a>)</li>
 <li><strong>dependabot:</strong> group the gomod dependency trees that move together (<a href="https://github.com/colonel-byte/cargoship/issues/831">#831</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2efed539390617270b9cefeadcaceaca07727721">2efed53</a>)</li>
 </ul>
-<h3 id="build-7"><a class="header" href="#build-7">Build</a></h3>
+<h3 id="build-8"><a class="header" href="#build-8">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/docker/cli from 29.9.0+incompatible to 29.9.1+incompatible in the docker group (<a href="https://github.com/colonel-byte/cargoship/issues/854">#854</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f8eb17ee3d36001e28635931d2a6bb939540a560">f8eb17e</a>)</li>
 <li><strong>deps:</strong> bump github.com/go-chi/chi/v5 from 5.3.2 to 5.4.0 (<a href="https://github.com/colonel-byte/cargoship/issues/818">#818</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/50270e59f6cc059347be21eba9901ece653d4bd1">50270e5</a>)</li>
@@ -11469,7 +11482,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>api:</strong> drop the Zarf prefix from the owned API types (<a href="https://github.com/colonel-byte/cargoship/issues/794">#794</a>)</li>
 <li><strong>api:</strong> move api/zarf.dev to api/colonel-byte.dev (<a href="https://github.com/colonel-byte/cargoship/issues/793">#793</a>)</li>
 </ul>
-<h3 id="features-8"><a class="header" href="#features-8">Features</a></h3>
+<h3 id="features-9"><a class="header" href="#features-9">Features</a></h3>
 <ul>
 <li><strong>api:</strong> accept colonel-byte.dev/v1alpha1 with Cluster and Distro kinds (<a href="https://github.com/colonel-byte/cargoship/issues/795">#795</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3b1ac3ccdcd691f427ee0913efedf2f70213959a">3b1ac3c</a>)</li>
 <li><strong>cli:</strong> add –receipt-path to the lifecycle commands (<a href="https://github.com/colonel-byte/cargoship/issues/781">#781</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/63ceeaa1315253555b6a1c11723e1082de0cfc80">63ceeaa</a>)</li>
@@ -11494,7 +11507,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>example:</strong> regenerate example packages for the colonel-byte.dev group (<a href="https://github.com/colonel-byte/cargoship/issues/797">#797</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0511fd3cdde7cf12883c44c9df48b52ed3acf27d">0511fd3</a>)</li>
 </ul>
-<h3 id="build-8"><a class="header" href="#build-8">Build</a></h3>
+<h3 id="build-9"><a class="header" href="#build-9">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/aws/aws-sdk-go-v2/service/ecrpublic from 1.47.3 to 1.47.4 (<a href="https://github.com/colonel-byte/cargoship/issues/806">#806</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b05ecf74ca104990b6160f3f096256a7d8566350">b05ecf7</a>)</li>
 <li><strong>deps:</strong> bump github.com/aws/aws-sdk-go-v2/service/kms from 1.61.3 to 1.61.4 (<a href="https://github.com/colonel-byte/cargoship/issues/808">#808</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9bb808bbdc04b1b858753ac67f7e1e995f2262fe">9bb808b</a>)</li>
@@ -11518,7 +11531,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>actions:</strong> exempt dependabot pull request titles from the 100-char cap (<a href="https://github.com/colonel-byte/cargoship/issues/730">#730</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9edcc87e57edf10d514a66f7036d2453c0ab9ee8">9edcc87</a>)</li>
 <li><strong>bot:</strong> raise the dependabot open pull request limit for gomod (<a href="https://github.com/colonel-byte/cargoship/issues/739">#739</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/27624607e5d6da29ab2437fe2eeb75b00ed5ce95">2762460</a>)</li>
 </ul>
-<h3 id="build-9"><a class="header" href="#build-9">Build</a></h3>
+<h3 id="build-10"><a class="header" href="#build-10">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump cloud.google.com/go/auth from 0.24.1-0.20261001053825-dbc26066f70a to 0.24.1 (<a href="https://github.com/colonel-byte/cargoship/issues/761">#761</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/911c84b3870e1225b7d28214f3283d4262ed8d47">911c84b</a>)</li>
 <li><strong>deps:</strong> bump github.com/aws/aws-sdk-go-v2/…/accept-encoding from 1.13.19 to 1.13.20 (<a href="https://github.com/colonel-byte/cargoship/issues/722">#722</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9a0471c153a77ae02e099ea367c110780041040c">9a0471c</a>)</li>
@@ -11568,7 +11581,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>example:</strong> release floor for kubernetes engines (<a href="https://github.com/colonel-byte/cargoship/issues/681">#681</a>)</li>
 <li><strong>tofu:</strong> read a fleet’s facts through the provider (<a href="https://github.com/colonel-byte/cargoship/issues/616">#616</a>)</li>
 </ul>
-<h3 id="features-9"><a class="header" href="#features-9">Features</a></h3>
+<h3 id="features-10"><a class="header" href="#features-10">Features</a></h3>
 <ul>
 <li><strong>cmd:</strong> add a verify command for package signatures (<a href="https://github.com/colonel-byte/cargoship/issues/691">#691</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/648d9207992eddd73c504f158d9a159fa4bbf27e">648d920</a>)</li>
 <li><strong>distro:</strong> add spec.config.os.selinux to the package schema (<a href="https://github.com/colonel-byte/cargoship/issues/661">#661</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/352514098bb5a71206f0862e4eccf2b45a9a293c">3525140</a>)</li>
@@ -11611,7 +11624,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>repo:</strong> add issue forms for build, test, bug, feature, docs, and stack reports (<a href="https://github.com/colonel-byte/cargoship/issues/706">#706</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/815fec269e30e437b867a3a118da0e05e4e959c8">815fec2</a>)</li>
 </ul>
-<h3 id="build-10"><a class="header" href="#build-10">Build</a></h3>
+<h3 id="build-11"><a class="header" href="#build-11">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/go-openapi/analysis from 1.0.0 to 1.0.1 (<a href="https://github.com/colonel-byte/cargoship/issues/648">#648</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3f5b368faf80c7307d247cb53c966a095f9aed94">3f5b368</a>)</li>
 <li><strong>deps:</strong> bump github.com/go-openapi/strfmt from 0.27.2 to 0.27.3 (<a href="https://github.com/colonel-byte/cargoship/issues/651">#651</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0caf1ce69de485fcfa54a0297ab83c26354d5048">0caf1ce</a>)</li>
@@ -11631,7 +11644,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>ansible:</strong> add read-only zarf modules and the roles that wrap them (<a href="https://github.com/colonel-byte/cargoship/issues/630">#630</a>)</li>
 </ul>
-<h3 id="features-10"><a class="header" href="#features-10">Features</a></h3>
+<h3 id="features-11"><a class="header" href="#features-11">Features</a></h3>
 <ul>
 <li><strong>ansible:</strong> add read-only zarf modules and the roles that wrap them (<a href="https://github.com/colonel-byte/cargoship/issues/630">#630</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/60219405d1f2ed3b8a1fe2d12803edb9a2cd3dcb">6021940</a>)</li>
 <li><strong>ansible:</strong> let zarf_package_inspect require a package signature (<a href="https://github.com/colonel-byte/cargoship/issues/633">#633</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5e81e2c5dbfcac7716e2b74bdf4595108ce5f0dc">5e81e2c</a>)</li>
@@ -11645,7 +11658,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>ansible:</strong> describe the read-only modules and render version_added (<a href="https://github.com/colonel-byte/cargoship/issues/635">#635</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5821f40b1175ae0ab043b4fa7307843ff46ce6b5">5821f40</a>)</li>
 </ul>
-<h3 id="build-11"><a class="header" href="#build-11">Build</a></h3>
+<h3 id="build-12"><a class="header" href="#build-12">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump anchore/sbom-action/download-syft from 0.24.2 to 0.24.3 in the core group (<a href="https://github.com/colonel-byte/cargoship/issues/628">#628</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/fc5d08208557a0616f9db560d47d636064e6ff2a">fc5d082</a>)</li>
 <li><strong>deps:</strong> bump github.com/google/s2a-go from 0.1.10 to 0.1.11 (<a href="https://github.com/colonel-byte/cargoship/issues/642">#642</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/85cc30c461b322e797f10cf16ac23faba1b70024">85cc30c</a>)</li>
@@ -11668,7 +11681,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>ansible:</strong> add the colonel_byte.zarf collection (<a href="https://github.com/colonel-byte/cargoship/issues/599">#599</a>)</li>
 <li><strong>zarfmod:</strong> answer Ansible as zarf_init and zarf_package_deploy (<a href="https://github.com/colonel-byte/cargoship/issues/598">#598</a>)</li>
 </ul>
-<h3 id="features-11"><a class="header" href="#features-11">Features</a></h3>
+<h3 id="features-12"><a class="header" href="#features-12">Features</a></h3>
 <ul>
 <li><strong>ansible:</strong> add the colonel_byte.zarf collection (<a href="https://github.com/colonel-byte/cargoship/issues/599">#599</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/592ffb3281a4bc4a861c8a896f81d2da1baa0fa8">592ffb3</a>)</li>
 <li>bootstrap single-controller upstream cluster (<a href="https://github.com/colonel-byte/cargoship/issues/512">#512</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c4abc64223ede6c36db22703bbfed2616d89cd6">9c4abc6</a>)</li>
@@ -11702,7 +11715,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>git:</strong> mark every generated path linguist-generated (<a href="https://github.com/colonel-byte/cargoship/issues/597">#597</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6a552e4fbdb02b398fa458f5478d46ed558253fc">6a552e4</a>)</li>
 </ul>
-<h3 id="build-12"><a class="header" href="#build-12">Build</a></h3>
+<h3 id="build-13"><a class="header" href="#build-13">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/andybalholm/brotli from 1.2.5 to 1.2.6 (<a href="https://github.com/colonel-byte/cargoship/issues/612">#612</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/27d3f410e272a6f9fc244fe7eec1e1ab55fe8c23">27d3f41</a>)</li>
 <li><strong>deps:</strong> bump github.com/Azure/azure-sdk-for-go/sdk/internal from 1.12.0 to 1.13.0 (<a href="https://github.com/colonel-byte/cargoship/issues/613">#613</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/08dd9c6d31c891f64b5c37bcb7e5d1b2d6ab110d">08dd9c6</a>)</li>
@@ -11719,7 +11732,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>reset:</strong> remove the hosts, firewall, and fapolicyd flags it never read (<a href="https://github.com/colonel-byte/cargoship/issues/573">#573</a>)</li>
 <li>enable merge queue on main branch (<a href="https://github.com/colonel-byte/cargoship/issues/552">#552</a>)</li>
 </ul>
-<h3 id="features-12"><a class="header" href="#features-12">Features</a></h3>
+<h3 id="features-13"><a class="header" href="#features-13">Features</a></h3>
 <ul>
 <li><strong>create:</strong> add –file-override to mirror file downloads (<a href="https://github.com/colonel-byte/cargoship/issues/548">#548</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/814694e6fb5f4ebbb05f8cd1fe5011b6640f08c0">814694e</a>)</li>
 <li><strong>create:</strong> record per-file provenance for overridden downloads (<a href="https://github.com/colonel-byte/cargoship/issues/549">#549</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ac27c42f037bc7e2b92d0ce35e5826ff8823039c">ac27c42</a>)</li>
@@ -11760,7 +11773,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>remove 32bit support (<a href="https://github.com/colonel-byte/cargoship/issues/590">#590</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7a59b8b799f347744831a757fb084ef758ef42a">d7a59b8</a>)</li>
 <li>update Dependabot schedule to daily for gomod and pre-commit (<a href="https://github.com/colonel-byte/cargoship/issues/578">#578</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8b2df63f48cedf203a7054ad796373910760f739">8b2df63</a>)</li>
 </ul>
-<h3 id="build-13"><a class="header" href="#build-13">Build</a></h3>
+<h3 id="build-14"><a class="header" href="#build-14">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump almalinux/10-base from <code>f110fee</code> to <code>ed618ca</code> in /containers/ansible (<a href="https://github.com/colonel-byte/cargoship/issues/580">#580</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/15c57d092d9658d56b4246b48cc26e261e481ce6">15c57d0</a>)</li>
 <li><strong>deps:</strong> bump almalinux/10-minimal from <code>ee053be</code> to <code>1c0191d</code> in /containers/ubi (<a href="https://github.com/colonel-byte/cargoship/issues/579">#579</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/829a09e0351a2c57f2ebb68f8e91cb7ae1de0199">829a09e</a>)</li>
@@ -11779,7 +11792,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>deps:</strong> bump sigs.k8s.io/kustomize/kyaml from 0.21.1 to 0.21.2 (<a href="https://github.com/colonel-byte/cargoship/issues/588">#588</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/70668f0383b25fd20be2ed13c9e61ccc4ba6f8e9">70668f0</a>)</li>
 </ul>
 <h2 id="0282-2026-09-30"><a class="header" href="#0282-2026-09-30"><a href="https://github.com/colonel-byte/cargoship/compare/v0.28.1...v0.28.2">0.28.2</a> (2026-09-30)</a></h2>
-<h3 id="features-13"><a class="header" href="#features-13">Features</a></h3>
+<h3 id="features-14"><a class="header" href="#features-14">Features</a></h3>
 <ul>
 <li><strong>install:</strong> address issue when dnf pin is not present (<a href="https://github.com/colonel-byte/cargoship/issues/543">#543</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d27943c1816b3324985f813b72d2bb554ea1f66e">d27943c</a>)</li>
 </ul>
@@ -11791,12 +11804,12 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>agents:</strong> symlink CLAUDE.md to AGENTS.md and warn on its root-only scope (<a href="https://github.com/colonel-byte/cargoship/issues/545">#545</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/09d5858c40fb33dc3ad09890765ae81ceabc48f8">09d5858</a>)</li>
 </ul>
-<h3 id="build-14"><a class="header" href="#build-14">Build</a></h3>
+<h3 id="build-15"><a class="header" href="#build-15">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump https://github.com/golangci/golangci-lint from v2.13.2 to 2.14.0 in the core group (<a href="https://github.com/colonel-byte/cargoship/issues/541">#541</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4328aab4c822632b2dd8625403da34a2c18c67eb">4328aab</a>)</li>
 </ul>
 <h2 id="0281-2026-09-30"><a class="header" href="#0281-2026-09-30"><a href="https://github.com/colonel-byte/cargoship/compare/v0.28.0...v0.28.1">0.28.1</a> (2026-09-30)</a></h2>
-<h3 id="features-14"><a class="header" href="#features-14">Features</a></h3>
+<h3 id="features-15"><a class="header" href="#features-15">Features</a></h3>
 <ul>
 <li><strong>drift:</strong> move files around to make sense (<a href="https://github.com/colonel-byte/cargoship/issues/540">#540</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/098ac1b109ec5accc5e905e84bacf6dd5fed9880">098ac1b</a>)</li>
 <li>install and pin upstream kubeadm packages (<a href="https://github.com/colonel-byte/cargoship/issues/509">#509</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/dbe72cb9495912dc01c45732a7cf311d4e910805">dbe72cb</a>)</li>
@@ -11811,7 +11824,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>examples:</strong> update versions (<a href="https://github.com/colonel-byte/cargoship/issues/537">#537</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/dd0959b821ca42265dbf71f609c866f0382a1fa8">dd0959b</a>)</li>
 <li><strong>releaser:</strong> update config to address build issues (<a href="https://github.com/colonel-byte/cargoship/issues/539">#539</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/10ef7ccf562f02aa3ebaff5813fb5fd873f56906">10ef7cc</a>)</li>
 </ul>
-<h3 id="build-15"><a class="header" href="#build-15">Build</a></h3>
+<h3 id="build-16"><a class="header" href="#build-16">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/ProtonMail/go-crypto from 1.5.1 to 1.5.2 (<a href="https://github.com/colonel-byte/cargoship/issues/532">#532</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0696e8a60d33827d10f0ecfd444874fc643537ed">0696e8a</a>)</li>
 <li><strong>deps:</strong> bump the core group with 3 updates (<a href="https://github.com/colonel-byte/cargoship/issues/533">#533</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/11c1e7f2a829041e228bc3155fdab634fea328d1">11c1e7f</a>)</li>
@@ -11825,7 +11838,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>move src/ contents to repo root (<a href="https://github.com/colonel-byte/cargoship/issues/503">#503</a>)</li>
 <li>update to v2 rig (<a href="https://github.com/colonel-byte/cargoship/issues/214">#214</a>)</li>
 </ul>
-<h3 id="features-15"><a class="header" href="#features-15">Features</a></h3>
+<h3 id="features-16"><a class="header" href="#features-16">Features</a></h3>
 <ul>
 <li>add k3s single-controller topology for e2e-cluster CI (<a href="https://github.com/colonel-byte/cargoship/issues/504">#504</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f95b31b08b0dcb930fe41b18b4261fc21cd348f9">f95b31b</a>)</li>
 <li>finish the apply walk, from the engine config to disconnect (<a href="https://github.com/colonel-byte/cargoship/issues/273">#273</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8f4830c7ab17706221df2ab6133abccdbaea0285">8f4830c</a>)</li>
@@ -11865,7 +11878,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>publish artifacts on regular basis (<a href="https://github.com/colonel-byte/cargoship/issues/445">#445</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/89085d78629533be47af69ddbca8ea0b700af079">89085d7</a>)</li>
 <li>test-build container images on dependabot docker bumps (<a href="https://github.com/colonel-byte/cargoship/issues/499">#499</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a76827fd0792c649f36d4f5ea1cc3d8aaa6b0567">a76827f</a>)</li>
 </ul>
-<h3 id="build-16"><a class="header" href="#build-16">Build</a></h3>
+<h3 id="build-17"><a class="header" href="#build-17">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump chainguard/cgr.dev/chainguard/static from <code>90b7f22</code> to <code>a6d1bbf</code> (<a href="https://github.com/colonel-byte/cargoship/issues/490">#490</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b547eaef57371719c48acd2ec48eb04b091c1fcb">b547eae</a>)</li>
 <li><strong>deps:</strong> bump chainguard/cgr.dev/chainguard/static from <code>a6d1bbf</code> to <code>f2787f1</code> (<a href="https://github.com/colonel-byte/cargoship/issues/497">#497</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c25c5e858b2e2a69288d6c705da309fb0f90950e">c25c5e8</a>)</li>
@@ -11902,7 +11915,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>modify Cosign verification steps in .goreleaser.yaml (<a href="https://github.com/colonel-byte/cargoship/issues/477">#477</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/efbf83d388c0830b12376092ce57c46b9db12cf1">efbf83d</a>)</li>
 </ul>
 <h2 id="0261-2026-09-22"><a class="header" href="#0261-2026-09-22"><a href="https://github.com/colonel-byte/cargoship/compare/v0.26.0...v0.26.1">0.26.1</a> (2026-09-22)</a></h2>
-<h3 id="features-16"><a class="header" href="#features-16">Features</a></h3>
+<h3 id="features-17"><a class="header" href="#features-17">Features</a></h3>
 <ul>
 <li><strong>cli:</strong> add flag for overriding version (<a href="https://github.com/colonel-byte/cargoship/issues/469">#469</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/472b4b28c64e6e34baa2f0e277ff1cd5723b744b">472b4b2</a>)</li>
 <li><strong>example:</strong> allow overriding pod sec (<a href="https://github.com/colonel-byte/cargoship/issues/470">#470</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9055c02843f68821a5601ac9097a40d0cdab5944">9055c02</a>)</li>
@@ -11918,7 +11931,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>container:</strong> pin dnf packages (<a href="https://github.com/colonel-byte/cargoship/issues/468">#468</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/259f717ce3c605cb7fd5408d1bc0a5cdc58d2079">259f717</a>)</li>
 <li><strong>pin:</strong> update issue search (<a href="https://github.com/colonel-byte/cargoship/issues/473">#473</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/01e35fd93a8d1c1fcf198ef9af1709f3fb585855">01e35fd</a>)</li>
 </ul>
-<h3 id="build-17"><a class="header" href="#build-17">Build</a></h3>
+<h3 id="build-18"><a class="header" href="#build-18">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/ulikunitz/xz from 0.5.16 to 0.5.17 in the misc group (<a href="https://github.com/colonel-byte/cargoship/issues/465">#465</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b00556d59fdb203c3c5c08f7346301487cf3262e">b00556d</a>)</li>
 <li><strong>deps:</strong> bump the cosign group with 2 updates (<a href="https://github.com/colonel-byte/cargoship/issues/464">#464</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/79630658b6dd5a9d8d71bd5c67bce861f2792049">7963065</a>)</li>
@@ -11928,7 +11941,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>address various unsafe repo settings (<a href="https://github.com/colonel-byte/cargoship/issues/446">#446</a>)</li>
 </ul>
-<h3 id="features-17"><a class="header" href="#features-17">Features</a></h3>
+<h3 id="features-18"><a class="header" href="#features-18">Features</a></h3>
 <ul>
 <li><strong>ansible:</strong> add container to goreleaser (<a href="https://github.com/colonel-byte/cargoship/issues/456">#456</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/25667e2ac09563d97620a4b6b633afead9540457">25667e2</a>)</li>
 <li><strong>ansible:</strong> add heartbeat to ansible logs (<a href="https://github.com/colonel-byte/cargoship/issues/458">#458</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7998f65c0144b0279e1a88a2217d5fdf044b5944">7998f65</a>)</li>
@@ -11965,7 +11978,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>mage:</strong> expose osv overrides (<a href="https://github.com/colonel-byte/cargoship/issues/463">#463</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7838fd9292579da6e1460fbeb62a294d30e293ee">7838fd9</a>)</li>
 <li><strong>vendor:</strong> stop scoring vendored JavaScript and Python as cargoship vulns (<a href="https://github.com/colonel-byte/cargoship/issues/447">#447</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d757666d4179529dee89b883f8c9ca969890d842">d757666</a>)</li>
 </ul>
-<h3 id="build-18"><a class="header" href="#build-18">Build</a></h3>
+<h3 id="build-19"><a class="header" href="#build-19">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/docker/cli from 29.8.0 to 29.8.1 (<a href="https://github.com/colonel-byte/cargoship/issues/451">#451</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/54c34a29ab0fa8915ca4ec0aa440b852f0883b1a">54c34a2</a>)</li>
 <li><strong>deps:</strong> bump github.com/zarf-dev/zarf from 0.85.0 to 0.86.0 in the zarf group (<a href="https://github.com/colonel-byte/cargoship/issues/449">#449</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ee26849a9b715ab4348ad23836d91bb1328eaa76">ee26849</a>)</li>
@@ -11982,7 +11995,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>dagger:</strong> remove dagger config (<a href="https://github.com/colonel-byte/cargoship/issues/419">#419</a>)</li>
 </ul>
-<h3 id="features-18"><a class="header" href="#features-18">Features</a></h3>
+<h3 id="features-19"><a class="header" href="#features-19">Features</a></h3>
 <ul>
 <li><strong>vault:</strong> add age receipts (<a href="https://github.com/colonel-byte/cargoship/issues/424">#424</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1d814ee6033ec80947042b33c11c64a7e5a51e43">1d814ee</a>)</li>
 </ul>
@@ -12005,7 +12018,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>cli:</strong> add validate command (<a href="https://github.com/colonel-byte/cargoship/issues/417">#417</a>)</li>
 <li><strong>schema:</strong> generate schema file (<a href="https://github.com/colonel-byte/cargoship/issues/416">#416</a>)</li>
 </ul>
-<h3 id="features-19"><a class="header" href="#features-19">Features</a></h3>
+<h3 id="features-20"><a class="header" href="#features-20">Features</a></h3>
 <ul>
 <li><strong>assemble:</strong> resolve values before the build runs (<a href="https://github.com/colonel-byte/cargoship/issues/403">#403</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8c62cb5aa36318f4bac81e0cc8dce8d259fba8df">8c62cb5</a>)</li>
 <li><strong>cli:</strong> add validate command (<a href="https://github.com/colonel-byte/cargoship/issues/417">#417</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d0ca61866d5b121935f46b38add40d7e978e3f78">d0ca618</a>)</li>
@@ -12026,7 +12039,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>example:</strong> expand packages (<a href="https://github.com/colonel-byte/cargoship/issues/413">#413</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4bcb52331d56d6f1425a31712eb74b9bde440202">4bcb523</a>)</li>
 <li><strong>example:</strong> generate all examples (<a href="https://github.com/colonel-byte/cargoship/issues/412">#412</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4326533f3922c4a9bfd4132e9edd7290f6ec57b1">4326533</a>)</li>
 </ul>
-<h3 id="build-19"><a class="header" href="#build-19">Build</a></h3>
+<h3 id="build-20"><a class="header" href="#build-20">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump chainguard/cgr.dev/chainguard/static from <code>fa805e7</code> to <code>90b7f22</code> (<a href="https://github.com/colonel-byte/cargoship/issues/411">#411</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/902711ac30eddeac653cc184db532c7adfaa77d1">902711a</a>)</li>
 </ul>
@@ -12035,7 +12048,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>change base image for non-ubi image (<a href="https://github.com/colonel-byte/cargoship/issues/399">#399</a>)</li>
 </ul>
-<h3 id="features-20"><a class="header" href="#features-20">Features</a></h3>
+<h3 id="features-21"><a class="header" href="#features-21">Features</a></h3>
 <ul>
 <li><strong>cluster:</strong> accept SSH keys as age keys (<a href="https://github.com/colonel-byte/cargoship/issues/391">#391</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1323ef946c2e4b2897c279efdf2de7904ca5f77e">1323ef9</a>)</li>
 <li><strong>clustercfg:</strong> report registry credentials encrypt-file unchanged (<a href="https://github.com/colonel-byte/cargoship/issues/387">#387</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b850c0946bb958e7273733a5bb866d8516d96611">b850c09</a>)</li>
@@ -12058,7 +12071,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>dependabot:</strong> add docker registry auth (<a href="https://github.com/colonel-byte/cargoship/issues/395">#395</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/30c462306750177ffd7a350a3a1fc4bd4ba5a31b">30c4623</a>)</li>
 <li><strong>dependabot:</strong> add registry1 auth (<a href="https://github.com/colonel-byte/cargoship/issues/398">#398</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/863afa85830258c07e57c4f9331cbed826fc0179">863afa8</a>)</li>
 </ul>
-<h3 id="build-20"><a class="header" href="#build-20">Build</a></h3>
+<h3 id="build-21"><a class="header" href="#build-21">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump sigs.k8s.io/controller-runtime from 0.25.0 to 0.25.1 (<a href="https://github.com/colonel-byte/cargoship/issues/396">#396</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2a24295f7d659776a5790dc6084f918f996a538a">2a24295</a>)</li>
 <li><strong>deps:</strong> bump the misc group across 1 directory with 2 updates (<a href="https://github.com/colonel-byte/cargoship/issues/397">#397</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8b57a7e0aa36cf9b855a7354347d0eb6a9c66a04">8b57a7e</a>)</li>
@@ -12071,7 +12084,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>gorelease:</strong> add ‘latest’ tag (<a href="https://github.com/colonel-byte/cargoship/issues/372">#372</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d4c0f1ed892ef7fce3f742116e75e76c55554912">d4c0f1e</a>)</li>
 </ul>
-<h3 id="build-21"><a class="header" href="#build-21">Build</a></h3>
+<h3 id="build-22"><a class="header" href="#build-22">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump the cosign group with 20 updates (<a href="https://github.com/colonel-byte/cargoship/issues/369">#369</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8f000467b5f612f6bf61f77718a30eb3e70a2367">8f00046</a>)</li>
 <li><strong>deps:</strong> Bump the misc group with 6 updates (<a href="https://github.com/colonel-byte/cargoship/issues/370">#370</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7bc188fc74c85e0ffcdbfb5cd3c3f2ed7c996701">7bc188f</a>)</li>
@@ -12082,7 +12095,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add docker images (<a href="https://github.com/colonel-byte/cargoship/issues/364">#364</a>)</li>
 <li>add code owners file (<a href="https://github.com/colonel-byte/cargoship/issues/366">#366</a>)</li>
 </ul>
-<h3 id="features-21"><a class="header" href="#features-21">Features</a></h3>
+<h3 id="features-22"><a class="header" href="#features-22">Features</a></h3>
 <ul>
 <li><strong>cli:</strong> remove unneeded global flags (<a href="https://github.com/colonel-byte/cargoship/issues/361">#361</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1185e460b5eec1e160adf95cd1e8dbeb5d006e65">1185e46</a>)</li>
 </ul>
@@ -12096,7 +12109,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add docker images (<a href="https://github.com/colonel-byte/cargoship/issues/364">#364</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a3a5070695757712f3d13f8d5c60f39490843b20">a3a5070</a>)</li>
 <li>add pre-commit checking (<a href="https://github.com/colonel-byte/cargoship/issues/365">#365</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e19472a34b7e9bdd99b1357fd260d4d08989b5d5">e19472a</a>)</li>
 </ul>
-<h3 id="build-22"><a class="header" href="#build-22">Build</a></h3>
+<h3 id="build-23"><a class="header" href="#build-23">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump alpine from 3.22 to 3.24 (<a href="https://github.com/colonel-byte/cargoship/issues/368">#368</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6f85407a36937f2f82f56906a3b1032f706a6127">6f85407</a>)</li>
 <li><strong>deps:</strong> Bump the golang group 11 updates (<a href="https://github.com/colonel-byte/cargoship/issues/367">#367</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d727bd3037b57900654fda92be9b97357e97647f">d727bd3</a>)</li>
@@ -12106,7 +12119,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>kubeconfig as value (<a href="https://github.com/colonel-byte/cargoship/issues/337">#337</a>)</li>
 </ul>
-<h3 id="features-22"><a class="header" href="#features-22">Features</a></h3>
+<h3 id="features-23"><a class="header" href="#features-23">Features</a></h3>
 <ul>
 <li>allow passing yaml blocks for helm manifests (<a href="https://github.com/colonel-byte/cargoship/issues/341">#341</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d493a7ce8fdfa4d1e25bbbe5582acb62b1346f1b">d493a7c</a>)</li>
 <li>kubeconfig as value (<a href="https://github.com/colonel-byte/cargoship/issues/337">#337</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7182994c711bcb8a78cd122eb6192fd3fc1f076">d718299</a>)</li>
@@ -12139,7 +12152,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>update logic on clean (<a href="https://github.com/colonel-byte/cargoship/issues/360">#360</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d42991ea71f7f10b6ea131d5a251271051c7ef0e">d42991e</a>)</li>
 </ul>
 <h2 id="0201-2026-09-10"><a class="header" href="#0201-2026-09-10"><a href="https://github.com/colonel-byte/cargoship/compare/v0.20.0...v0.20.1">0.20.1</a> (2026-09-10)</a></h2>
-<h3 id="features-23"><a class="header" href="#features-23">Features</a></h3>
+<h3 id="features-24"><a class="header" href="#features-24">Features</a></h3>
 <ul>
 <li>add mage function for generating packages (<a href="https://github.com/colonel-byte/cargoship/issues/335">#335</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5dd0c19079f41b6ac6934ca2ceaf291547ac0e07">5dd0c19</a>)</li>
 <li><strong>engine-config:</strong> remove files cargoship no longer writes (<a href="https://github.com/colonel-byte/cargoship/issues/331">#331</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2f9de30a6448a74a683b7f9c8d1105ae706e1e99">2f9de30</a>)</li>
@@ -12162,7 +12175,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>rework backend selection (<a href="https://github.com/colonel-byte/cargoship/issues/264">#264</a>)</li>
 </ul>
-<h3 id="features-24"><a class="header" href="#features-24">Features</a></h3>
+<h3 id="features-25"><a class="header" href="#features-25">Features</a></h3>
 <ul>
 <li>add dry-run support (<a href="https://github.com/colonel-byte/cargoship/issues/312">#312</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c1a2cf429f75021b8a1d070f51504a853145dde8">c1a2cf4</a>)</li>
 <li>assemble multi-arch packages with an OCI image index (<a href="https://github.com/colonel-byte/cargoship/issues/263">#263</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/db8d106e0710e4dbd835143512b44e9bb2d00716">db8d106</a>)</li>
@@ -12201,7 +12214,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>unhide refactor section (<a href="https://github.com/colonel-byte/cargoship/issues/321">#321</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f45dcd68eef60ced3c6403b54ee5c3b928dd19b6">f45dcd6</a>)</li>
 <li>update dependabot config (<a href="https://github.com/colonel-byte/cargoship/issues/303">#303</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/920e51591355d08934cf88eeaa4c8649d3563ffe">920e515</a>)</li>
 </ul>
-<h3 id="build-23"><a class="header" href="#build-23">Build</a></h3>
+<h3 id="build-24"><a class="header" href="#build-24">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/docker/cli from 29.7.2 to 29.8.0 (<a href="https://github.com/colonel-byte/cargoship/issues/300">#300</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f3993388e016d1b1c76932f1d25812686049a111">f399338</a>)</li>
 <li><strong>deps:</strong> Bump github.com/zarf-dev/zarf from 0.84.0 to 0.85.0 (<a href="https://github.com/colonel-byte/cargoship/issues/297">#297</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8ffbd145990ebdb83fc2659c04e11f2f5b10245c">8ffbd14</a>)</li>
@@ -12218,7 +12231,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>rework to add ufw support (<a href="https://github.com/colonel-byte/cargoship/issues/249">#249</a>)</li>
 <li>drop the update- prefix from the host modification flags (<a href="https://github.com/colonel-byte/cargoship/issues/250">#250</a>)</li>
 </ul>
-<h3 id="features-25"><a class="header" href="#features-25">Features</a></h3>
+<h3 id="features-26"><a class="header" href="#features-26">Features</a></h3>
 <ul>
 <li>add an nftables firewall backend (<a href="https://github.com/colonel-byte/cargoship/issues/251">#251</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7541115416e50159d54e351de0f87cb959e35772">7541115</a>)</li>
 <li>drop the update- prefix from the host modification flags (<a href="https://github.com/colonel-byte/cargoship/issues/250">#250</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/39d0d4734939093f563e81752f7ad3720584c0f9">39d0d47</a>)</li>
@@ -12229,11 +12242,11 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>add package verification (<a href="https://github.com/colonel-byte/cargoship/issues/248">#248</a>)</li>
 </ul>
-<h3 id="features-26"><a class="header" href="#features-26">Features</a></h3>
+<h3 id="features-27"><a class="header" href="#features-27">Features</a></h3>
 <ul>
 <li>add package verification (<a href="https://github.com/colonel-byte/cargoship/issues/248">#248</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/231030b60eea38478c9903a0b8dc6025e0dcf01b">231030b</a>)</li>
 </ul>
-<h3 id="build-24"><a class="header" href="#build-24">Build</a></h3>
+<h3 id="build-25"><a class="header" href="#build-25">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/docker/docker-credential-helpers from 0.9.8 to 0.9.9 (<a href="https://github.com/colonel-byte/cargoship/issues/241">#241</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0c0d8e81b9834c8fe85a99f790a621898096a39d">0c0d8e8</a>)</li>
 <li><strong>deps:</strong> Bump golangci-lint from v2.13.1 to 2.13.2 in the core group across 1 directory (<a href="https://github.com/colonel-byte/cargoship/issues/239">#239</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e9bdab85d00a5086bb19ba0e7762aaba3af594b5">e9bdab8</a>)</li>
@@ -12264,7 +12277,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>generate rke2 and k3s example packages per CNI flavor (<a href="https://github.com/colonel-byte/cargoship/issues/228">#228</a>)</li>
 </ul>
-<h3 id="features-27"><a class="header" href="#features-27">Features</a></h3>
+<h3 id="features-28"><a class="header" href="#features-28">Features</a></h3>
 <ul>
 <li>generate rke2 and k3s example packages per CNI flavor (<a href="https://github.com/colonel-byte/cargoship/issues/228">#228</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d9e5c0d2dec0be80a48cdac082b4d5f4fbb91126">d9e5c0d</a>)</li>
 <li>generate typed engine config structs per distro and version (<a href="https://github.com/colonel-byte/cargoship/issues/226">#226</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c2649b3e10c2f5f88139dd8d841dce70b76997db">c2649b3</a>)</li>
@@ -12281,7 +12294,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add commit hash (<a href="https://github.com/colonel-byte/cargoship/issues/231">#231</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b9ac48aacab5675b1af960d5503d60a2ee78a20a">b9ac48a</a>)</li>
 </ul>
 <h2 id="0151-2026-08-29"><a class="header" href="#0151-2026-08-29"><a href="https://github.com/colonel-byte/cargoship/compare/v0.15.0...v0.15.1">0.15.1</a> (2026-08-29)</a></h2>
-<h3 id="features-28"><a class="header" href="#features-28">Features</a></h3>
+<h3 id="features-29"><a class="header" href="#features-29">Features</a></h3>
 <ul>
 <li>reduce binary (<a href="https://github.com/colonel-byte/cargoship/issues/221">#221</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/43a17fc5e96d73277d82ced969b462a86876987a">43a17fc</a>)</li>
 </ul>
@@ -12291,7 +12304,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add profile concurrency (<a href="https://github.com/colonel-byte/cargoship/issues/219">#219</a>)</li>
 <li>allow registry overrides (<a href="https://github.com/colonel-byte/cargoship/issues/215">#215</a>)</li>
 </ul>
-<h3 id="features-29"><a class="header" href="#features-29">Features</a></h3>
+<h3 id="features-30"><a class="header" href="#features-30">Features</a></h3>
 <ul>
 <li>add profile concurrency (<a href="https://github.com/colonel-byte/cargoship/issues/219">#219</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1abcc66b9a50168c30fb9ac388a7a9800b4df872">1abcc66</a>)</li>
 <li>allow registry overrides (<a href="https://github.com/colonel-byte/cargoship/issues/215">#215</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/cac56ee52a83071d4a0dbc414c5d9d4b25387ac9">cac56ee</a>)</li>
@@ -12307,7 +12320,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add logic for keeping track of files uploaded (<a href="https://github.com/colonel-byte/cargoship/issues/212">#212</a>)</li>
 <li>add registry overrides (<a href="https://github.com/colonel-byte/cargoship/issues/211">#211</a>)</li>
 </ul>
-<h3 id="features-30"><a class="header" href="#features-30">Features</a></h3>
+<h3 id="features-31"><a class="header" href="#features-31">Features</a></h3>
 <ul>
 <li>add ability to sign packages (<a href="https://github.com/colonel-byte/cargoship/issues/208">#208</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3646edff8d641eabd9570db483b1c1eef5dd45bc">3646edf</a>)</li>
 <li>add logging to file (<a href="https://github.com/colonel-byte/cargoship/issues/213">#213</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b9ee105cfc6f99d681c7f480e89b9961ee60ccb0">b9ee105</a>)</li>
@@ -12320,7 +12333,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>add caching of artifacts (<a href="https://github.com/colonel-byte/cargoship/issues/204">#204</a>)</li>
 </ul>
-<h3 id="features-31"><a class="header" href="#features-31">Features</a></h3>
+<h3 id="features-32"><a class="header" href="#features-32">Features</a></h3>
 <ul>
 <li>add caching of artifacts (<a href="https://github.com/colonel-byte/cargoship/issues/204">#204</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/854111dd521c03b7eb2b275c5906dc23c0e2a77a">854111d</a>)</li>
 <li>add shell completion for arch (<a href="https://github.com/colonel-byte/cargoship/issues/207">#207</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e81b2fbf3befe062c8e39adf04141bb50b560f7e">e81b2fb</a>)</li>
@@ -12330,7 +12343,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>update dependabot config (<a href="https://github.com/colonel-byte/cargoship/issues/196">#196</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3ca50fddde487d5916b35823bdc77bf9602cf412">3ca50fd</a>)</li>
 </ul>
-<h3 id="build-25"><a class="header" href="#build-25">Build</a></h3>
+<h3 id="build-26"><a class="header" href="#build-26">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump google.golang.org/grpc from 1.83.0 to 1.83.1 (<a href="https://github.com/colonel-byte/cargoship/issues/195">#195</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/88784531588e37eeb94694e8327bf60cd370230a">8878453</a>)</li>
 <li><strong>deps:</strong> Bump the core group across 1 directory with 2 updates (<a href="https://github.com/colonel-byte/cargoship/issues/198">#198</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1b6324e93ad3a94422e62d77c351959eb9ed52c1">1b6324e</a>)</li>
@@ -12343,7 +12356,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>rework viper config (<a href="https://github.com/colonel-byte/cargoship/issues/191">#191</a>)</li>
 </ul>
-<h3 id="features-32"><a class="header" href="#features-32">Features</a></h3>
+<h3 id="features-33"><a class="header" href="#features-33">Features</a></h3>
 <ul>
 <li>add shell completion for flags (<a href="https://github.com/colonel-byte/cargoship/issues/190">#190</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c4046a77ee96911930cae4c0df9b379b0158a2d">9c4046a</a>)</li>
 <li>rework viper config (<a href="https://github.com/colonel-byte/cargoship/issues/191">#191</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5513027781368449747342ad12f685dfb3ae9318">5513027</a>)</li>
@@ -12357,11 +12370,11 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>update zarf version (<a href="https://github.com/colonel-byte/cargoship/issues/187">#187</a>)</li>
 </ul>
-<h3 id="features-33"><a class="header" href="#features-33">Features</a></h3>
+<h3 id="features-34"><a class="header" href="#features-34">Features</a></h3>
 <ul>
 <li>update zarf version (<a href="https://github.com/colonel-byte/cargoship/issues/187">#187</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/13c95955fecc3fca242f847befc0f1f65dc0069c">13c9595</a>)</li>
 </ul>
-<h3 id="build-26"><a class="header" href="#build-26">Build</a></h3>
+<h3 id="build-27"><a class="header" href="#build-27">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump the cosign group across 1 directory with 20 updates (<a href="https://github.com/colonel-byte/cargoship/issues/183">#183</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/eb4a6ff3669d650d29a7591b137e0defe8915074">eb4a6ff</a>)</li>
 <li><strong>deps:</strong> Bump the golang group across 1 directory with 10 updates (<a href="https://github.com/colonel-byte/cargoship/issues/182">#182</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a9deafcedd1cce6addcd103d0cc16b2a370a1a69">a9deafc</a>)</li>
@@ -12369,7 +12382,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>deps:</strong> Bump the opentelemetry group across 1 directory with 5 updates (<a href="https://github.com/colonel-byte/cargoship/issues/184">#184</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/61ce4938316fc0388463542ec11c9e685fa04207">61ce493</a>)</li>
 </ul>
 <h2 id="0102-2026-08-14"><a class="header" href="#0102-2026-08-14"><a href="https://github.com/colonel-byte/cargoship/compare/v0.10.1...v0.10.2">0.10.2</a> (2026-08-14)</a></h2>
-<h3 id="features-34"><a class="header" href="#features-34">Features</a></h3>
+<h3 id="features-35"><a class="header" href="#features-35">Features</a></h3>
 <ul>
 <li>remove ingests folder from tarball (<a href="https://github.com/colonel-byte/cargoship/issues/180">#180</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/29ded7b16f47e9434f9e721b82af055ca29db074">29ded7b</a>)</li>
 </ul>
@@ -12388,7 +12401,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add profiles for the config (<a href="https://github.com/colonel-byte/cargoship/issues/176">#176</a>)</li>
 <li>schema generator includes golang comments (<a href="https://github.com/colonel-byte/cargoship/issues/165">#165</a>)</li>
 </ul>
-<h3 id="features-35"><a class="header" href="#features-35">Features</a></h3>
+<h3 id="features-36"><a class="header" href="#features-36">Features</a></h3>
 <ul>
 <li>add profiles for the config (<a href="https://github.com/colonel-byte/cargoship/issues/176">#176</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/cda1112ef8c1f284b7abff2a71d33380910b7d4a">cda1112</a>)</li>
 <li>add the built dagger artifacts (<a href="https://github.com/colonel-byte/cargoship/issues/158">#158</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9f6163021dcd1300a522b44101d652ee7c6a6e23">9f61630</a>)</li>
@@ -12406,7 +12419,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>update the dependabot config (<a href="https://github.com/colonel-byte/cargoship/issues/172">#172</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/aa6652a756d87b1fc52d029c14eb1a9b8a123478">aa6652a</a>)</li>
 <li>update the dependabot logic (<a href="https://github.com/colonel-byte/cargoship/issues/150">#150</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7b2fef1d05514ff6dab86cba825d3768caf0ec9">d7b2fef</a>)</li>
 </ul>
-<h3 id="build-27"><a class="header" href="#build-27">Build</a></h3>
+<h3 id="build-28"><a class="header" href="#build-28">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/alibabacloud-go/debug from 1.0.0 to 1.0.1 (<a href="https://github.com/colonel-byte/cargoship/issues/149">#149</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6891f31721473f27187f5ff8d6e79f6e57b5c1b1">6891f31</a>)</li>
 <li><strong>deps:</strong> Bump github.com/aws/aws-sdk-go-v2/internal/configsources from 1.4.29 to 1.4.34 (<a href="https://github.com/colonel-byte/cargoship/issues/144">#144</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/45d3e40af149ad24077947d705e4a0eb33635e66">45d3e40</a>)</li>
@@ -12435,7 +12448,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>add framework for publishing and pulling packages (<a href="https://github.com/colonel-byte/cargoship/issues/134">#134</a>)</li>
 </ul>
-<h3 id="features-36"><a class="header" href="#features-36">Features</a></h3>
+<h3 id="features-37"><a class="header" href="#features-37">Features</a></h3>
 <ul>
 <li>add framework for publishing and pulling packages (<a href="https://github.com/colonel-byte/cargoship/issues/134">#134</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9f972535442cd50c596424ae6610bd7fbc8671ea">9f97253</a>)</li>
 </ul>
@@ -12444,7 +12457,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>add sha256sum command (<a href="https://github.com/colonel-byte/cargoship/issues/136">#136</a>)</li>
 </ul>
-<h3 id="features-37"><a class="header" href="#features-37">Features</a></h3>
+<h3 id="features-38"><a class="header" href="#features-38">Features</a></h3>
 <ul>
 <li>add sha256sum command (<a href="https://github.com/colonel-byte/cargoship/issues/136">#136</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a1b5f8b8b67c78a6d8daa3fbe7db6a9a0eec0425">a1b5f8b</a>)</li>
 </ul>
@@ -12468,7 +12481,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>address dependabot issues (<a href="https://github.com/colonel-byte/cargoship/issues/129">#129</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/07c3a04402cd70ea0631b5416731884affb8c681">07c3a04</a>)</li>
 <li>vendor the golang dep (<a href="https://github.com/colonel-byte/cargoship/issues/128">#128</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/832f376f9f47c88db9e514f626a8b389091be36f">832f376</a>)</li>
 </ul>
-<h3 id="build-28"><a class="header" href="#build-28">Build</a></h3>
+<h3 id="build-29"><a class="header" href="#build-29">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/checkout from 7.0.0 to 7.0.1 (<a href="https://github.com/colonel-byte/cargoship/issues/122">#122</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0d7757876902877b16439e69cc63873b699a591d">0d77578</a>)</li>
 <li><strong>deps:</strong> Bump actions/setup-go from 6.5.0 to 7.0.0 (<a href="https://github.com/colonel-byte/cargoship/issues/120">#120</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4276e9d88ea8c3e30bf368505b81d86732a81ec4">4276e9d</a>)</li>
@@ -12491,12 +12504,12 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>add firewalld policy management (<a href="https://github.com/colonel-byte/cargoship/issues/107">#107</a>)</li>
 <li>reduce binary size (<a href="https://github.com/colonel-byte/cargoship/issues/101">#101</a>)</li>
 </ul>
-<h3 id="features-38"><a class="header" href="#features-38">Features</a></h3>
+<h3 id="features-39"><a class="header" href="#features-39">Features</a></h3>
 <ul>
 <li>add firewalld policy management (<a href="https://github.com/colonel-byte/cargoship/issues/107">#107</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4a520304207ee9c7ebe1fe555cd2a9917198259f">4a52030</a>)</li>
 <li>reduce binary size (<a href="https://github.com/colonel-byte/cargoship/issues/101">#101</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/81bd7ea8d26f8bb180a494d72c837f6b6b9a338e">81bd7ea</a>)</li>
 </ul>
-<h3 id="build-29"><a class="header" href="#build-29">Build</a></h3>
+<h3 id="build-30"><a class="header" href="#build-30">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump golangci/golangci-lint-action from 9.2.1 to 9.3.0 (<a href="https://github.com/colonel-byte/cargoship/issues/105">#105</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a314b7c9b40a75c0ab5dd363f0bb51d2dea656a0">a314b7c</a>)</li>
 <li><strong>deps:</strong> Bump goreleaser/goreleaser-action from 7.2.2 to 7.2.3 (<a href="https://github.com/colonel-byte/cargoship/issues/106">#106</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0b32174b9bb006681159c561909c5e918184d8ea">0b32174</a>)</li>
@@ -12506,7 +12519,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>add prepare command (<a href="https://github.com/colonel-byte/cargoship/issues/99">#99</a>)</li>
 </ul>
-<h3 id="features-39"><a class="header" href="#features-39">Features</a></h3>
+<h3 id="features-40"><a class="header" href="#features-40">Features</a></h3>
 <ul>
 <li>add prepare command (<a href="https://github.com/colonel-byte/cargoship/issues/99">#99</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9f191aa097f8ffb01af7c124751c792deb695a29">9f191aa</a>)</li>
 <li><strong>logging:</strong> add better logic for distro output (<a href="https://github.com/colonel-byte/cargoship/issues/97">#97</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8e96e830dcc26d3b3d50549668bd80353fd4d3d6">8e96e83</a>)</li>
@@ -12517,7 +12530,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>dagger:</strong> update version (<a href="https://github.com/colonel-byte/cargoship/issues/88">#88</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a1643cb3a38a6edda63fe5aa2cf672d87f93de54">a1643cb</a>)</li>
 <li>update dagger to 0.21.7 (<a href="https://github.com/colonel-byte/cargoship/issues/96">#96</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/da2b4f857320875add6b1a61a9d36eabf2534d5b">da2b4f8</a>)</li>
 </ul>
-<h3 id="build-30"><a class="header" href="#build-30">Build</a></h3>
+<h3 id="build-31"><a class="header" href="#build-31">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/checkout from 6.0.2 to 6.0.3 (<a href="https://github.com/colonel-byte/cargoship/issues/85">#85</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e0598381202f9fa518e1b0ffc2f8d9564eb29cdc">e059838</a>)</li>
 <li><strong>deps:</strong> Bump actions/checkout from 6.0.3 to 7.0.0 (<a href="https://github.com/colonel-byte/cargoship/issues/94">#94</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2c55700306c9bf2612ccee98ebad0b005f50e2ef">2c55700</a>)</li>
@@ -12534,7 +12547,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>add dagger for ci building (<a href="https://github.com/colonel-byte/cargoship/issues/59">#59</a>)</li>
 </ul>
-<h3 id="features-40"><a class="header" href="#features-40">Features</a></h3>
+<h3 id="features-41"><a class="header" href="#features-41">Features</a></h3>
 <ul>
 <li>add dagger for ci building (<a href="https://github.com/colonel-byte/cargoship/issues/59">#59</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2545844143f8e6b002c1d08631e455a067ee49e0">2545844</a>)</li>
 <li>add mage for make like tool (<a href="https://github.com/colonel-byte/cargoship/issues/63">#63</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e35aed7198b429f5f5bf3fcc5e87dc8fb749afba">e35aed7</a>)</li>
@@ -12554,7 +12567,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li>remove the mage sub-modules (<a href="https://github.com/colonel-byte/cargoship/issues/74">#74</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c073a4266601a9935e8e459a14d6b5585289a22">9c073a4</a>)</li>
 <li>update dagger deps (<a href="https://github.com/colonel-byte/cargoship/issues/64">#64</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/96ad0c834feb236c169c71634c9164db994accd0">96ad0c8</a>)</li>
 </ul>
-<h3 id="build-31"><a class="header" href="#build-31">Build</a></h3>
+<h3 id="build-32"><a class="header" href="#build-32">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/create-github-app-token from 3.1.1 to 3.2.0 (<a href="https://github.com/colonel-byte/cargoship/issues/61">#61</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ac2c0b733af9bedef407a769a9d4d12b6314861a">ac2c0b7</a>)</li>
 <li><strong>deps:</strong> Bump docker/build-push-action from 7.1.0 to 7.2.0 (<a href="https://github.com/colonel-byte/cargoship/issues/79">#79</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a0b4da139a540ac6440f0637e1677983f4bc05e4">a0b4da1</a>)</li>
@@ -12576,7 +12589,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li>add proper code attribution (<a href="https://github.com/colonel-byte/cargoship/issues/55">#55</a>)</li>
 </ul>
-<h3 id="features-41"><a class="header" href="#features-41">Features</a></h3>
+<h3 id="features-42"><a class="header" href="#features-42">Features</a></h3>
 <ul>
 <li>add command to get kubeconfig (<a href="https://github.com/colonel-byte/cargoship/issues/41">#41</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ae53fdf31401b6062552f2373f42e24bc678c118">ae53fdf</a>)</li>
 <li>add proper code attribution (<a href="https://github.com/colonel-byte/cargoship/issues/55">#55</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e971e89a38a7422a64f803d042baec488ef8a366">e971e89</a>)</li>
@@ -12587,7 +12600,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>e2e:</strong> add image files for testing cargoship (<a href="https://github.com/colonel-byte/cargoship/issues/52">#52</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9d02b4529c77ffe91b0fd3d546d123885f814ed0">9d02b45</a>)</li>
 </ul>
-<h3 id="build-32"><a class="header" href="#build-32">Build</a></h3>
+<h3 id="build-33"><a class="header" href="#build-33">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/zarf-dev/zarf from 0.75.0 to 0.75.1 (<a href="https://github.com/colonel-byte/cargoship/issues/46">#46</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/57327f88337bfa69ad758dc5e6dd08df1c876d7e">57327f8</a>)</li>
 <li><strong>deps:</strong> Bump https://github.com/golangci/golangci-lint from v2.11.4 to 2.12.1 (<a href="https://github.com/colonel-byte/cargoship/issues/45">#45</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d791dd0686a6188e6614dfc3096364f35f187680">d791dd0</a>)</li>
@@ -12598,7 +12611,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <ul>
 <li><strong>release:</strong> expand release logic (<a href="https://github.com/colonel-byte/cargoship/commit/10eb37f3c65514159d09cec7b37c18e46f20f33e">10eb37f</a>)</li>
 </ul>
-<h3 id="build-33"><a class="header" href="#build-33">Build</a></h3>
+<h3 id="build-34"><a class="header" href="#build-34">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/Masterminds/semver/v3 from 3.4.0 to 3.5.0 (<a href="https://github.com/colonel-byte/cargoship/issues/42">#42</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/945d93bfc33732157960fbc89571a0e72e81183e">945d93b</a>)</li>
 </ul>
@@ -12608,11 +12621,11 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>release:</strong> change cosign cert (<a href="https://github.com/colonel-byte/cargoship/issues/35">#35</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ce4c5beaec3b56e09216581c9661d9b294f492cc">ce4c5be</a>)</li>
 </ul>
 <h2 id="023-2026-04-28"><a class="header" href="#023-2026-04-28"><a href="https://github.com/colonel-byte/cargoship/compare/v0.2.2...v0.2.3">0.2.3</a> (2026-04-28)</a></h2>
-<h3 id="features-42"><a class="header" href="#features-42">Features</a></h3>
+<h3 id="features-43"><a class="header" href="#features-43">Features</a></h3>
 <ul>
 <li>rework cosign logic (<a href="https://github.com/colonel-byte/cargoship/issues/34">#34</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c5687f6e9b28676856c4cc1fc7cd6612dfd1635">9c5687f</a>)</li>
 </ul>
-<h3 id="build-34"><a class="header" href="#build-34">Build</a></h3>
+<h3 id="build-35"><a class="header" href="#build-35">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump sigstore/cosign-installer from 4.1.0 to 4.1.1 (<a href="https://github.com/colonel-byte/cargoship/issues/32">#32</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/25cbcdd7b35821bf2d588ec1679b4636bfd5a19e">25cbcdd</a>)</li>
 </ul>
@@ -12632,7 +12645,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>release:</strong> add syft action (<a href="https://github.com/colonel-byte/cargoship/issues/24">#24</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3b9293ee2bfba660e100fe6bcc1b8df6eb39114b">3b9293e</a>)</li>
 </ul>
 <h2 id="010-2026-04-27"><a class="header" href="#010-2026-04-27">0.1.0 (2026-04-27)</a></h2>
-<h3 id="features-43"><a class="header" href="#features-43">Features</a></h3>
+<h3 id="features-44"><a class="header" href="#features-44">Features</a></h3>
 <ul>
 <li>add logic for allowing distro to manage stopping service (<a href="https://github.com/colonel-byte/cargoship/issues/11">#11</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/73010f5d887405c7fb9636de1a402f374d70f08d">73010f5</a>)</li>
 <li>add reset action (<a href="https://github.com/colonel-byte/cargoship/issues/19">#19</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5b3bc07bd0317788113285412453d40d9c9e52a8">5b3bc07</a>)</li>
@@ -12651,7 +12664,7 @@ nft add rule inet airgap out oifname enp0s3 drop
 <li><strong>release:</strong> fix config settings (<a href="https://github.com/colonel-byte/cargoship/commit/88a8fd18e88acfcfcae54fcbbbee81087e264bc0">88a8fd1</a>)</li>
 <li><strong>release:</strong> remove versioning (<a href="https://github.com/colonel-byte/cargoship/commit/30efbff506acffa34ccaab13d9fae9ddd9875490">30efbff</a>)</li>
 </ul>
-<h3 id="build-35"><a class="header" href="#build-35">Build</a></h3>
+<h3 id="build-36"><a class="header" href="#build-36">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/setup-node from 6.3.0 to 6.4.0 (<a href="https://github.com/colonel-byte/cargoship/issues/21">#21</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/846530bf1cfc67b9f755e819bc05ace871f860a8">846530b</a>)</li>
 <li><strong>deps:</strong> Bump github.com/invopop/jsonschema from 0.13.0 to 0.14.0 (<a href="https://github.com/colonel-byte/cargoship/issues/3">#3</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/51e8ace6fde4be678e46b0eafb4bad879f978e6c">51e8ace</a>)</li>
