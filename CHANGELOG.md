@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.41.1](https://github.com/colonel-byte/cargoship/compare/v0.41.0...v0.41.1) (2026-11-12)
+
+
+### Features
+
+* **action:** export the phase manager constructor ([#1100](https://github.com/colonel-byte/cargoship/issues/1100)) ([25e1458](https://github.com/colonel-byte/cargoship/commit/25e145892885d18c6a9582ed2456a909906db1e4))
+
+
+### Build
+
+* **deps:** bump github.com/klauspost/compress from 1.20.3 to 1.20.4 ([#1099](https://github.com/colonel-byte/cargoship/issues/1099)) ([ec6daa0](https://github.com/colonel-byte/cargoship/commit/ec6daa0c749a1765f455d37e090edeb5aa18e1b1))
+* **deps:** bump github.com/nao1215/markdown from 1.1.1 to 1.1.2 ([#1098](https://github.com/colonel-byte/cargoship/issues/1098)) ([78575ce](https://github.com/colonel-byte/cargoship/commit/78575ce3511158b5fea56ce950c0ed343445b97f))
+* **deps:** bump library/alpine from `be26560` to `f59abe6` in /containers/base ([#1095](https://github.com/colonel-byte/cargoship/issues/1095)) ([25203af](https://github.com/colonel-byte/cargoship/commit/25203aff224c804c5e22d6e1fab113b22c22cb27))
+* **deps:** bump the golang group with 2 updates ([#1093](https://github.com/colonel-byte/cargoship/issues/1093)) ([df10d08](https://github.com/colonel-byte/cargoship/commit/df10d0866917822829b685bdec6ab28ea63485e6))
+* **deps:** bump the golang group with 3 updates ([#1097](https://github.com/colonel-byte/cargoship/issues/1097)) ([eaf1805](https://github.com/colonel-byte/cargoship/commit/eaf18059c510bfd97c1bb271e1993323b39419b0))
+
 ## [0.41.0](https://github.com/colonel-byte/cargoship/compare/v0.40.0...v0.41.0) (2026-11-09)
 
 
