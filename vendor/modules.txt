@@ -812,7 +812,7 @@ github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/nao1215/markdown v1.1.1
+# github.com/nao1215/markdown v1.1.2
 ## explicit; go 1.26.0
 github.com/nao1215/markdown
 github.com/nao1215/markdown/internal
