@@ -22,7 +22,7 @@ require (
 	github.com/klauspost/compress v1.20.3
 	github.com/magefile/mage v1.17.2
 	github.com/mholt/archives v0.1.5
-	github.com/nao1215/markdown v1.1.1
+	github.com/nao1215/markdown v1.1.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/otiai10/copy v1.14.1
