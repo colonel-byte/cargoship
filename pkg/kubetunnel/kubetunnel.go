@@ -241,14 +241,34 @@ func (c *conn) Read(p []byte) (int, error) {
 	return n, nil
 }
 
+// dataChannelPrefix is the one-byte prefix every outbound frame carries. It is a package-level
+// value because it is written on every frame and never modified.
+var dataChannelPrefix = []byte{dataChannel}
+
+// Write sends p as one frame on the data channel.
+//
+// The prefix is streamed ahead of the payload rather than copied into a frame with it. Building
+// one slice would mean a full copy and an allocation the size of the payload on every write, and
+// this package exists to carry registry layers that run to gigabytes -- so that copy would be
+// the largest avoidable cost in it. Writing through NextWriter has neither.
 func (c *conn) Write(p []byte) (int, error) {
-	frame := make([]byte, 0, len(p)+1)
-	frame = append(frame, dataChannel)
-	frame = append(frame, p...)
-	if err := c.ws.WriteMessage(gwebsocket.BinaryMessage, frame); err != nil {
+	w, err := c.ws.NextWriter(gwebsocket.BinaryMessage)
+	if err != nil {
 		return 0, err
 	}
-	return len(p), nil
+	if _, err := w.Write(dataChannelPrefix); err != nil {
+		//nolint:errcheck // the write already failed, and that error is the one the caller needs
+		w.Close()
+		return 0, err
+	}
+	n, err := w.Write(p)
+	if err != nil {
+		//nolint:errcheck // same
+		w.Close()
+		return n, err
+	}
+	// Nothing is sent until the writer is closed, so a failure to close is a failure to write.
+	return n, w.Close()
 }
 
 func (c *conn) Close() error {
