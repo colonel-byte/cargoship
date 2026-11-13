@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.41.2](https://github.com/colonel-byte/cargoship/compare/v0.41.1...v0.41.2) (2026-11-13)
+
+
+### Features
+
+* **distro:** trust a CA bundle when pulling a package ([#1103](https://github.com/colonel-byte/cargoship/issues/1103)) ([cbaa652](https://github.com/colonel-byte/cargoship/commit/cbaa652e28dcaaa308bfc16a1e4758a578b6e7cc))
+
+
+### Bug Fixes
+
+* **test:** use cargoship's own GetArch so zarf v1.0.0 compiles ([#1104](https://github.com/colonel-byte/cargoship/issues/1104)) ([650d577](https://github.com/colonel-byte/cargoship/commit/650d5779b4a5fe91749da37c9a9a661d2f26b65c))
+
+
+### CI/CD
+
+* **go:** update from 1.27.3 to 1.27.4 ([#1101](https://github.com/colonel-byte/cargoship/issues/1101)) ([6718234](https://github.com/colonel-byte/cargoship/commit/6718234a8508e2b20f5c1a4723dadb91b0dbfd64))
+
 ## [0.41.1](https://github.com/colonel-byte/cargoship/compare/v0.41.0...v0.41.1) (2026-11-12)
 
 

@@ -56,7 +56,7 @@ Two things to know about it: it covers Linux and macOS on X64 and ARM64 and fail
 ```yaml
 - name: Install cargoship
   env:
-    VERSION: v0.41.1
+    VERSION: v0.41.2
   run: |
     set -euo pipefail
     curl -fsSLO "https://github.com/colonel-byte/cargoship/releases/download/${VERSION}/cargoship_Linux_x86_64.tar.gz"
