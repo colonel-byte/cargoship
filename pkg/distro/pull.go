@@ -23,6 +23,7 @@ package distro
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -61,6 +62,8 @@ type PullOptions struct {
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
 	types.RemoteOptions
+	// CABundle is trusted in addition to the system roots. See LoadOptions.CABundle.
+	CABundle []byte
 	// VerificationStrategy for explicit definition
 	layout.VerificationStrategy
 }
@@ -101,6 +104,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 		Output:               destination,
 		OCIConcurrency:       opts.OCIConcurrency,
 		RemoteOptions:        opts.RemoteOptions,
+		CABundle:             opts.CABundle,
 		CachePath:            opts.CachePath,
 	})
 	if err != nil {
@@ -128,6 +132,8 @@ type pullOCIOptions struct {
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	Connected         bool
 	types.RemoteOptions
+	// CABundle is trusted in addition to the system roots. See LoadOptions.CABundle.
+	CABundle []byte
 	layout.VerificationStrategy
 }
 
@@ -141,6 +147,21 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.DistroLayout, er
 	}
 	platform := oci.PlatformForArch(opts.Architecture)
 	mods := []oci.Modifier{oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod}
+	if len(opts.CABundle) > 0 {
+		pool, err := certPool(opts.CABundle)
+		if err != nil {
+			return nil, err
+		}
+		base, ok := http.DefaultTransport.(*http.Transport)
+		if !ok {
+			return nil, errors.New("could not get default transport")
+		}
+		transport := base.Clone()
+		transport.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
+		// Modifier order does not matter: WithTransport re-applies an insecure flag that was
+		// already set, so --insecure-skip-tls-verify still wins over a bundle given with it.
+		mods = append(mods, oci.WithTransport(transport))
+	}
 	remote, err := coci.NewRemote(ctx, opts.Source, platform, mods...)
 	if err != nil {
 		return nil, err
@@ -209,13 +230,13 @@ func pullSoleManifest(ctx context.Context, remote *coci.Remote, platform ocispec
 	return remote, desc, nil
 }
 
-func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (string, error) {
+func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool, caBundle []byte) (string, error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")
 	}
 	tarPath := filepath.Join(tarDir, "data")
 
-	err := pullHTTPFile(ctx, src, tarPath, insecureTLSSkipVerify)
+	err := pullHTTPFile(ctx, src, tarPath, insecureTLSSkipVerify, caBundle)
 	if err != nil {
 		return "", err
 	}
@@ -252,7 +273,7 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVe
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
-func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerify bool) (err error) {
+func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerify bool, caBundle []byte) (err error) {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
@@ -269,7 +290,14 @@ func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerif
 		return errors.New("could not get default transport")
 	}
 	transport = transport.Clone()
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureTLSSkipVerify}
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureTLSSkipVerify} //nolint:gosec // the caller asked for it
+	if len(caBundle) > 0 {
+		pool, err := certPool(caBundle)
+		if err != nil {
+			return err
+		}
+		transport.TLSClientConfig.RootCAs = pool
+	}
 	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -290,4 +318,20 @@ func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerif
 		return err
 	}
 	return nil
+}
+
+// certPool returns the system roots with caBundle added.
+//
+// Added to them rather than replacing them: a management node that trusts one registry's private
+// CA still resolves every other source through the system roots, and a bundle that replaced them
+// would break those with nothing in the error to say why.
+func certPool(caBundle []byte) (*x509.CertPool, error) {
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("unable to read the system certificate pool: %w", err)
+	}
+	if !pool.AppendCertsFromPEM(caBundle) {
+		return nil, errors.New("no certificate found in the CA bundle: it must hold one or more PEM-encoded certificates")
+	}
+	return pool, nil
 }

@@ -48,6 +48,13 @@ type LoadOptions struct {
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	// Only applicable to OCI + HTTP
 	types.RemoteOptions
+	// CABundle is one or more PEM-encoded certificates to trust in addition to the system roots,
+	// for a registry or an HTTP source serving a certificate the management node does not trust.
+	//
+	// Bytes rather than a path, so a caller holding the certificate in memory -- a controller
+	// reading it out of a Kubernetes secret, say -- does not have to write it to a file first.
+	// Only applicable to OCI + HTTP.
+	CABundle []byte
 	// VerificationStrategy for explicit definition
 	layout.VerificationStrategy
 }
@@ -83,6 +90,7 @@ func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroL
 			Architecture:         config.GetArch(opts.Architecture),
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
+			CABundle:             opts.CABundle,
 			CachePath:            opts.CachePath,
 		}
 
@@ -99,7 +107,7 @@ func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroL
 		}
 		return disLayout, nil
 	case "http", "https":
-		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify)
+		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify, opts.CABundle)
 		if err != nil {
 			return nil, err
 		}
