@@ -14,8 +14,12 @@ What worked was avoiding the scheme:
 | ---------------------------------------- | -------------------------- |
 | `client-go/kubernetes` (typed clientset) | 59                         |
 | `client-go/kubernetes/typed/core/v1`     | 56                         |
+| `client-go/tools/portforward`            | 1                          |
 | `client-go/dynamic`                      | **0**                      |
 | `client-go/tools/clientcmd`              | **0**                      |
+| `client-go/transport/websocket`          | **0**                      |
+
+`client-go/tools/portforward` is the one worth singling out, because one group sounds cheap and is not. It imports `k8s.io/api/core/v1` for a handful of constants, and that single package measured **+3.34MiB** of binary against a 40.00MiB baseline -- more than the dynamic client, the kubeconfig loader and the websocket transport put together. `pkg/kubetunnel` therefore hand-writes the channel protocol over `client-go/transport/websocket` and costs **+132KiB**, which is the whole reason that package looks like it is doing something the standard library already does.
 
 `k8s.io/api` 14MB plus `client-go` 9.4MB, against five call sites that read a node's name, its labels, `spec.unschedulable` and the Ready condition.
 

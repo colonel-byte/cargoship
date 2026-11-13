@@ -28,6 +28,7 @@ import (
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/internal/zarfstate"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/kubetunnel"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/colonel-byte/cargoship/pkg/tunnel"
 	"github.com/spf13/cobra"
@@ -42,7 +43,20 @@ type registryTargetFlags struct {
 	config        string
 	fromZarfState bool
 	kubeContext   string
+	viaKube       string
 }
+
+// defaultKubeService is the service --via-kube reaches with no value of its own: the one Zarf's
+// init package stands the registry up as.
+//
+// It is a constant rather than something read from zarf state because the state records no
+// service. What it records is the address a *node* reaches the registry on -- a NodePort, or the
+// per-node host port the registry proxy listens on -- and neither names anything the API server
+// can port-forward to. Zarf's own marker service, the one labelled zarf.dev/connect-name=registry,
+// carries the namespace and the port but has no selector and so no endpoints, which leaves the
+// backing service's name as the one piece that has to be stated. Giving the flag a value overrides
+// it, which is the escape hatch if Zarf ever renames it.
+const defaultKubeService = "zarf/zarf-docker-registry:5000"
 
 // addRegistryTargetFlags registers them. The names are part of mirror's published interface, so
 // they are spelled here once rather than per command.
@@ -50,6 +64,10 @@ func addRegistryTargetFlags(cmd *cobra.Command, o *registryTargetFlags) {
 	cmd.Flags().StringVarP(&o.config, InstallConfig, "f", "", lang.CmdFlagClusterConfigRegistry)
 	cmd.Flags().BoolVar(&o.fromZarfState, "from-zarf-state", false, lang.CmdFlagFromZarfState)
 	cmd.Flags().StringVar(&o.kubeContext, "context", "", lang.CmdFlagKubeContext)
+	cmd.Flags().StringVar(&o.viaKube, "via-kube", "", lang.CmdFlagViaKube)
+	// Passing the flag bare is the common case, so it carries the default service as its
+	// no-value form rather than making every invocation restate what Zarf always calls it.
+	cmd.Flags().Lookup("via-kube").NoOptDefVal = defaultKubeService
 	if err := cmd.RegisterFlagCompletionFunc("context", flags.RegisterKubeContext); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
 	}
@@ -107,9 +125,13 @@ func (o *registryTargetFlags) resolveTarget(ctx context.Context, explicit string
 	}
 
 	// Nothing else reads a cluster, so a context named here would be silently ignored rather
-	// than wrong -- which is worse, because it looks like it was honoured.
+	// than wrong -- which is worse, because it looks like it was honoured. The same goes for a
+	// tunnel: without --from-zarf-state there is no cluster to open one into.
 	if o.kubeContext != "" {
 		return registryTarget{}, errors.New("--context selects which cluster the zarf state is read from, so it needs --from-zarf-state")
+	}
+	if o.viaKube != "" {
+		return registryTarget{}, errors.New("--via-kube tunnels the push into the cluster the zarf state was read from, so it needs --from-zarf-state")
 	}
 
 	if explicit != "" {
@@ -148,6 +170,13 @@ func (o *registryTargetFlags) zarfStateTarget(ctx context.Context, explicit stri
 	// follows: the API server is read through it to find the registry, and then the push itself
 	// travels through it. Opening it first is what makes a fleet reachable only over SSH work at
 	// all, because the state read would otherwise need the API port open.
+	//
+	// Two tunnels to the same place is not a fallback worth having: they authenticate
+	// differently and reach the registry by different routes, so a push that silently took the
+	// other one is a push whose failure mode an operator cannot reason about.
+	if o.config != "" && o.viaKube != "" {
+		return registryTarget{}, fmt.Errorf("pass either --via-kube or --%s, not both: one tunnels through the api server and the other over ssh to a node", InstallConfig)
+	}
 	if o.config != "" {
 		return o.tunnelledTarget(ctx, explicit)
 	}
@@ -222,15 +251,21 @@ func registryAddress(reg zarfstate.Registry, explicit string) (addr string, node
 	return service, true, nil
 }
 
-// targetFromZarfRegistry builds a destination for a registry this machine can dial itself. A
-// node-local one needs the tunnel, which is tunnelledTarget's business.
+// targetFromZarfRegistry builds a destination for a registry this machine can dial itself, or
+// one it can reach through the API server when --via-kube says to. A node-local one with neither
+// needs the SSH tunnel, which is tunnelledTarget's business.
 func (o *registryTargetFlags) targetFromZarfRegistry(ctx context.Context, reg zarfstate.Registry, explicit string) (registryTarget, error) {
 	addr, nodeLocal, err := registryAddress(reg, explicit)
 	if err != nil {
 		return registryTarget{}, err
 	}
+
+	if o.viaKube != "" {
+		return o.kubeTunnelledTarget(ctx, reg, addr)
+	}
+
 	if nodeLocal {
-		return registryTarget{}, fmt.Errorf("the zarf registry runs in the cluster (mode %q, recorded as %q), which is an address only a node can reach; either name the address this machine reaches it on as oci://REGISTRY -- a node address and port %d -- or pass --%s so the push is tunnelled through a node. Either way --from-zarf-state supplies the credentials", reg.Mode, reg.Address, reg.Port, InstallConfig)
+		return registryTarget{}, fmt.Errorf("the zarf registry runs in the cluster (mode %q, recorded as %q), which is an address only a node can reach; either name the address this machine reaches it on as oci://REGISTRY -- a node address and port %d -- pass --via-kube to tunnel the push through the api server, or pass --%s so it is tunnelled through a node over ssh. Any of them has --from-zarf-state supply the credentials", reg.Mode, reg.Address, reg.Port, InstallConfig)
 	}
 
 	ca, err := o.registryCABundle(ctx, reg, nil)
@@ -244,6 +279,76 @@ func (o *registryTargetFlags) targetFromZarfRegistry(ctx context.Context, reg za
 		password: reg.PushPassword,
 		caBundle: ca,
 	}, nil
+}
+
+// kubeTunnelledTarget carries the push through the API server's port-forward subresource.
+//
+// The reference host stays the address zarf state recorded even though nothing dials it, which
+// is the same arrangement the SSH tunnel makes and it matters for the same reason: that address
+// is what every node asks the registry for, so a mirror populated under it is one the fleet can
+// read. The tunnel only decides where the bytes go -- see pkg/kubetunnel.Dialer.
+//
+// There is nothing to close. A port-forward here is one websocket per connection, opened by the
+// dialer and closed with the connection, so unlike the SSH tunnel there is no shared session
+// outliving the push.
+func (o *registryTargetFlags) kubeTunnelledTarget(ctx context.Context, reg zarfstate.Registry, addr string) (registryTarget, error) {
+	namespace, service, port, err := parseKubeService(o.viaKube)
+	if err != nil {
+		return registryTarget{}, err
+	}
+
+	restConfig, err := zarfstate.RESTConfig(resolvedConfig.DistroOpts.KubeConfig, o.kubeContext)
+	if err != nil {
+		return registryTarget{}, err
+	}
+
+	dialer, err := kubetunnel.To(ctx, restConfig, namespace, service, port)
+	if err != nil {
+		return registryTarget{}, err
+	}
+
+	// The API server is reachable by definition on this route -- it is the route -- so the CA
+	// read needs no dialer of its own.
+	ca, err := o.registryCABundle(ctx, reg, nil)
+	if err != nil {
+		return registryTarget{}, err
+	}
+
+	logger.From(ctx).Info("tunnelling the registry through the api server",
+		"service", dialer.Service(), "reference", addr)
+
+	return registryTarget{
+		registry: addr,
+		username: reg.PushUsername,
+		password: reg.PushPassword,
+		dial:     dialer.DialContext,
+		caBundle: ca,
+	}, nil
+}
+
+// parseKubeService reads the "namespace/service:port" --via-kube takes.
+//
+// The port is required rather than defaulted, because a default would be a second guess layered
+// on the service name's -- and a tunnel opened onto the wrong port of the right service fails as
+// a connection refused inside the cluster, which is the least informative way for this to go
+// wrong.
+func parseKubeService(spec string) (namespace, service string, port int, err error) {
+	nsPart, rest, found := strings.Cut(spec, "/")
+	if !found {
+		return "", "", 0, fmt.Errorf("--via-kube takes namespace/service:port, as in %s; got %q", defaultKubeService, spec)
+	}
+	svcPart, portPart, found := strings.Cut(rest, ":")
+	if !found {
+		return "", "", 0, fmt.Errorf("--via-kube takes namespace/service:port, as in %s; got %q", defaultKubeService, spec)
+	}
+	if nsPart == "" || svcPart == "" {
+		return "", "", 0, fmt.Errorf("--via-kube names no %s in %q", map[bool]string{true: "namespace", false: "service"}[nsPart == ""], spec)
+	}
+	port, err = strconv.Atoi(portPart)
+	if err != nil || port < 1 || port > 65535 {
+		return "", "", 0, fmt.Errorf("--via-kube names %q as a port, which is not a port number", portPart)
+	}
+	return nsPart, svcPart, port, nil
 }
 
 // tunnelledTarget opens one SSH connection to a controller and uses it for both halves of the

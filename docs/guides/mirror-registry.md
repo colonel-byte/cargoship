@@ -101,9 +101,35 @@ Any controller will do, since the API server listens on loopback on every contro
 
 One thing to know about it: throughput is whatever a single SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push. `--oci-concurrency` opens more channels, but they share the one TCP connection.
 
+#### Tunnelling through the API server
+
+Pass `--via-kube` alongside `--from-zarf-state` and the push is carried through the Kubernetes API server's port-forward subresource instead, needing nothing but your kubeconfig:
+
+```
+cargoship mirror ./package.tar.zst --from-zarf-state --via-kube
+```
+
+**This is the route for a cluster with no SSH.** k3d and kind nodes are containers with no `sshd`, and Talos runs no shell at all, so the SSH tunnel above cannot reach them however the inventory is written. It is also the route when you have a kubeconfig and no host credentials, which is the ordinary situation on a development cluster.
+
+The bare flag reaches `zarf/zarf-docker-registry:5000`, the service Zarf's init package stands the registry up as. Give it a value to name another, as `namespace/service:port`:
+
+```
+cargoship mirror ./package.tar.zst --from-zarf-state --via-kube registry/harbor-core:8080
+```
+
+The service has to be named because Zarf's state does not record one. What the state records is the address a **node** reaches the registry on -- a NodePort, or the per-node host port the registry proxy listens on -- and neither names anything the API server can forward to. Zarf's own marker service, the one labelled `zarf.dev/connect-name=registry`, carries the namespace and the port but has no selector and therefore no endpoints, which leaves the backing service's name as the one piece that has to be stated.
+
+As with the SSH tunnel, the reference host stays the address Zarf recorded even though nothing dials it. The tunnel decides only where the bytes go, so the mirror is still populated under the reference a node will ask for.
+
+What it needs that the SSH route does not is a reachable API server, which is the thing the SSH route exists to avoid. On an air-gapped fleet whose firewall admits port 22 and nothing else, `--config` remains the only route. Passing both is an error rather than a fallback: they authenticate differently and reach the registry by different routes, so a push that silently took the other one is one whose failure you cannot reason about.
+
+Throughput is not the concern it is for SSH. A port-forward here is one websocket per connection rather than a shared session, so `--oci-concurrency` buys real parallelism, and a 500MB push measured within 5% of the same push through `kubectl port-forward`.
+
+One certificate note: Zarf's registry serves TLS for its in-cluster name, and the reference host is the loopback address Zarf recorded for a node, so hostname validation will not match. `--insecure-skip-tls-verify` is the answer, and it is as safe here as it looks unsafe -- the connection never leaves your machine's API client, and the API server's own TLS is validated normally.
+
 #### Naming a reachable address yourself
 
-The alternative is to give the address this machine reaches the registry on and let `--from-zarf-state` supply only the credentials. A port-forward is the usual way to get one, and a `127.0.0.1` address works exactly as any other:
+The remaining alternative is to give the address this machine reaches the registry on and let `--from-zarf-state` supply only the credentials. `--via-kube` above does this for you; doing it by hand is still worth knowing, because it is what to reach for when the registry is somewhere neither tunnel goes. A port-forward is the usual way to get an address, and a `127.0.0.1` address works exactly as any other:
 
 ```
 kubectl port-forward -n zarf svc/zarf-docker-registry 5000:5000 &

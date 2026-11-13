@@ -21,11 +21,18 @@
 // an ordinary cargoship deployment. The SSH connection is therefore the one route that can be
 // relied on, and an SSH direct-tcpip channel turns it into a route for arbitrary TCP.
 //
-// What this deliberately is not is a Kubernetes port-forward. That would need
-// k8s.io/client-go/tools/portforward, which imports k8s.io/api/core/v1 unconditionally and so
-// relinks the module docs/agent/choice-dynamic-kube-client.md exists to keep out, plus three
-// modules absent from go.sum. It would also need the API port open, which is the problem rather
-// than the solution.
+// What this deliberately is not is a Kubernetes port-forward, and the reason is the API port
+// rather than the dependency. A port-forward needs the API server reachable, which on a fleet
+// whose firewall admits port 22 and nothing else is the problem rather than the solution.
+//
+// The dependency half of that argument no longer holds, and pkg/kubetunnel is the port-forward
+// this paragraph used to rule out: k8s.io/client-go/tools/portforward does cost 3.34MiB for its
+// import of k8s.io/api/core/v1, but hand-writing the channel protocol over
+// client-go/transport/websocket costs 132KiB and links no API group. The two packages are both
+// here because they answer different situations -- this one is the only route into an air-gapped
+// fleet, and kubetunnel is the only route into a cluster whose nodes have no sshd at all, which
+// is every k3d, kind and Talos cluster. See docs/agent/choice-dynamic-kube-client.md for the
+// measurements.
 package tunnel
 
 import (

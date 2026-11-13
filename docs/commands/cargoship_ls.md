@@ -37,14 +37,15 @@ $ cargoship ls oci://harbor.internal -o json
 ### Options
 
 ```
-  -f, --config PATH                             PATH of a cluster configuration to read the registry from. See docs/guides/mirror-registry.md.
-      --context NAME                            NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
-      --from-zarf-state[=true|false]            Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md.
-  -h, --help[=true|false]                       help for ls
-      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
-      --name NAME                               NAME of one package to list the mirrored versions of, instead of reading the registry's whole catalogue.
-  -o, --output outputFormat                     Output format. Valid options are: yaml, json.
-      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+  -f, --config PATH                                           PATH of a cluster configuration to read the registry from. See docs/guides/mirror-registry.md.
+      --context NAME                                          NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
+      --from-zarf-state[=true|false]                          Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md.
+  -h, --help[=true|false]                                     help for ls
+      --insecure-skip-tls-verify[=true|false]                 Skip validating the registry's TLS certificate. Reduces security; use only with reason.
+      --name NAME                                             NAME of one package to list the mirrored versions of, instead of reading the registry's whole catalogue.
+  -o, --output outputFormat                                   Output format. Valid options are: yaml, json.
+      --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Requires --from-zarf-state.
 ```
 
 ### Options inherited from parent commands
