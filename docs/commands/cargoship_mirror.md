@@ -43,7 +43,7 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --conf
 ```
   -a, --architecture string                     Architecture for OCI images and Zarf packages
   -f, --config PATH                             PATH of a cluster configuration to read the destination registry from. See docs/guides/mirror-registry.md.
-      --context NAME                            NAME of the kubeconfig context holding the zarf deployment to read. Needs --from-zarf-state. Defaults to the current context.
+      --context NAME                            NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
       --files[=true|false]                      Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
       --from-zarf-state[=true|false]            Take the destination registry and its push credentials from a zarf deployment. See docs/guides/mirror-registry.md.
   -h, --help[=true|false]                       help for mirror

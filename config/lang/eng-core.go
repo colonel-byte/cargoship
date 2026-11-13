@@ -61,7 +61,7 @@ const (
 	// CmdPackageMirrorFlagFromZarfState mirror flag from-zarf-state
 	CmdPackageMirrorFlagFromZarfState = "Take the destination registry and its push credentials from a zarf deployment. See docs/guides/mirror-registry.md."
 	// CmdPackageMirrorFlagContext mirror flag context
-	CmdPackageMirrorFlagContext = "`NAME` of the kubeconfig context holding the zarf deployment to read. Needs --from-zarf-state. Defaults to the current context."
+	CmdPackageMirrorFlagContext = "`NAME` of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one."
 	// CmdPackagePullShort pull short
 	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and saves it to the local filesystem"
 	// CmdPackagePullLong pull long
