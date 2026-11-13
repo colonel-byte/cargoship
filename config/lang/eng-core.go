@@ -147,6 +147,10 @@ const (
 	// CmdPackageSignFlagOutput replaces zlang.CmdPackageSignFlagOutput, which spelled its default
 	// out in prose. The default is shown by cobra, so it does not need saying twice.
 	CmdPackageSignFlagOutput = "Where to write the signed package: a local directory, or an oci:// registry URL."
+	// CmdPackagePublishFlagConfirm publish flag confirm. Replaces zarf's string of the same
+	// name, removed in zarf v1.0.0; it also described a signing-key password prompt, which
+	// cargoship does not have.
+	CmdPackagePublishFlagConfirm = "Publish the package without asking for confirmation first."
 	// CmdPackageCreateFlagConfirm create flag confirm. Replaces zarf's
 	// CmdPackagePublishFlagConfirm, which described publishing a package and a signing-key
 	// password prompt -- create does neither, and cargoship has no such prompt anywhere.
