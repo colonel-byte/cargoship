@@ -39,6 +39,10 @@ const (
 	CargoshipConfigMediaType = "application/vnd.cargoship.config.v1+json"
 	// CargoshipLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	CargoshipLayerMediaTypeBlob = "application/vnd.cargoship.layer.v1.blob"
+	// CargoshipMirrorConfigMediaType is the media type of the config blob on the record a mirror
+	// writes about itself. It is what classifies that artifact, so it is what a reader matches on
+	// rather than trusting the repository name it was found under.
+	CargoshipMirrorConfigMediaType = "application/vnd.cargoship.mirror.v1+json"
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 6
 	//DefaultRetries is the default number of retries for operations

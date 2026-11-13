@@ -48,6 +48,7 @@
   - [inventory](commands/cargoship_inventory.md)
     - [from-ansible](commands/cargoship_inventory_from-ansible.md)
   - [kube-config](commands/cargoship_kube-config.md)
+  - [ls](commands/cargoship_ls.md)
   - [mirror](commands/cargoship_mirror.md)
   - [prepare](commands/cargoship_prepare.md)
   - [publish](commands/cargoship_publish.md)

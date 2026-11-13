@@ -15,6 +15,7 @@
 package noncluster
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -65,6 +66,66 @@ func TestCargoshipMirrorImages(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+// TestCargoshipLs exercises the built binary's "ls" against a registry a mirror has just
+// filled, which is the whole round trip: the record mirror writes is read back by the command
+// an operator actually runs.
+//
+// It mirrors with --images, so it also covers the half of the run that pushes no files. The
+// record is written either way -- it describes the package, not the half -- and a record that
+// only appeared when files were mirrored would leave an images-only mirror unlistable.
+func TestCargoshipLs(t *testing.T) {
+	src := test.SetupInMemoryRegistry(t)
+	pushTestImage(t, src, pauseImageTag)
+	pushTestImage(t, src, ciliumImageTag)
+	pkgPath := imagePackage(t, src)
+
+	addr := test.SetupInMemoryRegistry(t)
+	dst := fmt.Sprintf("oci://%s/e2e-mirror", addr)
+	_, _, err := e2e.Cargoship(t, "mirror", pkgPath, dst, "--images", "--plain-http")
+	require.NoError(t, err)
+
+	t.Run("the table names the package that filled the registry", func(t *testing.T) {
+		// The table goes to stderr with every other human-facing summary; see cmd/table.go.
+		_, stderr, err := e2e.Cargoship(t, "ls", dst, "--plain-http")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "e2e-minimal-image")
+		require.Contains(t, stderr, "0.0.1")
+	})
+
+	t.Run("a name reads one repository, without the registry catalogue", func(t *testing.T) {
+		_, stderr, err := e2e.Cargoship(t, "ls", dst, "--name", "e2e-minimal-image", "--plain-http")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "e2e-minimal-image")
+	})
+
+	t.Run("json goes to stdout, for a script choosing a version", func(t *testing.T) {
+		stdout, _, err := e2e.Cargoship(t, "ls", dst, "--plain-http", "-o", "json")
+		require.NoError(t, err)
+
+		var records []struct {
+			Name    string `json:"name"`
+			Version string `json:"version"`
+			Engine  string `json:"engine"`
+			Images  int    `json:"images"`
+			Files   int    `json:"files"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(stdout), &records))
+		require.Len(t, records, 1)
+		require.Equal(t, "e2e-minimal-image", records[0].Name)
+		require.Equal(t, "0.0.1", records[0].Version)
+		require.Equal(t, "rke2", records[0].Engine)
+		require.Equal(t, 2, records[0].Images)
+		require.Zero(t, records[0].Files, "a count is what the run pushed, and this one was --images")
+	})
+
+	t.Run("a registry nothing was mirrored into is empty rather than an error", func(t *testing.T) {
+		empty := test.SetupInMemoryRegistry(t)
+		stdout, _, err := e2e.Cargoship(t, "ls", "oci://"+empty, "--plain-http", "-o", "json")
+		require.NoError(t, err)
+		require.JSONEq(t, "[]", stdout)
+	})
 }
 
 // TestCargoshipMirrorContextNeedsZarfState checks that --context is refused rather than

@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/avast/retry-go/v4"
 	v1alpha1 "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
@@ -88,17 +89,81 @@ func Mirror(ctx context.Context, l *layout.DistroLayout, target string, opts Mir
 		opts.Images, opts.Files = true, true
 	}
 
+	// One client and one plain-HTTP decision for the whole mirror, the record included. The file
+	// half used to make its own, which cost a second pre-authentication round trip and left
+	// nothing for the record to reuse on a run that mirrored only images.
+	client, plainHTTP, err := registryClient(ctx, target, opts)
+	if err != nil {
+		return err
+	}
+
+	record := MirrorRecord{
+		SchemaVersion:    MirrorRecordSchemaVersion,
+		Name:             l.Distro.Metadata.Name,
+		Version:          l.Distro.Metadata.Version,
+		Engine:           l.Distro.Spec.Type,
+		Digest:           l.Digest(),
+		CargoshipVersion: config.CLIVersion,
+		MirroredAt:       time.Now().UTC(),
+	}
+	for _, arch := range l.Distro.Arches() {
+		record.Arches = append(record.Arches, string(arch))
+	}
+
 	if opts.Images {
-		if err := mirrorImages(ctx, l, target, opts); err != nil {
+		pushed, err := mirrorImages(ctx, l, target, opts)
+		if err != nil {
 			return err
 		}
+		record.Images = pushed
 	}
 	if opts.Files {
-		if err := mirrorFiles(ctx, l, target, opts); err != nil {
+		pushed, err := mirrorFiles(ctx, l, target, client, plainHTTP, opts)
+		if err != nil {
 			return err
 		}
+		record.Files = pushed
 	}
-	return nil
+
+	// A record is tagged with the package's version, so a package that declares none -- the
+	// schema allows it -- cannot have one. That is not a reason to fail a mirror whose content
+	// has already landed, so it is reported and skipped.
+	if record.Name == "" || record.Version == "" {
+		logger.From(ctx).Warn("not recording the mirror: the package declares no name or version to record it under",
+			"name", record.Name, "version", record.Version)
+		return nil
+	}
+
+	// Last, and only on success. A record is a claim that the content is in the registry, so a
+	// mirror that got half way through must leave none rather than one nothing can act on.
+	return writeMirrorRecord(ctx, l, target, client, plainHTTP, record, opts.Retries)
+}
+
+// registryClient builds the one authenticated client a mirror uses, and settles whether the
+// target speaks plain HTTP.
+func registryClient(ctx context.Context, target string, opts MirrorOptions) (*auth.Client, bool, error) {
+	host, _, _ := strings.Cut(target, "/")
+	if err := (registry.Reference{Registry: host}).ValidateRegistry(); err != nil {
+		return nil, false, fmt.Errorf("invalid target registry %q: %w", target, err)
+	}
+
+	client, err := images.NewRegistryClient(ctx, []string{host}, images.ClientOptions{
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		Credential:            images.StaticCredential(host, opts.Username, opts.Password),
+		DialContext:           opts.DialContext,
+		CABundle:              opts.CABundle,
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	if opts.PlainHTTP {
+		return client, true, nil
+	}
+	plainHTTP, err := images.ShouldUsePlainHTTP(ctx, host, client)
+	if err != nil {
+		return nil, false, fmt.Errorf("unable to connect to the registry %s: %w", host, err)
+	}
+	return client, plainHTTP, nil
 }
 
 // mirrorImages pushes every image the package carries.
@@ -106,23 +171,23 @@ func Mirror(ctx context.Context, l *layout.DistroLayout, target string, opts Mir
 // AllImages rather than EnabledImages: a mirror's job is to hold the content, and the images of a
 // chart that is disabled today are in the package and cost nothing extra to push. Enabling that
 // chart later then needs no second pass, where the alternative fails on a node at pull time.
-func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, opts MirrorOptions) error {
+func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, opts MirrorOptions) (int, error) {
 	refs := l.Distro.Spec.Config.AllImages()
 	if len(refs) == 0 {
 		logger.From(ctx).Debug("the package carries no images, nothing to mirror")
-		return nil
+		return 0, nil
 	}
 
 	imageList := make([]transform.Image, 0, len(refs))
 	for _, ref := range refs {
 		img, err := transform.ParseImageRef(ref)
 		if err != nil {
-			return fmt.Errorf("unable to parse the image reference %s: %w", ref, err)
+			return 0, fmt.Errorf("unable to parse the image reference %s: %w", ref, err)
 		}
 		imageList = append(imageList, img)
 	}
 
-	return images.Push(ctx, imageList, l.GetImageDirPath(), target, images.PushOptions{
+	err := images.Push(ctx, imageList, l.GetImageDirPath(), target, images.PushOptions{
 		OCIConcurrency:        opts.OCIConcurrency,
 		PlainHTTP:             opts.PlainHTTP,
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
@@ -132,35 +197,15 @@ func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, op
 		DialContext:           opts.DialContext,
 		CABundle:              opts.CABundle,
 	})
+	if err != nil {
+		return 0, err
+	}
+	return len(imageList), nil
 }
 
 // mirrorFiles pushes every file the package staged, as an OCI artifact apiece.
-func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, opts MirrorOptions) error {
+func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, client *auth.Client, plainHTTP bool, opts MirrorOptions) (int, error) {
 	log := logger.From(ctx)
-
-	host, _, _ := strings.Cut(target, "/")
-	if err := (registry.Reference{Registry: host}).ValidateRegistry(); err != nil {
-		return fmt.Errorf("invalid target registry %q: %w", target, err)
-	}
-
-	// The same client and the same plain-HTTP decision the image half makes. Doing this once
-	// here rather than per file also means one pre-authentication round trip, not one each.
-	client, err := images.NewRegistryClient(ctx, []string{host}, images.ClientOptions{
-		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		Credential:            images.StaticCredential(host, opts.Username, opts.Password),
-		DialContext:           opts.DialContext,
-		CABundle:              opts.CABundle,
-	})
-	if err != nil {
-		return err
-	}
-	plainHTTP := opts.PlainHTTP
-	if !plainHTTP {
-		plainHTTP, err = images.ShouldUsePlainHTTP(ctx, host, client)
-		if err != nil {
-			return fmt.Errorf("unable to connect to the registry %s: %w", host, err)
-		}
-	}
 
 	pushed := 0
 	for _, set := range []struct {
@@ -184,14 +229,14 @@ func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, opt
 
 			staged := filepath.Join(l.DirPath(), set.dir, strconv.Itoa(i), filepath.Base(f.Target))
 			if err := pushFile(ctx, staged, f.Source, target, client, plainHTTP, opts.Retries); err != nil {
-				return fmt.Errorf("unable to mirror file %d (%s): %w", i, f.Source, err)
+				return 0, fmt.Errorf("unable to mirror file %d (%s): %w", i, f.Source, err)
 			}
 			pushed++
 		}
 	}
 
 	log.Info("done mirroring files", "count", pushed, "target", target)
-	return nil
+	return pushed, nil
 }
 
 // pushFile uploads one staged file as a single-layer OCI artifact.
@@ -203,9 +248,6 @@ func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, opt
 // hauler's original-ref annotation, which is the provenance a reader needs when it is handed the
 // artifact rather than computing its way to it.
 func pushFile(ctx context.Context, staged, source, target string, client *auth.Client, plainHTTP bool, retries int) error {
-	if retries <= 0 {
-		retries = zconfig.ZarfDefaultRetries
-	}
 	ref, err := contentstore.FileRef(target, source)
 	if err != nil {
 		return err
@@ -224,52 +266,84 @@ func pushFile(ctx context.Context, staged, source, target string, client *auth.C
 		return err
 	}
 
-	repo := &orasRemote.Repository{Reference: parsed, PlainHTTP: plainHTTP, Client: client}
+	name := filepath.Base(staged)
+	layerDesc.Annotations = map[string]string{ocispec.AnnotationTitle: name}
+
+	logger.From(ctx).Info("mirroring file", "source", source, "to", ref, "name", name)
 
 	// An empty JSON object is what hauler's own file config amounts to for this purpose: the
-	// manifest's media type is what classifies the artifact, and everything a reader needs is
-	// in the layer title and the annotation.
-	cfg := []byte("{}")
-	cfgDesc := ocispec.Descriptor{
-		MediaType: haulerstore.MediaTypeFileConfigHTTP,
-		Digest:    digest.FromBytes(cfg),
-		Size:      int64(len(cfg)),
+	// config media type is what classifies the artifact, and everything a reader needs is in
+	// the layer title and the annotation.
+	repo := &orasRemote.Repository{Reference: parsed, PlainHTTP: plainHTTP, Client: client}
+	return pushArtifact(ctx, repo, artifact{
+		ref:             ref,
+		configMediaType: haulerstore.MediaTypeFileConfigHTTP,
+		config:          []byte("{}"),
+		layer:           layerDesc,
+		open:            open,
+		annotations:     map[string]string{haulerstore.AnnotationOriginalRef: source},
+	}, retries)
+}
+
+// artifact is one single-layer OCI artifact to push: a config blob whose media type classifies
+// it, one layer, and the manifest annotations a reader is meant to find.
+type artifact struct {
+	ref             string
+	configMediaType string
+	config          []byte
+	layer           ocispec.Descriptor
+	// open reopens the layer content. It is an opener rather than a reader because a retry
+	// after a partial upload has to start again from the first byte.
+	open        func() (io.ReadCloser, error)
+	annotations map[string]string
+}
+
+// pushArtifact uploads one artifact: the config blob, the layer, then the manifest that ties
+// them together, each attempt wrapped in the same backoff.
+//
+// The manifest goes last on purpose. It is the only part of an artifact a reader resolves by
+// reference, so until it lands there is nothing to find -- which is what makes a push that fails
+// part way through leave no half-readable artifact behind.
+func pushArtifact(ctx context.Context, repo *orasRemote.Repository, a artifact, retries int) error {
+	if retries <= 0 {
+		retries = zconfig.ZarfDefaultRetries
 	}
-	if err := withRetry(ctx, retries, "artifact config", ref, func() error {
-		return repo.Push(ctx, cfgDesc, bytes.NewReader(cfg))
+
+	cfgDesc := ocispec.Descriptor{
+		MediaType: a.configMediaType,
+		Digest:    digest.FromBytes(a.config),
+		Size:      int64(len(a.config)),
+	}
+	if err := withRetry(ctx, retries, "artifact config", a.ref, func() error {
+		return repo.Push(ctx, cfgDesc, bytes.NewReader(a.config))
 	}); err != nil {
 		return fmt.Errorf("unable to push the artifact config: %w", err)
 	}
 
-	name := filepath.Base(staged)
-	layerDesc.Annotations = map[string]string{ocispec.AnnotationTitle: name}
-
-	// Reopened per attempt, which is the reason describeFile hands back an opener rather than a
-	// reader: a retry after a partial upload has to start from the first byte.
 	pushContent := func() error {
-		content, err := open()
+		content, err := a.open()
 		if err != nil {
 			return err
 		}
 		// NopCloser because oras closes the reader it is handed, and the file is ours to
 		// close: without this the close below is a second close on the same descriptor,
 		// which fails and masks an otherwise successful push.
-		pushErr := repo.Push(ctx, layerDesc, io.NopCloser(content))
+		pushErr := repo.Push(ctx, a.layer, io.NopCloser(content))
 		if cerr := content.Close(); cerr != nil && pushErr == nil {
 			pushErr = cerr
 		}
 		return pushErr
 	}
-	if err := withRetry(ctx, retries, "file content", ref, pushContent); err != nil {
-		return fmt.Errorf("unable to push the file content: %w", err)
+	if err := withRetry(ctx, retries, "artifact content", a.ref, pushContent); err != nil {
+		return fmt.Errorf("unable to push the artifact content: %w", err)
 	}
 
 	manifest, err := json.Marshal(ocispec.Manifest{
 		Versioned:   specs.Versioned{SchemaVersion: 2},
 		MediaType:   ocispec.MediaTypeImageManifest,
 		Config:      cfgDesc,
-		Layers:      []ocispec.Descriptor{layerDesc},
-		Annotations: map[string]string{haulerstore.AnnotationOriginalRef: source},
+		Layers:      []ocispec.Descriptor{a.layer},
+		Annotations: a.annotations,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to marshal the artifact manifest: %w", err)
@@ -280,9 +354,8 @@ func pushFile(ctx context.Context, staged, source, target string, client *auth.C
 		Size:      int64(len(manifest)),
 	}
 
-	logger.From(ctx).Info("mirroring file", "source", source, "to", ref, "name", name)
-	if err := withRetry(ctx, retries, "artifact manifest", ref, func() error {
-		return repo.PushReference(ctx, manifestDesc, bytes.NewReader(manifest), ref)
+	if err := withRetry(ctx, retries, "artifact manifest", a.ref, func() error {
+		return repo.PushReference(ctx, manifestDesc, bytes.NewReader(manifest), a.ref)
 	}); err != nil {
 		return fmt.Errorf("unable to push the artifact manifest: %w", err)
 	}

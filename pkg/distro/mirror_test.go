@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/api"
 	v1alpha1 "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	distroapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
@@ -49,6 +50,13 @@ const (
 // mirrorLayout stages a package on disk the way a build leaves one: an images/ OCI layout, and
 // each file under files/<index>/<basename of target>.
 func mirrorLayout(t *testing.T) *layout.DistroLayout {
+	t.Helper()
+	return mirrorLayoutVersion(t, "0.1.0")
+}
+
+// mirrorLayoutVersion is mirrorLayout at a chosen version, which is what distinguishes one
+// mirror record from another.
+func mirrorLayoutVersion(t *testing.T, version string) *layout.DistroLayout {
 	t.Helper()
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -82,7 +90,13 @@ func mirrorLayout(t *testing.T) *layout.DistroLayout {
 	stage(config.OSDir, 0, "/etc/sysctl.d/90-cargoship.conf", "vm.max_map_count=262144\n")
 
 	dis := distroapi.Distro{
+		Metadata: distroapi.Metadata{
+			Name:          "rke2",
+			Version:       version,
+			Architectures: api.Arches{"amd64", "arm64"},
+		},
 		Spec: distroapi.Spec{
+			Type: "rke2",
 			Config: distroapi.Config{
 				ImagesConfig: distroapi.ImageConfig{Images: []string{"registry.k8s.io/pause:3.10"}},
 				Files: v1alpha1.Files{
@@ -98,6 +112,13 @@ func mirrorLayout(t *testing.T) *layout.DistroLayout {
 			},
 		},
 	}
+
+	// The record a mirror writes carries the package's own distro.yaml as its layer, which a
+	// build always leaves beside the staged content.
+	definition, err := json.Marshal(dis)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, config.DistroYAML), definition, 0o644))
+
 	return layout.NewDistroLayout(dir, dis)
 }
 
