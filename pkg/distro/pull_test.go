@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -91,7 +92,7 @@ func TestPullHTTPFile(t *testing.T) {
 		defer srv.Close()
 
 		dst := filepath.Join(t.TempDir(), "data")
-		err := pullHTTPFile(context.Background(), srv.URL, dst, false)
+		err := pullHTTPFile(context.Background(), srv.URL, dst, false, nil)
 		require.NoError(t, err)
 
 		got, err := os.ReadFile(dst)
@@ -106,7 +107,7 @@ func TestPullHTTPFile(t *testing.T) {
 		defer srv.Close()
 
 		dst := filepath.Join(t.TempDir(), "data")
-		err := pullHTTPFile(context.Background(), srv.URL, dst, false)
+		err := pullHTTPFile(context.Background(), srv.URL, dst, false, nil)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "404")
 	})
@@ -114,7 +115,7 @@ func TestPullHTTPFile(t *testing.T) {
 
 func TestPullHTTP(t *testing.T) {
 	t.Run("empty shasum errors before any request", func(t *testing.T) {
-		_, err := pullHTTP(context.Background(), "http://example.invalid/pkg.tar", t.TempDir(), "", false)
+		_, err := pullHTTP(context.Background(), "http://example.invalid/pkg.tar", t.TempDir(), "", false, nil)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "shasum cannot be empty")
 	})
@@ -127,7 +128,7 @@ func TestPullHTTP(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, err := pullHTTP(context.Background(), srv.URL, t.TempDir(), "deadbeef", false)
+		_, err := pullHTTP(context.Background(), srv.URL, t.TempDir(), "deadbeef", false, nil)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "shasum mismatch")
 	})
@@ -144,7 +145,7 @@ func TestPullHTTP(t *testing.T) {
 		sum := sha256Hex(content)
 
 		tarDir := t.TempDir()
-		path, err := pullHTTP(context.Background(), srv.URL, tarDir, sum, false)
+		path, err := pullHTTP(context.Background(), srv.URL, tarDir, sum, false, nil)
 		require.NoError(t, err)
 		require.Equal(t, filepath.Join(tarDir, "data.tar"), path)
 	})
@@ -160,8 +161,90 @@ func TestPullHTTP(t *testing.T) {
 
 		sum := sha256Hex(content)
 
-		_, err := pullHTTP(context.Background(), srv.URL, t.TempDir(), sum, false)
+		_, err := pullHTTP(context.Background(), srv.URL, t.TempDir(), sum, false, nil)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported file type")
+	})
+}
+
+// pemCertificate returns a TLS test server's own certificate, PEM-encoded, which is the shape a CA
+// bundle arrives in. The server's certificate is self-signed, so trusting it as a root is what
+// httptest's own client does too.
+func pemCertificate(t *testing.T, srv *httptest.Server) []byte {
+	t.Helper()
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
+}
+
+func TestCertPool(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	defer srv.Close()
+
+	cases := []struct {
+		name    string
+		bundle  []byte
+		wantErr string
+	}{
+		{
+			name:   "a pem-encoded certificate",
+			bundle: pemCertificate(t, srv),
+		},
+		{
+			name:    "bytes that are not pem",
+			bundle:  []byte("-----BEGIN CERTIFICATE-----\nnot base64\n-----END CERTIFICATE-----\n"),
+			wantErr: "no certificate found in the CA bundle",
+		},
+		{
+			name:    "an empty bundle",
+			bundle:  []byte{},
+			wantErr: "no certificate found in the CA bundle",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			pool, err := certPool(tc.bundle)
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, pool)
+		})
+	}
+}
+
+// The point of the field: a source serving a certificate the system roots do not cover is
+// unreachable without it, and reachable with it, without anybody setting InsecureSkipTLSVerify.
+func TestPullHTTPFileTrustsACABundle(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte("package-bytes")); err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer srv.Close()
+
+	t.Run("untrusted without the bundle", func(t *testing.T) {
+		dst := filepath.Join(t.TempDir(), "data")
+		err := pullHTTPFile(context.Background(), srv.URL, dst, false, nil)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "certificate")
+	})
+
+	t.Run("trusted with the bundle", func(t *testing.T) {
+		dst := filepath.Join(t.TempDir(), "data")
+		err := pullHTTPFile(context.Background(), srv.URL, dst, false, pemCertificate(t, srv))
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(dst)
+		require.NoError(t, err)
+		require.Equal(t, "package-bytes", string(got))
+	})
+
+	t.Run("a bundle that cannot be parsed is an error, not a fallback", func(t *testing.T) {
+		dst := filepath.Join(t.TempDir(), "data")
+		err := pullHTTPFile(context.Background(), srv.URL, dst, false, []byte("zarf-docker-registry"))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "no certificate found in the CA bundle")
 	})
 }
