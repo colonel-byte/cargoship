@@ -24,6 +24,7 @@ package images
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
@@ -159,7 +160,15 @@ func orasTransport(opts ClientOptions) (*retry.Transport, error) {
 	}
 	transport = transport.Clone()
 	// Enable / Disable TLS verification based on the config
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify}
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} //nolint:gosec // the field is the operator's explicit choice
+	if len(opts.CABundle) > 0 {
+		pool, err := CertPool(opts.CABundle)
+		if err != nil {
+			return nil, err
+		}
+		transport.TLSClientConfig.RootCAs = pool
+		transport.TLSClientConfig.MinVersion = tls.VersionTLS12
+	}
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
 	transport.ResponseHeaderTimeout = opts.ResponseHeaderTimeout
 	if opts.DialContext != nil {
@@ -196,6 +205,26 @@ type ClientOptions struct {
 	// connection while the references stay the ones a node will ask for. The address the dialer
 	// is handed is the reference's, and a tunnelling dialer is free to ignore it.
 	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	// CABundle is trusted in addition to the system roots. A registry serving a certificate
+	// from a private CA -- which a zarf-managed-mTLS registry does -- is reached by supplying
+	// its CA here, rather than by turning verification off.
+	CABundle []byte
+}
+
+// CertPool is the system roots plus the PEM certificates in caBundle.
+//
+// It lives here rather than beside its other caller in pkg/distro because a pull and a mirror
+// both have to trust a private CA the same way, and pkg/distro imports this package while the
+// reverse would be a cycle.
+func CertPool(caBundle []byte) (*x509.CertPool, error) {
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("unable to read the system certificate pool: %w", err)
+	}
+	if !pool.AppendCertsFromPEM(caBundle) {
+		return nil, errors.New("no certificate found in the CA bundle: it must hold one or more PEM-encoded certificates")
+	}
+	return pool, nil
 }
 
 // NewRegistryClient builds the ORAS auth client every registry operation shares, and

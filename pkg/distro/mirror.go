@@ -63,6 +63,9 @@ type MirrorOptions struct {
 	// a registry only a cluster node can see. See images.ClientOptions.DialContext and
 	// pkg/tunnel.
 	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	// CABundle is trusted in addition to the system roots, which is how a mirror verifies a
+	// registry serving a certificate from a private CA. See images.ClientOptions.CABundle.
+	CABundle []byte
 }
 
 // Mirror publishes the contents of a built package into target, a registry host optionally
@@ -127,6 +130,7 @@ func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, op
 		Username:              opts.Username,
 		Password:              opts.Password,
 		DialContext:           opts.DialContext,
+		CABundle:              opts.CABundle,
 	})
 }
 
@@ -145,6 +149,7 @@ func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, opt
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Credential:            images.StaticCredential(host, opts.Username, opts.Password),
 		DialContext:           opts.DialContext,
+		CABundle:              opts.CABundle,
 	})
 	if err != nil {
 		return err

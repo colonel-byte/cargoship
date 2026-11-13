@@ -15,6 +15,7 @@
 package zarfstate
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -147,4 +148,59 @@ func TestUsesMTLS(t *testing.T) {
 	require.False(t, Registry{}.UsesMTLS())
 	require.False(t, Registry{MTLSStrategy: "none"}.UsesMTLS())
 	require.True(t, Registry{MTLSStrategy: "zarf"}.UsesMTLS())
+}
+
+func TestSecretKey(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name    string
+		obj     map[string]any
+		key     string
+		want    string
+		wantErr string
+	}{
+		{
+			name: "a base64 value is decoded",
+			obj: map[string]any{
+				"data": map[string]any{"ca.crt": base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----"))},
+			},
+			key:  "ca.crt",
+			want: "-----BEGIN CERTIFICATE-----",
+		},
+		{
+			name:    "a secret with no data",
+			obj:     map[string]any{"metadata": map[string]any{"name": "zarf-registry-server-tls"}},
+			key:     "ca.crt",
+			wantErr: "holds no data",
+		},
+		{
+			name: "a secret missing the key",
+			obj: map[string]any{
+				"data": map[string]any{"tls.crt": "Zm9v"},
+			},
+			key:     "ca.crt",
+			wantErr: `has no "ca.crt" key`,
+		},
+		{
+			name: "a value that is not base64",
+			obj: map[string]any{
+				"data": map[string]any{"ca.crt": "not base64!"},
+			},
+			key:     "ca.crt",
+			wantErr: "unable to decode",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := secretKey(tt.obj, "zarf-registry-server-tls", tt.key)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, string(got))
+		})
+	}
 }

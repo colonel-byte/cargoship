@@ -58,6 +58,8 @@ type PushOptions struct {
 	Password string
 	// DialContext opens the connection the push travels over. See ClientOptions.DialContext.
 	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	// CABundle is trusted in addition to the system roots. See ClientOptions.CABundle.
+	CABundle []byte
 }
 
 // StaticCredential turns a username and password into something ClientOptions takes, and
@@ -133,6 +135,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory, tar
 		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		Credential:            StaticCredential(host, opts.Username, opts.Password),
 		DialContext:           opts.DialContext,
+		CABundle:              opts.CABundle,
 	})
 	if err != nil {
 		return err

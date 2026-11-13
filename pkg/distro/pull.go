@@ -23,7 +23,6 @@ package distro
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -37,6 +36,7 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/coci"
 	"github.com/colonel-byte/cargoship/pkg/coci/layers"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/gabriel-vasile/mimetype"
@@ -148,7 +148,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.DistroLayout, er
 	platform := oci.PlatformForArch(opts.Architecture)
 	mods := []oci.Modifier{oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod}
 	if len(opts.CABundle) > 0 {
-		pool, err := certPool(opts.CABundle)
+		pool, err := images.CertPool(opts.CABundle)
 		if err != nil {
 			return nil, err
 		}
@@ -292,7 +292,7 @@ func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerif
 	transport = transport.Clone()
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureTLSSkipVerify} //nolint:gosec // the caller asked for it
 	if len(caBundle) > 0 {
-		pool, err := certPool(caBundle)
+		pool, err := images.CertPool(caBundle)
 		if err != nil {
 			return err
 		}
@@ -318,20 +318,4 @@ func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerif
 		return err
 	}
 	return nil
-}
-
-// certPool returns the system roots with caBundle added.
-//
-// Added to them rather than replacing them: a management node that trusts one registry's private
-// CA still resolves every other source through the system roots, and a bundle that replaced them
-// would break those with nothing in the error to say why.
-func certPool(caBundle []byte) (*x509.CertPool, error) {
-	pool, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, fmt.Errorf("unable to read the system certificate pool: %w", err)
-	}
-	if !pool.AppendCertsFromPEM(caBundle) {
-		return nil, errors.New("no certificate found in the CA bundle: it must hold one or more PEM-encoded certificates")
-	}
-	return pool, nil
 }

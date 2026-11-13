@@ -124,6 +124,7 @@ func (o *packageMirrorOptions) run(ctx context.Context, args []string) error {
 		Username:       dst.username,
 		Password:       dst.password,
 		DialContext:    dst.dial,
+		CABundle:       dst.caBundle,
 	})
 }
 
@@ -138,7 +139,13 @@ type mirrorTarget struct {
 	// releases whatever it is carried over. Both are nil for a registry this machine can dial.
 	dial  func(ctx context.Context, network, addr string) (net.Conn, error)
 	close func()
+	// caBundle is the CA the registry's server certificate is validated against, set when the
+	// deployment manages its own. Nil for a registry whose certificate the system roots cover.
+	caBundle []byte
 }
+
+// apiDial is the route to the API server: a tunnel's dialer, or nil for a direct connection.
+type apiDial func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // release closes a tunnel the target opened, and is safe on a target that has none.
 func (t mirrorTarget) release() {
@@ -221,7 +228,29 @@ func (o *packageMirrorOptions) zarfStateTarget(ctx context.Context, explicit str
 	if err != nil {
 		return mirrorTarget{}, err
 	}
-	return o.targetFromZarfRegistry(reg, explicit)
+	return o.targetFromZarfRegistry(ctx, reg, explicit)
+}
+
+// registryCABundle reads the CA a zarf-managed-mTLS registry's certificate is signed by, and
+// returns nil for a deployment that manages no certificates of its own.
+//
+// dial is the route to the API server, which is the tunnel's dialer under --config and nil
+// otherwise. Reading the CA over the same route as the state is what keeps this working on a
+// fleet whose API port is closed: the two reads are the same cluster, reached the same way.
+func (o *packageMirrorOptions) registryCABundle(ctx context.Context, reg zarfstate.Registry, dial apiDial) ([]byte, error) {
+	if !reg.UsesMTLS() {
+		return nil, nil
+	}
+	ca, err := zarfstate.LoadCABundle(ctx, zarfstate.Options{
+		Kubeconfig: resolvedConfig.DistroOpts.KubeConfig,
+		Context:    o.kubeContext,
+		Dial:       dial,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("the zarf registry manages its own certificates (mTLS strategy %q), so its CA is needed to verify the push, and reading it failed: %w -- pass --insecure-skip-tls-verify to push without verifying instead", reg.MTLSStrategy, err)
+	}
+	logger.From(ctx).Debug("trusting the zarf registry's own certificate authority", "mtlsStrategy", reg.MTLSStrategy, "bytes", len(ca))
+	return ca, nil
 }
 
 // registryAddress decides what address a mirror pushes to, and whether only a cluster node can
@@ -232,10 +261,14 @@ func (o *packageMirrorOptions) zarfStateTarget(ctx context.Context, explicit str
 // registry is external, which is the one mode whose recorded address is routable from somewhere
 // other than a node. Anything else is node-local, and the caller decides whether it holds a
 // tunnel that can reach it.
+//
+// A zarf-managed-mTLS registry is not refused here, and used to be. The refusal said a push
+// would need a client certificate, and that premise is wrong: zarf issues a client certificate
+// for the per-node registry proxy, not for a direct client, and the registry accepts a push
+// authenticated with the push credentials alone. What mTLS does change is the scheme and the
+// trust -- it is always HTTPS, with a server certificate from a private CA - which is the
+// caller's business rather than this function's. See zarfstate.LoadCABundle.
 func registryAddress(reg zarfstate.Registry, explicit string) (addr string, nodeLocal bool, err error) {
-	if reg.UsesMTLS() {
-		return "", false, fmt.Errorf("the zarf registry is configured for zarf-managed mTLS (%s), and a push with a client certificate is not supported", reg.MTLSStrategy)
-	}
 	if explicit != "" {
 		return explicit, false, nil
 	}
@@ -260,7 +293,7 @@ func registryAddress(reg zarfstate.Registry, explicit string) (addr string, node
 
 // targetFromZarfRegistry builds a destination for a registry this machine can dial itself. A
 // node-local one needs the tunnel, which is tunnelledTarget's business.
-func (o *packageMirrorOptions) targetFromZarfRegistry(reg zarfstate.Registry, explicit string) (mirrorTarget, error) {
+func (o *packageMirrorOptions) targetFromZarfRegistry(ctx context.Context, reg zarfstate.Registry, explicit string) (mirrorTarget, error) {
 	addr, nodeLocal, err := registryAddress(reg, explicit)
 	if err != nil {
 		return mirrorTarget{}, err
@@ -269,10 +302,16 @@ func (o *packageMirrorOptions) targetFromZarfRegistry(reg zarfstate.Registry, ex
 		return mirrorTarget{}, fmt.Errorf("the zarf registry runs in the cluster (mode %q, recorded as %q), which is an address only a node can reach; either name the address this machine reaches it on as oci://REGISTRY -- a node address and port %d -- or pass --%s so the push is tunnelled through a node. Either way --from-zarf-state supplies the credentials", reg.Mode, reg.Address, reg.Port, InstallConfig)
 	}
 
+	ca, err := o.registryCABundle(ctx, reg, nil)
+	if err != nil {
+		return mirrorTarget{}, err
+	}
+
 	return mirrorTarget{
 		registry: addr,
 		username: reg.PushUsername,
 		password: reg.PushPassword,
+		caBundle: ca,
 	}, nil
 }
 
@@ -315,7 +354,7 @@ func (o *packageMirrorOptions) tunnelledTarget(ctx context.Context, explicit str
 		}
 	}()
 
-	reg, err := o.zarfStateThrough(ctx, conn)
+	reg, apiDial, err := o.zarfStateThrough(ctx, conn)
 	if err != nil {
 		return mirrorTarget{}, err
 	}
@@ -325,10 +364,16 @@ func (o *packageMirrorOptions) tunnelledTarget(ctx context.Context, explicit str
 		return mirrorTarget{}, err
 	}
 
+	ca, err := o.registryCABundle(ctx, reg, apiDial)
+	if err != nil {
+		return mirrorTarget{}, err
+	}
+
 	dst := mirrorTarget{
 		registry: addr,
 		username: reg.PushUsername,
 		password: reg.PushPassword,
+		caBundle: ca,
 	}
 	if !nodeLocal {
 		// The destination is one this machine can reach, so the push takes the direct route and
@@ -350,22 +395,25 @@ func (o *packageMirrorOptions) tunnelledTarget(ctx context.Context, explicit str
 }
 
 // zarfStateThrough reads the state secret over the tunnel.
-func (o *packageMirrorOptions) zarfStateThrough(ctx context.Context, conn *tunnel.Conn) (zarfstate.Registry, error) {
+func (o *packageMirrorOptions) zarfStateThrough(ctx context.Context, conn *tunnel.Conn) (zarfstate.Registry, apiDial, error) {
 	endpoint, err := zarfstate.APIEndpoint(resolvedConfig.DistroOpts.KubeConfig, o.kubeContext)
 	if err != nil {
-		return zarfstate.Registry{}, err
+		return zarfstate.Registry{}, nil, err
 	}
 	apiDialer, err := conn.To(endpoint)
 	if err != nil {
-		return zarfstate.Registry{}, err
+		return zarfstate.Registry{}, nil, err
 	}
 
 	logger.From(ctx).Debug("reading zarf state through the tunnel", "host", conn.Address(), "api", endpoint)
-	return zarfstate.Load(ctx, zarfstate.Options{
+	reg, err := zarfstate.Load(ctx, zarfstate.Options{
 		Kubeconfig: resolvedConfig.DistroOpts.KubeConfig,
 		Context:    o.kubeContext,
 		Dial:       apiDialer.DialContext,
 	})
+	// The dialer is handed back because a zarf-managed-mTLS registry needs a second read from
+	// the same API server for its CA, and opening a route of its own would defeat the point.
+	return reg, apiDialer.DialContext, err
 }
 
 // firstControllerWithSSH picks the node the tunnel is opened through.

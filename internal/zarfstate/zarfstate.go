@@ -40,6 +40,17 @@ const (
 	namespace  = "zarf"
 	secretName = "zarf-state"
 	dataKey    = "state"
+
+	// serverTLSSecretName holds the registry's server certificate and the CA that signed it,
+	// and caKey is the CA within it. Zarf mounts the same secret into the registry pod as its
+	// `server-certs` volume, so this is the certificate chain a push has to validate against
+	// rather than a copy of it.
+	//
+	// The CA is not in zarf state: RegistryInfo records the address, the port, the mode and
+	// the mTLS strategy and nothing else, so a client that has to trust the registry has to
+	// come here for it.
+	serverTLSSecretName = "zarf-registry-server-tls"
+	caKey               = "ca.crt"
 )
 
 // Registry modes, matching state.RegistryMode. Only an external registry records an address
@@ -117,36 +128,81 @@ type Options struct {
 
 // Load reads the registry half of the zarf-state secret.
 func Load(ctx context.Context, opts Options) (Registry, error) {
-	restConfig, err := restConfigFor(opts.Kubeconfig, opts.Context)
+	restConfig, err := RESTConfig(opts.Kubeconfig, opts.Context)
 	if err != nil {
 		return Registry{}, err
 	}
 	restConfig.Dial = opts.Dial
 
-	client, err := dynamic.NewForConfig(restConfig)
+	raw, err := readSecretKey(ctx, restConfig, secretName, dataKey)
 	if err != nil {
-		return Registry{}, fmt.Errorf("unable to build a kubernetes client: %w", err)
-	}
-
-	secret, err := client.Resource(secretsResource).Namespace(namespace).Get(ctx, secretName, metav1.GetOptions{})
-	if err != nil {
-		return Registry{}, fmt.Errorf("unable to read the %s/%s secret, which is where a zarf deployment records its registry: %w", namespace, secretName, err)
-	}
-
-	data, ok := secret.Object["data"].(map[string]any)
-	if !ok {
-		return Registry{}, fmt.Errorf("the %s/%s secret holds no data", namespace, secretName)
-	}
-	encoded, ok := data[dataKey].(string)
-	if !ok {
-		return Registry{}, fmt.Errorf("the %s/%s secret has no %q key", namespace, secretName, dataKey)
-	}
-	raw, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return Registry{}, fmt.Errorf("unable to decode the %s/%s secret: %w", namespace, secretName, err)
+		return Registry{}, fmt.Errorf("unable to read the registry a zarf deployment records: %w", err)
 	}
 
 	return decode(raw)
+}
+
+// LoadCABundle reads the CA that signed the registry's server certificate.
+//
+// A zarf-managed-mTLS registry serves HTTPS with a certificate from a private CA, so a push to
+// it validates against nothing the system roots hold. This is the one piece of that puzzle not
+// in zarf state, and reading it out of the cluster is what lets a mirror verify the registry
+// properly rather than being told to skip verification.
+//
+// No client certificate is read, and that is deliberate rather than an omission. Zarf issues one
+// -- the `zarf-registry-client-tls` secret, common name `zarf-registry-client` -- but it belongs
+// to the per-node registry proxy, which is what presents it on a node's behalf. The registry
+// itself does not require one from a direct client, so a push authenticates with the push
+// credentials from state and nothing more.
+func LoadCABundle(ctx context.Context, opts Options) ([]byte, error) {
+	restConfig, err := RESTConfig(opts.Kubeconfig, opts.Context)
+	if err != nil {
+		return nil, err
+	}
+	restConfig.Dial = opts.Dial
+
+	ca, err := readSecretKey(ctx, restConfig, serverTLSSecretName, caKey)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read the registry's certificate authority: %w", err)
+	}
+	return ca, nil
+}
+
+// readSecretKey reads one key out of one secret in zarf's namespace.
+//
+// It goes through the dynamic client for the reason secretsResource records, and it is shared so
+// that the state read and the CA read cannot disagree about the namespace or about how a missing
+// key is reported.
+func readSecretKey(ctx context.Context, restConfig *rest.Config, name, key string) ([]byte, error) {
+	client, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("unable to build a kubernetes client: %w", err)
+	}
+
+	secret, err := client.Resource(secretsResource).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to read the %s/%s secret: %w", namespace, name, err)
+	}
+
+	return secretKey(secret.Object, name, key)
+}
+
+// secretKey pulls one base64 value out of an unstructured secret. Separate from the read so that
+// the shape handling is testable without a cluster.
+func secretKey(obj map[string]any, name, key string) ([]byte, error) {
+	data, ok := obj["data"].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("the %s/%s secret holds no data", namespace, name)
+	}
+	encoded, ok := data[key].(string)
+	if !ok {
+		return nil, fmt.Errorf("the %s/%s secret has no %q key", namespace, name, key)
+	}
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode %q in the %s/%s secret: %w", key, namespace, name, err)
+	}
+	return raw, nil
 }
 
 // APIEndpoint is the address a tunnel to the API server should open onto, derived from the
@@ -157,7 +213,7 @@ func Load(ctx context.Context, opts Options) (Registry, error) {
 // and guessing would tunnel to a closed port on the node. The host is loopback because the API
 // server listens there on every control-plane node, which is what makes any controller do.
 func APIEndpoint(kubeconfig, kubeContext string) (string, error) {
-	restConfig, err := restConfigFor(kubeconfig, kubeContext)
+	restConfig, err := RESTConfig(kubeconfig, kubeContext)
 	if err != nil {
 		return "", err
 	}
@@ -175,12 +231,16 @@ func APIEndpoint(kubeconfig, kubeContext string) (string, error) {
 	return net.JoinHostPort("127.0.0.1", port), nil
 }
 
-// restConfigFor resolves a kubeconfig path and a context name into a connection.
+// RESTConfig resolves a kubeconfig path and a context name into a connection.
 //
 // This goes through the deferred loading rules rather than clientcmd.BuildConfigFromFlags
 // because that helper has no way to name a context -- it always takes whichever one the file
 // marks current, which is the wrong cluster as soon as an operator has more than one.
-func restConfigFor(kubeconfig, kubeContext string) (*rest.Config, error) {
+//
+// It is exported because a caller reaching the cluster for something other than a secret has to
+// resolve the same kubeconfig and the same context this package did, rather than loading its own
+// and quietly disagreeing about which cluster is meant.
+func RESTConfig(kubeconfig, kubeContext string) (*rest.Config, error) {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 	if kubeconfig != "" {
 		rules.ExplicitPath = kubeconfig

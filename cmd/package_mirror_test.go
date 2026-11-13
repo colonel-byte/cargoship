@@ -234,6 +234,21 @@ func TestRegistryAddress(t *testing.T) {
 			wantAddr:      "harbor.internal",
 			wantNodeLocal: false,
 		},
+		{
+			// mTLS changes the scheme and the trust, not the address. This used to be
+			// refused outright on the premise that a push would need a client certificate:
+			// zarf issues one for the per-node registry proxy, not for a direct client, and
+			// the registry accepts a push authenticated with the push credentials alone.
+			name: "zarf-managed mtls leaves the address alone",
+			reg: zarfstate.Registry{
+				Address:      "harbor.internal",
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeExternal,
+				MTLSStrategy: "zarf-managed",
+			},
+			wantAddr: "harbor.internal",
+		},
 	}
 
 	for _, tt := range tests {
@@ -408,23 +423,12 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 			},
 			wantErr: "records no registry address",
 		},
-		{
-			name: "zarf-managed mTLS is refused rather than attempted",
-			reg: zarfstate.Registry{
-				Address:      "harbor.internal",
-				PushUsername: "zarf-push",
-				PushPassword: "secret",
-				Mode:         zarfstate.ModeExternal,
-				MTLSStrategy: "zarf",
-			},
-			wantErr: "mTLS",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			o := &packageMirrorOptions{}
-			got, err := o.targetFromZarfRegistry(tt.reg, tt.explicit)
+			got, err := o.targetFromZarfRegistry(context.Background(), tt.reg, tt.explicit)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				return
