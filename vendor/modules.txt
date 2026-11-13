@@ -49,8 +49,6 @@ github.com/Azure/go-ansiterm/winterm
 ## explicit; go 1.24
 github.com/Azure/go-ntlmssp
 github.com/Azure/go-ntlmssp/internal/md4
-# github.com/AzureAD/microsoft-authentication-library-for-go v1.10.1
-## explicit; go 1.18
 # github.com/BurntSushi/toml v1.6.0
 ## explicit; go 1.18
 github.com/BurntSushi/toml
@@ -960,7 +958,7 @@ github.com/sigstore/protobuf-specs/gen/pb-go/common/v1
 github.com/sigstore/protobuf-specs/gen/pb-go/dsse
 github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1
 github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1
-# github.com/sigstore/rekor v1.5.5
+# github.com/sigstore/rekor v1.6.0
 ## explicit; go 1.27
 github.com/sigstore/rekor/internal/pgpv3
 github.com/sigstore/rekor/internal/pgpv3/adapted
@@ -998,7 +996,7 @@ github.com/sigstore/rekor/pkg/types/rekord/v0.0.1
 github.com/sigstore/rekor/pkg/util
 github.com/sigstore/rekor/pkg/util/jcs
 github.com/sigstore/rekor/pkg/verify
-# github.com/sigstore/rekor-tiles/v2 v2.4.1
+# github.com/sigstore/rekor-tiles/v2 v2.4.2
 ## explicit; go 1.27.0
 github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry
 github.com/sigstore/rekor-tiles/v2/internal/safeint
