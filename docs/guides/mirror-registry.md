@@ -103,19 +103,23 @@ One thing to know about it: throughput is whatever a single SSH connection gives
 
 #### Tunnelling through the API server
 
-Pass `--via-kube` alongside `--from-zarf-state` and the push is carried through the Kubernetes API server's port-forward subresource instead, needing nothing but your kubeconfig:
+Pass `--via-kube` and the push is carried through the Kubernetes API server's port-forward subresource instead, needing nothing but your kubeconfig:
 
 ```
-cargoship mirror ./package.tar.zst --from-zarf-state --via-kube
+cargoship mirror ./package.tar.zst --via-kube
 ```
+
+`--from-zarf-state` is implied, so it need not be passed: routing into the cluster without naming a destination has one sensible answer, which is the registry that cluster's state records. `--config` cannot imply it the same way, because `--config` on its own means something else entirely -- read the proxy a cluster configuration declares -- so that pairing stays explicit.
 
 **This is the route for a cluster with no SSH.** k3d and kind nodes are containers with no `sshd`, and Talos runs no shell at all, so the SSH tunnel above cannot reach them however the inventory is written. It is also the route when you have a kubeconfig and no host credentials, which is the ordinary situation on a development cluster.
 
 The bare flag reaches `zarf/zarf-docker-registry:5000`, the service Zarf's init package stands the registry up as. Give it a value to name another, as `namespace/service:port`:
 
 ```
-cargoship mirror ./package.tar.zst --from-zarf-state --via-kube registry/harbor-core:8080
+cargoship mirror ./package.tar.zst --via-kube registry/harbor-core:8080 oci://harbor.internal
 ```
+
+Naming a destination is what makes an in-cluster registry that is **not** Zarf's reachable. An `oci://` argument suppresses the implied state read, so the reference and the credentials are yours -- from the Docker configuration, as everywhere else -- and only the route comes from `--via-kube`. There is no `zarf-state` secret involved, and none has to exist.
 
 The service has to be named because Zarf's state does not record one. What the state records is the address a **node** reaches the registry on -- a NodePort, or the per-node host port the registry proxy listens on -- and neither names anything the API server can forward to. Zarf's own marker service, the one labelled `zarf.dev/connect-name=registry`, carries the namespace and the port but has no selector and therefore no endpoints, which leaves the backing service's name as the one piece that has to be stated.
 

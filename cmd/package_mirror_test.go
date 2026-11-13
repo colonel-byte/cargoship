@@ -533,41 +533,72 @@ func TestParseKubeService(t *testing.T) {
 	}
 }
 
-// TestViaKubeRejectedEarly covers the two ways --via-kube can be asked for something it cannot
-// do. Both are refused before anything connects, because a flag silently ignored looks like a
-// flag that was honoured, and a push that quietly took the other tunnel is one whose failure an
-// operator cannot reason about.
-func TestViaKubeRejectedEarly(t *testing.T) {
+// TestReadsZarfState pins the rule that removed a redundant flag: --via-kube with no destination
+// named implies --from-zarf-state, because "route into the cluster, destination unspecified" has
+// one sensible answer. --config cannot imply it, since --config alone means something else -- read
+// the proxy a cluster configuration declares -- so the pairing stays explicit there.
+func TestReadsZarfState(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct {
-		name    string
-		flags   registryTargetFlags
-		wantErr string
+		name          string
+		fromZarfState bool
+		viaKube       string
+		explicit      string
+		want          bool
 	}{
 		{
-			name: "without --from-zarf-state there is no cluster to tunnel into",
-			flags: registryTargetFlags{
-				viaKube: defaultKubeService,
-			},
-			wantErr: "needs --from-zarf-state",
+			name:          "asked for outright",
+			fromZarfState: true,
+			want:          true,
 		},
 		{
-			name: "alongside a cluster configuration it is ambiguous",
-			flags: registryTargetFlags{
-				fromZarfState: true,
-				viaKube:       defaultKubeService,
-				config:        "./cluster.yaml",
-			},
-			wantErr: "not both",
+			name:    "a bare --via-kube implies it",
+			viaKube: defaultKubeService,
+			want:    true,
+		},
+		{
+			name:     "a named destination means nothing is read from state",
+			viaKube:  "registry/harbor-core:8080",
+			explicit: "harbor.internal",
+			want:     false,
+		},
+		{
+			name:          "both together is still a state read",
+			fromZarfState: true,
+			viaKube:       defaultKubeService,
+			want:          true,
+		},
+		{
+			name:          "a named destination does not override an explicit --from-zarf-state",
+			fromZarfState: true,
+			explicit:      "harbor.internal",
+			want:          true,
+		},
+		{
+			name: "neither",
+			want: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			o := tt.flags
-			_, err := o.resolveTarget(context.Background(), "")
-			require.ErrorContains(t, err, tt.wantErr)
+			require.Equal(t, tt.want, readsZarfState(tt.fromZarfState, tt.viaKube, tt.explicit))
 		})
 	}
+}
+
+// TestViaKubeRejectsTwoTunnels covers the one combination --via-kube still refuses. Two routes to
+// the same registry is not a fallback worth having: they authenticate differently, so a push that
+// silently took the other one is one whose failure an operator cannot reason about.
+func TestViaKubeRejectsTwoTunnels(t *testing.T) {
+	t.Parallel()
+
+	o := registryTargetFlags{
+		fromZarfState: true,
+		viaKube:       defaultKubeService,
+		config:        "./cluster.yaml",
+	}
+	_, err := o.resolveTarget(context.Background(), "")
+	require.ErrorContains(t, err, "not both")
 }

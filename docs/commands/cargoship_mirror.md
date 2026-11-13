@@ -57,7 +57,7 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --conf
       --retries int                                           Number of retries to perform for Cargoship's operations, such as package publishes.
       --tmpdir string                                         Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode                                     Verify the Cargoship package signature. (default if-possible)
-      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Requires --from-zarf-state.
+      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Implies --from-zarf-state.
       --zarf-cache string                                     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 

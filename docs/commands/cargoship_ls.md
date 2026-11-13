@@ -45,7 +45,7 @@ $ cargoship ls oci://harbor.internal -o json
       --name NAME                                             NAME of one package to list the mirrored versions of, instead of reading the registry's whole catalogue.
   -o, --output outputFormat                                   Output format. Valid options are: yaml, json.
       --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
-      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Requires --from-zarf-state.
+      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Implies --from-zarf-state.
 ```
 
 ### Options inherited from parent commands

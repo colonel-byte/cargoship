@@ -120,23 +120,38 @@ func (t registryTarget) release() {
 // each host's containerd hosts.toml, and a mirror populated at a different address is one no node
 // ever reaches. Taking both from one field is what makes them agree.
 func (o *registryTargetFlags) resolveTarget(ctx context.Context, explicit string) (registryTarget, error) {
-	if o.fromZarfState {
+	// --via-kube with no destination named implies --from-zarf-state, because "route into the
+	// cluster, destination unspecified" has exactly one sensible answer: the registry that
+	// cluster's zarf state records. Requiring both flags was symmetry with --config and nothing
+	// more -- and --config cannot imply it, because --config alone means something else
+	// entirely (read the proxy a cluster configuration declares). --via-kube carries no second
+	// meaning, so it can.
+	//
+	// A local rather than a write to o.fromZarfState: the flag struct is the record of what the
+	// operator typed, and a resolver that edits it makes every later read of it a guess about
+	// whether resolution has happened yet.
+	if readsZarfState(o.fromZarfState, o.viaKube, explicit) {
 		return o.zarfStateTarget(ctx, explicit)
 	}
 
 	// Nothing else reads a cluster, so a context named here would be silently ignored rather
-	// than wrong -- which is worse, because it looks like it was honoured. The same goes for a
-	// tunnel: without --from-zarf-state there is no cluster to open one into.
-	if o.kubeContext != "" {
+	// than wrong -- which is worse, because it looks like it was honoured. --via-kube does read
+	// one, so it is not covered by this.
+	if o.kubeContext != "" && o.viaKube == "" {
 		return registryTarget{}, errors.New("--context selects which cluster the zarf state is read from, so it needs --from-zarf-state")
-	}
-	if o.viaKube != "" {
-		return registryTarget{}, errors.New("--via-kube tunnels the push into the cluster the zarf state was read from, so it needs --from-zarf-state")
 	}
 
 	if explicit != "" {
 		if o.config != "" {
 			return registryTarget{}, fmt.Errorf("pass either a repository argument or --%s, not both", InstallConfig)
+		}
+		if o.viaKube != "" {
+			// A destination was named, so nothing is read from zarf state -- which is what
+			// makes an in-cluster registry that is not zarf's reachable: the reference and
+			// the credentials are the operator's, and only the route comes from here. A
+			// zero Registry carries no credentials and no mTLS strategy, so the push
+			// authenticates from the Docker configuration and trusts the system roots.
+			return o.kubeTunnelledTarget(ctx, zarfstate.Registry{}, explicit)
 		}
 		return registryTarget{registry: explicit}, nil
 	}
@@ -189,6 +204,12 @@ func (o *registryTargetFlags) zarfStateTarget(ctx context.Context, explicit stri
 		return registryTarget{}, err
 	}
 	return o.targetFromZarfRegistry(ctx, reg, explicit)
+}
+
+// readsZarfState reports whether the destination and credentials come from a zarf deployment's
+// state secret. See resolveTarget for why --via-kube implies it and --config cannot.
+func readsZarfState(fromZarfState bool, viaKube, explicit string) bool {
+	return fromZarfState || (viaKube != "" && explicit == "")
 }
 
 // registryCABundle reads the CA a zarf-managed-mTLS registry's certificate is signed by, and
