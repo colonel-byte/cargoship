@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	zconfig "github.com/zarf-dev/zarf/src/config"
+	"github.com/colonel-byte/cargoship/config"
 )
 
 // Bootstrap chdirs into the repo root and returns a CargoE2ETest pointed at the binary
@@ -54,7 +54,7 @@ func BootstrapInProcess() (CargoE2ETest, string, error) {
 		return CargoE2ETest{}, "", err
 	}
 
-	return CargoE2ETest{Arch: zconfig.GetArch()}, root, nil
+	return CargoE2ETest{Arch: config.GetArch()}, root, nil
 }
 
 // RepoRoot walks up from the working directory to the directory holding go.mod, so a
