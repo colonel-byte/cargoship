@@ -46,7 +46,7 @@ func printHostSummary(w io.Writer, r receipt.Receipt) {
 		})
 	}
 
-	message.TableWithWriter(w, []string{"Host", "Role", "Changed", "Phases"}, rows)
+	message.Table(w, []string{"Host", "Role", "Changed", "Phases"}, rows)
 	printCoverageNote(w, r)
 }
 

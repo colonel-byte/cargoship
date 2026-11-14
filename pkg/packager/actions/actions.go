@@ -41,7 +41,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/value"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/variables" //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 )
 
 // RunOptions configures optional action execution behavior.
@@ -79,10 +79,10 @@ func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaul
 	l := logger.From(ctx)
 	start := time.Now()
 
-	tmplObjs, err := template.NewObjects(values).
-		WithConstants(variableConfig.GetConstants()).
-		WithVariables(variableConfig.GetSetVariableMap()).
-		WithState(stateAccess)
+	objs := template.NewObjects(values)
+	objs = objs.WithConstants(variableConfig.GetConstants())      //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+	objs = objs.WithVariables(variableConfig.GetSetVariableMap()) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+	tmplObjs, err := objs.WithState(stateAccess)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaul
 
 	l.Info("running command", "cmd", cmdEscaped)
 
-	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
+	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates()) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 	actionDefaults.Dir = filepath.Join(basePath, actionDefaults.Dir)
 
 	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell, runtime.GOOS); err != nil {
@@ -138,9 +138,9 @@ retryCmd:
 			outTrimmed := strings.TrimSpace(stdout)
 
 			// If an output variable is defined, set it.
-			for _, v := range action.SetVariables {
-				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
-				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
+			for _, v := range action.SetVariables { //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {    //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 					return err
 				}
 			}
@@ -211,7 +211,7 @@ func runWaitAction(ctx context.Context, action api.Action, variableConfig *varia
 	}
 
 	// Apply variable substitution to wait action fields.
-	templates := variableConfig.GetAllTemplates()
+	templates := variableConfig.GetAllTemplates() //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 
 	// Apply go-templates if templating is enabled, in the same way as regular actions.
 	var applyTemplates func(s string) (string, error)

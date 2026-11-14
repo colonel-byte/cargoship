@@ -126,6 +126,7 @@
 - [shell-completion](dev/shell-completion.md)
 - [signing](dev/signing.md)
 - [thirdparty-src](dev/thirdparty-src.md)
+- [zarf-v1alpha1-surface](dev/zarf-v1alpha1-surface.md)
 
 
 -----------

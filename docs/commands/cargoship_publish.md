@@ -34,7 +34,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
 
 ```
   -a, --architecture string                     Architecture for OCI images and Zarf packages
-      --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
+      --confirm[=true|false]                    Publish the package without asking for confirmation first.
   -h, --help[=true|false]                       help for publish
       --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
   -k, --key string                              Path to public key file for validating signed packages
@@ -42,7 +42,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
       --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
       --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
       --signing-key string                      Private key for signing or re-signing: a path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md.
-      --signing-key-pass string                 Password to the private key used for publishing packages
+      --signing-key-pass string                 Password to the private key used for publishing packages.
       --tag string                              The tag to be used in the OCI reference for the package in the registry
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)

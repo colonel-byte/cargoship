@@ -45,7 +45,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	zarfapi "github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1" //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -194,7 +194,7 @@ func decodeDocument(node ast.Node, version string) (zarfapi.Package, int, error)
 		if err := goyaml.NodeToValue(node, &pkg); err != nil {
 			return zarfapi.Package{}, 0, err
 		}
-		return convert.PackageFromV1alpha1(pkg), 1, nil
+		return convert.PackageFromV1alpha1(pkg), 1, nil //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 	case v1beta1.APIVersion:
 		var pkg v1beta1.Package
 		if err := goyaml.NodeToValue(node, &pkg); err != nil {

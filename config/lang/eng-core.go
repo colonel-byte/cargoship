@@ -291,6 +291,13 @@ const (
 	CmdPackageFlagSigningKey = "Private key for signing: a file path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md."
 	// CmdPackagePublishFlagSigningKey publish signing key flag
 	CmdPackagePublishFlagSigningKey = "Private key for signing or re-signing: a path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md."
+	// CmdPackagePublishFlagSigningKeyPassword publish signing key password flag. Replaces zarf's
+	// string of the same name, which zarf 1.0.1 removed.
+	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages."
+	// CmdPackagePublishFlagConfirm publish flag confirm. Replaces zarf's string of the same name,
+	// which zarf 1.0.1 removed, and which promised to skip a signing-key password prompt that
+	// cargoship does not have.
+	CmdPackagePublishFlagConfirm = "Publish the package without asking for confirmation first."
 	// CmdPackageCreateFlagReproducible create flag reproducible
 	CmdPackageCreateFlagReproducible = "Pin the recorded build time to a fixed value, so identical inputs produce a byte-identical package."
 	// CmdSchemaShort schema short
