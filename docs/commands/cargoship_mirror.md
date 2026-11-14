@@ -18,6 +18,8 @@ Give the registry as an oci:// reference, optionally with a repository prefix fo
 
 A finished mirror records which package populated it, under cargoship:_mirror.NAME.VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed.
 
+--publish adds the package itself, as 'cargoship publish --record' would have, once the mirror has landed. The two answer different questions -- what a node pulls at runtime, and what a consumer pulls to install with -- and a registry holding only the first is one a consumer cannot install from. An air gap generally wants both.
+
 ```
 cargoship mirror [Package] [REPOSITORY] [flags]
 ```
@@ -55,6 +57,7 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --conf
       --no-record[=true|false]                                Skip the record a finished mirror writes about itself, which is what makes cargoship ls able to see it.
       --oci-concurrency int                                   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --publish[=true|false]                                  Also publish the package itself to the same registry, so a consumer can pull it. See docs/guides/mirror-registry.md.
       --retries int                                           Number of retries to perform for Cargoship's operations, such as package publishes.
       --tmpdir string                                         Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode                                     Verify the Cargoship package signature. (default if-possible)

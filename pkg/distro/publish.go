@@ -23,11 +23,13 @@ package distro
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/coci"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -52,6 +54,19 @@ type PublishOptions struct {
 	types.RemoteOptions
 	// Tag is an optional tag for the OCI reference separate from the package metadata.version
 	Tag string
+	// Username and Password authenticate the push. Empty, which is the usual case for the
+	// command line, reads the Docker configuration file instead.
+	Username string
+	Password string
+	// DialContext opens the connections the push travels over, which is how it reaches a
+	// registry only a cluster node can see. See pkg/tunnel and pkg/kubetunnel.
+	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	// CABundle is trusted in addition to the system roots, which is how a push reaches a
+	// registry serving a certificate from a private CA. See images.ClientOptions.CABundle.
+	CABundle []byte
+	// ClientCertificate is presented to a registry that requires one of every client. See
+	// images.ClientCertificate.
+	ClientCertificate images.ClientCertificate
 	// Record writes a record of the published package, so that `cargoship ls` can find it and
 	// a consumer can resolve the newest version of a package without being told where it is.
 	//
@@ -175,7 +190,37 @@ func pushToRemote(ctx context.Context, layout *layout.DistroLayout, ref registry
 		return fmt.Errorf("could not configure OCI cache: %w", err)
 	}
 
-	remote, err := coci.NewRemote(ctx, ref.String(), platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
+	mods := []oci.Modifier{
+		oci.WithPlainHTTP(opts.PlainHTTP),
+		oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify),
+		cacheMod,
+	}
+
+	// The transport half, which a push reaching a registry through a tunnel or behind a private
+	// CA needs and an ordinary one does not have at all: left out entirely where nothing asks
+	// for it, so zarf's own default transport still applies.
+	clientOptions := images.ClientOptions{
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		CABundle:              opts.CABundle,
+		ClientCertificate:     opts.ClientCertificate,
+		DialContext:           opts.DialContext,
+	}
+	if !clientOptions.IsZero() {
+		transport, err := images.Transport(clientOptions)
+		if err != nil {
+			return err
+		}
+		mods = append(mods, oci.WithTransport(transport))
+	}
+
+	// Credentials given rather than read from the Docker configuration file, for the caller that
+	// has them and nowhere to put them -- `cargoship mirror --publish --from-zarf-state` holds
+	// the push credentials zarf generated and never writes them anywhere.
+	if credential := images.StaticCredential(ref.Registry, opts.Username, opts.Password); credential != nil {
+		mods = append(mods, oci.WithCredentialFunc(credential))
+	}
+
+	remote, err := coci.NewRemote(ctx, ref.String(), platform, mods...)
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}

@@ -211,6 +211,25 @@ cargoship mirror ./package.tar.zst oci://harbor.internal --images
 
 Every image in the package is pushed, including those belonging to a chart that is currently disabled. A mirror's job is to hold the content, and enabling that chart later then needs no second pass -- the alternative fails on a node at pull time.
 
+## Publishing the Package Alongside It
+
+`--publish` writes the package itself to the same registry once the mirror has landed, exactly as `cargoship publish --record` would have:
+
+```
+cargoship mirror ./package.tar.zst oci://harbor.internal --publish
+```
+
+Reach for it where something downstream has to **install** from this registry rather than pull images through it. A mirror holds every reference a node asks for at runtime and no artifact to install from, so a consumer resolving a package by name finds a `mirror` record, no `package` record, and nothing to pull -- which is what [`cluster-api-provider-cargoship`](https://github.com/colonel-byte/cluster-api-provider-cargoship) reports as *recorded as mirrored into this registry but not published into it*. An air gap generally wants both halves, and this is one command rather than two.
+
+Four things about it:
+
+- **It runs after the mirror, and only if the mirror succeeded.** A registry advertising a package whose content is not there is worse than a registry with neither.
+- **It uses the same transport and credentials.** A destination reached through `--from-zarf-state`, `--config` or `--via-kube` -- over an SSH channel or the API server's port-forward, against a certificate signed by a private CA, with credentials that exist only in Zarf's state -- is reached the same way for the publish. Nothing has to be logged into separately.
+- **The reference is the one `publish` would have written**: the target's host and repository prefix, then the package's own name and version. So a consumer reading the record finds the artifact where the record says it is.
+- **`--no-record` suppresses both records.** The artifact is still published; what is skipped is the record repository, which is what an operator asking for no records asked for.
+
+The costs are storage and time: the package's layers are pushed in addition to the loose content, so a registry holds both. Leave `--publish` off where the only consumer is a node pulling images.
+
 ## Credentials
 
 Credentials come from the Docker configuration file, the same as `publish`, `pull`, and `create`. `docker login harbor.internal` before mirroring to a registry that needs authentication.
