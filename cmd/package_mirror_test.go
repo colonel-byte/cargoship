@@ -135,34 +135,56 @@ func TestResolveTarget(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("an oci argument is used as given, with the prefix stripped", func(t *testing.T) {
-		o := &packageMirrorOptions{}
-		got, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "oci://harbor.internal/cargoship"})
+		o := &registryTargetFlags{}
+		got, err := o.resolveTarget(ctx, "harbor.internal/cargoship")
 		require.NoError(t, err)
-		require.Equal(t, mirrorTarget{registry: "harbor.internal/cargoship"}, got)
-	})
-
-	t.Run("an argument without the oci scheme is refused", func(t *testing.T) {
-		o := &packageMirrorOptions{}
-		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "harbor.internal"})
-		require.ErrorContains(t, err, "oci://")
+		require.Equal(t, registryTarget{registry: "harbor.internal/cargoship"}, got)
 	})
 
 	t.Run("naming both a registry and a cluster configuration is refused", func(t *testing.T) {
-		o := &packageMirrorOptions{config: "cluster.yaml"}
-		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "oci://harbor.internal"})
+		o := &registryTargetFlags{config: "cluster.yaml"}
+		_, err := o.resolveTarget(ctx, "harbor.internal")
 		require.ErrorContains(t, err, "not both")
 	})
 
 	t.Run("naming neither says how to name one", func(t *testing.T) {
-		o := &packageMirrorOptions{}
-		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst"})
-		require.ErrorContains(t, err, "no destination registry")
+		o := &registryTargetFlags{}
+		_, err := o.resolveTarget(ctx, "")
+		require.ErrorContains(t, err, "no registry named")
 	})
 
 	t.Run("a context with nothing to read a cluster for is refused, not ignored", func(t *testing.T) {
-		o := &packageMirrorOptions{kubeContext: "prod"}
-		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "oci://harbor.internal"})
+		o := &registryTargetFlags{kubeContext: "prod"}
+		_, err := o.resolveTarget(ctx, "harbor.internal")
 		require.ErrorContains(t, err, "--from-zarf-state")
+	})
+}
+
+// TestExplicitRegistry covers the one argument both mirror and ls take, at the position each of
+// them takes it. The scheme is required rather than assumed: a bare host would be read as a
+// repository path by the reference parser and fail somewhere less obvious.
+func TestExplicitRegistry(t *testing.T) {
+	t.Run("the prefix is stripped", func(t *testing.T) {
+		got, err := explicitRegistry([]string{"pkg.tar.zst", "oci://harbor.internal/cargoship"}, 1)
+		require.NoError(t, err)
+		require.Equal(t, "harbor.internal/cargoship", got)
+	})
+
+	t.Run("ls takes it first", func(t *testing.T) {
+		got, err := explicitRegistry([]string{"oci://harbor.internal"}, 0)
+		require.NoError(t, err)
+		require.Equal(t, "harbor.internal", got)
+	})
+
+	t.Run("an argument without the oci scheme is refused", func(t *testing.T) {
+		_, err := explicitRegistry([]string{"pkg.tar.zst", "harbor.internal"}, 1)
+		require.ErrorContains(t, err, "oci://")
+	})
+
+	t.Run("no argument is not an error, because there are other places to look", func(t *testing.T) {
+		got, err := explicitRegistry([]string{"pkg.tar.zst"}, 1)
+		require.NoError(t, err)
+		require.Empty(t, got)
 	})
 }
 
@@ -358,7 +380,7 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 		name     string
 		reg      zarfstate.Registry
 		explicit string
-		want     mirrorTarget
+		want     registryTarget
 		wantErr  string
 	}{
 		{
@@ -369,7 +391,7 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 				PushPassword: "secret",
 				Mode:         zarfstate.ModeExternal,
 			},
-			want: mirrorTarget{
+			want: registryTarget{
 				registry: "harbor.internal",
 				username: "zarf-push",
 				password: "secret",
@@ -382,7 +404,7 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 				PushUsername: "zarf-push",
 				PushPassword: "secret",
 			},
-			want: mirrorTarget{
+			want: registryTarget{
 				registry: "harbor.internal",
 				username: "zarf-push",
 				password: "secret",
@@ -392,7 +414,7 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 			name:     "an explicit address wins, and the credentials still come from state",
 			reg:      internal,
 			explicit: "node1.internal:31999",
-			want: mirrorTarget{
+			want: registryTarget{
 				registry: "node1.internal:31999",
 				username: "zarf-push",
 				password: "secret",
@@ -427,7 +449,7 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := &packageMirrorOptions{}
+			o := &registryTargetFlags{}
 			got, err := o.targetFromZarfRegistry(context.Background(), tt.reg, tt.explicit)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)

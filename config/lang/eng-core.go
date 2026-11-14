@@ -41,7 +41,8 @@ const (
 		"This is not 'cargoship publish'. That uploads the package as one artifact, to be pulled back as a package. This unpacks it: each image is pushed under the same repository path and tag it had upstream with only the registry host swapped, because that is exactly what a node asks a mirror for once cargoship has written the mirror into its containerd configuration. An image the package carries for several architectures is pushed as an index, so the registry holds every architecture the package did.\n\n" +
 		"Each file is pushed as a single-layer OCI artifact named after the file and tagged with a digest of the source URL the definition declared, which keeps two releases of the same filename apart.\n\n" +
 		"Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give --config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.\n\n" +
-		"--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches."
+		"--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches.\n\n" +
+		"A finished mirror records which package populated it, under cargoship/NAME:VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed."
 	// CmdPackageMirrorExample mirror example
 	CmdPackageMirrorExample = "\n" +
 		"# Mirror everything the package carries into a registry:\n" +
@@ -52,16 +53,34 @@ const (
 		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:5000 --images --plain-http\n\n" +
 		"# Mirror into a zarf deployment's in-cluster registry, tunnelled over ssh to a node:\n" +
 		"$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --config ./cluster.yaml\n"
-	// CmdPackageMirrorFlagConfig mirror flag config
-	CmdPackageMirrorFlagConfig = "`PATH` of a cluster configuration to read the destination registry from. See docs/guides/mirror-registry.md."
+	// CmdFlagClusterConfigRegistry cluster configuration flag, shared by mirror and ls
+	CmdFlagClusterConfigRegistry = "`PATH` of a cluster configuration to read the registry from. See docs/guides/mirror-registry.md."
 	// CmdPackageMirrorFlagImages mirror flag images
 	CmdPackageMirrorFlagImages = "Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given."
 	// CmdPackageMirrorFlagFiles mirror flag files
 	CmdPackageMirrorFlagFiles = "Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given."
-	// CmdPackageMirrorFlagFromZarfState mirror flag from-zarf-state
-	CmdPackageMirrorFlagFromZarfState = "Take the destination registry and its push credentials from a zarf deployment. See docs/guides/mirror-registry.md."
-	// CmdPackageMirrorFlagContext mirror flag context
-	CmdPackageMirrorFlagContext = "`NAME` of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one."
+	// CmdFlagFromZarfState from-zarf-state flag, shared by mirror and ls
+	CmdFlagFromZarfState = "Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md."
+	// CmdFlagKubeContext kubeconfig context flag, shared by mirror and ls
+	CmdFlagKubeContext = "`NAME` of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one."
+	// CmdPackageLsShort ls short
+	CmdPackageLsShort = "List the cargoship packages mirrored into an OCI registry"
+	// CmdPackageLsLong ls long
+	CmdPackageLsLong = "Reads the record every 'cargoship mirror' leaves behind and reports which packages populated a registry, newest first. This is what a registry holds rather than what a cluster runs: two versions of one package can be mirrored side by side, and both are listed.\n\n" +
+		"The registry is named the same three ways 'cargoship mirror' names it -- as an oci:// argument, with --config to read the proxy a cluster configuration declares, or with --from-zarf-state to read a zarf deployment's own registry, tunnelled over ssh when --config names the fleet.\n\n" +
+		"Without --name the registry's catalogue is listed, which needs a credential allowed to read it; --name reads one repository and needs no more than a pull. A listing is what was recorded, so content deleted from the registry by hand still appears."
+	// CmdPackageLsExample ls example
+	CmdPackageLsExample = "\n" +
+		"# List what has been mirrored into a registry:\n" +
+		"$ cargoship ls oci://harbor.internal\n\n" +
+		"# List one package's versions, without reading the registry catalogue:\n" +
+		"$ cargoship ls oci://harbor.internal --name rke2\n\n" +
+		"# List a zarf deployment's in-cluster registry, over ssh to a node:\n" +
+		"$ cargoship ls --from-zarf-state --config ./cluster.yaml\n\n" +
+		"# Machine-readable, for a script choosing a version:\n" +
+		"$ cargoship ls oci://harbor.internal -o json\n"
+	// CmdPackageLsFlagName ls flag name
+	CmdPackageLsFlagName = "`NAME` of one package to list the mirrored versions of, instead of reading the registry's whole catalogue."
 	// CmdPackagePullShort pull short
 	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and saves it to the local filesystem"
 	// CmdPackagePullLong pull long

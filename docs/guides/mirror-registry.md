@@ -160,6 +160,41 @@ The credentials a cluster configuration carries under `spec.config.registries[].
 
 Use `--plain-http` for a registry serving plain HTTP, and `--insecure-skip-tls-verify` for one with a certificate the management node does not trust. Without `--plain-http`, HTTPS is tried first and plain HTTP only if the registry does not serve it.
 
+## Reading a Mirror Back
+
+Nothing else in a mirror says which package filled it. Images keep their original repository paths and files are named from their source URL, so a registry holding a few hundred repositories answers "what images are here" and not "is rke2 0.1.0 loaded". A finished mirror therefore records itself:
+
+```
+cargoship ls oci://harbor.internal
+```
+
+```
+ PACKAGE  VERSION  ARCH         ENGINE  MIRRORED          BY
+ rke2     0.1.0    amd64,arm64  rke2    2026-11-13 09:41  0.41.1
+ rke2     0.0.9    amd64        rke2    2026-10-02 14:08  0.40.2
+```
+
+The record is one small OCI artifact per package and version, at `cargoship/NAME:VERSION` under whatever the mirror's own target was. Its config blob is the row above as JSON; its single layer is the package's own `distro.yaml`, so a reader that wants the full definition has it without pulling the package back. The prefix is reserved: `cargoship publish` writes a package to `NAME:VERSION`, and a record written there would be the same reference.
+
+Two versions of one package sit side by side, because the record's tag is the version. That is a property of a registry rather than of a cluster -- Zarf's deployed-package state is keyed on the package name alone, so it records one version per name and a redeploy overwrites it.
+
+`ls` names its registry the same three ways `mirror` does, and `--from-zarf-state` with `--config` tunnels the read over SSH exactly as the push is tunnelled:
+
+```
+cargoship ls --from-zarf-state --config ./cluster.yaml
+cargoship ls oci://harbor.internal --name rke2
+cargoship ls oci://harbor.internal -o json
+```
+
+`--name` matters for more than brevity. Listing the whole registry means asking it for its catalogue, which is a wider permission than pushing -- the push credentials Zarf generates are not always allowed to enumerate -- while `--name` reads one repository and needs no more than a pull.
+
+Two limits worth knowing:
+
+- **A record is a claim, not a check.** Nothing reconciles it against the images and files it describes, so content deleted from the registry by hand leaves a record that still lists.
+- **It is not a trust anchor.** The `distro.yaml` a record carries is a copy; the signature that makes a package's own `distro.yaml` the root of trust lives in the package bundle. A record says what was mirrored, never that it is intact. Verify a package with `cargoship verify` before mirroring it, which is where that check belongs.
+
+A package that declares no version has nothing to tag a record with. The mirror still runs -- its content is what matters -- and says in the log that it recorded nothing.
+
 ## How This Compares
 
 Three features move content toward an air-gapped fleet, in different directions:
