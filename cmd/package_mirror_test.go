@@ -19,6 +19,9 @@ import (
 	"testing"
 
 	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/internal/zarfstate"
+	"github.com/k0sproject/rig/v2/protocol/openssh"
+	rigssh "github.com/k0sproject/rig/v2/protocol/ssh"
 	"github.com/stretchr/testify/require"
 )
 
@@ -135,7 +138,7 @@ func TestResolveTarget(t *testing.T) {
 		o := &packageMirrorOptions{}
 		got, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "oci://harbor.internal/cargoship"})
 		require.NoError(t, err)
-		require.Equal(t, "harbor.internal/cargoship", got)
+		require.Equal(t, mirrorTarget{registry: "harbor.internal/cargoship"}, got)
 	})
 
 	t.Run("an argument without the oci scheme is refused", func(t *testing.T) {
@@ -155,4 +158,283 @@ func TestResolveTarget(t *testing.T) {
 		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst"})
 		require.ErrorContains(t, err, "no destination registry")
 	})
+
+	t.Run("a context with nothing to read a cluster for is refused, not ignored", func(t *testing.T) {
+		o := &packageMirrorOptions{kubeContext: "prod"}
+		_, err := o.resolveTarget(ctx, []string{"pkg.tar.zst", "oci://harbor.internal"})
+		require.ErrorContains(t, err, "--from-zarf-state")
+	})
+}
+
+// TestRegistryAddress covers the address decision on its own, including the node-local case the
+// non-tunnelled path can only report as an error.
+func TestRegistryAddress(t *testing.T) {
+	tests := []struct {
+		name          string
+		reg           zarfstate.Registry
+		explicit      string
+		wantAddr      string
+		wantNodeLocal bool
+		wantErr       string
+	}{
+		{
+			name: "a nodeport address is used as recorded when it already carries a port",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1:31999",
+				Port:    31999,
+				Mode:    zarfstate.ModeNodePort,
+			},
+			wantAddr:      "127.0.0.1:31999",
+			wantNodeLocal: true,
+		},
+		{
+			name: "a recorded address with no port takes the one from state",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1",
+				Port:    31999,
+				Mode:    zarfstate.ModeNodePort,
+			},
+			wantAddr:      "127.0.0.1:31999",
+			wantNodeLocal: true,
+		},
+		{
+			name: "a proxy-mode host port is node-local too",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1:5000",
+				Port:    5000,
+				Mode:    zarfstate.ModeProxy,
+			},
+			wantAddr:      "127.0.0.1:5000",
+			wantNodeLocal: true,
+		},
+		{
+			name: "no address and no port leaves nothing to dial",
+			reg: zarfstate.Registry{
+				Mode: zarfstate.ModeNodePort,
+			},
+			wantErr: "nothing to reach it on",
+		},
+		{
+			name: "an explicit address is this machine's business, never the tunnel's",
+			reg: zarfstate.Registry{
+				Address: "127.0.0.1:31999",
+				Port:    31999,
+				Mode:    zarfstate.ModeNodePort,
+			},
+			explicit:      "node1.internal:31999",
+			wantAddr:      "node1.internal:31999",
+			wantNodeLocal: false,
+		},
+		{
+			name: "an external registry needs no tunnel",
+			reg: zarfstate.Registry{
+				Address: "harbor.internal",
+				Mode:    zarfstate.ModeExternal,
+			},
+			wantAddr:      "harbor.internal",
+			wantNodeLocal: false,
+		},
+		{
+			// mTLS changes the scheme and the trust, not the address. This used to be
+			// refused outright on the premise that a push would need a client certificate:
+			// zarf issues one for the per-node registry proxy, not for a direct client, and
+			// the registry accepts a push authenticated with the push credentials alone.
+			name: "zarf-managed mtls leaves the address alone",
+			reg: zarfstate.Registry{
+				Address:      "harbor.internal",
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeExternal,
+				MTLSStrategy: "zarf-managed",
+			},
+			wantAddr: "harbor.internal",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addr, nodeLocal, err := registryAddress(tt.reg, tt.explicit)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantAddr, addr)
+			require.Equal(t, tt.wantNodeLocal, nodeLocal)
+		})
+	}
+}
+
+// TestFirstControllerWithSSH covers which node a tunnel is opened through. Any controller will
+// do -- a NodePort answers on every node -- so the only real decisions are skipping workers and
+// refusing a fleet whose hosts cargoship cannot open a channel to.
+func TestFirstControllerWithSSH(t *testing.T) {
+	sshHost := func(role, addr string) *clusterapi.Host {
+		h := &clusterapi.Host{Role: role}
+		h.ConnectionConfig.SSH = &rigssh.Config{Address: addr}
+		return h
+	}
+	openSSHHost := func(role, addr string) *clusterapi.Host {
+		h := &clusterapi.Host{Role: role}
+		h.ConnectionConfig.OpenSSH = &openssh.Config{Address: addr}
+		return h
+	}
+
+	tests := []struct {
+		name    string
+		hosts   []*clusterapi.Host
+		want    string
+		wantErr string
+	}{
+		{
+			name: "the first controller is taken",
+			hosts: []*clusterapi.Host{
+				sshHost(clusterapi.RoleWorker, "worker1"),
+				sshHost(clusterapi.RoleController, "control1"),
+				sshHost(clusterapi.RoleController, "control2"),
+			},
+			want: "control1",
+		},
+		{
+			name: "a single-role host counts as a controller",
+			hosts: []*clusterapi.Host{
+				sshHost(clusterapi.RoleSingle, "solo"),
+			},
+			want: "solo",
+		},
+		{
+			name: "a controller with no ssh block is skipped for one that has it",
+			hosts: []*clusterapi.Host{
+				openSSHHost(clusterapi.RoleController, "control1"),
+				sshHost(clusterapi.RoleController, "control2"),
+			},
+			want: "control2",
+		},
+		{
+			name: "a fleet cargoship cannot open a channel to is refused by name",
+			hosts: []*clusterapi.Host{
+				openSSHHost(clusterapi.RoleController, "control1"),
+			},
+			wantErr: "ssh",
+		},
+		{
+			name: "workers alone leave nothing to tunnel through",
+			hosts: []*clusterapi.Host{
+				sshHost(clusterapi.RoleWorker, "worker1"),
+			},
+			wantErr: "names no controller",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := clusterapi.Cluster{}
+			c.Spec.Hosts = tt.hosts
+
+			got, err := firstControllerWithSSH(c)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got.ConnectionConfig.SSH.Address)
+		})
+	}
+}
+
+// TestTargetFromZarfRegistry covers how a zarf deployment's state becomes a destination. The
+// credentials always come from state; the address only does when a machine other than a node
+// can reach it.
+func TestTargetFromZarfRegistry(t *testing.T) {
+	internal := zarfstate.Registry{
+		Address:      "127.0.0.1:31999",
+		Port:         31999,
+		PushUsername: "zarf-push",
+		PushPassword: "secret",
+		Mode:         zarfstate.ModeNodePort,
+	}
+
+	tests := []struct {
+		name     string
+		reg      zarfstate.Registry
+		explicit string
+		want     mirrorTarget
+		wantErr  string
+	}{
+		{
+			name: "an external registry is taken whole",
+			reg: zarfstate.Registry{
+				Address:      "harbor.internal",
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeExternal,
+			},
+			want: mirrorTarget{
+				registry: "harbor.internal",
+				username: "zarf-push",
+				password: "secret",
+			},
+		},
+		{
+			name: "state written before zarf recorded a mode is external when it names an address",
+			reg: zarfstate.Registry{
+				Address:      "harbor.internal",
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+			},
+			want: mirrorTarget{
+				registry: "harbor.internal",
+				username: "zarf-push",
+				password: "secret",
+			},
+		},
+		{
+			name:     "an explicit address wins, and the credentials still come from state",
+			reg:      internal,
+			explicit: "node1.internal:31999",
+			want: mirrorTarget{
+				registry: "node1.internal:31999",
+				username: "zarf-push",
+				password: "secret",
+			},
+		},
+		{
+			name:    "a nodeport registry with no address given names the fix",
+			reg:     internal,
+			wantErr: "only a node can reach",
+		},
+		{
+			name: "a proxied registry is no more reachable than a nodeport one",
+			reg: zarfstate.Registry{
+				Address:      "127.0.0.1:31999",
+				Port:         31999,
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeProxy,
+			},
+			wantErr: "only a node can reach",
+		},
+		{
+			name: "an external registry with no address at all is an error",
+			reg: zarfstate.Registry{
+				PushUsername: "zarf-push",
+				PushPassword: "secret",
+				Mode:         zarfstate.ModeExternal,
+			},
+			wantErr: "records no registry address",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := &packageMirrorOptions{}
+			got, err := o.targetFromZarfRegistry(context.Background(), tt.reg, tt.explicit)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

@@ -151,7 +151,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	for _, v := range imagesWithOverride {
 		hosts = append(hosts, v.overridden.Host)
 	}
-	client, err := NewRegistryClient(ctx, hosts, opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
+	client, err := NewRegistryClient(ctx, hosts, ClientOptions{
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
+	})
 	if err != nil {
 		return nil, err
 	}

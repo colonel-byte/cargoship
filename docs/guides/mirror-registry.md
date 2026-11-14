@@ -61,7 +61,70 @@ cargoship mirror ./package.tar.zst --config ./cluster.yaml
 
 Prefer this. It is the same field `apply` writes into every host, so what gets pushed and what the nodes ask for are read from one place and cannot drift. The scheme is dropped, and a path becomes the repository prefix.
 
-The argument and `--config` are alternatives rather than layers: passing both is an error, because silently preferring one would mirror to an address you did not name. A configuration declaring more than one proxy is also an error -- which mirror a package belongs in is not a question the command can answer, and guessing would populate the wrong one quietly.
+The argument and `--config` are alternatives rather than layers: passing both is an error, because silently preferring one would mirror to an address you did not name. (`--config` does compose with `--from-zarf-state`, where it names the nodes rather than the destination -- see below.) A configuration declaring more than one proxy is also an error -- which mirror a package belongs in is not a question the command can answer, and guessing would populate the wrong one quietly.
+
+### Reading It from a Zarf Deployment
+
+Where the fleet pulls through a registry [Zarf](https://zarf.dev) stands up, `--from-zarf-state` reads that registry out of the `zarf-state` secret in the `zarf` namespace:
+
+```
+cargoship mirror ./package.tar.zst oci://node1.internal:31999 --from-zarf-state --plain-http
+```
+
+The push credentials always come from there, and that is the half worth having: Zarf generates them at `zarf init` and writes them nowhere an operator would otherwise look, so the alternative is extracting them by hand and running `docker login`.
+
+The **address** only comes from there when the registry is external, which is the one mode whose recorded address is routable from somewhere other than a cluster node:
+
+| `registryMode` | What the address is                        | What `--from-zarf-state` does               |
+| -------------- | ------------------------------------------ | ------------------------------------------- |
+| `external`     | A registry outside the cluster             | Uses it, and the credentials                |
+| `nodeport`     | A node-local address behind a NodePort     | Tunnels with `--config`, else names the fix |
+| `proxy`        | A per-node host port served by a DaemonSet | Tunnels with `--config`, else names the fix |
+
+There are two ways to reach an internal registry, and the error names both.
+
+#### Tunnelling through a node
+
+Pass `--config` alongside `--from-zarf-state` and the push is carried over an SSH channel to one of the cluster's controllers:
+
+```
+cargoship mirror ./package.tar.zst --from-zarf-state --config ./cluster.yaml
+```
+
+**Port 22 is the only port this needs.** One SSH connection to a controller carries both halves of the job: the Kubernetes API is read through it to find the registry, and then the push travels through it. No API port, no Kubernetes port-forward, no `kubectl`, and nothing installed on the node.
+
+Your kubeconfig is still required, but only for **identity** -- the client credentials and the CA. Its server URL is deliberately left untouched, so TLS validates against the hostname it names while the bytes travel through SSH to the node. That means no certificate needs a SAN for the address actually dialled, and a kubeconfig whose server this machine cannot route to works fine. The port to tunnel to is read from that same URL rather than assumed, so a cluster serving the API somewhere other than 6443 needs no extra flag.
+
+For the registry, the recorded address does double duty, which is what makes this correct rather than merely workable: it is both the service the channel opens onto and the reference host the images are pushed under, so the mirror cannot be populated at an address a node will not ask for.
+
+Any controller will do, since the API server listens on loopback on every control-plane node and a NodePort answers on all of them, so the first one in the configuration is used. A fleet whose hosts are configured with `openSSH:` rather than `ssh:` is refused: rig's OpenSSH protocol shells out to the `ssh` binary and offers no way to open a channel.
+
+One thing to know about it: throughput is whatever a single SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push. `--oci-concurrency` opens more channels, but they share the one TCP connection.
+
+#### Naming a reachable address yourself
+
+The alternative is to give the address this machine reaches the registry on and let `--from-zarf-state` supply only the credentials. A port-forward is the usual way to get one, and a `127.0.0.1` address works exactly as any other:
+
+```
+kubectl port-forward -n zarf svc/zarf-docker-registry 5000:5000 &
+cargoship mirror ./package.tar.zst oci://127.0.0.1:5000 --from-zarf-state --plain-http
+```
+
+The loopback address is not treated specially -- it is a destination like any other, and the only thing to watch is that it is **your** loopback rather than the one Zarf recorded for a node. `--plain-http` is worth passing **only when the deployment manages no certificates**: Zarf's internal registry without mTLS serves plain HTTP, and while HTTPS is tried first and falls back, saying so skips the failed probe. Under `mtlsStrategy: zarf-managed` the registry serves HTTPS and `--plain-http` would send the push to a port that will not answer it - see [A Zarf-managed mTLS registry](#a-zarf-managed-mtls-registry).
+
+One sharp edge, which applies to every destination and not just this one: if the package's images already name the registry you are mirroring **to**, a repository prefix on the destination is silently dropped and the images are pushed back to their own references. That is zarf's `ImageTransformHostWithoutChecksum` treating the push as already done. It does not arise for a package built against upstream registries, which is the normal case.
+
+`--context` picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the `kubeconfig` setting (`KUBECONFIG`, else the standard location). `--context` without `--from-zarf-state` is an error rather than being ignored, since nothing else here reads a cluster. Under `--config` the context still chooses which cluster's credentials and API port are used, and the tunnel supplies the route to it.
+
+### A Zarf-managed mTLS registry
+
+`zarf init` can manage the registry's certificates itself, recording `mtlsStrategy: zarf-managed` in state - and from Zarf v1.0.0 that is what a default deployment does. Two things follow, and `--from-zarf-state` handles both without a flag.
+
+The registry serves **HTTPS**, never plain HTTP, with a server certificate signed by a private CA named `Zarf Registry CA`. Nothing in the management node's trust store covers it, so the CA is read out of the cluster - the `ca.crt` of the `zarf-registry-server-tls` secret, the same secret Zarf mounts into the registry pod - and trusted for the push. Under `--config` that read travels the same SSH channel as the state read, so a fleet with a closed API port is unaffected. `--insecure-skip-tls-verify` remains available for a deployment whose CA cannot be read, but it should not be needed.
+
+No client certificate is presented, and that is deliberate. Zarf does issue one - the `zarf-registry-client-tls` secret, common name `zarf-registry-client` - but it belongs to the per-node registry proxy, which presents it on a node's behalf: a node reaches `127.0.0.1:5000` in plain HTTP, the proxy on that node terminates it and speaks mTLS to the registry. The registry does not require a client certificate from a direct client, so a push authenticates with the push credentials from state and nothing else. Earlier versions of cargoship refused this case outright on the premise that a client certificate was needed; that premise was wrong.
+
+Note that the images land under their original path and tag, as everywhere else in this guide -- **not** Zarf's `pause:3.10-zarf-1234567890` form. That is correct for nodes reaching the mirror through a containerd `hosts.toml`, and it means a workload whose image reference Zarf's own agent rewrites will not find these copies.
 
 ## How Files Are Named
 
@@ -90,6 +153,8 @@ Every image in the package is pushed, including those belonging to a chart that 
 ## Credentials
 
 Credentials come from the Docker configuration file, the same as `publish`, `pull`, and `create`. `docker login harbor.internal` before mirroring to a registry that needs authentication.
+
+The one exception is `--from-zarf-state`, which reads the push credentials Zarf generated along with the registry -- see [above](#reading-it-from-a-zarf-deployment).
 
 The credentials a cluster configuration carries under `spec.config.registries[].auth` are **not** used for the push, even when `--config` supplied the address. Those exist for the nodes to pull with, they are commonly encrypted at rest with age or Ansible Vault, and reusing them here would mean decrypting a fleet's secrets during what is otherwise a local operation.
 

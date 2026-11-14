@@ -14,6 +14,8 @@ Each file is pushed as a single-layer OCI artifact named after the file and tagg
 
 Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give --config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.
 
+--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches.
+
 ```
 cargoship mirror [Package] [REPOSITORY] [flags]
 ```
@@ -25,14 +27,14 @@ cargoship mirror [Package] [REPOSITORY] [flags]
 # Mirror everything the package carries into a registry:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://harbor.internal
 
-# Mirror under a repository prefix, which most hosted registries require:
-$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://harbor.internal/cargoship
-
 # Mirror into the proxy the cluster configuration already declares:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --config ./cluster.yaml
 
 # Mirror only the images, over plain HTTP:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:5000 --images --plain-http
+
+# Mirror into a zarf deployment's in-cluster registry, tunnelled over ssh to a node:
+$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --config ./cluster.yaml
 
 ```
 
@@ -41,7 +43,9 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:
 ```
   -a, --architecture string                     Architecture for OCI images and Zarf packages
   -f, --config PATH                             PATH of a cluster configuration to read the destination registry from. See docs/guides/mirror-registry.md.
+      --context NAME                            NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
       --files[=true|false]                      Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
+      --from-zarf-state[=true|false]            Take the destination registry and its push credentials from a zarf deployment. See docs/guides/mirror-registry.md.
   -h, --help[=true|false]                       help for mirror
       --images[=true|false]                     Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
       --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.

@@ -24,8 +24,10 @@ package images
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -151,16 +153,30 @@ func addNameAnnotationsToDesc(desc ocispec.Descriptor, ref string) ocispec.Descr
 	return desc
 }
 
-func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*retry.Transport, error) {
+func orasTransport(opts ClientOptions) (*retry.Transport, error) {
 	transport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
 		return nil, errors.New("could not get default transport")
 	}
 	transport = transport.Clone()
 	// Enable / Disable TLS verification based on the config
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} //nolint:gosec // the field is the operator's explicit choice
+	if len(opts.CABundle) > 0 {
+		pool, err := CertPool(opts.CABundle)
+		if err != nil {
+			return nil, err
+		}
+		transport.TLSClientConfig.RootCAs = pool
+		transport.TLSClientConfig.MinVersion = tls.VersionTLS12
+	}
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
-	transport.ResponseHeaderTimeout = responseHeaderTimeout
+	transport.ResponseHeaderTimeout = opts.ResponseHeaderTimeout
+	if opts.DialContext != nil {
+		transport.DialContext = opts.DialContext
+		// A cloned DefaultTransport carries HTTP/2, which negotiates over the dialled
+		// connection and would have to be proxied too. Nothing needs it here.
+		transport.ForceAttemptHTTP2 = false
+	}
 	return retry.NewTransport(transport), nil
 }
 
@@ -172,6 +188,43 @@ func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) 
 	}
 	totalSize += manifest.Config.Size
 	return totalSize
+}
+
+// ClientOptions are the transport and credential settings NewRegistryClient needs.
+type ClientOptions struct {
+	InsecureSkipTLSVerify bool
+	ResponseHeaderTimeout time.Duration
+	// Credential authenticates every host the client is used with. Nil, which is the usual
+	// case, reads credentials from the Docker configuration file instead.
+	Credential auth.CredentialFunc
+	// DialContext opens the TCP connection every registry request travels over. Nil, which is
+	// the usual case, dials the reference's own host.
+	//
+	// Setting it decouples where the bytes go from what the reference says, which is what lets
+	// a registry be reached through a tunnel: an SSH channel to a cluster node carries the
+	// connection while the references stay the ones a node will ask for. The address the dialer
+	// is handed is the reference's, and a tunnelling dialer is free to ignore it.
+	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	// CABundle is trusted in addition to the system roots. A registry serving a certificate
+	// from a private CA -- which a zarf-managed-mTLS registry does -- is reached by supplying
+	// its CA here, rather than by turning verification off.
+	CABundle []byte
+}
+
+// CertPool is the system roots plus the PEM certificates in caBundle.
+//
+// It lives here rather than beside its other caller in pkg/distro because a pull and a mirror
+// both have to trust a private CA the same way, and pkg/distro imports this package while the
+// reverse would be a cycle.
+func CertPool(caBundle []byte) (*x509.CertPool, error) {
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("unable to read the system certificate pool: %w", err)
+	}
+	if !pool.AppendCertsFromPEM(caBundle) {
+		return nil, errors.New("no certificate found in the CA bundle: it must hold one or more PEM-encoded certificates")
+	}
+	return pool, nil
 }
 
 // NewRegistryClient builds the ORAS auth client every registry operation shares, and
@@ -189,12 +242,8 @@ func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) 
 // It is exported because a mirror pushes files alongside images, and both halves have to
 // authenticate to the target the same way or a credentialled registry takes one and refuses
 // the other.
-func NewRegistryClient(ctx context.Context, hosts []string, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*auth.Client, error) {
-	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get credentials: %w", err)
-	}
-	transport, err := orasTransport(insecureSkipTLSVerify, responseHeaderTimeout)
+func NewRegistryClient(ctx context.Context, hosts []string, opts ClientOptions) (*auth.Client, error) {
+	transport, err := orasTransport(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +251,32 @@ func NewRegistryClient(ctx context.Context, hosts []string, insecureSkipTLSVerif
 		Client: &http.Client{
 			Transport: transport,
 		},
-		Cache:      auth.NewCache(),
-		Credential: credentials.Credential(credStore),
+		Cache: auth.NewCache(),
 	}
+
+	// A credential given by the caller was read from somewhere that knows which registry it
+	// belongs to -- a zarf state secret, say -- so it answers for that host alone and the
+	// Docker configuration is not consulted at all. Mixing the two would let a stale
+	// docker login shadow the credential the operator just supplied.
+	if opts.Credential != nil {
+		client.Credential = opts.Credential
+		for _, host := range helpers.Unique(hosts) {
+			reg, err := remote.NewRegistry(host)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create registry: %w", err)
+			}
+			reg.Client = client
+			_ = reg.Ping(ctx) //nolint: errcheck
+		}
+		logger.From(ctx).Debug("using credentials supplied by the caller", "hosts", hosts)
+		return client, nil
+	}
+
+	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get credentials: %w", err)
+	}
+	client.Credential = credentials.Credential(credStore)
 
 	if credStore.IsAuthConfigured() {
 		for _, host := range helpers.Unique(hosts) {

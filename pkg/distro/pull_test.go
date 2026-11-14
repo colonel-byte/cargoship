@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/stretchr/testify/require"
 )
 
@@ -202,7 +203,7 @@ func TestCertPool(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			pool, err := certPool(tc.bundle)
+			pool, err := images.CertPool(tc.bundle)
 			if tc.wantErr != "" {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.wantErr)

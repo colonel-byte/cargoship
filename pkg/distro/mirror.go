@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -54,6 +55,17 @@ type MirrorOptions struct {
 	// line that named neither asked for.
 	Images bool
 	Files  bool
+	// Username and Password authenticate both halves of the mirror against the target.
+	// Empty falls back to the Docker configuration file.
+	Username string
+	Password string
+	// DialContext opens the connections both halves travel over, which is how a mirror reaches
+	// a registry only a cluster node can see. See images.ClientOptions.DialContext and
+	// pkg/tunnel.
+	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	// CABundle is trusted in addition to the system roots, which is how a mirror verifies a
+	// registry serving a certificate from a private CA. See images.ClientOptions.CABundle.
+	CABundle []byte
 }
 
 // Mirror publishes the contents of a built package into target, a registry host optionally
@@ -115,6 +127,10 @@ func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, op
 		PlainHTTP:             opts.PlainHTTP,
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Retries:               opts.Retries,
+		Username:              opts.Username,
+		Password:              opts.Password,
+		DialContext:           opts.DialContext,
+		CABundle:              opts.CABundle,
 	})
 }
 
@@ -129,7 +145,12 @@ func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, opt
 
 	// The same client and the same plain-HTTP decision the image half makes. Doing this once
 	// here rather than per file also means one pre-authentication round trip, not one each.
-	client, err := images.NewRegistryClient(ctx, []string{host}, opts.InsecureSkipTLSVerify, 0)
+	client, err := images.NewRegistryClient(ctx, []string{host}, images.ClientOptions{
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		Credential:            images.StaticCredential(host, opts.Username, opts.Password),
+		DialContext:           opts.DialContext,
+		CABundle:              opts.CABundle,
+	})
 	if err != nil {
 		return err
 	}
