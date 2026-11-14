@@ -23,7 +23,10 @@ package distro
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
+	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/coci"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/signing"
@@ -49,6 +52,13 @@ type PublishOptions struct {
 	types.RemoteOptions
 	// Tag is an optional tag for the OCI reference separate from the package metadata.version
 	Tag string
+	// Record writes a record of the published package, so that `cargoship ls` can find it and
+	// a consumer can resolve the newest version of a package without being told where it is.
+	//
+	// Off by default, unlike the record a mirror writes. Publishing is the older half of this
+	// and a registry somebody already publishes into should not quietly gain a second artifact
+	// per package on an upgrade.
+	Record bool
 }
 
 // Publish used to publish a distro package to an oci registry
@@ -91,7 +101,61 @@ func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.R
 		return registry.Reference{}, err
 	}
 
-	return registry.Reference{}, nil
+	if opts.Record {
+		writePublishRecord(ctx, disLayout, dst, disRef, opts)
+	}
+
+	// The reference the package actually landed at, which is what a caller asked for by taking
+	// a return value. This used to return the zero Reference on success, so `cargoship publish`
+	// logged an empty path on every run.
+	return disRef, nil
+}
+
+// writePublishRecord records a published package so that `cargoship ls` can find it, and so that
+// a consumer can discover where to pull the newest version of a package from.
+//
+// A failure is logged and no more. The package is already pushed by the time this runs, and the
+// record is advisory -- the same position the mirror record takes about itself. Turning a
+// successful publish into a failed command because a secondary artifact could not be written
+// would be the wrong trade, and the credential that can push a package cannot always write
+// another repository beside it.
+func writePublishRecord(ctx context.Context, l *layout.DistroLayout, dst, published registry.Reference, opts PublishOptions) {
+	log := logger.From(ctx)
+
+	record := MirrorRecord{
+		SchemaVersion:    MirrorRecordSchemaVersion,
+		Kind:             RecordKindPackage,
+		Name:             l.Distro.Metadata.Name,
+		Version:          l.Distro.Metadata.Version,
+		Engine:           l.Distro.Spec.Type,
+		Digest:           l.Digest(),
+		CargoshipVersion: config.CLIVersion,
+		MirroredAt:       time.Now().UTC(),
+	}
+	for _, arch := range l.Distro.Arches() {
+		record.Arches = append(record.Arches, string(arch))
+	}
+
+	// The version is what the record is keyed on, and --tag publishes under something else
+	// without changing the package's own version. Recording the tag that was actually written
+	// is what keeps the record's reference pullable.
+	if opts.Tag != "" {
+		record.Version = opts.Tag
+	}
+	if record.Version == "" {
+		log.Debug("not recording the publish: the package declares no version")
+		return
+	}
+
+	target := strings.TrimSuffix(dst.String(), "/")
+	client, plainHTTP, err := registryClient(ctx, target, MirrorOptions{RemoteOptions: opts.RemoteOptions})
+	if err != nil {
+		log.Warn("published, but unable to record it for `cargoship ls`", "reference", published.String(), "error", err)
+		return
+	}
+	if err := writeMirrorRecord(ctx, l, target, client, plainHTTP, record, opts.Retries); err != nil {
+		log.Warn("published, but unable to record it for `cargoship ls`", "reference", published.String(), "error", err)
+	}
 }
 
 // pushToRemote pushes a package to the given reference

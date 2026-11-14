@@ -67,6 +67,10 @@ type MirrorOptions struct {
 	// CABundle is trusted in addition to the system roots, which is how a mirror verifies a
 	// registry serving a certificate from a private CA. See images.ClientOptions.CABundle.
 	CABundle []byte
+	// NoRecord skips the record a finished mirror writes about itself. The content is pushed
+	// either way; what is lost is `cargoship ls` being able to say the mirror happened, so a
+	// registry populated with this set looks empty to a listing.
+	NoRecord bool
 }
 
 // Mirror publishes the contents of a built package into target, a registry host optionally
@@ -99,6 +103,7 @@ func Mirror(ctx context.Context, l *layout.DistroLayout, target string, opts Mir
 
 	record := MirrorRecord{
 		SchemaVersion:    MirrorRecordSchemaVersion,
+		Kind:             RecordKindMirror,
 		Name:             l.Distro.Metadata.Name,
 		Version:          l.Distro.Metadata.Version,
 		Engine:           l.Distro.Spec.Type,
@@ -125,6 +130,11 @@ func Mirror(ctx context.Context, l *layout.DistroLayout, target string, opts Mir
 		record.Files = pushed
 	}
 
+	if opts.NoRecord {
+		logger.From(ctx).Debug("not recording the mirror: --no-record was given", "target", target)
+		return nil
+	}
+
 	// A record is tagged with the package's version, so a package that declares none -- the
 	// schema allows it -- cannot have one. That is not a reason to fail a mirror whose content
 	// has already landed, so it is reported and skipped.
@@ -136,7 +146,20 @@ func Mirror(ctx context.Context, l *layout.DistroLayout, target string, opts Mir
 
 	// Last, and only on success. A record is a claim that the content is in the registry, so a
 	// mirror that got half way through must leave none rather than one nothing can act on.
-	return writeMirrorRecord(ctx, l, target, client, plainHTTP, record, opts.Retries)
+	//
+	// A failure to write it is warned about rather than returned, which is the same position
+	// `cargoship publish --record` takes and the one the record's own documentation claims for
+	// it: advisory, not a trust anchor. Returning it meant a mirror that had pushed every byte
+	// failed at its last step -- and the case that makes that more than theoretical is a
+	// registry which locks a tag once written, where re-mirroring a version that already has a
+	// record is refused however complete the content is. What is lost by warning is that
+	// `cargoship ls` cannot see this mirror, so the warning says that rather than only naming
+	// the error.
+	if err := writeMirrorRecord(ctx, l, target, client, plainHTTP, record, opts.Retries); err != nil {
+		logger.From(ctx).Warn("mirrored, but unable to record it -- `cargoship ls` will not report this package as mirrored here",
+			"target", target, "package", record.Name, "version", record.Version, "error", err)
+	}
+	return nil
 }
 
 // registryClient builds the one authenticated client a mirror uses, and settles whether the

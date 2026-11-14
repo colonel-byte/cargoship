@@ -118,7 +118,7 @@ func (o *packageLsOptions) print(ctx context.Context, target string, records []d
 	if len(records) == 0 {
 		// Not an error. A registry a mirror has never run against is a perfectly ordinary
 		// answer, and an exit code saying otherwise would break a script that checks.
-		logger.From(ctx).Info("no cargoship package is recorded as mirrored here", "registry", target)
+		logger.From(ctx).Info("no cargoship package is recorded here", "registry", target)
 		return nil
 	}
 
@@ -127,13 +127,17 @@ func (o *packageLsOptions) print(ctx context.Context, target string, records []d
 		rows = append(rows, []string{
 			r.Name,
 			r.Version,
+			r.Kind,
 			strings.Join(r.Arches, ","),
 			r.Engine,
 			r.MirroredAt.Local().Format("2006-01-02 15:04"),
 			r.CargoshipVersion,
 		})
 	}
-	logger.From(ctx).Info("packages mirrored into this registry", "registry", target, "count", len(records))
-	message.Table(OutputWriter, []string{"Package", "Version", "Arch", "Engine", "Mirrored", "By"}, rows)
+	// Kind is a column rather than a footnote because it decides what a reader does next: a
+	// package record names one artifact to pull whole, a mirror record names loose content a
+	// node reaches by its own references.
+	logger.From(ctx).Info("cargoship packages recorded in this registry", "registry", target, "count", len(records))
+	message.Table(OutputWriter, []string{"Package", "Version", "Kind", "Arch", "Engine", "Recorded", "By"}, rows)
 	return nil
 }

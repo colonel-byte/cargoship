@@ -20,9 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
+	v1alpha1 "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/coci"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
@@ -38,13 +40,84 @@ import (
 // field added, the major for a field removed or given a new meaning.
 const MirrorRecordSchemaVersion = "1.0"
 
-// MirrorRecordRepoPrefix is the repository prefix every mirror record lives under.
+// RecordRepo is the one repository every record lives in, under whatever prefix the target
+// carries.
 //
 // It is reserved rather than incidental. A package published with `cargoship publish` lands at
 // <registry>/<name>:<version>, so a record written there would be the same reference as a real
-// package and one would silently overwrite the other. The prefix also means listing the records
-// for a known package is one tag query instead of a walk of the registry's catalogue.
-const MirrorRecordRepoPrefix = "cargoship"
+// package and one would silently overwrite the other.
+//
+// One repository rather than one per package, which is what this used to be, because discovery
+// has to work on the registries people actually use. Finding records spread across repositories
+// means asking for the registry's catalogue, and `/v2/_catalog` is a wider permission than
+// pushing where it exists at all -- ghcr.io answers it with 403 DENIED and Docker Hub does not
+// implement it, so `cargoship ls` could not list either. Records in one repository are one
+// `/v2/<repo>/tags/list` away, which every registry serves and which needs no more than pull.
+const RecordRepo = "cargoship"
+
+// Record kinds, and the tag prefix each one takes.
+//
+// The kind is in the tag because the two describe different things to do. A published package is
+// one artifact to pull whole; a mirror is loose content a node reaches by its own references. A
+// consumer looking for "where do I pull the newest rancher-rke2-multi-cilium" wants the first and
+// would be misled by the second, so they cannot share a tag.
+//
+// The `_` prefix is what keeps them out of the way of a package someone publishes into this same
+// repository: a tag may begin with `_` but a version string does not, so `cargoship:1.0.0` and
+// `cargoship:_pkg.rke2.1.0.0` cannot collide however the repository is otherwise used.
+const (
+	// RecordKindMirror is a record written by `cargoship mirror`.
+	RecordKindMirror = "mirror"
+	// RecordKindPackage is a record written by `cargoship publish`.
+	RecordKindPackage = "package"
+)
+
+// recordKinds is every kind this version writes and recognises.
+var recordKinds = []string{RecordKindMirror, RecordKindPackage}
+
+// recordTagName reads the package name back out of a record's tag.
+//
+// The parse is unambiguous because a package name may not hold a dot -- the schema's pattern is
+// `^[a-z0-9][a-z0-9\-]*$` -- while a version routinely does, so the first dot after the kind
+// prefix is always the boundary. The record's own JSON is still the authority on the name; this
+// exists so that a listing scoped to one package can skip a tag without fetching it.
+func recordTagName(tag, kind string) string {
+	name, _, found := strings.Cut(strings.TrimPrefix(tag, recordTagPrefix(kind)), ".")
+	if !found {
+		return ""
+	}
+	return name
+}
+
+// recordTagPrefix is the tag prefix for a kind, derived rather than mapped.
+//
+// Derived because the kind is published twice -- in the tag, and in the record's own JSON -- and a
+// mapping between two spellings of one concept is the pair that drifts. It did: this returned
+// `_pkg.` for a kind the JSON called `package`, so a consumer reading `kind: package` out of
+// `cargoship ls -o json` and building a reference from it would have constructed `_package.` and
+// found nothing. Deriving the prefix makes the two incapable of disagreeing.
+func recordTagPrefix(kind string) string {
+	return "_" + kind + "."
+}
+
+// kindForTag reads the kind back out of a tag, and reports whether the tag is a record at all.
+//
+// Only the kinds this version knows are recognised. A tag written by a later cargoship with a
+// kind this one has never heard of is skipped rather than guessed at, which is what keeps a
+// listing from reporting a record it cannot act on.
+func kindForTag(tag string) (string, bool) {
+	for _, kind := range recordKinds {
+		if strings.HasPrefix(tag, recordTagPrefix(kind)) {
+			return kind, true
+		}
+	}
+	return "", false
+}
+
+// isRecordKind reports whether kind is one this version writes.
+func isRecordKind(kind string) bool {
+	return slices.Contains(recordKinds, kind)
+}
 
 // MirrorRecord is what a mirror records about itself: which cargoship package's contents
 // populated the registry, and when.
@@ -59,7 +132,12 @@ const MirrorRecordRepoPrefix = "cargoship"
 // rather than here -- so a reader learns what was mirrored, never that the content is intact.
 type MirrorRecord struct {
 	SchemaVersion string `json:"schemaVersion"`
-	Name          string `json:"name"`
+	// Kind says what the record describes, and so what a reader should do with it: a package
+	// record names one artifact to pull whole, a mirror record names loose content a node
+	// reaches by its own references. It is in the stored JSON as well as the tag, so a reader
+	// holding the record does not have to parse the reference it came from.
+	Kind string `json:"kind"`
+	Name string `json:"name"`
 	// Version is the package's own version, not cargoship's. It is also the record's tag, which
 	// is what lets two versions of one package be mirrored into the same registry and both be
 	// listed afterwards.
@@ -85,18 +163,28 @@ type MirrorRecord struct {
 	Reference string `json:"-"`
 }
 
-// MirrorRecordRef is where the record for one package and version lives under target.
+// RecordRef is where the record of one kind, package and version lives under target.
 //
 // Computed, never chosen, for the same reason the references in pkg/contentstore are: the write
 // and the read halves have to agree without consulting each other.
-func MirrorRecordRef(target, name, version string) (string, error) {
+//
+// The name and version are bounded by the schema -- see distro.MaxNameLength -- which is what
+// makes this safe to put in a tag. A tag is at most 128 characters, and the longest prefix here
+// plus the two bounds comes to 121.
+func RecordRef(target, kind, name, version string) (string, error) {
 	if target == "" {
 		return "", errors.New("target registry is required")
 	}
 	if name == "" || version == "" {
-		return "", fmt.Errorf("a mirror record needs both a package name and a version, got %q and %q", name, version)
+		return "", fmt.Errorf("a %s record needs both a package name and a version, got %q and %q", kind, name, version)
 	}
-	return fmt.Sprintf("%s/%s/%s:%s", strings.TrimSuffix(target, "/"), MirrorRecordRepoPrefix, name, version), nil
+	if !isRecordKind(kind) {
+		return "", fmt.Errorf("unknown record kind %q", kind)
+	}
+	if err := v1alpha1.ValidateReferenceLengths(name, version); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/%s:%s%s.%s", strings.TrimSuffix(target, "/"), RecordRepo, recordTagPrefix(kind), name, version), nil
 }
 
 // writeMirrorRecord pushes the record for a finished mirror.
@@ -105,7 +193,7 @@ func MirrorRecordRef(target, name, version string) (string, error) {
 // images and files it declared, what the engine was configured with -- has it without pulling the
 // package back. coci.FetchDistroYAML reads it.
 func writeMirrorRecord(ctx context.Context, l *layout.DistroLayout, target string, client *auth.Client, plainHTTP bool, record MirrorRecord, retries int) error {
-	ref, err := MirrorRecordRef(target, record.Name, record.Version)
+	ref, err := RecordRef(target, record.Kind, record.Name, record.Version)
 	if err != nil {
 		return err
 	}

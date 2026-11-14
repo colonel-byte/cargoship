@@ -16,7 +16,7 @@ Give the registry as an oci:// reference, optionally with a repository prefix fo
 
 --from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches.
 
-A finished mirror records which package populated it, under cargoship/NAME:VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed.
+A finished mirror records which package populated it, under cargoship:_mirror.NAME.VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed.
 
 ```
 cargoship mirror [Package] [REPOSITORY] [flags]
@@ -52,6 +52,7 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --conf
       --images[=true|false]                                   Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
       --insecure-skip-tls-verify[=true|false]                 Skip validating the registry's TLS certificate. Reduces security; use only with reason.
   -k, --key string                                            Path to public key file for validating signed packages
+      --no-record[=true|false]                                Skip the record a finished mirror writes about itself, which is what makes cargoship ls able to see it.
       --oci-concurrency int                                   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
       --retries int                                           Number of retries to perform for Cargoship's operations, such as package publishes.

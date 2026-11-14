@@ -235,7 +235,30 @@ cargoship ls oci://harbor.internal
  rke2     0.0.9    amd64        rke2    2026-10-02 14:08  0.40.2
 ```
 
-The record is one small OCI artifact per package and version, at `cargoship/NAME:VERSION` under whatever the mirror's own target was. Its config blob is the row above as JSON; its single layer is the package's own `distro.yaml`, so a reader that wants the full definition has it without pulling the package back. The prefix is reserved: `cargoship publish` writes a package to `NAME:VERSION`, and a record written there would be the same reference.
+The record is one small OCI artifact per package and version, and every record a registry holds lives in **one repository** -- `cargoship`, under whatever prefix the target carried -- tagged by what it describes:
+
+| Tag                     | Written by                     | What it means                                                    |
+| ----------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| `_mirror.NAME.VERSION`  | `cargoship mirror`, by default | loose content a node reaches by its own references               |
+| `_package.NAME.VERSION` | `cargoship publish --record`   | one artifact to pull whole, at `NAME:VERSION` in the same prefix |
+
+The two defaults are opposite on purpose. A mirror has recorded itself since the feature existed, so it still does and `--no-record` is the way out. Publishing is the newer half, so it records nothing unless `--record` asks: a registry somebody already publishes into should not quietly gain a second artifact per package because they upgraded cargoship.
+
+Its config blob is the row above as JSON; its single layer is the package's own `distro.yaml`, so a reader that wants the full definition -- every image and file it declared -- has it without pulling the package back.
+
+One repository rather than one per package, because that is what makes discovery work on the registries people use. Records spread across repositories have to be found by asking the registry for its catalogue, and `/v2/_catalog` is a wider permission than pushing where it is implemented at all: **ghcr.io answers it with `403 DENIED`** and Docker Hub does not implement it, so `cargoship ls` could list neither. One repository makes a listing a single `/v2/<prefix>/cargoship/tags/list`, which every registry serves and which needs no more than a pull.
+
+The tag prefix is the kind with an underscore in front of it, derived from the `kind` in the record's own JSON rather than mapped to it, so the two cannot disagree about how a kind is spelled. The underscore is what keeps records out of the way of a package published into that same repository: a tag may begin with `_` and a version does not, so `cargoship:1.0.0` and `cargoship:_package.rke2.1.0.0` cannot collide. Note that this is convention rather than enforcement -- the schema bounds a version's length but not its characters, so a version literally spelled `_package.x.1` would collide and nothing checks for it. The name and version bounds, 64 and 48 characters, are what make them safe to put in a tag at all, since a tag is capped at 128.
+
+### A registry that locks tags
+
+Some registries refuse to overwrite a tag once it exists -- Nexus can be configured this way, often with `latest` as the only exception -- and a record is written to a stable tag per kind, package and version. Re-running a mirror or a publish for a version that already has a record therefore tries to replace an immutable tag, and the registry refuses.
+
+This is why kind is in the tag rather than the two kinds sharing one, and why a record is not a single artifact carrying both facts: merging would mean reading a record, adding to it and pushing it back to the same tag, which such a registry cannot do at all. Separate tags per kind mean the only rewrite is a genuine re-run of the same operation.
+
+Both commands now **warn** rather than fail when the record cannot be written: the content is in the registry either way, and the record is advisory. What is lost is that `cargoship ls` cannot see that mirror, so the warning says exactly that rather than only naming the error.
+
+The images and files themselves are a separate matter, and worth knowing precisely. ORAS does not re-upload content that is already there -- it checks the destination and skips a sub-graph that exists, so re-mirroring a package whose `rancher/pause:3.10` is already present sends none of its bytes again. It does, however, **always write the tag**, even for content it skipped. So a re-mirror issues a tag request per image regardless. Whether a tag-locking registry refuses that depends on the implementation: a re-tag to the *same* digest is often permitted, since it changes nothing, and a re-mirror of an unchanged package produces exactly the same digests. A re-tag to a *different* digest is what immutability exists to prevent, and that is the case to expect a refusal on -- re-mirroring a package rebuilt with different content under a version it already used. An image push that is refused fails the mirror, which is the right answer: an image a node will ask for and not find is a broken mirror, not a cosmetic problem.
 
 Two versions of one package sit side by side, because the record's tag is the version. That is a property of a registry rather than of a cluster -- Zarf's deployed-package state is keyed on the package name alone, so it records one version per name and a redeploy overwrites it.
 
@@ -247,7 +270,20 @@ cargoship ls oci://harbor.internal --name rke2
 cargoship ls oci://harbor.internal -o json
 ```
 
-`--name` matters for more than brevity. Listing the whole registry means asking it for its catalogue, which is a wider permission than pushing -- the push credentials Zarf generates are not always allowed to enumerate -- while `--name` reads one repository and needs no more than a pull.
+`--name` narrows the tags considered before any manifest is fetched, so listing one package out of a registry holding hundreds of records reads one manifest rather than all of them. It is no longer a permission workaround: neither form reads the registry catalogue, and both need only a pull.
+
+### Finding the newest version of a package
+
+This is the question a consumer asks -- [`cluster-api-provider-cargoship`](https://github.com/colonel-byte/cluster-api-provider-cargoship) asks exactly it -- and the layout above is shaped to answer it in one request:
+
+```
+cargoship publish ./package.tar.zst oci://ghcr.io/colonel-byte --record
+cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
+```
+
+Records come back newest first, so the first entry is the answer. Each one carries the `kind`, which is what decides the next move: a `package` record names an artifact to pull whole with `cargoship pull`, at `NAME:VERSION` in the same prefix the record was found in; a `mirror` record names content already unpacked into the registry, which nodes reach by the references the package itself declares. Those references are in the `distro.yaml` the record carries as its layer, so one small fetch yields the complete image list without pulling the package.
+
+From Go, `distro.ListMirrored` returns the same records and is exported for exactly this -- a consumer in another module resolving a version without shelling out to the CLI.
 
 Two limits worth knowing:
 

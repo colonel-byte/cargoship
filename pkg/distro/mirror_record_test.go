@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/config"
@@ -43,38 +44,53 @@ func plainHTTPListOptions() ListMirroredOptions {
 }
 
 // TestMirrorRecordRef pins the one rule the write and the read halves both apply.
-func TestMirrorRecordRef(t *testing.T) {
-	tests := []struct {
+func TestRecordRef(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
 		name    string
 		target  string
+		kind    string
 		pkg     string
 		version string
 		want    string
 		wantErr string
 	}{
 		{
-			name:    "a bare registry",
+			name:    "a mirror record in a bare registry",
 			target:  "harbor.internal",
+			kind:    RecordKindMirror,
 			pkg:     "rke2",
 			version: "0.1.0",
-			want:    "harbor.internal/cargoship/rke2:0.1.0",
+			want:    "harbor.internal/cargoship:_mirror.rke2.0.1.0",
 		},
 		{
-			name:    "a repository prefix is kept, because that is where the mirror itself went",
+			name:    "a package record, which is the one a consumer pulls",
+			target:  "ghcr.io/colonel-byte",
+			kind:    RecordKindPackage,
+			pkg:     "rancher-rke2-multi-cni-cilium",
+			version: "1.36.0-rke2r1",
+			want:    "ghcr.io/colonel-byte/cargoship:_package.rancher-rke2-multi-cni-cilium.1.36.0-rke2r1",
+		},
+		{
+			name:    "a repository prefix is kept, because that is where the content itself went",
 			target:  "harbor.internal/fleet",
+			kind:    RecordKindMirror,
 			pkg:     "rke2",
 			version: "0.1.0",
-			want:    "harbor.internal/fleet/cargoship/rke2:0.1.0",
+			want:    "harbor.internal/fleet/cargoship:_mirror.rke2.0.1.0",
 		},
 		{
 			name:    "a trailing slash does not double",
 			target:  "harbor.internal/fleet/",
+			kind:    RecordKindMirror,
 			pkg:     "k3s",
 			version: "1.36.1",
-			want:    "harbor.internal/fleet/cargoship/k3s:1.36.1",
+			want:    "harbor.internal/fleet/cargoship:_mirror.k3s.1.36.1",
 		},
 		{
 			name:    "no registry",
+			kind:    RecordKindMirror,
 			pkg:     "rke2",
 			version: "0.1.0",
 			wantErr: "target registry is required",
@@ -82,20 +98,92 @@ func TestMirrorRecordRef(t *testing.T) {
 		{
 			name:    "no version to tag it with",
 			target:  "harbor.internal",
+			kind:    RecordKindMirror,
 			pkg:     "rke2",
 			wantErr: "needs both a package name and a version",
 		},
-	}
-
-	for _, tt := range tests {
+		{
+			name:    "an unknown kind has no tag prefix to take",
+			target:  "harbor.internal",
+			kind:    "something-else",
+			pkg:     "rke2",
+			version: "0.1.0",
+			wantErr: `unknown record kind "something-else"`,
+		},
+		{
+			name:    "a name past the bound would not fit the tag",
+			target:  "harbor.internal",
+			kind:    RecordKindMirror,
+			pkg:     strings.Repeat("a", 65),
+			version: "0.1.0",
+			wantErr: "over the 64 allowed",
+		},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MirrorRecordRef(tt.target, tt.pkg, tt.version)
+			t.Parallel()
+
+			got, err := RecordRef(tt.target, tt.kind, tt.pkg, tt.version)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
+			require.LessOrEqual(t, len(strings.SplitN(got, ":", 2)[1]), 128,
+				"a tag is at most 128 characters, which is what the name and version bounds are sized for")
+		})
+	}
+}
+
+// TestKindForTagAndName covers reading a record's kind and package back out of its tag, which is
+// what lets a listing skip a tag without fetching the manifest behind it.
+func TestKindForTagAndName(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		tag      string
+		wantKind string
+		wantIs   bool
+		wantName string
+	}{
+		{
+			name:     "a mirror record",
+			tag:      "_mirror.rke2.0.1.0",
+			wantKind: RecordKindMirror,
+			wantIs:   true,
+			wantName: "rke2",
+		},
+		{
+			name:     "a package record whose version holds dots",
+			tag:      "_package.rancher-k3s-multi.1.36.4-k3s1",
+			wantKind: RecordKindPackage,
+			wantIs:   true,
+			wantName: "rancher-k3s-multi",
+		},
+		{
+			// A package published into the same repository, which is the collision the
+			// underscore prefix exists to avoid.
+			name:   "a plain version tag is not a record",
+			tag:    "1.36.4-k3s1",
+			wantIs: false,
+		},
+		{
+			name:   "something else underscored is not a record either",
+			tag:    "_notarecord.rke2.0.1.0",
+			wantIs: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			kind, ok := kindForTag(tt.tag)
+			require.Equal(t, tt.wantIs, ok)
+			if !tt.wantIs {
+				return
+			}
+			require.Equal(t, tt.wantKind, kind)
+			require.Equal(t, tt.wantName, recordTagName(tt.tag, kind))
 		})
 	}
 }
@@ -109,7 +197,7 @@ func TestMirrorRecord(t *testing.T) {
 
 	require.NoError(t, Mirror(ctx, l, host, plainHTTPOptions()))
 
-	ref, err := MirrorRecordRef(host, "rke2", "0.1.0")
+	ref, err := RecordRef(host, RecordKindMirror, "rke2", "0.1.0")
 	require.NoError(t, err)
 	manifest, repo := fetchManifest(t, ref)
 
@@ -154,7 +242,7 @@ func TestListMirroredTwoVersions(t *testing.T) {
 		versions := []string{got[0].Version, got[1].Version}
 		require.ElementsMatch(t, []string{"1.35.6", "1.36.1"}, versions)
 		for _, r := range got {
-			require.Equal(t, host+"/cargoship/rke2:"+r.Version, r.Reference,
+			require.Equal(t, host+"/cargoship:_mirror.rke2."+r.Version, r.Reference,
 				"the reference a record was read from is reported, since the stored JSON cannot know it")
 		}
 	})
@@ -263,4 +351,168 @@ func fetchBlob(ctx context.Context, t *testing.T, repo *orasRemote.Repository, d
 	body, err := io.ReadAll(rc)
 	require.NoError(t, err)
 	return body
+}
+
+// TestDiscoverNewestVersion is the question a consumer actually asks: given a package name and a
+// registry, where do I pull the newest one from.
+//
+// It is here because that question is the reason the layout changed. Records used to live one
+// repository per package, so answering it meant walking the registry's catalogue -- which ghcr.io
+// refuses outright and Docker Hub does not implement. One repository makes it a single tag query,
+// and the tag carries the kind and the package so the query can be narrowed before any manifest
+// is fetched.
+func TestDiscoverNewestVersion(t *testing.T) {
+	ctx := context.Background()
+	host := test.SetupInMemoryRegistry(t)
+
+	for _, v := range []string{"1.35.10", "1.36.1", "1.36.4"} {
+		require.NoError(t, Mirror(ctx, mirrorLayoutVersion(t, v), host, plainHTTPOptions()))
+	}
+	// A second package, so the scoping is actually doing something.
+	other := mirrorLayoutVersion(t, "9.9.9")
+	other.Distro.Metadata.Name = "k3s"
+	require.NoError(t, Mirror(ctx, other, host, plainHTTPOptions()))
+
+	t.Run("every record is found without reading the catalogue", func(t *testing.T) {
+		all, err := ListMirrored(ctx, host, listOptions(""))
+		require.NoError(t, err)
+		require.Len(t, all, 4)
+	})
+
+	t.Run("scoped to one package, newest first", func(t *testing.T) {
+		found, err := ListMirrored(ctx, host, listOptions("rke2"))
+		require.NoError(t, err)
+
+		versions := make([]string, 0, len(found))
+		for _, r := range found {
+			versions = append(versions, r.Version)
+			require.Equal(t, "rke2", r.Name)
+			require.Equal(t, RecordKindMirror, r.Kind, "a mirror records itself as one")
+		}
+		require.Equal(t, []string{"1.36.4", "1.36.1", "1.35.10"}, versions,
+			"newest first, so the first record is the answer to 'which is latest'")
+	})
+
+	t.Run("the record names where its content is", func(t *testing.T) {
+		found, err := ListMirrored(ctx, host, listOptions("rke2"))
+		require.NoError(t, err)
+		require.NotEmpty(t, found)
+
+		newest := found[0]
+		require.Equal(t, host+"/cargoship:_mirror.rke2.1.36.4", newest.Reference,
+			"the reference a record was read from, which is what a consumer fetches to get the distro.yaml behind it")
+		require.Equal(t, "rke2", newest.Name, "the record is the authority on the name, not the tag it was parsed from")
+	})
+}
+
+// listOptions is the plain-HTTP listing the in-memory registry needs, optionally scoped.
+func listOptions(name string) ListMirroredOptions {
+	return ListMirroredOptions{
+		RemoteOptions: plainHTTPOptions().RemoteOptions,
+		Name:          name,
+	}
+}
+
+// TestPublishIsDiscoverable covers the half a consumer looking for a package to pull actually
+// needs. `cargoship mirror` unpacks content into a registry; `cargoship publish` puts the package
+// there as one artifact, and until it recorded itself `cargoship ls` could not see it at all --
+// so "where do I pull the newest rancher-rke2-multi-cni-cilium" had no answer, however the
+// records were laid out.
+//
+// It drives writePublishRecord rather than Publish, because a publishable layout needs a computed
+// manifest cache and no fixture in this package builds one -- Publish's own tests cover only its
+// error paths for the same reason. What is asserted is everything writePublishRecord decides; that
+// Publish calls it after a successful push is one line and read rather than exercised.
+func TestPublishIsDiscoverable(t *testing.T) {
+	ctx := context.Background()
+	host := test.SetupInMemoryRegistry(t)
+	l := mirrorLayoutVersion(t, "1.36.0-rke2r1")
+
+	writePublishRecord(ctx, l, registry.Reference{Registry: host}, registry.Reference{
+		Registry:   host,
+		Repository: "rke2",
+		Reference:  "1.36.0-rke2r1",
+	}, PublishOptions{
+		Retries:       1,
+		RemoteOptions: plainHTTPOptions().RemoteOptions,
+	})
+
+	found, err := ListMirrored(ctx, host, listOptions("rke2"))
+	require.NoError(t, err)
+	require.Len(t, found, 1, "a publish should leave exactly one record")
+
+	require.Equal(t, RecordKindPackage, found[0].Kind,
+		"the kind is what tells a consumer to pull this whole rather than point nodes at it")
+	require.Equal(t, "1.36.0-rke2r1", found[0].Version)
+	require.Equal(t, host+"/cargoship:_package.rke2.1.36.0-rke2r1", found[0].Reference)
+}
+
+// TestPublishRecordUsesTheTagItWasPublishedUnder covers --tag, which publishes a package under
+// something other than its own version. The record is keyed on what was written, because a record
+// pointing at a reference nobody can pull is worse than no record.
+func TestPublishRecordUsesTheTagItWasPublishedUnder(t *testing.T) {
+	ctx := context.Background()
+	host := test.SetupInMemoryRegistry(t)
+	l := mirrorLayoutVersion(t, "1.36.0-rke2r1")
+
+	writePublishRecord(ctx, l, registry.Reference{Registry: host}, registry.Reference{
+		Registry:   host,
+		Repository: "rke2",
+		Reference:  "edge",
+	}, PublishOptions{
+		Retries:       1,
+		Tag:           "edge",
+		RemoteOptions: plainHTTPOptions().RemoteOptions,
+	})
+
+	found, err := ListMirrored(ctx, host, listOptions("rke2"))
+	require.NoError(t, err)
+	require.Len(t, found, 1)
+	require.Equal(t, "edge", found[0].Version, "the record follows the tag, not the metadata version")
+	require.Equal(t, host+"/cargoship:_package.rke2.edge", found[0].Reference)
+}
+
+// TestRecordingIsGated covers the two defaults, which are deliberately opposite. A mirror has
+// recorded itself since the feature existed, so it keeps doing so and --no-record is the way out;
+// publishing is the new half, so it records nothing unless asked and a registry somebody already
+// publishes into does not quietly gain an artifact per package on an upgrade.
+func TestRecordingIsGated(t *testing.T) {
+	t.Run("a mirror records by default", func(t *testing.T) {
+		ctx := context.Background()
+		host := test.SetupInMemoryRegistry(t)
+		require.NoError(t, Mirror(ctx, mirrorLayout(t), host, plainHTTPOptions()))
+
+		found, err := ListMirrored(ctx, host, listOptions(""))
+		require.NoError(t, err)
+		require.Len(t, found, 1)
+	})
+
+	t.Run("--no-record skips it, and the content still lands", func(t *testing.T) {
+		ctx := context.Background()
+		host := test.SetupInMemoryRegistry(t)
+		opts := plainHTTPOptions()
+		opts.NoRecord = true
+		require.NoError(t, Mirror(ctx, mirrorLayout(t), host, opts))
+
+		found, err := ListMirrored(ctx, host, listOptions(""))
+		require.NoError(t, err)
+		require.Empty(t, found, "nothing recorded, so a listing sees an empty registry")
+	})
+
+	t.Run("a publish records nothing unless asked", func(t *testing.T) {
+		ctx := context.Background()
+		host := test.SetupInMemoryRegistry(t)
+		l := mirrorLayout(t)
+
+		// Publish's own gate, which is the one line writePublishRecord sits behind.
+		opts := PublishOptions{Retries: 1, RemoteOptions: plainHTTPOptions().RemoteOptions}
+		require.False(t, opts.Record, "the zero value is off, which is what makes it opt-in")
+		if opts.Record {
+			writePublishRecord(ctx, l, registry.Reference{Registry: host}, registry.Reference{Registry: host}, opts)
+		}
+
+		found, err := ListMirrored(ctx, host, listOptions(""))
+		require.NoError(t, err)
+		require.Empty(t, found)
+	})
 }

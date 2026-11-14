@@ -408,8 +408,16 @@ jobs:
             fi
             pkg=$(find build -maxdepth 1 -name '*.tar.zst')
 
-            # Publish with regular version tag
+            # Publish with regular version tag.
+            #
+            # --record leaves a record beside the package so that `cargoship ls` can resolve the
+            # newest version of a flavor without being told where it is -- which is the whole
+            # point on GHCR, where a registry catalogue cannot be read at all. It is only on
+            # this invocation and not the precise-tag one below: a record per commit would make
+            # "the newest rancher-k3s-multi" ambiguous, and the precise tag is for tracing a
+            # build rather than for anyone to discover.
             if cargoship publish "$pkg" "$REGISTRY" \
+              --record \
               --tmpdir "$RUNNER_TEMP" \
               --signing-key env://COSIGN_PRIVATE_KEY \
               --signing-key-pass "$COSIGN_PASSWORD" \

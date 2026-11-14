@@ -87,17 +87,14 @@ func ListMirrored(ctx context.Context, target string, opts ListMirroredOptions) 
 		return nil, err
 	}
 
-	repos := []string{strings.TrimPrefix(fmt.Sprintf("%s/%s/%s", prefix, MirrorRecordRepoPrefix, opts.Name), "/")}
-	if opts.Name == "" {
-		repos, err = recordRepositories(ctx, host, prefix, plainHTTP, client)
-		if err != nil {
-			return nil, err
-		}
-	}
+	// Every record lives in one repository, so a listing is one tag query whatever it is
+	// scoped to. --name narrows the tags considered rather than the repositories asked for,
+	// which is why it no longer needs a wider permission than reading them.
+	repos := []string{strings.TrimPrefix(prefix+"/"+RecordRepo, "/")}
 
 	var records []MirrorRecord
 	for _, repo := range repos {
-		found, err := recordsInRepository(ctx, host, repo, plainHTTP, client)
+		found, err := recordsInRepository(ctx, host, repo, opts.Name, plainHTTP, client)
 		if err != nil {
 			return nil, err
 		}
@@ -116,36 +113,12 @@ func ListMirrored(ctx context.Context, target string, opts ListMirroredOptions) 
 	return records, nil
 }
 
-// recordRepositories walks the registry's catalogue for the repositories mirror records live in.
-func recordRepositories(ctx context.Context, host, prefix string, plainHTTP bool, client *auth.Client) ([]string, error) {
-	reg, err := orasRemote.NewRegistry(host)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read the registry %s: %w", host, err)
-	}
-	reg.PlainHTTP = plainHTTP
-	reg.Client = client
-
-	want := strings.TrimPrefix(prefix+"/"+MirrorRecordRepoPrefix+"/", "/")
-	var found []string
-	if err := reg.Repositories(ctx, "", func(repos []string) error {
-		for _, repo := range repos {
-			if strings.HasPrefix(repo, want) {
-				found = append(found, repo)
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("unable to list the repositories in %s, which needs a credential allowed to read the registry catalogue -- pass a package name to read one repository instead: %w", host, err)
-	}
-	return found, nil
-}
-
 // recordsInRepository decodes the record behind every tag of one repository.
 //
 // Anything that is not a record is skipped rather than failing the listing. The reserved prefix
 // makes a foreign artifact unlikely, not impossible, and the config media type is what settles
 // it -- so a registry somebody else also writes into still lists.
-func recordsInRepository(ctx context.Context, host, repo string, plainHTTP bool, client *auth.Client) ([]MirrorRecord, error) {
+func recordsInRepository(ctx context.Context, host, repo, name string, plainHTTP bool, client *auth.Client) ([]MirrorRecord, error) {
 	log := logger.From(ctx)
 
 	repository, err := orasRemote.NewRepository(host + "/" + repo)
@@ -158,6 +131,18 @@ func recordsInRepository(ctx context.Context, host, repo string, plainHTTP bool,
 	var records []MirrorRecord
 	if err := repository.Tags(ctx, "", func(tags []string) error {
 		for _, tag := range tags {
+			// Filtered on the tag before anything is fetched. A record's tag names its
+			// kind, its package and its version, so a listing scoped to one package reads
+			// one manifest rather than every manifest in the repository -- and a tag that
+			// is not a record at all, which includes a package published into this same
+			// repository, costs nothing to skip.
+			kind, isRecord := kindForTag(tag)
+			if !isRecord {
+				continue
+			}
+			if name != "" && recordTagName(tag, kind) != name {
+				continue
+			}
 			ref := fmt.Sprintf("%s/%s:%s", host, repo, tag)
 			record, ok, err := fetchMirrorRecord(ctx, repository, tag)
 			if err != nil {

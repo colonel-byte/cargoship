@@ -42,7 +42,7 @@ const (
 		"Each file is pushed as a single-layer OCI artifact named after the file and tagged with a digest of the source URL the definition declared, which keeps two releases of the same filename apart.\n\n" +
 		"Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give --config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.\n\n" +
 		"--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches.\n\n" +
-		"A finished mirror records which package populated it, under cargoship/NAME:VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed."
+		"A finished mirror records which package populated it, under cargoship:_mirror.NAME.VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed."
 	// CmdPackageMirrorExample mirror example
 	CmdPackageMirrorExample = "\n" +
 		"# Mirror everything the package carries into a registry:\n" +
@@ -70,19 +70,23 @@ const (
 	// CmdPackageLsLong ls long
 	CmdPackageLsLong = "Reads the record every 'cargoship mirror' leaves behind and reports which packages populated a registry, newest first. This is what a registry holds rather than what a cluster runs: two versions of one package can be mirrored side by side, and both are listed.\n\n" +
 		"The registry is named the same three ways 'cargoship mirror' names it -- as an oci:// argument, with --config to read the proxy a cluster configuration declares, or with --from-zarf-state to read a zarf deployment's own registry, tunnelled over ssh when --config names the fleet.\n\n" +
-		"Without --name the registry's catalogue is listed, which needs a credential allowed to read it; --name reads one repository and needs no more than a pull. A listing is what was recorded, so content deleted from the registry by hand still appears."
+		"Records live in one repository, so a listing is a single tag query and needs no more than a pull -- which is what makes this work on ghcr.io and Docker Hub, where a registry catalogue cannot be read at all. --name narrows it to one package. A listing is what was recorded, so content deleted from the registry by hand still appears."
 	// CmdPackageLsExample ls example
 	CmdPackageLsExample = "\n" +
 		"# List what has been mirrored into a registry:\n" +
 		"$ cargoship ls oci://harbor.internal\n\n" +
-		"# List one package's versions, without reading the registry catalogue:\n" +
+		"# List one package's versions, newest first:\n" +
 		"$ cargoship ls oci://harbor.internal --name rke2\n\n" +
 		"# List a zarf deployment's in-cluster registry, over ssh to a node:\n" +
 		"$ cargoship ls --from-zarf-state --config ./cluster.yaml\n\n" +
 		"# Machine-readable, for a script choosing a version:\n" +
 		"$ cargoship ls oci://harbor.internal -o json\n"
+	// CmdPackageMirrorFlagNoRecord mirror flag no-record
+	CmdPackageMirrorFlagNoRecord = "Skip the record a finished mirror writes about itself, which is what makes `cargoship ls` able to see it."
+	// CmdPackagePublishFlagRecord publish flag record
+	CmdPackagePublishFlagRecord = "Record the published package so `cargoship ls` can find it and resolve the newest version. Off by default."
 	// CmdPackageLsFlagName ls flag name
-	CmdPackageLsFlagName = "`NAME` of one package to list the mirrored versions of, instead of reading the registry's whole catalogue."
+	CmdPackageLsFlagName = "`NAME` of one package to list the recorded versions of, instead of every package in the registry."
 	// CmdPackagePullShort pull short
 	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and saves it to the local filesystem"
 	// CmdPackagePullLong pull long

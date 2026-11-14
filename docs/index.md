@@ -317,6 +317,10 @@ An image keeps its repository path and its tag, and only the registry host chang
 ```sh
 # Mirror into a development cluster that has no SSH
 cargoship mirror ./build/cargoship-distro-amd64.tar.zst --via-kube
+
+# Publish with a record, then resolve the newest version from anywhere
+cargoship publish ./build/cargoship-distro-amd64.tar.zst oci://ghcr.io/colonel-byte --record
+cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
 ```
 
 A finished mirror records which package filled it, as a few kilobytes at `cargoship/NAME:VERSION`, and `ls` reads those records back. Two versions of one package are listed side by side, because the record's tag is the version - that is a registry's property, not a cluster's. `--name` lists one package without needing a credential allowed to read the registry's catalogue.
