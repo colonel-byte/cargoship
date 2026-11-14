@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-62793ae3.js";
+            window.path_to_searchindex_js = "searchindex-5635310f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-10f08c0d.js"></script>
+        <script src="toc-16386550.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -4453,7 +4453,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
 </code></pre>
 <h3 id="options-16"><a class="header" href="#options-16">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
-      --confirm[=true|false]                    Confirms package publish without prompting. Skips prompt for the signing key password
+      --confirm[=true|false]                    Publish the package without asking for confirmation first.
   -h, --help[=true|false]                       help for publish
       --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
   -k, --key string                              Path to public key file for validating signed packages
@@ -4461,7 +4461,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
       --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
       --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
       --signing-key string                      Private key for signing or re-signing: a path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md.
-      --signing-key-pass string                 Password to the private key used for publishing packages
+      --signing-key-pass string                 Password to the private key used for publishing packages.
       --tag string                              The tag to be used in the OCI reference for the package in the registry
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
@@ -9228,6 +9228,92 @@ mage generate:updatePins            # refresh every line already pinned
 <h2 id="consuming-it"><a class="header" href="#consuming-it">Consuming it</a></h2>
 <p><code>mage generate:engineConfig</code> walks every <code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> directory and writes generated structs to <code>pkg/engineconfig/gen/&lt;distro&gt;/&lt;version&gt;/</code>, alongside a <code>zz_addons.go</code> holding that version’s <code>Addons</code> (valid <code>disable:</code> values), <code>CNIs</code>, and <code>IngressControllers</code>. <code>zz_addons.go</code> is written for every version even when nothing was extracted - the generated registry references those vars from every package, so one package without them would not compile. An empty <code>Addons</code> means no component source was pulled for that version, and consumers treat it as “no data to check against” rather than “nothing is valid”. For k3s (and any distro that declares its flags outright) it parses whichever of <code>zz_server.go</code>/<code>zz_agent.go</code> it finds directly; for RKE2 it composes as described above. See <code>docs/dev/mage.md</code> for the broader <code>Generate</code> namespace.</p>
 <p>It also (re)writes <code>pkg/engineconfig/gen/zz_registry.go</code>, wiring every distro/version it just generated into <code>gen.Registry</code> so nothing needs hand-maintaining as new versions are pulled. <code>types/distrocfg</code> (<code>RancherCommon.ConfigureEngine</code>) uses <code>gen.Lookup</code> to find the struct matching a node’s distro and minor version, and drops (with a warning) any <code>config.yaml</code> key that isn’t a real flag for it – falling back to the previous unvalidated, pass-everything-through behavior with a warning if that distro/version was never pulled/generated. On controllers it also checks each <code>disable:</code> value against <code>Entry.Addons</code> via <code>gen.UnknownAddons</code>; an unrecognized component is warned about but <strong>kept</strong>, since the addon vocabulary is composed rather than read straight off a declaration and dropping the entry would silently deploy something the user asked to be without. See “Consumption: wired into <code>types/distrocfg</code>” in <code>docs/agent/design-config-codegen.md</code> for the full picture.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="what-cargoship-still-uses-from-zarfs-v1alpha1"><a class="header" href="#what-cargoship-still-uses-from-zarfs-v1alpha1">What cargoship still uses from zarf’s v1alpha1</a></h1>
+<p>zarf v1.0.1 deprecated its <code>v1alpha1</code> package model: the <code>src/api/v1alpha1</code> types, the whole of <code>src/pkg/variables</code>, the <code>convert.Package*V1alpha1</code> family, and two methods on <code>template.Objects</code>. Everything still exists and still works - the deprecation is a doc comment, not a removal - so the v0.89.0 to v1.0.1 bump compiled with three small changes, none of which touched the package model. What it did change is <code>golangci-lint</code>, which runs <code>staticcheck</code> with <code>checks: ["all"]</code>, and SA1019 reports every use of a deprecated symbol.</p>
+<p>This document records which of cargoship’s code sits on that surface, why it sits there, and what moving off it costs. It is a map, not a plan: no migration has been started, and the bump deliberately did not start one.</p>
+<h2 id="the-bump-itself"><a class="header" href="#the-bump-itself">The bump itself</a></h2>
+<p><code>github.com/zarf-dev/zarf v0.89.0</code> to <code>v1.0.1</code> broke three things, all in <code>cmd/</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What broke</th><th>Fix</th></tr>
+</thead>
+<tbody>
+<tr><td><code>message.TableWithWriter</code> removed</td><td><code>message.Table</code> takes the writer now; same signature, renamed at two call sites</td></tr>
+<tr><td><code>zlang.CmdPackagePublishFlagConfirm</code> removed</td><td>A constant in <code>config/lang/eng-core.go</code></td></tr>
+<tr><td><code>zlang.CmdPackagePublishFlagSigningKeyPassword</code></td><td>A constant in <code>config/lang/eng-core.go</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The confirm string was rewritten rather than copied across. zarf’s version promised to skip a signing-key password prompt, and cargoship has no such prompt - the same divergence <code>CmdPackageCreateFlagConfirm</code> already records in <code>config/lang/eng-core.go</code>.</p>
+<p>Two other upstream changes are visible in the vendored diff and affect nothing here, because nothing on this side reads them: <code>state.Distro</code> was removed and <code>template.WithState</code> now renders <code>.StorageClass</code> as the empty string, and <code>src/pkg/transform/artifact.go</code> was deleted. The binary moved from 39.98 MiB to 40.00 MiB, both measured with <code>mage build:binary</code> in one session. <code>docker/go-metrics</code> left the module graph and <code>agnivade/levenshtein</code> joined it.</p>
+<h2 id="the-lint-wall"><a class="header" href="#the-lint-wall">The lint wall</a></h2>
+<p><code>golangci-lint run</code> over the module reports <strong>30</strong> SA1019 findings in six files. The <code>lint</code> job in <a href="../.github/workflows/scan-lint.yaml"><code>.github/workflows/scan-lint.yaml</code></a> runs the linter with no path filter, so this is a red check rather than a warning somebody can ignore.</p>
+<p><strong>Count them with the caps off</strong>, or the number is wrong and unstable:</p>
+<pre><code class="language-sh">golangci-lint run --max-same-issues=0 --max-issues-per-linter=0 2&gt;&amp;1 | grep -c SA1019
+</code></pre>
+<p>golangci-lint’s <code>max-same-issues</code> defaults to 3, and it groups by message text - so each distinct deprecated symbol reports at most three times and the rest are dropped silently. A plain <code>golangci-lint run</code> reported exactly <code>25 issues</code> both locally and in CI while naming a <em>different</em> 25 each time, which reads as a stable number and is not one. The same applies to any future SA1019 sweep here: the truncated output is not a work list.</p>
+<p>A local <code>prek run --all-files</code> will not reproduce the findings at all, for two separate reasons worth knowing apart. The <code>prek</code> job in <a href="../.github/workflows/pre-commit.yaml"><code>.github/workflows/pre-commit.yaml</code></a> passes <code>--skip golangci-lint</code>, so the hook is not what gates this in CI - the <code>lint</code> job is. And locally the hook hands the linter only the files being committed, so sites already committed before the bump are never passed to it.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Findings</th><th>What it uses</th></tr>
+</thead>
+<tbody>
+<tr><td><code>pkg/packager/actions/actions.go</code></td><td>8</td><td><code>variables.VariableConfig</code> throughout, <code>template.WithVariables</code>, <code>api.Action.SetVariables</code></td></tr>
+<tr><td><code>pkg/packager/assemble/actions.go</code></td><td>8</td><td><code>variables.New</code>, <code>convert.PackageFromV1alpha1</code>, <code>v1alpha1.ZarfComponentAction</code>, <code>ShouldTemplate</code></td></tr>
+<tr><td><code>pkg/packager/assemble/actions_test.go</code></td><td>5</td><td><code>api.Action.SetVariables</code>, <code>ShouldTemplate</code></td></tr>
+<tr><td><code>pkg/packager/actions/actions_test.go</code></td><td>2</td><td><code>variables</code>, <code>variables.New</code></td></tr>
+<tr><td><code>pkg/zarfpackage/zarfpackage.go</code></td><td>2</td><td><code>v1alpha1.ZarfPackage</code>, <code>convert.PackageFromV1alpha1</code></td></tr>
+<tr><td><code>api/colonel-byte.dev/v1alpha1/distro/spec.go</code></td><td>1</td><td>the <code>v1alpha1</code> import, for <code>ZarfComponentActionSet</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Reproduce it with <code>golangci-lint run 2&gt;&amp;1 | grep SA1019</code>. Use the bare form rather than <code>golangci-lint run ./...</code> when counting: the two did not report the same set here, and the <code>./...</code> form missed <code>api/</code>.</p>
+<h2 id="a-naming-collision-first"><a class="header" href="#a-naming-collision-first">A naming collision, first</a></h2>
+<p><code>api/colonel-byte.dev/v1alpha1/</code> is <strong>cargoship’s own API group</strong>, and has nothing to do with zarf’s <code>src/api/v1alpha1</code>. Cargoship’s <code>v1alpha1</code> is the version of the <code>Distro</code> and <code>Cluster</code> kinds an operator writes in a <code>distro.yaml</code> or an inventory; zarf’s is the version of a <code>zarf.yaml</code>. They are unrelated version numbers on unrelated schemas, and nothing upstream deprecating the latter says anything about the former. The one place the two meet is the single field described immediately below.</p>
+<h2 id="the-four-places"><a class="header" href="#the-four-places">The four places</a></h2>
+<h3 id="1-the-distro-schema-embeds-a-zarf-action-set"><a class="header" href="#1-the-distro-schema-embeds-a-zarf-action-set">1. The distro schema embeds a zarf action set</a></h3>
+<p><code>Actions.OnCreate</code> in <a href="../api/colonel-byte.dev/v1alpha1/distro/spec.go"><code>api/colonel-byte.dev/v1alpha1/distro/spec.go</code></a> is a <code>zarf.ZarfComponentActionSet</code>. That one field is what puts <code>mute</code>, <code>maxRetries</code>, <code>setVariable</code>, <code>setVariables</code> and the rest of the action vocabulary into <code>schema/distro-v1alpha1-schema.json</code>.</p>
+<p>This is the load-bearing one, and it is the reason the next two exist. Retyping it onto the normalized <code>api.ActionSet</code> is a breaking schema change for every <code>distro.yaml</code> an operator has written: <code>mute</code> becomes <code>silent</code>, <code>maxRetries</code> becomes <code>retries</code>, <code>wait.cluster.condition</code> stops being a string and becomes a struct. <a href="#why-oncreate-actions-go-through-zarfs-package-converter"><code>docs/agent/choice-v1alpha1-action-conversion.md</code></a> has the full mapping and why it is not a rename list.</p>
+<h3 id="2-assemble-converts-the-action-set-at-the-call-site"><a class="header" href="#2-assemble-converts-the-action-set-at-the-call-site">2. <code>assemble</code> converts the action set at the call site</a></h3>
+<p><a href="../pkg/packager/assemble/actions.go"><code>pkg/packager/assemble/actions.go</code></a> holds v1alpha1 actions because of the field above, and <code>actions.Run</code> takes <code>api.Action</code>, so <code>toAPIActionSet</code> wraps a single action set in a throwaway <code>ZarfPackage</code> and runs <code>convert.PackageFromV1alpha1</code> over it. That looks wasteful and is deliberate: zarf’s real converters are in <code>src/internal/api/v1alpha1</code> and unreachable from here, and going through the package door also runs zarf’s migrations, which is what makes a deprecated singular <code>setVariable</code> work at all. The whole argument - including the three tests that exist so it cannot be reverted by accident - is in <code>choice-v1alpha1-action-conversion.md</code>. Read it before touching this function.</p>
+<h3 id="3-actions-keeps-a-variableconfig-for-variable-state"><a class="header" href="#3-actions-keeps-a-variableconfig-for-variable-state">3. <code>actions</code> keeps a <code>VariableConfig</code> for variable state</a></h3>
+<p><a href="../pkg/packager/actions/actions.go"><code>pkg/packager/actions/actions.go</code></a> is cargoship’s fork of zarf’s action executor (see <a href="#why-pkgpackageractions-is-a-fork-and-why-a-create-time-cluster-wait-now-fails"><code>docs/agent/choice-actions-fork.md</code></a>). It is already on the normalized <code>api.Action</code>, so the deprecated surface here is narrower than the finding count suggests - it is the <code>variables</code> package, used for three distinct jobs:</p>
+<ul>
+<li><strong>variable state across an action set.</strong> <code>newVariableConfig</code> builds one <code>VariableConfig</code> for the whole <code>onCreate</code> set, so a variable one action sets is readable by the next. zarf builds a fresh one per call, which loses it.</li>
+<li><strong><code>###ZARF_VAR_x###</code> and <code>$VAR</code> substitution.</strong> <code>templateString</code> walks <code>variableConfig.GetAllTemplates()</code> and does literal string replacement. This is the older substitution pass, and it runs on the fields Go templating does not cover - the shell, the directory, the environment, and the string fields of a wait action.</li>
+<li><strong>the <code>setVariables</code> branch.</strong> <code>SetVariable</code> plus <code>CheckVariablePattern</code> on an action’s trimmed stdout, carrying the <code>sensitive</code>, <code>autoIndent</code>, <code>type</code> and <code>pattern</code> fields with it.</li>
+</ul>
+<h3 id="4-zarfpackage-reads-an-operators-zarfyaml"><a class="header" href="#4-zarfpackage-reads-an-operators-zarfyaml">4. <code>zarfpackage</code> reads an operator’s <code>zarf.yaml</code></a></h3>
+<p><a href="../pkg/zarfpackage/zarfpackage.go"><code>pkg/zarfpackage/zarfpackage.go</code></a> decodes a <code>zarf.yaml</code> in whichever apiVersion it declares, and an omitted apiVersion is zarf’s legacy spelling of v1alpha1. This one is not a cargoship design decision at all: the file is written by somebody else, and dropping the branch means refusing to read packages zarf itself still reads. It stays until zarf stops accepting them.</p>
+<h2 id="what-a-migration-would-actually-cost"><a class="header" href="#what-a-migration-would-actually-cost">What a migration would actually cost</a></h2>
+<p>The replacement for <code>variables</code> is <code>value.Values</code> plus <code>api.Action.SetValues</code>, and cargoship <strong>already handles both</strong> - <code>parseAndSetValue</code> at <code>pkg/packager/actions/actions.go:150</code> is the <code>SetValues</code> branch, running immediately after the <code>SetVariables</code> one in the same closure. So the executor is half migrated already, and what remains is not a mechanical substitution:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What <code>variables</code> does</th><th>What <code>value.Values</code> gives</th><th>Gap</th></tr>
+</thead>
+<tbody>
+<tr><td><code>setVariables</code> with a <code>pattern</code></td><td><code>setValues</code> with a <code>type</code></td><td>No regex validation on the way in; <code>CheckVariablePattern</code> has no counterpart</td></tr>
+<tr><td><code>sensitive</code>, <code>autoIndent</code></td><td>nothing</td><td>A sensitive variable’s value would stop being redacted, and stop being reindented</td></tr>
+<tr><td><code>###ZARF_VAR_x###</code> substitution</td><td>Go templating only</td><td>The older pass covers fields Go templating never sees, including a wait action’s</td></tr>
+<tr><td><code>GetConstants</code></td><td>values merged into one map</td><td>Constants and variables stop being separate namespaces inside a template</td></tr>
+</tbody>
+</table>
+</div>
+<p>So it is a behaviour change for any <code>distro.yaml</code> using <code>setVariables</code> with a <code>pattern</code> or <code>sensitive</code>, on top of the schema break in place 1. That is a feature with its own migration story for operators, which is why the bump left it alone.</p>
+<p>Note also that <code>api.SetValue.Value</code> is itself marked deprecated upstream, so the normalized model is not a settled destination either - part of the v1 replacement is already on the way out.</p>
+<h2 id="how-it-is-suppressed-and-why-that-way"><a class="header" href="#how-it-is-suppressed-and-why-that-way">How it is suppressed, and why that way</a></h2>
+<p>Every site carries a per-line <code>//nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md</code> - <strong>28 directives</strong> covering the 30 findings. <code>grep -rn 'SA1019' --include='*.go' .</code> is the index; nothing else in the tree records them.</p>
+<p>A path exclusion for these six files in <code>.golangci.yaml</code> would have been three lines instead of 28, and was rejected on what it costs rather than on how it reads: an exclusion also silences the <em>next</em> deprecation in those files, and these are precisely the files the next one will land in. A per-line directive fails loudly when the line it sits on changes and is flagged by <code>nolintlint</code> when it stops suppressing anything, so it cannot outlive what it was written for.</p>
+<p>Two mechanical facts about placing these, both of which cost a round trip here:</p>
+<ul>
+<li><strong>Only a trailing comment works.</strong> A standalone <code>//nolint</code> line above a statement suppresses nothing in golangci-lint, and above a <code>for</code> block it does not reach the block’s contents either. The directive has to be on the reported line.</li>
+<li><strong>A trailing comment inside a method chain fights gofmt.</strong> <code>template.NewObjects(values).WithConstants(...).WithVariables(...)</code> spans three lines, and a trailing directive on each made gofmt reindent the continuations to seven tabs. Both chains - in <code>runAction</code> and in <code>renderAction</code> - are now plain statements reassigning an <code>objs</code> variable, which is what lets each line carry its own directive and stay formatted. The behaviour is identical: <code>WithConstants</code> and <code>WithVariables</code> are value-receiver methods returning <code>Objects</code>.</li>
+</ul>
+<p>The suppression is not the end state. The migration described above is still the actual fix, and it belongs behind its own issue rather than inside a dependency bump.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="check-go-modyaml"><a class="header" href="#check-go-modyaml">check-go-mod.yaml</a></h1>
 <p><strong>Triggers:</strong> pull requests, merge groups.</p>
