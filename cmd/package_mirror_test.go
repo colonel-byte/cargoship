@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/internal/zarfstate"
+	"github.com/colonel-byte/cargoship/pkg/zarfstate"
 	"github.com/k0sproject/rig/v2/protocol/openssh"
 	rigssh "github.com/k0sproject/rig/v2/protocol/ssh"
 	"github.com/stretchr/testify/require"
