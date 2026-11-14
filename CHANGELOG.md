@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.42.0](https://github.com/colonel-byte/cargoship/compare/v0.41.2...v0.42.0) (2026-11-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** update to zarf v1.0.1 ([#1116](https://github.com/colonel-byte/cargoship/issues/1116))
+* **api:** spell the authors metadata key correctly ([#1113](https://github.com/colonel-byte/cargoship/issues/1113))
+
+### Features
+
+* **create:** validate a definition when loading it, and bound its name ([#1112](https://github.com/colonel-byte/cargoship/issues/1112)) ([9a3f1e1](https://github.com/colonel-byte/cargoship/commit/9a3f1e1d45509c31741698d56c6f4b5ace29e920))
+* **mirror:** make records discoverable on a registry with no catalogue ([#1117](https://github.com/colonel-byte/cargoship/issues/1117)) ([c0965f7](https://github.com/colonel-byte/cargoship/commit/c0965f7fb42e59a60c8377cf8cd1a1dd04893e2f))
+* **mirror:** mirror into a zarf registry over an ssh tunnel ([#1096](https://github.com/colonel-byte/cargoship/issues/1096)) ([f147f42](https://github.com/colonel-byte/cargoship/commit/f147f4286e0450889173d20b66213678637aeee6))
+* **mirror:** record what filled a registry, and list it back ([#1105](https://github.com/colonel-byte/cargoship/issues/1105)) ([540848d](https://github.com/colonel-byte/cargoship/commit/540848d1a27da9f87a62fea6f3a7fc3aecc865d7))
+* **mirror:** tunnel the push through the api server ([#1111](https://github.com/colonel-byte/cargoship/issues/1111)) ([b077383](https://github.com/colonel-byte/cargoship/commit/b077383335363f05260b189d0ba9d9ffa5a7763b))
+
+
+### Bug Fixes
+
+* **api:** spell the authors metadata key correctly ([#1113](https://github.com/colonel-byte/cargoship/issues/1113)) ([7e819ff](https://github.com/colonel-byte/cargoship/commit/7e819ffe81f9c5ccda19b881d32f72fef3a3b9d7))
+* **create:** remove the ingest directory even when oras left blobs in it ([#1114](https://github.com/colonel-byte/cargoship/issues/1114)) ([bc5828f](https://github.com/colonel-byte/cargoship/commit/bc5828f79a9fa3d7b42214666bea5017337dc6a2))
+
+
+### Miscellaneous
+
+* **deps:** update to zarf v1.0.1 ([#1116](https://github.com/colonel-byte/cargoship/issues/1116)) ([75999ce](https://github.com/colonel-byte/cargoship/commit/75999ce755830387ed0ccfa3abe7fece3e19f9dd))
+
+
+### Build
+
+* **deps:** bump github.com/andybalholm/brotli from 1.2.8 to 1.3.0 ([#1108](https://github.com/colonel-byte/cargoship/issues/1108)) ([47d5e71](https://github.com/colonel-byte/cargoship/commit/47d5e71c212b457a6bc7b5266ba89e3a21ea3327))
+* **deps:** bump the sigstore group with 2 updates ([#1107](https://github.com/colonel-byte/cargoship/issues/1107)) ([3e1d14c](https://github.com/colonel-byte/cargoship/commit/3e1d14c8dbf68fbee85432bb21a5fbad800af11f))
+
 ## [0.41.2](https://github.com/colonel-byte/cargoship/compare/v0.41.1...v0.41.2) (2026-11-13)
 
 
