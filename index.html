@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-95430940.js";
+            window.path_to_searchindex_js = "searchindex-2bdd6d7c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-16386550.js"></script>
+        <script src="toc-5a9b6c47.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -397,10 +397,22 @@ cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:
 
 # Or into a Zarf deployment's in-cluster registry, tunnelled over SSH to a node
 cargoship mirror ./build/cargoship-distro-amd64.tar.zst --from-zarf-state --config ./cluster.yaml
+
+# Then ask a registry which packages have been mirrored into it
+cargoship ls oci://harbor.internal
+cargoship ls --from-zarf-state --config ./cluster.yaml -o json
 </code></pre>
 <p>An image keeps its repository path and its tag, and only the registry host changes: <code>registry.k8s.io/pause:3.10</code> is pushed as <code>harbor.internal/pause:3.10</code>. That is not cosmetic - it is exactly what a node asks a mirror for, because <code>apply</code> writes that same proxy address into each host’s containerd configuration from <code>spec.config.registries[].proxy.url</code>. Passing <code>--config</code> reads the destination from that one field, so what gets pushed and what the nodes ask for cannot drift apart.</p>
-<p><code>--from-zarf-state</code> reads the destination registry and its push credentials from a Zarf deployment’s own state secret, over <code>--context</code> or the current kubeconfig context. Zarf’s in-cluster registry sits at an address only a node can reach, so add <code>--config</code> and one SSH channel to a controller carries both the state read and the push - port 22 is the only port needed, and the kubeconfig supplies identity rather than reachability. Naming an <code>oci://</code> address this machine reaches works too, with the credentials still coming from state.</p>
-<p>See <a href="guides/mirror-registry.html">Mirroring to a Registry</a> for the naming rules, and how this compares with <code>--registry-override</code> and <code>--content-store</code>.</p>
+<p><code>--from-zarf-state</code> reads the destination registry and its push credentials from a Zarf deployment’s own state secret, over <code>--context</code> or the current kubeconfig context. Zarf’s in-cluster registry sits at an address only a node can reach, so add <code>--config</code> and one SSH channel to a controller carries both the state read and the push - port 22 is the only port needed, and the kubeconfig supplies identity rather than reachability. Where the nodes have no <code>sshd</code> at all - k3d, kind, Talos - <code>--via-kube</code> carries the push through the API server’s port-forward instead, needing nothing but the kubeconfig, and implying <code>--from-zarf-state</code> so it is the only flag needed. Naming an <code>oci://</code> address this machine reaches works too, with the credentials still coming from state.</p>
+<pre><code class="language-sh"># Mirror into a development cluster that has no SSH
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst --via-kube
+
+# Publish with a record, then resolve the newest version from anywhere
+cargoship publish ./build/cargoship-distro-amd64.tar.zst oci://ghcr.io/colonel-byte --record
+cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
+</code></pre>
+<p>A finished mirror records which package filled it, as a few kilobytes at <code>cargoship/NAME:VERSION</code>, and <code>ls</code> reads those records back. Two versions of one package are listed side by side, because the record’s tag is the version - that is a registry’s property, not a cluster’s. <code>--name</code> lists one package without needing a credential allowed to read the registry’s catalogue.</p>
+<p>See <a href="guides/mirror-registry.html">Mirroring to a Registry</a> for the naming rules, what a record holds, and how this compares with <code>--registry-override</code> and <code>--content-store</code>.</p>
 <h3 id="9-encrypt-credentials-in-a-config-file"><a class="header" href="#9-encrypt-credentials-in-a-config-file">9. Encrypt Credentials in a Config File</a></h3>
 <p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
 <pre><code class="language-bash"># Encrypt one value for a registry's user/pass/token field

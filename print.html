@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-95430940.js";
+            window.path_to_searchindex_js = "searchindex-2bdd6d7c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-16386550.js"></script>
+        <script src="toc-5a9b6c47.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -395,10 +395,22 @@ cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:
 
 # Or into a Zarf deployment's in-cluster registry, tunnelled over SSH to a node
 cargoship mirror ./build/cargoship-distro-amd64.tar.zst --from-zarf-state --config ./cluster.yaml
+
+# Then ask a registry which packages have been mirrored into it
+cargoship ls oci://harbor.internal
+cargoship ls --from-zarf-state --config ./cluster.yaml -o json
 </code></pre>
 <p>An image keeps its repository path and its tag, and only the registry host changes: <code>registry.k8s.io/pause:3.10</code> is pushed as <code>harbor.internal/pause:3.10</code>. That is not cosmetic - it is exactly what a node asks a mirror for, because <code>apply</code> writes that same proxy address into each host’s containerd configuration from <code>spec.config.registries[].proxy.url</code>. Passing <code>--config</code> reads the destination from that one field, so what gets pushed and what the nodes ask for cannot drift apart.</p>
-<p><code>--from-zarf-state</code> reads the destination registry and its push credentials from a Zarf deployment’s own state secret, over <code>--context</code> or the current kubeconfig context. Zarf’s in-cluster registry sits at an address only a node can reach, so add <code>--config</code> and one SSH channel to a controller carries both the state read and the push - port 22 is the only port needed, and the kubeconfig supplies identity rather than reachability. Naming an <code>oci://</code> address this machine reaches works too, with the credentials still coming from state.</p>
-<p>See <a href="#mirroring-to-a-registry-guide">Mirroring to a Registry</a> for the naming rules, and how this compares with <code>--registry-override</code> and <code>--content-store</code>.</p>
+<p><code>--from-zarf-state</code> reads the destination registry and its push credentials from a Zarf deployment’s own state secret, over <code>--context</code> or the current kubeconfig context. Zarf’s in-cluster registry sits at an address only a node can reach, so add <code>--config</code> and one SSH channel to a controller carries both the state read and the push - port 22 is the only port needed, and the kubeconfig supplies identity rather than reachability. Where the nodes have no <code>sshd</code> at all - k3d, kind, Talos - <code>--via-kube</code> carries the push through the API server’s port-forward instead, needing nothing but the kubeconfig, and implying <code>--from-zarf-state</code> so it is the only flag needed. Naming an <code>oci://</code> address this machine reaches works too, with the credentials still coming from state.</p>
+<pre><code class="language-sh"># Mirror into a development cluster that has no SSH
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst --via-kube
+
+# Publish with a record, then resolve the newest version from anywhere
+cargoship publish ./build/cargoship-distro-amd64.tar.zst oci://ghcr.io/colonel-byte --record
+cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
+</code></pre>
+<p>A finished mirror records which package filled it, as a few kilobytes at <code>cargoship/NAME:VERSION</code>, and <code>ls</code> reads those records back. Two versions of one package are listed side by side, because the record’s tag is the version - that is a registry’s property, not a cluster’s. <code>--name</code> lists one package without needing a credential allowed to read the registry’s catalogue.</p>
+<p>See <a href="#mirroring-to-a-registry-guide">Mirroring to a Registry</a> for the naming rules, what a record holds, and how this compares with <code>--registry-override</code> and <code>--content-store</code>.</p>
 <h3 id="9-encrypt-credentials-in-a-config-file"><a class="header" href="#9-encrypt-credentials-in-a-config-file">9. Encrypt Credentials in a Config File</a></h3>
 <p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
 <pre><code class="language-bash"># Encrypt one value for a registry's user/pass/token field
@@ -2177,14 +2189,48 @@ crane pull --format=oci registry.example.com/cargoship/my-package:1.0.0 ./my-pac
 <p>For the registry, the recorded address does double duty, which is what makes this correct rather than merely workable: it is both the service the channel opens onto and the reference host the images are pushed under, so the mirror cannot be populated at an address a node will not ask for.</p>
 <p>Any controller will do, since the API server listens on loopback on every control-plane node and a NodePort answers on all of them, so the first one in the configuration is used. A fleet whose hosts are configured with <code>openSSH:</code> rather than <code>ssh:</code> is refused: rig’s OpenSSH protocol shells out to the <code>ssh</code> binary and offers no way to open a channel.</p>
 <p>One thing to know about it: throughput is whatever a single SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push. <code>--oci-concurrency</code> opens more channels, but they share the one TCP connection.</p>
+<h4 id="tunnelling-through-the-api-server"><a class="header" href="#tunnelling-through-the-api-server">Tunnelling through the API server</a></h4>
+<p>Pass <code>--via-kube</code> and the push is carried through the Kubernetes API server’s port-forward subresource instead, needing nothing but your kubeconfig:</p>
+<pre><code>cargoship mirror ./package.tar.zst --via-kube
+</code></pre>
+<p><code>--from-zarf-state</code> is implied, so it need not be passed: routing into the cluster without naming a destination has one sensible answer, which is the registry that cluster’s state records. <code>--config</code> cannot imply it the same way, because <code>--config</code> on its own means something else entirely – read the proxy a cluster configuration declares – so that pairing stays explicit.</p>
+<p><strong>This is the route for a cluster with no SSH.</strong> k3d and kind nodes are containers with no <code>sshd</code>, and Talos runs no shell at all, so the SSH tunnel above cannot reach them however the inventory is written. It is also the route when you have a kubeconfig and no host credentials, which is the ordinary situation on a development cluster.</p>
+<p>The bare flag reaches <code>zarf/zarf-docker-registry:5000</code>, the service Zarf’s init package stands the registry up as. Give it a value to name another, as <code>namespace/service:port</code>:</p>
+<pre><code>cargoship mirror ./package.tar.zst --via-kube registry/harbor-core:8080 oci://harbor.internal
+</code></pre>
+<p>Naming a destination is what makes an in-cluster registry that is <strong>not</strong> Zarf’s reachable. An <code>oci://</code> argument suppresses the implied state read, so the reference and the credentials are yours – from the Docker configuration, as everywhere else – and only the route comes from <code>--via-kube</code>. There is no <code>zarf-state</code> secret involved, and none has to exist.</p>
+<p>The service has to be named because Zarf’s state does not record one. What the state records is the address a <strong>node</strong> reaches the registry on – a NodePort, or the per-node host port the registry proxy listens on – and neither names anything the API server can forward to. Zarf’s own marker service, the one labelled <code>zarf.dev/connect-name=registry</code>, carries the namespace and the port but has no selector and therefore no endpoints, which leaves the backing service’s name as the one piece that has to be stated.</p>
+<p>As with the SSH tunnel, the reference host stays the address Zarf recorded even though nothing dials it. The tunnel decides only where the bytes go, so the mirror is still populated under the reference a node will ask for.</p>
+<p>What it needs that the SSH route does not is a reachable API server, which is the thing the SSH route exists to avoid. On an air-gapped fleet whose firewall admits port 22 and nothing else, <code>--config</code> remains the only route. Passing both is an error rather than a fallback: they authenticate differently and reach the registry by different routes, so a push that silently took the other one is one whose failure you cannot reason about.</p>
+<p>Throughput is not the concern it is for SSH. A port-forward here is one websocket per connection rather than a shared session, so <code>--oci-concurrency</code> buys real parallelism, and a 500MB push measured within 5% of the same push through <code>kubectl port-forward</code>.</p>
+<p>One certificate note: Zarf’s registry serves TLS for its in-cluster name, and the reference host is the loopback address Zarf recorded for a node, so hostname validation will not match. <code>--insecure-skip-tls-verify</code> is the answer, and it is as safe here as it looks unsafe – the connection never leaves your machine’s API client, and the API server’s own TLS is validated normally.</p>
 <h4 id="naming-a-reachable-address-yourself"><a class="header" href="#naming-a-reachable-address-yourself">Naming a reachable address yourself</a></h4>
-<p>The alternative is to give the address this machine reaches the registry on and let <code>--from-zarf-state</code> supply only the credentials. A port-forward is the usual way to get one, and a <code>127.0.0.1</code> address works exactly as any other:</p>
+<p>The remaining alternative is to give the address this machine reaches the registry on and let <code>--from-zarf-state</code> supply only the credentials. <code>--via-kube</code> above does this for you; doing it by hand is still worth knowing, because it is what to reach for when the registry is somewhere neither tunnel goes. A port-forward is the usual way to get an address, and a <code>127.0.0.1</code> address works exactly as any other:</p>
 <pre><code>kubectl port-forward -n zarf svc/zarf-docker-registry 5000:5000 &amp;
 cargoship mirror ./package.tar.zst oci://127.0.0.1:5000 --from-zarf-state --plain-http
 </code></pre>
 <p>The loopback address is not treated specially – it is a destination like any other, and the only thing to watch is that it is <strong>your</strong> loopback rather than the one Zarf recorded for a node. <code>--plain-http</code> is worth passing <strong>only when the deployment manages no certificates</strong>: Zarf’s internal registry without mTLS serves plain HTTP, and while HTTPS is tried first and falls back, saying so skips the failed probe. Under <code>mtlsStrategy: zarf-managed</code> the registry serves HTTPS and <code>--plain-http</code> would send the push to a port that will not answer it - see <a href="#a-zarf-managed-mtls-registry">A Zarf-managed mTLS registry</a>.</p>
 <p>One sharp edge, which applies to every destination and not just this one: if the package’s images already name the registry you are mirroring <strong>to</strong>, a repository prefix on the destination is silently dropped and the images are pushed back to their own references. That is zarf’s <code>ImageTransformHostWithoutChecksum</code> treating the push as already done. It does not arise for a package built against upstream registries, which is the normal case.</p>
 <p><code>--context</code> picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the <code>kubeconfig</code> setting (<code>KUBECONFIG</code>, else the standard location). <code>--context</code> without <code>--from-zarf-state</code> is an error rather than being ignored, since nothing else here reads a cluster. Under <code>--config</code> the context still chooses which cluster’s credentials and API port are used, and the tunnel supplies the route to it.</p>
+<h3 id="the-registry-pods-memory-limit-counts-what-you-push"><a class="header" href="#the-registry-pods-memory-limit-counts-what-you-push">The registry pod’s memory limit counts what you push</a></h3>
+<p>Mirroring several gigabytes into Zarf’s in-cluster registry can kill its pod, and the reason is not the registry’s own memory. Zarf’s init chart gives the deployment a <strong>2Gi memory limit</strong>, and cgroup v2 charges a pod’s limit for the <strong>page cache</strong> of every file it writes – so the blobs a mirror lands become memory charged to the registry, whether or not the registry is still reading them. Where the node is short of free memory the kernel OOM-kills the container rather than reclaiming, and because each restart touches the files again it comes back as a crash loop.</p>
+<p>The signature is unmistakable once you know to look, and it is the reason to read the cgroup rather than <code>kubectl top</code>, which reports the working set and so shows a healthy figure:</p>
+<pre><code>$ kubectl -n zarf get pod -l app=docker-registry
+zarf-docker-registry-...  0/1  CrashLoopBackOff  6
+
+$ # on the node, the pod's cgroup
+memory.max      2147483648   # the 2Gi limit
+memory.current  2134671360   # pinned at it
+anon                 24576   # 24KB -- the registry process itself
+file            2127904768   # 1.98GB -- page cache from the blobs
+</code></pre>
+<p>Deleting the pod clears it immediately, because the cgroup goes with the pod and the replacement starts with nothing charged:</p>
+<pre><code>kubectl -n zarf delete pod -l app=docker-registry
+</code></pre>
+<p>To stop it recurring, give the limit room for both the process and the cache of what it writes. <code>zarf init</code> has no flag for this, so it is a change to the deployment:</p>
+<pre><code>kubectl -n zarf set resources deploy/zarf-docker-registry --limits=memory=4Gi
+</code></pre>
+<p>None of this is affected by how the push is routed – <code>--via-kube</code>, <code>--config</code> and a directly dialled address all write the same bytes – and none of it indicates anything wrong with the package or the mirror. A push interrupted this way is safe to repeat: content already landed is skipped by digest.</p>
 <h3 id="a-zarf-managed-mtls-registry"><a class="header" href="#a-zarf-managed-mtls-registry">A Zarf-managed mTLS registry</a></h3>
 <p><code>zarf init</code> can manage the registry’s certificates itself, recording <code>mtlsStrategy: zarf-managed</code> in state - and from Zarf v1.0.0 that is what a default deployment does. Two things follow, and <code>--from-zarf-state</code> handles both without a flag.</p>
 <p>The registry serves <strong>HTTPS</strong>, never plain HTTP, with a server certificate signed by a private CA named <code>Zarf Registry CA</code>. Nothing in the management node’s trust store covers it, so the CA is read out of the cluster - the <code>ca.crt</code> of the <code>zarf-registry-server-tls</code> secret, the same secret Zarf mounts into the registry pod - and trusted for the push. Under <code>--config</code> that read travels the same SSH channel as the state read, so a fleet with a closed API port is unaffected. <code>--insecure-skip-tls-verify</code> remains available for a deployment whose CA cannot be read, but it should not be needed.</p>
@@ -2215,6 +2261,55 @@ cargoship mirror ./package.tar.zst oci://127.0.0.1:5000 --from-zarf-state --plai
 <p>The one exception is <code>--from-zarf-state</code>, which reads the push credentials Zarf generated along with the registry – see <a href="#reading-it-from-a-zarf-deployment">above</a>.</p>
 <p>The credentials a cluster configuration carries under <code>spec.config.registries[].auth</code> are <strong>not</strong> used for the push, even when <code>--config</code> supplied the address. Those exist for the nodes to pull with, they are commonly encrypted at rest with age or Ansible Vault, and reusing them here would mean decrypting a fleet’s secrets during what is otherwise a local operation.</p>
 <p>Use <code>--plain-http</code> for a registry serving plain HTTP, and <code>--insecure-skip-tls-verify</code> for one with a certificate the management node does not trust. Without <code>--plain-http</code>, HTTPS is tried first and plain HTTP only if the registry does not serve it.</p>
+<h2 id="reading-a-mirror-back"><a class="header" href="#reading-a-mirror-back">Reading a Mirror Back</a></h2>
+<p>Nothing else in a mirror says which package filled it. Images keep their original repository paths and files are named from their source URL, so a registry holding a few hundred repositories answers “what images are here” and not “is rke2 0.1.0 loaded”. A finished mirror therefore records itself:</p>
+<pre><code>cargoship ls oci://harbor.internal
+</code></pre>
+<pre><code> PACKAGE  VERSION  ARCH         ENGINE  MIRRORED          BY
+ rke2     0.1.0    amd64,arm64  rke2    2026-11-13 09:41  0.41.1
+ rke2     0.0.9    amd64        rke2    2026-10-02 14:08  0.40.2
+</code></pre>
+<p>The record is one small OCI artifact per package and version, and every record a registry holds lives in <strong>one repository</strong> – <code>cargoship</code>, under whatever prefix the target carried – tagged by what it describes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tag</th><th>Written by</th><th>What it means</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_mirror.NAME.VERSION</code></td><td><code>cargoship mirror</code>, by default</td><td>loose content a node reaches by its own references</td></tr>
+<tr><td><code>_package.NAME.VERSION</code></td><td><code>cargoship publish --record</code></td><td>one artifact to pull whole, at <code>NAME:VERSION</code> in the same prefix</td></tr>
+</tbody>
+</table>
+</div>
+<p>The two defaults are opposite on purpose. A mirror has recorded itself since the feature existed, so it still does and <code>--no-record</code> is the way out. Publishing is the newer half, so it records nothing unless <code>--record</code> asks: a registry somebody already publishes into should not quietly gain a second artifact per package because they upgraded cargoship.</p>
+<p>Its config blob is the row above as JSON; its single layer is the package’s own <code>distro.yaml</code>, so a reader that wants the full definition – every image and file it declared – has it without pulling the package back.</p>
+<p>One repository rather than one per package, because that is what makes discovery work on the registries people use. Records spread across repositories have to be found by asking the registry for its catalogue, and <code>/v2/_catalog</code> is a wider permission than pushing where it is implemented at all: <strong>ghcr.io answers it with <code>403 DENIED</code></strong> and Docker Hub does not implement it, so <code>cargoship ls</code> could list neither. One repository makes a listing a single <code>/v2/&lt;prefix&gt;/cargoship/tags/list</code>, which every registry serves and which needs no more than a pull.</p>
+<p>The tag prefix is the kind with an underscore in front of it, derived from the <code>kind</code> in the record’s own JSON rather than mapped to it, so the two cannot disagree about how a kind is spelled. The underscore is what keeps records out of the way of a package published into that same repository: a tag may begin with <code>_</code> and a version does not, so <code>cargoship:1.0.0</code> and <code>cargoship:_package.rke2.1.0.0</code> cannot collide. Note that this is convention rather than enforcement – the schema bounds a version’s length but not its characters, so a version literally spelled <code>_package.x.1</code> would collide and nothing checks for it. The name and version bounds, 64 and 48 characters, are what make them safe to put in a tag at all, since a tag is capped at 128.</p>
+<h3 id="a-registry-that-locks-tags"><a class="header" href="#a-registry-that-locks-tags">A registry that locks tags</a></h3>
+<p>Some registries refuse to overwrite a tag once it exists – Nexus can be configured this way, often with <code>latest</code> as the only exception – and a record is written to a stable tag per kind, package and version. Re-running a mirror or a publish for a version that already has a record therefore tries to replace an immutable tag, and the registry refuses.</p>
+<p>This is why kind is in the tag rather than the two kinds sharing one, and why a record is not a single artifact carrying both facts: merging would mean reading a record, adding to it and pushing it back to the same tag, which such a registry cannot do at all. Separate tags per kind mean the only rewrite is a genuine re-run of the same operation.</p>
+<p>Both commands now <strong>warn</strong> rather than fail when the record cannot be written: the content is in the registry either way, and the record is advisory. What is lost is that <code>cargoship ls</code> cannot see that mirror, so the warning says exactly that rather than only naming the error.</p>
+<p>The images and files themselves are a separate matter, and worth knowing precisely. ORAS does not re-upload content that is already there – it checks the destination and skips a sub-graph that exists, so re-mirroring a package whose <code>rancher/pause:3.10</code> is already present sends none of its bytes again. It does, however, <strong>always write the tag</strong>, even for content it skipped. So a re-mirror issues a tag request per image regardless. Whether a tag-locking registry refuses that depends on the implementation: a re-tag to the <em>same</em> digest is often permitted, since it changes nothing, and a re-mirror of an unchanged package produces exactly the same digests. A re-tag to a <em>different</em> digest is what immutability exists to prevent, and that is the case to expect a refusal on – re-mirroring a package rebuilt with different content under a version it already used. An image push that is refused fails the mirror, which is the right answer: an image a node will ask for and not find is a broken mirror, not a cosmetic problem.</p>
+<p>Two versions of one package sit side by side, because the record’s tag is the version. That is a property of a registry rather than of a cluster – Zarf’s deployed-package state is keyed on the package name alone, so it records one version per name and a redeploy overwrites it.</p>
+<p><code>ls</code> names its registry the same three ways <code>mirror</code> does, and <code>--from-zarf-state</code> with <code>--config</code> tunnels the read over SSH exactly as the push is tunnelled:</p>
+<pre><code>cargoship ls --from-zarf-state --config ./cluster.yaml
+cargoship ls oci://harbor.internal --name rke2
+cargoship ls oci://harbor.internal -o json
+</code></pre>
+<p><code>--name</code> narrows the tags considered before any manifest is fetched, so listing one package out of a registry holding hundreds of records reads one manifest rather than all of them. It is no longer a permission workaround: neither form reads the registry catalogue, and both need only a pull.</p>
+<h3 id="finding-the-newest-version-of-a-package"><a class="header" href="#finding-the-newest-version-of-a-package">Finding the newest version of a package</a></h3>
+<p>This is the question a consumer asks – <a href="https://github.com/colonel-byte/cluster-api-provider-cargoship"><code>cluster-api-provider-cargoship</code></a> asks exactly it – and the layout above is shaped to answer it in one request:</p>
+<pre><code>cargoship publish ./package.tar.zst oci://ghcr.io/colonel-byte --record
+cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
+</code></pre>
+<p>Records come back newest first, so the first entry is the answer. Each one carries the <code>kind</code>, which is what decides the next move: a <code>package</code> record names an artifact to pull whole with <code>cargoship pull</code>, at <code>NAME:VERSION</code> in the same prefix the record was found in; a <code>mirror</code> record names content already unpacked into the registry, which nodes reach by the references the package itself declares. Those references are in the <code>distro.yaml</code> the record carries as its layer, so one small fetch yields the complete image list without pulling the package.</p>
+<p>From Go, <code>distro.ListMirrored</code> returns the same records and is exported for exactly this – a consumer in another module resolving a version without shelling out to the CLI.</p>
+<p>Two limits worth knowing:</p>
+<ul>
+<li><strong>A record is a claim, not a check.</strong> Nothing reconciles it against the images and files it describes, so content deleted from the registry by hand leaves a record that still lists.</li>
+<li><strong>It is not a trust anchor.</strong> The <code>distro.yaml</code> a record carries is a copy; the signature that makes a package’s own <code>distro.yaml</code> the root of trust lives in the package bundle. A record says what was mirrored, never that it is intact. Verify a package with <code>cargoship verify</code> before mirroring it, which is where that check belongs.</li>
+</ul>
+<p>A package that declares no version has nothing to tag a record with. The mirror still runs – its content is what matters – and says in the log that it recorded nothing.</p>
 <h2 id="how-this-compares"><a class="header" href="#how-this-compares">How This Compares</a></h2>
 <p>Three features move content toward an air-gapped fleet, in different directions:</p>
 <div class="table-wrapper">
@@ -3778,6 +3873,7 @@ ansible-vault decrypt --vault-password-file ./vault-pass.txt --output - &lt; ct.
 <li><a href="#import">cargoship import</a>	 - Converts an OCI Image Layout archive into a native Cargoship package</li>
 <li><a href="#inventory">cargoship inventory</a>	 - Generates a cluster inventory from another source of truth</li>
 <li><a href="#kube-config">cargoship kube-config</a>	 - Get the admin kube-config for a control-plane node</li>
+<li><a href="#ls">cargoship ls</a>	 - List the cargoship packages mirrored into an OCI registry</li>
 <li><a href="#mirror">cargoship mirror</a>	 - Publish a built package’s images and files to an OCI registry</li>
 <li><a href="#prepare">cargoship prepare</a>	 - Prepares the nodes, including restarting the node if new kernel modules are enabled</li>
 <li><a href="#publish">cargoship publish</a>	 - Publish the Cargoship Package to an OCI registry</li>
@@ -4371,19 +4467,67 @@ $ cargoship kube-config --config ./cargoship-config.yaml
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="ls"><a href="#ls" class="header">ls</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-ls"><a class="header" href="#cargoship-ls">cargoship ls</a></h2>
+<p>List the cargoship packages mirrored into an OCI registry</p>
+<h3 id="synopsis-13"><a class="header" href="#synopsis-13">Synopsis</a></h3>
+<p>Reads the record every ‘cargoship mirror’ leaves behind and reports which packages populated a registry, newest first. This is what a registry holds rather than what a cluster runs: two versions of one package can be mirrored side by side, and both are listed.</p>
+<p>The registry is named the same three ways ‘cargoship mirror’ names it – as an oci:// argument, with –config to read the proxy a cluster configuration declares, or with –from-zarf-state to read a zarf deployment’s own registry, tunnelled over ssh when –config names the fleet.</p>
+<p>Records live in one repository, so a listing is a single tag query and needs no more than a pull – which is what makes this work on ghcr.io and Docker Hub, where a registry catalogue cannot be read at all. –name narrows it to one package. A listing is what was recorded, so content deleted from the registry by hand still appears.</p>
+<pre><code>cargoship ls [REPOSITORY] [flags]
+</code></pre>
+<h3 id="examples-11"><a class="header" href="#examples-11">Examples</a></h3>
+<pre><code>
+# List what has been mirrored into a registry:
+$ cargoship ls oci://harbor.internal
+
+# List one package's versions, newest first:
+$ cargoship ls oci://harbor.internal --name rke2
+
+# List a zarf deployment's in-cluster registry, over ssh to a node:
+$ cargoship ls --from-zarf-state --config ./cluster.yaml
+
+# Machine-readable, for a script choosing a version:
+$ cargoship ls oci://harbor.internal -o json
+
+</code></pre>
+<h3 id="options-14"><a class="header" href="#options-14">Options</a></h3>
+<pre><code>  -f, --config PATH                                           PATH of a cluster configuration to read the registry from. See docs/guides/mirror-registry.md.
+      --context NAME                                          NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
+      --from-zarf-state[=true|false]                          Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md.
+  -h, --help[=true|false]                                     help for ls
+      --insecure-skip-tls-verify[=true|false]                 Skip validating the registry's TLS certificate. Reduces security; use only with reason.
+      --name NAME                                             NAME of one package to list the recorded versions of, instead of every package in the registry.
+  -o, --output outputFormat                                   Output format. Valid options are: yaml, json.
+      --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Implies --from-zarf-state.
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-13"><a class="header" href="#options-inherited-from-parent-commands-13">Options inherited from parent commands</a></h3>
+<pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
+</code></pre>
+<h3 id="see-also-14"><a class="header" href="#see-also-14">SEE ALSO</a></h3>
+<ul>
+<li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="mirror"><a href="#mirror" class="header">mirror</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-mirror"><a class="header" href="#cargoship-mirror">cargoship mirror</a></h2>
 <p>Publish a built package’s images and files to an OCI registry</p>
-<h3 id="synopsis-13"><a class="header" href="#synopsis-13">Synopsis</a></h3>
+<h3 id="synopsis-14"><a class="header" href="#synopsis-14">Synopsis</a></h3>
 <p>Pushes what a package carries – its images, and the files it stages – into a registry as individually pullable content, so the mirror a fleet is already pointed at holds what its nodes will ask for.</p>
 <p>This is not ‘cargoship publish’. That uploads the package as one artifact, to be pulled back as a package. This unpacks it: each image is pushed under the same repository path and tag it had upstream with only the registry host swapped, because that is exactly what a node asks a mirror for once cargoship has written the mirror into its containerd configuration. An image the package carries for several architectures is pushed as an index, so the registry holds every architecture the package did.</p>
 <p>Each file is pushed as a single-layer OCI artifact named after the file and tagged with a digest of the source URL the definition declared, which keeps two releases of the same filename apart.</p>
 <p>Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give –config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.</p>
 <p>–from-zarf-state reads the destination and the push credentials from a zarf deployment’s state instead. Its in-cluster registry sits at an address only a node can reach, so either add –config to tunnel the push through a node over ssh, or name an address this machine reaches.</p>
+<p>A finished mirror records which package populated it, under cargoship:_mirror.NAME.VERSION, so that ‘cargoship ls’ can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed.</p>
 <pre><code>cargoship mirror [Package] [REPOSITORY] [flags]
 </code></pre>
-<h3 id="examples-11"><a class="header" href="#examples-11">Examples</a></h3>
+<h3 id="examples-12"><a class="header" href="#examples-12">Examples</a></h3>
 <pre><code>
 # Mirror everything the package carries into a registry:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://harbor.internal
@@ -4398,30 +4542,32 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --config ./cluster.yaml
 
 </code></pre>
-<h3 id="options-14"><a class="header" href="#options-14">Options</a></h3>
-<pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
-  -f, --config PATH                             PATH of a cluster configuration to read the destination registry from. See docs/guides/mirror-registry.md.
-      --context NAME                            NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
-      --files[=true|false]                      Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
-      --from-zarf-state[=true|false]            Take the destination registry and its push credentials from a zarf deployment. See docs/guides/mirror-registry.md.
-  -h, --help[=true|false]                       help for mirror
-      --images[=true|false]                     Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
-      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
-  -k, --key string                              Path to public key file for validating signed packages
-      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
-      --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
-      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
-      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
-      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+<h3 id="options-15"><a class="header" href="#options-15">Options</a></h3>
+<pre><code>  -a, --architecture string                                   Architecture for OCI images and Zarf packages
+  -f, --config PATH                                           PATH of a cluster configuration to read the registry from. See docs/guides/mirror-registry.md.
+      --context NAME                                          NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
+      --files[=true|false]                                    Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
+      --from-zarf-state[=true|false]                          Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md.
+  -h, --help[=true|false]                                     help for mirror
+      --images[=true|false]                                   Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
+      --insecure-skip-tls-verify[=true|false]                 Skip validating the registry's TLS certificate. Reduces security; use only with reason.
+  -k, --key string                                            Path to public key file for validating signed packages
+      --no-record[=true|false]                                Skip the record a finished mirror writes about itself, which is what makes cargoship ls able to see it.
+      --oci-concurrency int                                   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --retries int                                           Number of retries to perform for Cargoship's operations, such as package publishes.
+      --tmpdir string                                         Specify the temporary directory to use for intermediate files (default "/tmp")
+      --verify verifyMode                                     Verify the Cargoship package signature. (default if-possible)
+      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Implies --from-zarf-state.
+      --zarf-cache string                                     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-13"><a class="header" href="#options-inherited-from-parent-commands-13">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-14"><a class="header" href="#options-inherited-from-parent-commands-14">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-14"><a class="header" href="#see-also-14">SEE ALSO</a></h3>
+<h3 id="see-also-15"><a class="header" href="#see-also-15">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -4430,14 +4576,14 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --conf
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-prepare"><a class="header" href="#cargoship-prepare">cargoship prepare</a></h2>
 <p>Prepares the nodes, including restarting the node if new kernel modules are enabled</p>
-<h3 id="synopsis-14"><a class="header" href="#synopsis-14">Synopsis</a></h3>
+<h3 id="synopsis-15"><a class="header" href="#synopsis-15">Synopsis</a></h3>
 <p>Brings every host the cluster configuration names up to the prerequisites the package declares, without installing the engine: environment variables and sysctl settings, container-selinux on hosts with SELinux enabled, the fapolicyd rules the distro supplies, and the kernel modules the package asks for. A host that gained a module is rebooted, because the module has to be loaded before an apply can use it.</p>
 <p>Running this is optional. An apply runs the same preparation phases itself, and this command exists so that the disruptive half can be done on its own schedule – ahead of a maintenance window rather than inside it.</p>
 <p>–hosts and –firewall each opt into rewriting a part of the host that cargoship otherwise leaves alone. The fapolicyd rules are not one of them: they are written wherever a host runs fapolicyd and the package carries rules for it.</p>
 <p>This changes every host it is pointed at, so it needs –confirm. Pass –dry-run to report what it would change instead.</p>
 <pre><code>cargoship prepare [Distro Package] [flags]
 </code></pre>
-<h3 id="examples-12"><a class="header" href="#examples-12">Examples</a></h3>
+<h3 id="examples-13"><a class="header" href="#examples-13">Examples</a></h3>
 <pre><code># Prepare every node in the config for an install
 $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 
@@ -4450,7 +4596,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
 # Prepare workers 25% at a time
 $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
 </code></pre>
-<h3 id="options-15"><a class="header" href="#options-15">Options</a></h3>
+<h3 id="options-16"><a class="header" href="#options-16">Options</a></h3>
 <pre><code>  -a, --architecture string     Architecture for OCI images and Zarf packages
   -c, --concurrency int         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
   -f, --config string           Config file used to bootstrap a cluster.
@@ -4467,13 +4613,13 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
       --verify verifyMode       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-14"><a class="header" href="#options-inherited-from-parent-commands-14">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-15"><a class="header" href="#options-inherited-from-parent-commands-15">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-15"><a class="header" href="#see-also-15">SEE ALSO</a></h3>
+<h3 id="see-also-16"><a class="header" href="#see-also-16">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -4482,12 +4628,12 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-publish"><a class="header" href="#cargoship-publish">cargoship publish</a></h2>
 <p>Publish the Cargoship Package to an OCI registry</p>
-<h3 id="synopsis-15"><a class="header" href="#synopsis-15">Synopsis</a></h3>
+<h3 id="synopsis-16"><a class="header" href="#synopsis-16">Synopsis</a></h3>
 <p>Pushes a built package to an OCI registry, where ‘cargoship apply’ and ‘cargoship pull’ can read it by reference instead of by path. The package is uploaded as OCI artifacts, so any registry that stores them will hold it, and –oci-concurrency sets how many layers move at once.</p>
 <p>The signature a package already carries is published with it. Passing –signing-key re-signs the package under a different key on the way out, which is how one built and signed in a development environment is re-signed for a production registry.</p>
 <pre><code>cargoship publish [Package] [REPOSITORY] [flags]
 </code></pre>
-<h3 id="examples-13"><a class="header" href="#examples-13">Examples</a></h3>
+<h3 id="examples-14"><a class="header" href="#examples-14">Examples</a></h3>
 <pre><code># Publish a package to an OCI registry
 $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org
 
@@ -4500,7 +4646,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
 # Refuse to publish unless the package carries a signature this key validates
 $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org --verify=always --key ./public-key.pem
 </code></pre>
-<h3 id="options-16"><a class="header" href="#options-16">Options</a></h3>
+<h3 id="options-17"><a class="header" href="#options-17">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
       --confirm[=true|false]                    Publish the package without asking for confirmation first.
   -h, --help[=true|false]                       help for publish
@@ -4508,57 +4654,11 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
   -k, --key string                              Path to public key file for validating signed packages
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --record[=true|false]                     Record the published package so cargoship ls can find it and resolve the newest version. Off by default.
       --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
       --signing-key string                      Private key for signing or re-signing: a path or env://ENV_VAR, no cloud KMS. See docs/guides/signing-packages.md.
       --signing-key-pass string                 Password to the private key used for publishing packages.
       --tag string                              The tag to be used in the OCI reference for the package in the registry
-      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
-      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
-      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
-</code></pre>
-<h3 id="options-inherited-from-parent-commands-15"><a class="header" href="#options-inherited-from-parent-commands-15">Options inherited from parent commands</a></h3>
-<pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
-      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
-</code></pre>
-<h3 id="see-also-16"><a class="header" href="#see-also-16">SEE ALSO</a></h3>
-<ul>
-<li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
-</ul>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="pull"><a href="#pull" class="header">pull</a></h1>
-<!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-pull"><a class="header" href="#cargoship-pull">cargoship pull</a></h2>
-<p>Pulls a Cargoship package from a remote registry and saves it to the local filesystem</p>
-<h3 id="synopsis-16"><a class="header" href="#synopsis-16">Synopsis</a></h3>
-<p>Downloads a package from an OCI registry or an https:// URL and writes it to the local filesystem as a single archive, so that it can be carried to a machine with no route to the registry it came from. An apply reads the same references directly, so pulling first is for staging rather than something an install needs.</p>
-<p>–shasum checks the downloaded archive against a checksum you already hold, which is the check to use when the package is to be trusted on the strength of something other than its signature.</p>
-<pre><code>cargoship pull [Package] [flags]
-</code></pre>
-<h3 id="examples-14"><a class="header" href="#examples-14">Examples</a></h3>
-<pre><code># Pull a package into the current directory
-$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0
-
-# Pull it into ./build/ instead
-$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --output ./build/
-
-# Check the downloaded package against a known checksum
-$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --shasum 4a4f1f5eb0a1e3f2c9b6d0b2b6a0d3f4c5e6a7b8c9d0e1f2a3b4c5d6e7f8a9b0
-
-# Refuse to keep the package unless a signature validates against this key
-$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./public-key.pem
-
-</code></pre>
-<h3 id="options-17"><a class="header" href="#options-17">Options</a></h3>
-<pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
-  -h, --help[=true|false]                       help for pull
-      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
-  -k, --key string                              Path to public key file for validating signed packages
-      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string                           Where to write the package: a local directory, or an oci:// registry URL. (default ".")
-      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
-      --shasum string                           Shasum of the package to pull.
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
@@ -4574,40 +4674,41 @@ $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./p
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="reset"><a href="#reset" class="header">reset</a></h1>
+<h1 id="pull"><a href="#pull" class="header">pull</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-reset"><a class="header" href="#cargoship-reset">cargoship reset</a></h2>
-<p>Reset a cluster, stopping, uninstalling, and removing all data for an engine</p>
+<h2 id="cargoship-pull"><a class="header" href="#cargoship-pull">cargoship pull</a></h2>
+<p>Pulls a Cargoship package from a remote registry and saves it to the local filesystem</p>
 <h3 id="synopsis-17"><a class="header" href="#synopsis-17">Synopsis</a></h3>
-<p>Removes the engine and the data it wrote from every host the cluster configuration names. Each node is deleted from the cluster, drained first where that is enabled, then the engine’s packages or binaries are uninstalled and the service manager is reloaded.</p>
-<p>This is destructive and it backs nothing up. Nothing a workload kept on a host survives it, and no command puts the cluster back: what follows a reset is an apply, which bootstraps a new one.</p>
-<p>–distro names the engine to remove. A reset loads no package, so it has nothing else to read the engine’s identity from.</p>
-<p>This needs –confirm. Pass –dry-run to report every host it would reset, and what it would do to each, without touching one.</p>
-<pre><code>cargoship reset [flags]
+<p>Downloads a package from an OCI registry or an https:// URL and writes it to the local filesystem as a single archive, so that it can be carried to a machine with no route to the registry it came from. An apply reads the same references directly, so pulling first is for staging rather than something an install needs.</p>
+<p>–shasum checks the downloaded archive against a checksum you already hold, which is the check to use when the package is to be trusted on the strength of something other than its signature.</p>
+<pre><code>cargoship pull [Package] [flags]
 </code></pre>
 <h3 id="examples-15"><a class="header" href="#examples-15">Examples</a></h3>
-<pre><code># Reset an RKE2 cluster, uninstalling the engine and removing its data
-$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
+<pre><code># Pull a package into the current directory
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0
 
-# Reset a K3s cluster
-$ cargoship reset --config ./cargoship-config.yaml --distro k3s --confirm
+# Pull it into ./build/ instead
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --output ./build/
 
-# Reset at most five hosts at a time
-$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --concurrency 5
+# Check the downloaded package against a known checksum
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --shasum 4a4f1f5eb0a1e3f2c9b6d0b2b6a0d3f4c5e6a7b8c9d0e1f2a3b4c5d6e7f8a9b0
 
-# Reset workers 25% at a time
-$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --work-concurrency 25%
+# Refuse to keep the package unless a signature validates against this key
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./public-key.pem
+
 </code></pre>
 <h3 id="options-18"><a class="header" href="#options-18">Options</a></h3>
-<pre><code>  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-  -f, --config string             Config file used to bootstrap a cluster.
-      --confirm[=true|false]      Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
-  -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
-      --dry-run[=true|false]      Report what would be done without changing any host. Runs the preflight checks for real. Does not need --confirm.
-  -h, --help[=true|false]         help for reset
-      --receipt-path string       Write a JSON record of the run to PATH. Takes the {command} and {timestamp} placeholders. It names every host.
-      --target-hosts strings      Hosts to delete and uninstall, by hostname or address. Repeatable. Defaults to every host in the configuration.
-  -w, --work-concurrency string   Workers to update in parallel, a count or a percentage. See docs/guides/profile-concurrency.md. (default "0")
+<pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
+  -h, --help[=true|false]                       help for pull
+      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
+  -k, --key string                              Path to public key file for validating signed packages
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string                           Where to write the package: a local directory, or an oci:// registry URL. (default ".")
+      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --shasum string                           Shasum of the package to pull.
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
+      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
+      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-17"><a class="header" href="#options-inherited-from-parent-commands-17">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
@@ -4620,15 +4721,61 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="reset"><a href="#reset" class="header">reset</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-reset"><a class="header" href="#cargoship-reset">cargoship reset</a></h2>
+<p>Reset a cluster, stopping, uninstalling, and removing all data for an engine</p>
+<h3 id="synopsis-18"><a class="header" href="#synopsis-18">Synopsis</a></h3>
+<p>Removes the engine and the data it wrote from every host the cluster configuration names. Each node is deleted from the cluster, drained first where that is enabled, then the engine’s packages or binaries are uninstalled and the service manager is reloaded.</p>
+<p>This is destructive and it backs nothing up. Nothing a workload kept on a host survives it, and no command puts the cluster back: what follows a reset is an apply, which bootstraps a new one.</p>
+<p>–distro names the engine to remove. A reset loads no package, so it has nothing else to read the engine’s identity from.</p>
+<p>This needs –confirm. Pass –dry-run to report every host it would reset, and what it would do to each, without touching one.</p>
+<pre><code>cargoship reset [flags]
+</code></pre>
+<h3 id="examples-16"><a class="header" href="#examples-16">Examples</a></h3>
+<pre><code># Reset an RKE2 cluster, uninstalling the engine and removing its data
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
+
+# Reset a K3s cluster
+$ cargoship reset --config ./cargoship-config.yaml --distro k3s --confirm
+
+# Reset at most five hosts at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --concurrency 5
+
+# Reset workers 25% at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --work-concurrency 25%
+</code></pre>
+<h3 id="options-19"><a class="header" href="#options-19">Options</a></h3>
+<pre><code>  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+  -f, --config string             Config file used to bootstrap a cluster.
+      --confirm[=true|false]      Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
+  -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
+      --dry-run[=true|false]      Report what would be done without changing any host. Runs the preflight checks for real. Does not need --confirm.
+  -h, --help[=true|false]         help for reset
+      --receipt-path string       Write a JSON record of the run to PATH. Takes the {command} and {timestamp} placeholders. It names every host.
+      --target-hosts strings      Hosts to delete and uninstall, by hostname or address. Repeatable. Defaults to every host in the configuration.
+  -w, --work-concurrency string   Workers to update in parallel, a count or a percentage. See docs/guides/profile-concurrency.md. (default "0")
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-18"><a class="header" href="#options-inherited-from-parent-commands-18">Options inherited from parent commands</a></h3>
+<pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
+</code></pre>
+<h3 id="see-also-19"><a class="header" href="#see-also-19">SEE ALSO</a></h3>
+<ul>
+<li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="schema"><a href="#schema" class="header">schema</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-schema"><a class="header" href="#cargoship-schema">cargoship schema</a></h2>
 <p>Writes out a JSON Schema for one of cargoship’s own file formats</p>
-<h3 id="synopsis-18"><a class="header" href="#synopsis-18">Synopsis</a></h3>
+<h3 id="synopsis-19"><a class="header" href="#synopsis-19">Synopsis</a></h3>
 <p>Writes out the JSON Schema for KIND – ‘inventory’ for a cluster file, ‘package’ for a distro.yaml, ‘config’ for a cargoship config file – so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to –output. Point an editor at a written file with a ‘# yaml-language-server: $schema=PATH’ comment on the first line. With –package, the package’s own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship – so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation.</p>
 <pre><code>cargoship schema KIND [flags]
 </code></pre>
-<h3 id="examples-16"><a class="header" href="#examples-16">Examples</a></h3>
+<h3 id="examples-17"><a class="header" href="#examples-17">Examples</a></h3>
 <pre><code># Write the inventory schema next to an inventory file, for an editor to read
 $ cargoship schema inventory -o ./cluster-v1alpha1-schema.json
 
@@ -4646,7 +4793,7 @@ $ cargoship schema inventory --package ./example/rke2-cilium-vsphere/v1_37/v1.37
 $ cargoship schema package -o ./distro.schema.json
 $ cargoship schema config -o ./cargoship.schema.json
 </code></pre>
-<h3 id="options-19"><a class="header" href="#options-19">Options</a></h3>
+<h3 id="options-20"><a class="header" href="#options-20">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
   -h, --help[=true|false]                       help for schema
       --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
@@ -4658,13 +4805,13 @@ $ cargoship schema config -o ./cargoship.schema.json
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-18"><a class="header" href="#options-inherited-from-parent-commands-18">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-19"><a class="header" href="#options-inherited-from-parent-commands-19">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-19"><a class="header" href="#see-also-19">SEE ALSO</a></h3>
+<h3 id="see-also-20"><a class="header" href="#see-also-20">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -4673,11 +4820,11 @@ $ cargoship schema config -o ./cargoship.schema.json
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-sign"><a class="header" href="#cargoship-sign">cargoship sign</a></h2>
 <p>Signs an existing Cargoship distro package</p>
-<h3 id="synopsis-19"><a class="header" href="#synopsis-19">Synopsis</a></h3>
+<h3 id="synopsis-20"><a class="header" href="#synopsis-20">Synopsis</a></h3>
 <p>Signs an existing Cargoship distro package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the distro.yaml file and does not modify the package checksums.</p>
 <pre><code>cargoship sign PACKAGE_SOURCE [flags]
 </code></pre>
-<h3 id="examples-17"><a class="header" href="#examples-17">Examples</a></h3>
+<h3 id="examples-18"><a class="header" href="#examples-18">Examples</a></h3>
 <pre><code># Sign an unsigned package
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
 
@@ -4693,7 +4840,7 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./priv
 # Sign with a key held in an environment variable rather than on disk
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key env://COSIGN_PRIVATE_KEY
 </code></pre>
-<h3 id="options-20"><a class="header" href="#options-20">Options</a></h3>
+<h3 id="options-21"><a class="header" href="#options-21">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
       --confirm[=true|false]                    Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes).
   -h, --help[=true|false]                       help for sign
@@ -4710,13 +4857,13 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key env://
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-19"><a class="header" href="#options-inherited-from-parent-commands-19">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-20"><a class="header" href="#options-inherited-from-parent-commands-20">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-20"><a class="header" href="#see-also-20">SEE ALSO</a></h3>
+<h3 id="see-also-21"><a class="header" href="#see-also-21">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -4725,13 +4872,13 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key env://
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-validate"><a class="header" href="#cargoship-validate">cargoship validate</a></h2>
 <p>Checks a cluster inventory, package definition, or config file against its schema</p>
-<h3 id="synopsis-20"><a class="header" href="#synopsis-20">Synopsis</a></h3>
+<h3 id="synopsis-21"><a class="header" href="#synopsis-21">Synopsis</a></h3>
 <p>Checks one or more files against the JSON Schema cargoship generates for that file format, reporting every problem rather than the first. Cargoship parses these files without strict key checking, so a misspelled key is dropped rather than reported; this catches that, along with a wrong type and a value outside an enumerated list. The schema is read from the binary, so no network access is needed.</p>
 <p>The schema is chosen from the document’s own ‘kind’ field. A cargoship config file declares no kind and has to be named with –kind.</p>
 <p>spec.config.values is untyped in the inventory schema, because its shape belongs to whichever package is being installed. Pass –package to check it as well.</p>
 <pre><code>cargoship validate FILE... [flags]
 </code></pre>
-<h3 id="examples-18"><a class="header" href="#examples-18">Examples</a></h3>
+<h3 id="examples-19"><a class="header" href="#examples-19">Examples</a></h3>
 <pre><code>
 # Check a cluster inventory against the inventory schema:
 $ cargoship validate ./inventory.yaml
@@ -4746,7 +4893,7 @@ $ cargoship validate --kind config ./cargoship-config.yaml
 $ cargoship validate ./inventory.yaml --package ./package.tar.zst
 
 </code></pre>
-<h3 id="options-21"><a class="header" href="#options-21">Options</a></h3>
+<h3 id="options-22"><a class="header" href="#options-22">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
   -h, --help[=true|false]                       help for validate
       --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
@@ -4758,13 +4905,13 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
       --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-20"><a class="header" href="#options-inherited-from-parent-commands-20">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-21"><a class="header" href="#options-inherited-from-parent-commands-21">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-21"><a class="header" href="#see-also-21">SEE ALSO</a></h3>
+<h3 id="see-also-22"><a class="header" href="#see-also-22">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -4773,18 +4920,18 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault"><a class="header" href="#cargoship-vault">cargoship vault</a></h2>
 <p>Encrypts and decrypts cluster configuration values with Ansible Vault or age</p>
-<h3 id="synopsis-21"><a class="header" href="#synopsis-21">Synopsis</a></h3>
+<h3 id="synopsis-22"><a class="header" href="#synopsis-22">Synopsis</a></h3>
 <p>Groups the commands that read and write encrypted values for a cluster configuration, in either of the two formats cargoship supports: Ansible Vault, keyed by a shared password given via –vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable, and age, keyed by public keys given via –age-recipient and read back with –age-identity-file. Cargoship decrypts a registry’s user/pass/token and tls.ca fields at apply time. Which format a value is in is read from the value itself, so one configuration can hold both, and moving between them is ‘cargoship vault rekey’. The group is still called vault because renaming it would break every script that calls it.</p>
-<h3 id="options-22"><a class="header" href="#options-22">Options</a></h3>
+<h3 id="options-23"><a class="header" href="#options-23">Options</a></h3>
 <pre><code>  -h, --help[=true|false]   help for vault
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-21"><a class="header" href="#options-inherited-from-parent-commands-21">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-22"><a class="header" href="#options-inherited-from-parent-commands-22">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-22"><a class="header" href="#see-also-22">SEE ALSO</a></h3>
+<h3 id="see-also-23"><a class="header" href="#see-also-23">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 <li><a href="#decrypt">cargoship vault decrypt</a>	 - Decrypts an Ansible Vault or age value, printing the plaintext</li>
@@ -4801,11 +4948,11 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-decrypt-file"><a class="header" href="#cargoship-vault-decrypt-file">cargoship vault decrypt-file</a></h2>
 <p>Decrypts every registry credential in a config file, in place</p>
-<h3 id="synopsis-22"><a class="header" href="#synopsis-22">Synopsis</a></h3>
+<h3 id="synopsis-23"><a class="header" href="#synopsis-23">Synopsis</a></h3>
 <p>Decrypts every encrypted registry credential FILE holds – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of ‘cargoship vault encrypt-file’, and leaves the credentials readable to anyone who can read the file.</p>
 <pre><code>cargoship vault decrypt-file FILE [flags]
 </code></pre>
-<h3 id="examples-19"><a class="header" href="#examples-19">Examples</a></h3>
+<h3 id="examples-20"><a class="header" href="#examples-20">Examples</a></h3>
 <pre><code># Decrypt every registry credential in a cluster configuration
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
 
@@ -4822,53 +4969,12 @@ $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.txt
 </code></pre>
-<h3 id="options-23"><a class="header" href="#options-23">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
-      --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
-      --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
-      --dry-run[=true|false]              Print the resulting document to stdout instead of writing it back to FILE.
-  -h, --help[=true|false]                 help for decrypt-file
-      --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
-</code></pre>
-<h3 id="options-inherited-from-parent-commands-22"><a class="header" href="#options-inherited-from-parent-commands-22">Options inherited from parent commands</a></h3>
-<pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
-      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
-</code></pre>
-<h3 id="see-also-23"><a class="header" href="#see-also-23">SEE ALSO</a></h3>
-<ul>
-<li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
-</ul>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="decrypt-path"><a href="#decrypt-path" class="header">decrypt-path</a></h1>
-<!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-vault-decrypt-path"><a class="header" href="#cargoship-vault-decrypt-path">cargoship vault decrypt-path</a></h2>
-<p>Decrypts the values a config file holds at one or more YAML paths, in place</p>
-<h3 id="synopsis-23"><a class="header" href="#synopsis-23">Synopsis</a></h3>
-<p>Decrypts the encrypted values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as ‘.spec.config.registries[0].auth.pass’, and the leading ‘$’ go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like – FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of ‘cargoship vault encrypt-path’, and leaves the values readable to anyone who can read the file.</p>
-<pre><code>cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
-</code></pre>
-<h3 id="examples-20"><a class="header" href="#examples-20">Examples</a></h3>
-<pre><code># Put the plaintext password back into a config, in place of the ciphertext
-$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
-
-# Decrypt several values in one pass
-$ cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
-
-# Check that a vaulted value decrypts, without writing the plaintext to disk
-$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run
-
-# Rotate the password a config is vaulted with
-$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
-$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt
-</code></pre>
 <h3 id="options-24"><a class="header" href="#options-24">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
       --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
       --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
       --dry-run[=true|false]              Print the resulting document to stdout instead of writing it back to FILE.
-  -h, --help[=true|false]                 help for decrypt-path
+  -h, --help[=true|false]                 help for decrypt-file
       --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-23"><a class="header" href="#options-inherited-from-parent-commands-23">Options inherited from parent commands</a></h3>
@@ -4882,15 +4988,56 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="decrypt-path"><a href="#decrypt-path" class="header">decrypt-path</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-vault-decrypt-path"><a class="header" href="#cargoship-vault-decrypt-path">cargoship vault decrypt-path</a></h2>
+<p>Decrypts the values a config file holds at one or more YAML paths, in place</p>
+<h3 id="synopsis-24"><a class="header" href="#synopsis-24">Synopsis</a></h3>
+<p>Decrypts the encrypted values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as ‘.spec.config.registries[0].auth.pass’, and the leading ‘$’ go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like – FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of ‘cargoship vault encrypt-path’, and leaves the values readable to anyone who can read the file.</p>
+<pre><code>cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
+</code></pre>
+<h3 id="examples-21"><a class="header" href="#examples-21">Examples</a></h3>
+<pre><code># Put the plaintext password back into a config, in place of the ciphertext
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Decrypt several values in one pass
+$ cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
+
+# Check that a vaulted value decrypts, without writing the plaintext to disk
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run
+
+# Rotate the password a config is vaulted with
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt
+</code></pre>
+<h3 id="options-25"><a class="header" href="#options-25">Options</a></h3>
+<pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
+      --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
+      --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
+      --dry-run[=true|false]              Print the resulting document to stdout instead of writing it back to FILE.
+  -h, --help[=true|false]                 help for decrypt-path
+      --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-24"><a class="header" href="#options-inherited-from-parent-commands-24">Options inherited from parent commands</a></h3>
+<pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
+      --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
+</code></pre>
+<h3 id="see-also-25"><a class="header" href="#see-also-25">SEE ALSO</a></h3>
+<ul>
+<li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="decrypt"><a href="#decrypt" class="header">decrypt</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-decrypt"><a class="header" href="#cargoship-vault-decrypt">cargoship vault decrypt</a></h2>
 <p>Decrypts an Ansible Vault or age value, printing the plaintext</p>
-<h3 id="synopsis-24"><a class="header" href="#synopsis-24">Synopsis</a></h3>
+<h3 id="synopsis-25"><a class="header" href="#synopsis-25">Synopsis</a></h3>
 <p>Decrypts VALUE, a string produced by ‘cargoship vault encrypt’ in either format, and prints the plaintext to stdout. The format is read from the value itself: a $ANSIBLE_VAULT prefix needs the vault password, an —–BEGIN AGE ENCRYPTED FILE—– prefix needs –age-identity-file. If VALUE is omitted, it is read from stdin, which is the easier way to hand over an age value, since one begins with dashes and is read as a flag when given as an argument; after the flags, ‘–’ works too. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file.</p>
 <pre><code>cargoship vault decrypt [VALUE] [flags]
 </code></pre>
-<h3 id="examples-21"><a class="header" href="#examples-21">Examples</a></h3>
+<h3 id="examples-22"><a class="header" href="#examples-22">Examples</a></h3>
 <pre><code># Decrypt a value copied out of a config file
 $ cargoship vault decrypt '$ANSIBLE_VAULT;1.1;AES256
 3862...' --vault-password-file ./vault-pass.txt
@@ -4910,20 +5057,20 @@ $ cargoship vault decrypt --age-identity-file ./key.txt &lt; ./encrypted-token.t
 # The same value as an argument, with "--" after the flags to end flag parsing
 $ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-token.txt)"
 </code></pre>
-<h3 id="options-25"><a class="header" href="#options-25">Options</a></h3>
+<h3 id="options-26"><a class="header" href="#options-26">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
       --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
       --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
   -h, --help[=true|false]                 help for decrypt
       --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-24"><a class="header" href="#options-inherited-from-parent-commands-24">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-25"><a class="header" href="#options-inherited-from-parent-commands-25">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-25"><a class="header" href="#see-also-25">SEE ALSO</a></h3>
+<h3 id="see-also-26"><a class="header" href="#see-also-26">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -4932,11 +5079,11 @@ $ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-to
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-encrypt-file"><a class="header" href="#cargoship-vault-encrypt-file">cargoship vault encrypt-file</a></h2>
 <p>Encrypts every registry credential in a config file, in place</p>
-<h3 id="synopsis-25"><a class="header" href="#synopsis-25">Synopsis</a></h3>
+<h3 id="synopsis-26"><a class="header" href="#synopsis-26">Synopsis</a></h3>
 <p>Encrypts every registry credential FILE holds that cargoship decrypts at apply time – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what ‘cargoship vault rekey’ is for. Every credential skipped for a reason worth knowing about is reported, so a run that changes nothing says which values it left alone and why.</p>
 <pre><code>cargoship vault encrypt-file FILE [flags]
 </code></pre>
-<h3 id="examples-22"><a class="header" href="#examples-22">Examples</a></h3>
+<h3 id="examples-23"><a class="header" href="#examples-23">Examples</a></h3>
 <pre><code># Encrypt every registry credential in a cluster configuration
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
 
@@ -4952,7 +5099,7 @@ $ cargoship vault encrypt-file ./cluster.yaml
 # Encrypt to the SSH keys a team already distributes, using its authorized_keys file as it is
 $ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys
 </code></pre>
-<h3 id="options-26"><a class="header" href="#options-26">Options</a></h3>
+<h3 id="options-27"><a class="header" href="#options-27">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
       --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
       --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
@@ -4961,13 +5108,13 @@ $ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized
   -h, --help[=true|false]                 help for encrypt-file
       --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-25"><a class="header" href="#options-inherited-from-parent-commands-25">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-26"><a class="header" href="#options-inherited-from-parent-commands-26">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-26"><a class="header" href="#see-also-26">SEE ALSO</a></h3>
+<h3 id="see-also-27"><a class="header" href="#see-also-27">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -4976,11 +5123,11 @@ $ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-encrypt-path"><a class="header" href="#cargoship-vault-encrypt-path">cargoship vault encrypt-path</a></h2>
 <p>Encrypts the values a config file already holds at one or more YAML paths, in place</p>
-<h3 id="synopsis-26"><a class="header" href="#synopsis-26">Synopsis</a></h3>
+<h3 id="synopsis-27"><a class="header" href="#synopsis-27">Synopsis</a></h3>
 <p>Encrypts the values FILE holds at each YAML_PATH and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as ‘.spec.config.registries[0].auth.pass’, and the leading ‘$’ go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like – FILE is written once, after every one of them has encrypted, so a path that is missing or encrypted already leaves FILE as it was rather than partly rewritten. Cargoship decrypts a registry’s user/pass/token and tls.ca fields at apply time, and warns about a path anywhere else, because nothing unwraps a value encrypted elsewhere.</p>
 <pre><code>cargoship vault encrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
 </code></pre>
-<h3 id="examples-23"><a class="header" href="#examples-23">Examples</a></h3>
+<h3 id="examples-24"><a class="header" href="#examples-24">Examples</a></h3>
 <pre><code># Encrypt the password a config already holds for its first registry
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
 
@@ -4996,7 +5143,7 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.t
 # Encrypt to an age recipient instead of a vault password
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
 </code></pre>
-<h3 id="options-27"><a class="header" href="#options-27">Options</a></h3>
+<h3 id="options-28"><a class="header" href="#options-28">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
       --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
       --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
@@ -5005,13 +5152,13 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
   -h, --help[=true|false]                 help for encrypt-path
       --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-26"><a class="header" href="#options-inherited-from-parent-commands-26">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-27"><a class="header" href="#options-inherited-from-parent-commands-27">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-27"><a class="header" href="#see-also-27">SEE ALSO</a></h3>
+<h3 id="see-also-28"><a class="header" href="#see-also-28">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -5020,11 +5167,11 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-encrypt"><a class="header" href="#cargoship-vault-encrypt">cargoship vault encrypt</a></h2>
 <p>Encrypts a value with Ansible Vault or age, for use in a registry’s user/pass/token fields</p>
-<h3 id="synopsis-27"><a class="header" href="#synopsis-27">Synopsis</a></h3>
+<h3 id="synopsis-28"><a class="header" href="#synopsis-28">Synopsis</a></h3>
 <p>Encrypts VALUE, producing a string that cargoship decrypts automatically at apply time when placed in a registry’s user/pass/token field. With –age-recipient or –age-recipients-file the output is armored age ciphertext beginning with —–BEGIN AGE ENCRYPTED FILE—–; otherwise it is Ansible Vault ciphertext beginning with $ANSIBLE_VAULT. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal.</p>
 <pre><code>cargoship vault encrypt [VALUE] [flags]
 </code></pre>
-<h3 id="examples-24"><a class="header" href="#examples-24">Examples</a></h3>
+<h3 id="examples-25"><a class="header" href="#examples-25">Examples</a></h3>
 <pre><code># Encrypt a registry password for a config file's user/pass/token field
 $ cargoship vault encrypt my-registry-password --vault-password-file ./vault-pass.txt
 
@@ -5043,20 +5190,20 @@ $ cargoship vault encrypt my-registry-password --age-recipient age1ql3z7hjy54pw3
 # Encrypt to every key a team keeps in one file, each of whom can decrypt on their own
 $ cargoship vault encrypt my-registry-password --age-recipients-file ./recipients.txt
 </code></pre>
-<h3 id="options-28"><a class="header" href="#options-28">Options</a></h3>
+<h3 id="options-29"><a class="header" href="#options-29">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
       --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
       --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
   -h, --help[=true|false]                 help for encrypt
       --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-27"><a class="header" href="#options-inherited-from-parent-commands-27">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-28"><a class="header" href="#options-inherited-from-parent-commands-28">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-28"><a class="header" href="#see-also-28">SEE ALSO</a></h3>
+<h3 id="see-also-29"><a class="header" href="#see-also-29">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -5065,11 +5212,11 @@ $ cargoship vault encrypt my-registry-password --age-recipients-file ./recipient
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-keygen"><a class="header" href="#cargoship-vault-keygen">cargoship vault keygen</a></h2>
 <p>Generates an age key pair, or prints the public key of one you already hold</p>
-<h3 id="synopsis-28"><a class="header" href="#synopsis-28">Synopsis</a></h3>
+<h3 id="synopsis-29"><a class="header" href="#synopsis-29">Synopsis</a></h3>
 <p>Generates an age key pair in the format age-keygen writes, so that the age distribution is not a prerequisite for encrypting a configuration with age, and the file stays readable by ‘age –decrypt’ and anything else that speaks the format. The identity – the private key, AGE-SECRET-KEY-1… – goes to –output, or to stdout when that is omitted; the recipient – the public key, age1… – goes to stderr, so that the file holds the private key alone and the public key can be copied straight into a recipients file. With –public-key it generates nothing and instead prints the public keys held in IDENTITY_FILE, or in stdin when no file is given, which is how a recipient is recovered from a private key you still have. A key pair is not registered anywhere: pass the public key to ‘cargoship vault encrypt’ as –age-recipient, and the file back as –age-identity-file to read those values again.</p>
 <pre><code>cargoship vault keygen [IDENTITY_FILE] [flags]
 </code></pre>
-<h3 id="examples-25"><a class="header" href="#examples-25">Examples</a></h3>
+<h3 id="examples-26"><a class="header" href="#examples-26">Examples</a></h3>
 <pre><code># Generate a key pair, writing the private key to a file and printing the public key
 $ cargoship vault keygen --output ~/.age/cargoship.key
 
@@ -5084,18 +5231,18 @@ $ cargoship vault encrypt-file ./cluster.yaml --age-recipient age1ql3z7hjy54pw3h
 $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargoship.key
 
 </code></pre>
-<h3 id="options-29"><a class="header" href="#options-29">Options</a></h3>
+<h3 id="options-30"><a class="header" href="#options-30">Options</a></h3>
 <pre><code>  -h, --help[=true|false]         help for keygen
   -o, --output string             Path to write the identity to, mode 0600. An existing file is never overwritten. Omit to write to stdout.
   -y, --public-key[=true|false]   Print the public keys in IDENTITY_FILE instead of generating a pair. Reads stdin when no file is given.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-28"><a class="header" href="#options-inherited-from-parent-commands-28">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-29"><a class="header" href="#options-inherited-from-parent-commands-29">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-29"><a class="header" href="#see-also-29">SEE ALSO</a></h3>
+<h3 id="see-also-30"><a class="header" href="#see-also-30">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -5104,11 +5251,11 @@ $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargosh
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-rekey"><a class="header" href="#cargoship-vault-rekey">cargoship vault rekey</a></h2>
 <p>Re-wraps every encrypted registry credential in a config file, optionally under a new key</p>
-<h3 id="synopsis-29"><a class="header" href="#synopsis-29">Synopsis</a></h3>
+<h3 id="synopsis-30"><a class="header" href="#synopsis-30">Synopsis</a></h3>
 <p>Re-wraps every encrypted registry credential FILE holds – each registry’s auth.user, auth.pass, auth.token and tls.ca – under the key named by –new-vault-password-file or by –age-recipient, leaving comments, key order, and the rest of the document untouched. Naming age recipients while reading with the vault password is how a configuration moves from Ansible Vault to age; naming neither re-wraps the values under the key they already carry, which gives every one of them fresh ciphertext without changing the key. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the keys given, and the command stops without touching FILE if one is not, because a configuration encrypted under two keys is one no single key can read back.</p>
 <pre><code>cargoship vault rekey FILE [flags]
 </code></pre>
-<h3 id="examples-26"><a class="header" href="#examples-26">Examples</a></h3>
+<h3 id="examples-27"><a class="header" href="#examples-27">Examples</a></h3>
 <pre><code># Move every encrypted registry credential in a cluster configuration to a new vault password
 $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt
 
@@ -5125,7 +5272,7 @@ $ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt --
 $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recipients-file ./recipients.txt
 
 </code></pre>
-<h3 id="options-30"><a class="header" href="#options-30">Options</a></h3>
+<h3 id="options-31"><a class="header" href="#options-31">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     age identity file, or SSH private key, that decrypts credentials. Repeatable. See docs/guides/age-encryption.md.
       --age-recipient stringArray         age recipient or SSH public key to encrypt credentials to. Repeatable. See docs/guides/age-encryption.md.
       --age-recipients-file stringArray   File of public keys, one per line; an authorized_keys file works. See docs/guides/age-encryption.md.
@@ -5134,13 +5281,13 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
       --new-vault-password-file string    File holding the Ansible Vault password to move to. Omit to re-salt under the current key. No environment fallback.
       --vault-password-file string        File holding the Ansible Vault password. Falls back to CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-29"><a class="header" href="#options-inherited-from-parent-commands-29">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-30"><a class="header" href="#options-inherited-from-parent-commands-30">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-30"><a class="header" href="#see-also-30">SEE ALSO</a></h3>
+<h3 id="see-also-31"><a class="header" href="#see-also-31">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -5149,11 +5296,11 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-verify"><a class="header" href="#cargoship-verify">cargoship verify</a></h2>
 <p>Verifies the signature on a Cargoship distro package</p>
-<h3 id="synopsis-30"><a class="header" href="#synopsis-30">Synopsis</a></h3>
+<h3 id="synopsis-31"><a class="header" href="#synopsis-31">Synopsis</a></h3>
 <p>Verifies the signature on an existing Cargoship distro package. The package can be a local tarball or pulled from an OCI registry. Pass –key to verify against a cosign public key, which is the only supported signing method. An unsigned package is reported as a failure. The other commands that load packages verify as part of loading, gated on their –verify flag – this command verifies and nothing else.</p>
 <pre><code>cargoship verify PACKAGE_SOURCE [flags]
 </code></pre>
-<h3 id="examples-27"><a class="header" href="#examples-27">Examples</a></h3>
+<h3 id="examples-28"><a class="header" href="#examples-28">Examples</a></h3>
 <pre><code># Verify a signed package against a public key
 $ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --key ./cosign.pub
 
@@ -5164,7 +5311,7 @@ $ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
 # Match the signer identity by pattern instead
 
 </code></pre>
-<h3 id="options-31"><a class="header" href="#options-31">Options</a></h3>
+<h3 id="options-32"><a class="header" href="#options-32">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
   -h, --help[=true|false]                       help for verify
       --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
@@ -5173,13 +5320,13 @@ $ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-30"><a class="header" href="#options-inherited-from-parent-commands-30">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-31"><a class="header" href="#options-inherited-from-parent-commands-31">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-31"><a class="header" href="#see-also-31">SEE ALSO</a></h3>
+<h3 id="see-also-32"><a class="header" href="#see-also-32">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -5188,11 +5335,11 @@ $ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-version"><a class="header" href="#cargoship-version">cargoship version</a></h2>
 <p>Shows the version of the running binary</p>
-<h3 id="synopsis-31"><a class="header" href="#synopsis-31">Synopsis</a></h3>
+<h3 id="synopsis-32"><a class="header" href="#synopsis-32">Synopsis</a></h3>
 <p>Displays the version of the release that the current binary was built from.</p>
 <pre><code>cargoship version [flags]
 </code></pre>
-<h3 id="examples-28"><a class="header" href="#examples-28">Examples</a></h3>
+<h3 id="examples-29"><a class="header" href="#examples-29">Examples</a></h3>
 <pre><code># Print the version of the running binary
 $ cargoship version
 
@@ -5202,17 +5349,17 @@ $ cargoship version --output yaml
 # Print it as JSON, for piping into jq
 $ cargoship version -o json
 </code></pre>
-<h3 id="options-32"><a class="header" href="#options-32">Options</a></h3>
+<h3 id="options-33"><a class="header" href="#options-33">Options</a></h3>
 <pre><code>  -h, --help[=true|false]     help for version
   -o, --output outputFormat   Output format. Valid options are: yaml, json.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-31"><a class="header" href="#options-inherited-from-parent-commands-31">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-32"><a class="header" href="#options-inherited-from-parent-commands-32">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file[=true|false]   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string       Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string        Log level when running cargoship. One of: error, warn, info, debug. (default "info")
       --no-color[=true|false]   Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-32"><a class="header" href="#see-also-32">SEE ALSO</a></h3>
+<h3 id="see-also-33"><a class="header" href="#see-also-33">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -10049,11 +10196,14 @@ build(deps): bump github.com/ulikunitz/xz from 0.5.16 to 0.5.17 in the misc grou
 <tbody>
 <tr><td><code>client-go/kubernetes</code> (typed clientset)</td><td>59</td></tr>
 <tr><td><code>client-go/kubernetes/typed/core/v1</code></td><td>56</td></tr>
+<tr><td><code>client-go/tools/portforward</code></td><td>1</td></tr>
 <tr><td><code>client-go/dynamic</code></td><td><strong>0</strong></td></tr>
 <tr><td><code>client-go/tools/clientcmd</code></td><td><strong>0</strong></td></tr>
+<tr><td><code>client-go/transport/websocket</code></td><td><strong>0</strong></td></tr>
 </tbody>
 </table>
 </div>
+<p><code>client-go/tools/portforward</code> is the one worth singling out, because one group sounds cheap and is not. It imports <code>k8s.io/api/core/v1</code> for a handful of constants, and that single package measured <strong>+3.34MiB</strong> of binary against a 40.00MiB baseline – more than the dynamic client, the kubeconfig loader and the websocket transport put together. <code>pkg/kubetunnel</code> therefore hand-writes the channel protocol over <code>client-go/transport/websocket</code> and costs <strong>+132KiB</strong>, which is the whole reason that package looks like it is doing something the standard library already does.</p>
 <p><code>k8s.io/api</code> 14MB plus <code>client-go</code> 9.4MB, against five call sites that read a node’s name, its labels, <code>spec.unschedulable</code> and the Ready condition.</p>
 <h2 id="what-each-place-does-instead"><a class="header" href="#what-each-place-does-instead">What each place does instead</a></h2>
 <p><strong><code>pkg/phase/81_label_nodes.go</code></strong> uses <code>dynamic.Interface</code> against <code>schema.GroupVersionResource{Version: "v1", Resource: "nodes"}</code>. It lists nodes and patches one label, and <code>unstructured.Unstructured</code> serves both directly: <code>GetName</code> and <code>GetLabels</code> are methods on it, and <code>Patch</code> takes the same merge-patch bytes the typed client took. The phase reads no field that needs a typed struct.</p>
@@ -10140,7 +10290,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>If some future case genuinely needs an unverifiable overridden download, it needs an explicit opt-out flag with a name that says what it gives up, and a line in the build log every time it fires. It does not need this check quietly deleted.</p>
 <h2 id="what-the-record-is-for"><a class="header" href="#what-the-record-is-for">What the record is for</a></h2>
 <p>Because the checksum is mandatory, <code>.build.fileSources</code> can record it next to the mirror each file came from, and every entry is then a complete claim: these bytes, from this place, matching this digest. That is only worth writing down because the refusal above guarantees the digest exists. Drop the refusal and the provenance record degrades into a list of URLs nobody can check.</p>
-<h2 id="see-also-33"><a class="header" href="#see-also-33">See also</a></h2>
+<h2 id="see-also-34"><a class="header" href="#see-also-34">See also</a></h2>
 <ul>
 <li><code>pkg/fileoverride</code> – the matcher, and why it parses URLs instead of comparing string prefixes.</li>
 <li><a href="#file-override-guide"><code>docs/guides/file-override.md</code></a> – the user-facing guide.</li>
@@ -10282,6 +10432,52 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>Adding a second guest image was left to a later change, because one distribution with SELinux enforcing closes the gap that motivated the package, and a second would double the bring-up cost of every run before anything had been learned from the first. That change has since landed: <code>ubuntuImage</code> in <code>test/microvm/image.go</code> is the opt-in second guest, selected per fleet with the <code>UbuntuControllers</code> and <code>UbuntuWorkers</code> counts, and it is what reaches the APT upload phase, the ufw backend, and the SELinux and fapolicyd gates correctly doing nothing. It stays opt-in and off by default for the bring-up cost reason above, and rke2 cannot run on an Ubuntu node at all, so a mixed fleet wants <code>-distro=k3s</code> or an upstream package.</p>
 <h2 id="two-qemu-details-that-each-cost-a-boot-to-find"><a class="header" href="#two-qemu-details-that-each-cost-a-boot-to-find">Two qemu details that each cost a boot to find</a></h2>
 <p><code>-display none</code>, not <code>-nographic</code>: qemu refuses <code>-nographic</code> together with <code>-daemonize</code>, and reports it only once the process has been launched, so the failure arrives as a node that never appears rather than as a bad flag. And the overlay is opened <code>cache=unsafe</code>, which is correct precisely because these disks are disposable – there is no state on them worth an fsync, and the next bring-up recreates them.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-mirror-records-live-in-one-repository-tagged-by-kind"><a class="header" href="#why-mirror-records-live-in-one-repository-tagged-by-kind">Why mirror records live in one repository, tagged by kind</a></h1>
+<p><code>cargoship mirror</code> and <code>cargoship publish --record</code> both leave a record of what they put in a registry, and <code>cargoship ls</code> reads those records back. The layout is one repository – <code>cargoship</code>, under whatever prefix the target carried – holding one tag per record:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tag</th><th>Written by</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_mirror.NAME.VERSION</code></td><td><code>cargoship mirror</code>, by default</td></tr>
+<tr><td><code>_package.NAME.VERSION</code></td><td><code>cargoship publish --record</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>From the code alone this looks like it could just as well be one repository per package with the version as the tag, which is what it was first. This records why it is not.</p>
+<h2 id="one-repository-because-discovery-has-to-work-where-people-publish"><a class="header" href="#one-repository-because-discovery-has-to-work-where-people-publish">One repository, because discovery has to work where people publish</a></h2>
+<p>Records spread across repositories have to be found by asking the registry for its catalogue, and <code>/v2/_catalog</code> is a wider permission than pushing wherever it is implemented at all. It is not implemented everywhere:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Endpoint</th><th>ghcr.io</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/v2/_catalog</code>, with a catalog-scoped token</td><td><strong><code>403 DENIED</code></strong></td></tr>
+<tr><td><code>/v2/colonel-byte/cargoship/tags/list</code></td><td><code>200</code>, 67 tags</td></tr>
+</tbody>
+</table>
+</div>
+<p>Measured against the real registry, not inferred. GitHub does not implement catalogue enumeration and Docker Hub does not either, so the per-package layout could not list a registry on either – <code>cargoship ls</code> worked only against a registry that allowed a catalogue read, which the push credentials Zarf generates frequently do not. One repository makes a listing a single <code>tags/list</code>, which every registry serves and which needs no more than a pull.</p>
+<h2 id="kind-in-the-tag-because-two-kinds-cannot-share-one"><a class="header" href="#kind-in-the-tag-because-two-kinds-cannot-share-one">Kind in the tag, because two kinds cannot share one</a></h2>
+<p>A package both published and mirrored at the same name and version would want the same tag if the kind were not in it, and the second write would silently replace the first. The surviving record would then be wrong about what the registry holds – claiming an artifact to pull where there is loose content, or the reverse – which is worse than having no record.</p>
+<p>The kind is in the record’s JSON as well, and the two serve different purposes: the tag is the index, so a listing can skip a manifest it does not want without fetching it, and the JSON is the authority, so a consumer holding a record never has to parse a reference.</p>
+<h2 id="not-one-record-carrying-both-facts"><a class="header" href="#not-one-record-carrying-both-facts">Not one record carrying both facts</a></h2>
+<p>The alternative to separate tags was one record per name and version with flags for what had happened to it. It is rejected for two reasons, and the second is the hard one.</p>
+<p>The two records are written at different times by different commands, so merging means read-modify-write: a mirror would have to fetch a publish’s record, add to it, and push it back. That makes a mirror’s success depend on parsing an artifact it did not write.</p>
+<p>And it cannot be done at all on a registry that locks tags. Nexus can be configured to refuse overwriting an existing tag, often with <code>latest</code> as the only exception, and a read-modify-write cycle is exactly what such a registry forbids. Separate tags per kind mean the only rewrite is a genuine re-run of the same operation.</p>
+<h2 id="the-tag-prefix-is-derived-from-the-kind-not-mapped-to-it"><a class="header" href="#the-tag-prefix-is-derived-from-the-kind-not-mapped-to-it">The tag prefix is derived from the kind, not mapped to it</a></h2>
+<p><code>recordTagPrefix</code> returns <code>"_" + kind + "."</code>. It used to be a <code>switch</code> returning <code>_pkg.</code> for the kind the JSON called <code>package</code>, which meant a consumer reading <code>kind: package</code> out of <code>cargoship ls -o json</code> and building a reference from it would construct <code>_package.</code> and find nothing. Two spellings of one concept, mapped by hand, in a package that already carries an anti-drift test for the same hazard elsewhere. Deriving it makes them incapable of disagreeing, and deletes the mapping and its error branch.</p>
+<p>The underscore is what keeps a record clear of a package published into the same repository: a tag may begin with <code>_</code> and a version does not, so <code>cargoship:1.0.0</code> and <code>cargoship:_package.rke2.1.0.0</code> cannot collide. This is convention rather than enforcement – the schema bounds a version’s length but not its characters – and nothing checks it.</p>
+<h2 id="a-failed-record-write-is-a-warning-not-an-error"><a class="header" href="#a-failed-record-write-is-a-warning-not-an-error">A failed record write is a warning, not an error</a></h2>
+<p>A record is written to a stable tag, so re-running a mirror or a publish for a version that already has one rewrites that tag – and a registry which locks tags refuses it. Both commands warn and carry on. The alternative, which <code>mirror</code> did at first, was to return the error, and that made a mirror which had pushed every byte fail at its last step: the same shape as the ingest-directory defect fixed in <a href="https://github.com/colonel-byte/cargoship/pull/1114">#1114</a>, a long operation that succeeded reporting failure from its tail.</p>
+<p>The cost of warning is real and is why the warning says more than the error would: <code>cargoship ls</code> is the discovery mechanism, so a record that was not written is a package a consumer cannot find. The warning names that consequence rather than only the underlying failure.</p>
+<p>No attempt is made to tell an immutable-tag refusal apart from any other failed push. Doing so means matching on registry-specific status codes and messages, which is a guess that silently stops being true, and the handling would be the same either way.</p>
+<h2 id="what-a-re-mirror-actually-sends"><a class="header" href="#what-a-re-mirror-actually-sends">What a re-mirror actually sends</a></h2>
+<p>Worth recording because it is easy to assume the opposite in both directions. <code>oras.Copy</code> checks the destination before pushing and skips a rooted sub-graph that already exists (<code>vendor/oras.land/oras-go/v2/copy.go</code>, “skip if a rooted sub-DAG exists”), so re-mirroring a package does not re-upload content the registry already holds. But it also <strong>enforces tagging on the root even when the root was skipped</strong> (same file, “enforce tagging when the skipped node is root”), so a tag request goes out per image on every run regardless.</p>
+<p>The consequence for a tag-locking registry is that re-mirroring an unchanged package produces identical digests, and a re-tag to the same digest is usually permitted because it changes nothing; re-mirroring a <em>rebuilt</em> package under a version it already used is the case to expect a refusal on. That refusal fails the mirror, and should: an image a node will ask for and not find is a broken mirror rather than a cosmetic problem. Only the record write is advisory.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table"><a class="header" href="#why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table">Why the nftables backend shells out to <code>nft</code> and owns a single table</a></h1>
 <p>Cargoship’s firewall support (<code>cargoship apply --firewall</code>) renders a backend-neutral <code>firewall.Plan</code> onto whichever firewall a node runs. <code>firewalld</code> and <code>ufw</code> cover Enterprise Linux and Debian-family hosts that use a front end. The <code>nftables</code> backend (<code>pkg/firewall/nftables.go</code>) covers the rest: Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all. Several design choices there are not obvious from the code, and each had an alternative that was considered and rejected.</p>

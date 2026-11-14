@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-95430940.js";
+            window.path_to_searchindex_js = "../searchindex-2bdd6d7c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-16386550.js"></script>
+        <script src="../toc-5a9b6c47.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -256,14 +256,48 @@
 <p>For the registry, the recorded address does double duty, which is what makes this correct rather than merely workable: it is both the service the channel opens onto and the reference host the images are pushed under, so the mirror cannot be populated at an address a node will not ask for.</p>
 <p>Any controller will do, since the API server listens on loopback on every control-plane node and a NodePort answers on all of them, so the first one in the configuration is used. A fleet whose hosts are configured with <code>openSSH:</code> rather than <code>ssh:</code> is refused: rig’s OpenSSH protocol shells out to the <code>ssh</code> binary and offers no way to open a channel.</p>
 <p>One thing to know about it: throughput is whatever a single SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push. <code>--oci-concurrency</code> opens more channels, but they share the one TCP connection.</p>
+<h4 id="tunnelling-through-the-api-server"><a class="header" href="#tunnelling-through-the-api-server">Tunnelling through the API server</a></h4>
+<p>Pass <code>--via-kube</code> and the push is carried through the Kubernetes API server’s port-forward subresource instead, needing nothing but your kubeconfig:</p>
+<pre><code>cargoship mirror ./package.tar.zst --via-kube
+</code></pre>
+<p><code>--from-zarf-state</code> is implied, so it need not be passed: routing into the cluster without naming a destination has one sensible answer, which is the registry that cluster’s state records. <code>--config</code> cannot imply it the same way, because <code>--config</code> on its own means something else entirely – read the proxy a cluster configuration declares – so that pairing stays explicit.</p>
+<p><strong>This is the route for a cluster with no SSH.</strong> k3d and kind nodes are containers with no <code>sshd</code>, and Talos runs no shell at all, so the SSH tunnel above cannot reach them however the inventory is written. It is also the route when you have a kubeconfig and no host credentials, which is the ordinary situation on a development cluster.</p>
+<p>The bare flag reaches <code>zarf/zarf-docker-registry:5000</code>, the service Zarf’s init package stands the registry up as. Give it a value to name another, as <code>namespace/service:port</code>:</p>
+<pre><code>cargoship mirror ./package.tar.zst --via-kube registry/harbor-core:8080 oci://harbor.internal
+</code></pre>
+<p>Naming a destination is what makes an in-cluster registry that is <strong>not</strong> Zarf’s reachable. An <code>oci://</code> argument suppresses the implied state read, so the reference and the credentials are yours – from the Docker configuration, as everywhere else – and only the route comes from <code>--via-kube</code>. There is no <code>zarf-state</code> secret involved, and none has to exist.</p>
+<p>The service has to be named because Zarf’s state does not record one. What the state records is the address a <strong>node</strong> reaches the registry on – a NodePort, or the per-node host port the registry proxy listens on – and neither names anything the API server can forward to. Zarf’s own marker service, the one labelled <code>zarf.dev/connect-name=registry</code>, carries the namespace and the port but has no selector and therefore no endpoints, which leaves the backing service’s name as the one piece that has to be stated.</p>
+<p>As with the SSH tunnel, the reference host stays the address Zarf recorded even though nothing dials it. The tunnel decides only where the bytes go, so the mirror is still populated under the reference a node will ask for.</p>
+<p>What it needs that the SSH route does not is a reachable API server, which is the thing the SSH route exists to avoid. On an air-gapped fleet whose firewall admits port 22 and nothing else, <code>--config</code> remains the only route. Passing both is an error rather than a fallback: they authenticate differently and reach the registry by different routes, so a push that silently took the other one is one whose failure you cannot reason about.</p>
+<p>Throughput is not the concern it is for SSH. A port-forward here is one websocket per connection rather than a shared session, so <code>--oci-concurrency</code> buys real parallelism, and a 500MB push measured within 5% of the same push through <code>kubectl port-forward</code>.</p>
+<p>One certificate note: Zarf’s registry serves TLS for its in-cluster name, and the reference host is the loopback address Zarf recorded for a node, so hostname validation will not match. <code>--insecure-skip-tls-verify</code> is the answer, and it is as safe here as it looks unsafe – the connection never leaves your machine’s API client, and the API server’s own TLS is validated normally.</p>
 <h4 id="naming-a-reachable-address-yourself"><a class="header" href="#naming-a-reachable-address-yourself">Naming a reachable address yourself</a></h4>
-<p>The alternative is to give the address this machine reaches the registry on and let <code>--from-zarf-state</code> supply only the credentials. A port-forward is the usual way to get one, and a <code>127.0.0.1</code> address works exactly as any other:</p>
+<p>The remaining alternative is to give the address this machine reaches the registry on and let <code>--from-zarf-state</code> supply only the credentials. <code>--via-kube</code> above does this for you; doing it by hand is still worth knowing, because it is what to reach for when the registry is somewhere neither tunnel goes. A port-forward is the usual way to get an address, and a <code>127.0.0.1</code> address works exactly as any other:</p>
 <pre><code>kubectl port-forward -n zarf svc/zarf-docker-registry 5000:5000 &amp;
 cargoship mirror ./package.tar.zst oci://127.0.0.1:5000 --from-zarf-state --plain-http
 </code></pre>
 <p>The loopback address is not treated specially – it is a destination like any other, and the only thing to watch is that it is <strong>your</strong> loopback rather than the one Zarf recorded for a node. <code>--plain-http</code> is worth passing <strong>only when the deployment manages no certificates</strong>: Zarf’s internal registry without mTLS serves plain HTTP, and while HTTPS is tried first and falls back, saying so skips the failed probe. Under <code>mtlsStrategy: zarf-managed</code> the registry serves HTTPS and <code>--plain-http</code> would send the push to a port that will not answer it - see <a href="#a-zarf-managed-mtls-registry">A Zarf-managed mTLS registry</a>.</p>
 <p>One sharp edge, which applies to every destination and not just this one: if the package’s images already name the registry you are mirroring <strong>to</strong>, a repository prefix on the destination is silently dropped and the images are pushed back to their own references. That is zarf’s <code>ImageTransformHostWithoutChecksum</code> treating the push as already done. It does not arise for a package built against upstream registries, which is the normal case.</p>
 <p><code>--context</code> picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the <code>kubeconfig</code> setting (<code>KUBECONFIG</code>, else the standard location). <code>--context</code> without <code>--from-zarf-state</code> is an error rather than being ignored, since nothing else here reads a cluster. Under <code>--config</code> the context still chooses which cluster’s credentials and API port are used, and the tunnel supplies the route to it.</p>
+<h3 id="the-registry-pods-memory-limit-counts-what-you-push"><a class="header" href="#the-registry-pods-memory-limit-counts-what-you-push">The registry pod’s memory limit counts what you push</a></h3>
+<p>Mirroring several gigabytes into Zarf’s in-cluster registry can kill its pod, and the reason is not the registry’s own memory. Zarf’s init chart gives the deployment a <strong>2Gi memory limit</strong>, and cgroup v2 charges a pod’s limit for the <strong>page cache</strong> of every file it writes – so the blobs a mirror lands become memory charged to the registry, whether or not the registry is still reading them. Where the node is short of free memory the kernel OOM-kills the container rather than reclaiming, and because each restart touches the files again it comes back as a crash loop.</p>
+<p>The signature is unmistakable once you know to look, and it is the reason to read the cgroup rather than <code>kubectl top</code>, which reports the working set and so shows a healthy figure:</p>
+<pre><code>$ kubectl -n zarf get pod -l app=docker-registry
+zarf-docker-registry-...  0/1  CrashLoopBackOff  6
+
+$ # on the node, the pod's cgroup
+memory.max      2147483648   # the 2Gi limit
+memory.current  2134671360   # pinned at it
+anon                 24576   # 24KB -- the registry process itself
+file            2127904768   # 1.98GB -- page cache from the blobs
+</code></pre>
+<p>Deleting the pod clears it immediately, because the cgroup goes with the pod and the replacement starts with nothing charged:</p>
+<pre><code>kubectl -n zarf delete pod -l app=docker-registry
+</code></pre>
+<p>To stop it recurring, give the limit room for both the process and the cache of what it writes. <code>zarf init</code> has no flag for this, so it is a change to the deployment:</p>
+<pre><code>kubectl -n zarf set resources deploy/zarf-docker-registry --limits=memory=4Gi
+</code></pre>
+<p>None of this is affected by how the push is routed – <code>--via-kube</code>, <code>--config</code> and a directly dialled address all write the same bytes – and none of it indicates anything wrong with the package or the mirror. A push interrupted this way is safe to repeat: content already landed is skipped by digest.</p>
 <h3 id="a-zarf-managed-mtls-registry"><a class="header" href="#a-zarf-managed-mtls-registry">A Zarf-managed mTLS registry</a></h3>
 <p><code>zarf init</code> can manage the registry’s certificates itself, recording <code>mtlsStrategy: zarf-managed</code> in state - and from Zarf v1.0.0 that is what a default deployment does. Two things follow, and <code>--from-zarf-state</code> handles both without a flag.</p>
 <p>The registry serves <strong>HTTPS</strong>, never plain HTTP, with a server certificate signed by a private CA named <code>Zarf Registry CA</code>. Nothing in the management node’s trust store covers it, so the CA is read out of the cluster - the <code>ca.crt</code> of the <code>zarf-registry-server-tls</code> secret, the same secret Zarf mounts into the registry pod - and trusted for the push. Under <code>--config</code> that read travels the same SSH channel as the state read, so a fleet with a closed API port is unaffected. <code>--insecure-skip-tls-verify</code> remains available for a deployment whose CA cannot be read, but it should not be needed.</p>
@@ -294,6 +328,55 @@ cargoship mirror ./package.tar.zst oci://127.0.0.1:5000 --from-zarf-state --plai
 <p>The one exception is <code>--from-zarf-state</code>, which reads the push credentials Zarf generated along with the registry – see <a href="#reading-it-from-a-zarf-deployment">above</a>.</p>
 <p>The credentials a cluster configuration carries under <code>spec.config.registries[].auth</code> are <strong>not</strong> used for the push, even when <code>--config</code> supplied the address. Those exist for the nodes to pull with, they are commonly encrypted at rest with age or Ansible Vault, and reusing them here would mean decrypting a fleet’s secrets during what is otherwise a local operation.</p>
 <p>Use <code>--plain-http</code> for a registry serving plain HTTP, and <code>--insecure-skip-tls-verify</code> for one with a certificate the management node does not trust. Without <code>--plain-http</code>, HTTPS is tried first and plain HTTP only if the registry does not serve it.</p>
+<h2 id="reading-a-mirror-back"><a class="header" href="#reading-a-mirror-back">Reading a Mirror Back</a></h2>
+<p>Nothing else in a mirror says which package filled it. Images keep their original repository paths and files are named from their source URL, so a registry holding a few hundred repositories answers “what images are here” and not “is rke2 0.1.0 loaded”. A finished mirror therefore records itself:</p>
+<pre><code>cargoship ls oci://harbor.internal
+</code></pre>
+<pre><code> PACKAGE  VERSION  ARCH         ENGINE  MIRRORED          BY
+ rke2     0.1.0    amd64,arm64  rke2    2026-11-13 09:41  0.41.1
+ rke2     0.0.9    amd64        rke2    2026-10-02 14:08  0.40.2
+</code></pre>
+<p>The record is one small OCI artifact per package and version, and every record a registry holds lives in <strong>one repository</strong> – <code>cargoship</code>, under whatever prefix the target carried – tagged by what it describes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tag</th><th>Written by</th><th>What it means</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_mirror.NAME.VERSION</code></td><td><code>cargoship mirror</code>, by default</td><td>loose content a node reaches by its own references</td></tr>
+<tr><td><code>_package.NAME.VERSION</code></td><td><code>cargoship publish --record</code></td><td>one artifact to pull whole, at <code>NAME:VERSION</code> in the same prefix</td></tr>
+</tbody>
+</table>
+</div>
+<p>The two defaults are opposite on purpose. A mirror has recorded itself since the feature existed, so it still does and <code>--no-record</code> is the way out. Publishing is the newer half, so it records nothing unless <code>--record</code> asks: a registry somebody already publishes into should not quietly gain a second artifact per package because they upgraded cargoship.</p>
+<p>Its config blob is the row above as JSON; its single layer is the package’s own <code>distro.yaml</code>, so a reader that wants the full definition – every image and file it declared – has it without pulling the package back.</p>
+<p>One repository rather than one per package, because that is what makes discovery work on the registries people use. Records spread across repositories have to be found by asking the registry for its catalogue, and <code>/v2/_catalog</code> is a wider permission than pushing where it is implemented at all: <strong>ghcr.io answers it with <code>403 DENIED</code></strong> and Docker Hub does not implement it, so <code>cargoship ls</code> could list neither. One repository makes a listing a single <code>/v2/&lt;prefix&gt;/cargoship/tags/list</code>, which every registry serves and which needs no more than a pull.</p>
+<p>The tag prefix is the kind with an underscore in front of it, derived from the <code>kind</code> in the record’s own JSON rather than mapped to it, so the two cannot disagree about how a kind is spelled. The underscore is what keeps records out of the way of a package published into that same repository: a tag may begin with <code>_</code> and a version does not, so <code>cargoship:1.0.0</code> and <code>cargoship:_package.rke2.1.0.0</code> cannot collide. Note that this is convention rather than enforcement – the schema bounds a version’s length but not its characters, so a version literally spelled <code>_package.x.1</code> would collide and nothing checks for it. The name and version bounds, 64 and 48 characters, are what make them safe to put in a tag at all, since a tag is capped at 128.</p>
+<h3 id="a-registry-that-locks-tags"><a class="header" href="#a-registry-that-locks-tags">A registry that locks tags</a></h3>
+<p>Some registries refuse to overwrite a tag once it exists – Nexus can be configured this way, often with <code>latest</code> as the only exception – and a record is written to a stable tag per kind, package and version. Re-running a mirror or a publish for a version that already has a record therefore tries to replace an immutable tag, and the registry refuses.</p>
+<p>This is why kind is in the tag rather than the two kinds sharing one, and why a record is not a single artifact carrying both facts: merging would mean reading a record, adding to it and pushing it back to the same tag, which such a registry cannot do at all. Separate tags per kind mean the only rewrite is a genuine re-run of the same operation.</p>
+<p>Both commands now <strong>warn</strong> rather than fail when the record cannot be written: the content is in the registry either way, and the record is advisory. What is lost is that <code>cargoship ls</code> cannot see that mirror, so the warning says exactly that rather than only naming the error.</p>
+<p>The images and files themselves are a separate matter, and worth knowing precisely. ORAS does not re-upload content that is already there – it checks the destination and skips a sub-graph that exists, so re-mirroring a package whose <code>rancher/pause:3.10</code> is already present sends none of its bytes again. It does, however, <strong>always write the tag</strong>, even for content it skipped. So a re-mirror issues a tag request per image regardless. Whether a tag-locking registry refuses that depends on the implementation: a re-tag to the <em>same</em> digest is often permitted, since it changes nothing, and a re-mirror of an unchanged package produces exactly the same digests. A re-tag to a <em>different</em> digest is what immutability exists to prevent, and that is the case to expect a refusal on – re-mirroring a package rebuilt with different content under a version it already used. An image push that is refused fails the mirror, which is the right answer: an image a node will ask for and not find is a broken mirror, not a cosmetic problem.</p>
+<p>Two versions of one package sit side by side, because the record’s tag is the version. That is a property of a registry rather than of a cluster – Zarf’s deployed-package state is keyed on the package name alone, so it records one version per name and a redeploy overwrites it.</p>
+<p><code>ls</code> names its registry the same three ways <code>mirror</code> does, and <code>--from-zarf-state</code> with <code>--config</code> tunnels the read over SSH exactly as the push is tunnelled:</p>
+<pre><code>cargoship ls --from-zarf-state --config ./cluster.yaml
+cargoship ls oci://harbor.internal --name rke2
+cargoship ls oci://harbor.internal -o json
+</code></pre>
+<p><code>--name</code> narrows the tags considered before any manifest is fetched, so listing one package out of a registry holding hundreds of records reads one manifest rather than all of them. It is no longer a permission workaround: neither form reads the registry catalogue, and both need only a pull.</p>
+<h3 id="finding-the-newest-version-of-a-package"><a class="header" href="#finding-the-newest-version-of-a-package">Finding the newest version of a package</a></h3>
+<p>This is the question a consumer asks – <a href="https://github.com/colonel-byte/cluster-api-provider-cargoship"><code>cluster-api-provider-cargoship</code></a> asks exactly it – and the layout above is shaped to answer it in one request:</p>
+<pre><code>cargoship publish ./package.tar.zst oci://ghcr.io/colonel-byte --record
+cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
+</code></pre>
+<p>Records come back newest first, so the first entry is the answer. Each one carries the <code>kind</code>, which is what decides the next move: a <code>package</code> record names an artifact to pull whole with <code>cargoship pull</code>, at <code>NAME:VERSION</code> in the same prefix the record was found in; a <code>mirror</code> record names content already unpacked into the registry, which nodes reach by the references the package itself declares. Those references are in the <code>distro.yaml</code> the record carries as its layer, so one small fetch yields the complete image list without pulling the package.</p>
+<p>From Go, <code>distro.ListMirrored</code> returns the same records and is exported for exactly this – a consumer in another module resolving a version without shelling out to the CLI.</p>
+<p>Two limits worth knowing:</p>
+<ul>
+<li><strong>A record is a claim, not a check.</strong> Nothing reconciles it against the images and files it describes, so content deleted from the registry by hand leaves a record that still lists.</li>
+<li><strong>It is not a trust anchor.</strong> The <code>distro.yaml</code> a record carries is a copy; the signature that makes a package’s own <code>distro.yaml</code> the root of trust lives in the package bundle. A record says what was mirrored, never that it is intact. Verify a package with <code>cargoship verify</code> before mirroring it, which is where that check belongs.</li>
+</ul>
+<p>A package that declares no version has nothing to tag a record with. The mirror still runs – its content is what matters – and says in the log that it recorded nothing.</p>
 <h2 id="how-this-compares"><a class="header" href="#how-this-compares">How This Compares</a></h2>
 <p>Three features move content toward an air-gapped fleet, in different directions:</p>
 <div class="table-wrapper">

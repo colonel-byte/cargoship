@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-95430940.js";
+            window.path_to_searchindex_js = "../searchindex-2bdd6d7c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-16386550.js"></script>
+        <script src="../toc-5a9b6c47.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -196,11 +196,14 @@
 <tbody>
 <tr><td><code>client-go/kubernetes</code> (typed clientset)</td><td>59</td></tr>
 <tr><td><code>client-go/kubernetes/typed/core/v1</code></td><td>56</td></tr>
+<tr><td><code>client-go/tools/portforward</code></td><td>1</td></tr>
 <tr><td><code>client-go/dynamic</code></td><td><strong>0</strong></td></tr>
 <tr><td><code>client-go/tools/clientcmd</code></td><td><strong>0</strong></td></tr>
+<tr><td><code>client-go/transport/websocket</code></td><td><strong>0</strong></td></tr>
 </tbody>
 </table>
 </div>
+<p><code>client-go/tools/portforward</code> is the one worth singling out, because one group sounds cheap and is not. It imports <code>k8s.io/api/core/v1</code> for a handful of constants, and that single package measured <strong>+3.34MiB</strong> of binary against a 40.00MiB baseline – more than the dynamic client, the kubeconfig loader and the websocket transport put together. <code>pkg/kubetunnel</code> therefore hand-writes the channel protocol over <code>client-go/transport/websocket</code> and costs <strong>+132KiB</strong>, which is the whole reason that package looks like it is doing something the standard library already does.</p>
 <p><code>k8s.io/api</code> 14MB plus <code>client-go</code> 9.4MB, against five call sites that read a node’s name, its labels, <code>spec.unschedulable</code> and the Ready condition.</p>
 <h2 id="what-each-place-does-instead"><a class="header" href="#what-each-place-does-instead">What each place does instead</a></h2>
 <p><strong><code>pkg/phase/81_label_nodes.go</code></strong> uses <code>dynamic.Interface</code> against <code>schema.GroupVersionResource{Version: "v1", Resource: "nodes"}</code>. It lists nodes and patches one label, and <code>unstructured.Unstructured</code> serves both directly: <code>GetName</code> and <code>GetLabels</code> are methods on it, and <code>Patch</code> takes the same merge-patch bytes the typed client took. The phase reads no field that needs a typed struct.</p>
