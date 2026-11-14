@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5635310f.js";
+            window.path_to_searchindex_js = "../searchindex-95430940.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-16386550.js"></script>
@@ -200,6 +200,10 @@
 <h2 id="what-the-check-actually-does"><a class="header" href="#what-the-check-actually-does">What the check actually does</a></h2>
 <p><code>DetectRemovedHosts</code> runs after fact gathering and before anything is changed, lists the nodes joined to the cluster, and stops the apply when the cluster holds a node no host accounts for, naming each one with its role.</p>
 <p>The list is read by running <code>kubectl get nodes -o json</code> on the leader over the existing SSH connection, which is how every other cluster command in the phases works. <code>LabelNodes</code> is the exception: it builds a Kubernetes client dialled at <code>https://&lt;loadBalancer&gt;:6443</code> from the machine running cargoship. That was not copied here. A cluster whose firewall admits only SSH from outside is an ordinary deployment for cargoship, and a check that runs on every apply must not be the one thing that needs the API port open. Going through the leader also drops the need for the load balancer address and for reading the admin certificates.</p>
+<h3 id="labelnodes-could-now-stop-being-the-exception"><a class="header" href="#labelnodes-could-now-stop-being-the-exception"><code>LabelNodes</code> could now stop being the exception</a></h3>
+<p><a href="../../pkg/tunnel/tunnel.go"><code>pkg/tunnel</code></a> carries arbitrary TCP over an SSH <code>direct-tcpip</code> channel, and <code>rest.Config.Dial</code> accepts a dialer directly, so a Kubernetes client can reach <code>127.0.0.1:6443</code> on the leader without the API port being open from anywhere. <code>cargoship mirror --from-zarf-state --config</code> already reads a secret that way. Applied to <code>dynamicClient</code> (<code>pkg/phase/81_label_nodes.go:151</code>) it is about six lines, and TLS keeps working untouched – the <code>Host</code> stays <code>https://&lt;loadBalancer&gt;:6443</code>, so verification still uses the certificate the direct path already verifies against, while the bytes travel through SSH.</p>
+<p>It has not been done, deliberately. <code>LabelNodes</code> runs on every apply against every fleet, so the question is not whether the tunnel works but what should happen for operators whose API server is already reachable: always tunnel, paying an extra SSH connection per apply, or try direct and fall back, adding a second failure mode and a timeout nobody will tune correctly. That is a change to the apply path rather than a new opt-in, and it was left alone rather than decided in passing. Raised and deferred on 2026-11-11.</p>
+<p>What is worth noting either way is that the paragraph above no longer describes a limit of the tooling. It describes a choice about the apply path that is still open.</p>
 <p>Two guards keep it from becoming a nuisance, and both exist because a false positive would stop an apply on a working cluster:</p>
 <ul>
 <li>Nodes are matched to hosts by any shared identifier: the node’s name or any address it reports, against the host’s hostname, private address, or connection address. Names alone are not enough, because an operator can set <code>node-name</code> in the engine config, and matching on names would then report every node in the cluster as removed.</li>

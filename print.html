@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5635310f.js";
+            window.path_to_searchindex_js = "searchindex-95430940.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-16386550.js"></script>
@@ -392,8 +392,12 @@ cargoship mirror ./build/cargoship-distro-amd64.tar.zst --config ./cluster.yaml
 
 # Only the images, against a registry on plain HTTP
 cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:5000 --images --plain-http
+
+# Or into a Zarf deployment's in-cluster registry, tunnelled over SSH to a node
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst --from-zarf-state --config ./cluster.yaml
 </code></pre>
 <p>An image keeps its repository path and its tag, and only the registry host changes: <code>registry.k8s.io/pause:3.10</code> is pushed as <code>harbor.internal/pause:3.10</code>. That is not cosmetic - it is exactly what a node asks a mirror for, because <code>apply</code> writes that same proxy address into each host’s containerd configuration from <code>spec.config.registries[].proxy.url</code>. Passing <code>--config</code> reads the destination from that one field, so what gets pushed and what the nodes ask for cannot drift apart.</p>
+<p><code>--from-zarf-state</code> reads the destination registry and its push credentials from a Zarf deployment’s own state secret, over <code>--context</code> or the current kubeconfig context. Zarf’s in-cluster registry sits at an address only a node can reach, so add <code>--config</code> and one SSH channel to a controller carries both the state read and the push - port 22 is the only port needed, and the kubeconfig supplies identity rather than reachability. Naming an <code>oci://</code> address this machine reaches works too, with the credentials still coming from state.</p>
 <p>See <a href="#mirroring-to-a-registry-guide">Mirroring to a Registry</a> for the naming rules, and how this compares with <code>--registry-override</code> and <code>--content-store</code>.</p>
 <h3 id="9-encrypt-credentials-in-a-config-file"><a class="header" href="#9-encrypt-credentials-in-a-config-file">9. Encrypt Credentials in a Config File</a></h3>
 <p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
@@ -2144,7 +2148,48 @@ crane pull --format=oci registry.example.com/cargoship/my-package:1.0.0 ./my-pac
 <pre><code>cargoship mirror ./package.tar.zst --config ./cluster.yaml
 </code></pre>
 <p>Prefer this. It is the same field <code>apply</code> writes into every host, so what gets pushed and what the nodes ask for are read from one place and cannot drift. The scheme is dropped, and a path becomes the repository prefix.</p>
-<p>The argument and <code>--config</code> are alternatives rather than layers: passing both is an error, because silently preferring one would mirror to an address you did not name. A configuration declaring more than one proxy is also an error – which mirror a package belongs in is not a question the command can answer, and guessing would populate the wrong one quietly.</p>
+<p>The argument and <code>--config</code> are alternatives rather than layers: passing both is an error, because silently preferring one would mirror to an address you did not name. (<code>--config</code> does compose with <code>--from-zarf-state</code>, where it names the nodes rather than the destination – see below.) A configuration declaring more than one proxy is also an error – which mirror a package belongs in is not a question the command can answer, and guessing would populate the wrong one quietly.</p>
+<h3 id="reading-it-from-a-zarf-deployment"><a class="header" href="#reading-it-from-a-zarf-deployment">Reading It from a Zarf Deployment</a></h3>
+<p>Where the fleet pulls through a registry <a href="https://zarf.dev">Zarf</a> stands up, <code>--from-zarf-state</code> reads that registry out of the <code>zarf-state</code> secret in the <code>zarf</code> namespace:</p>
+<pre><code>cargoship mirror ./package.tar.zst oci://node1.internal:31999 --from-zarf-state --plain-http
+</code></pre>
+<p>The push credentials always come from there, and that is the half worth having: Zarf generates them at <code>zarf init</code> and writes them nowhere an operator would otherwise look, so the alternative is extracting them by hand and running <code>docker login</code>.</p>
+<p>The <strong>address</strong> only comes from there when the registry is external, which is the one mode whose recorded address is routable from somewhere other than a cluster node:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>registryMode</code></th><th>What the address is</th><th>What <code>--from-zarf-state</code> does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>external</code></td><td>A registry outside the cluster</td><td>Uses it, and the credentials</td></tr>
+<tr><td><code>nodeport</code></td><td>A node-local address behind a NodePort</td><td>Tunnels with <code>--config</code>, else names the fix</td></tr>
+<tr><td><code>proxy</code></td><td>A per-node host port served by a DaemonSet</td><td>Tunnels with <code>--config</code>, else names the fix</td></tr>
+</tbody>
+</table>
+</div>
+<p>There are two ways to reach an internal registry, and the error names both.</p>
+<h4 id="tunnelling-through-a-node"><a class="header" href="#tunnelling-through-a-node">Tunnelling through a node</a></h4>
+<p>Pass <code>--config</code> alongside <code>--from-zarf-state</code> and the push is carried over an SSH channel to one of the cluster’s controllers:</p>
+<pre><code>cargoship mirror ./package.tar.zst --from-zarf-state --config ./cluster.yaml
+</code></pre>
+<p><strong>Port 22 is the only port this needs.</strong> One SSH connection to a controller carries both halves of the job: the Kubernetes API is read through it to find the registry, and then the push travels through it. No API port, no Kubernetes port-forward, no <code>kubectl</code>, and nothing installed on the node.</p>
+<p>Your kubeconfig is still required, but only for <strong>identity</strong> – the client credentials and the CA. Its server URL is deliberately left untouched, so TLS validates against the hostname it names while the bytes travel through SSH to the node. That means no certificate needs a SAN for the address actually dialled, and a kubeconfig whose server this machine cannot route to works fine. The port to tunnel to is read from that same URL rather than assumed, so a cluster serving the API somewhere other than 6443 needs no extra flag.</p>
+<p>For the registry, the recorded address does double duty, which is what makes this correct rather than merely workable: it is both the service the channel opens onto and the reference host the images are pushed under, so the mirror cannot be populated at an address a node will not ask for.</p>
+<p>Any controller will do, since the API server listens on loopback on every control-plane node and a NodePort answers on all of them, so the first one in the configuration is used. A fleet whose hosts are configured with <code>openSSH:</code> rather than <code>ssh:</code> is refused: rig’s OpenSSH protocol shells out to the <code>ssh</code> binary and offers no way to open a channel.</p>
+<p>One thing to know about it: throughput is whatever a single SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push. <code>--oci-concurrency</code> opens more channels, but they share the one TCP connection.</p>
+<h4 id="naming-a-reachable-address-yourself"><a class="header" href="#naming-a-reachable-address-yourself">Naming a reachable address yourself</a></h4>
+<p>The alternative is to give the address this machine reaches the registry on and let <code>--from-zarf-state</code> supply only the credentials. A port-forward is the usual way to get one, and a <code>127.0.0.1</code> address works exactly as any other:</p>
+<pre><code>kubectl port-forward -n zarf svc/zarf-docker-registry 5000:5000 &amp;
+cargoship mirror ./package.tar.zst oci://127.0.0.1:5000 --from-zarf-state --plain-http
+</code></pre>
+<p>The loopback address is not treated specially – it is a destination like any other, and the only thing to watch is that it is <strong>your</strong> loopback rather than the one Zarf recorded for a node. <code>--plain-http</code> is worth passing <strong>only when the deployment manages no certificates</strong>: Zarf’s internal registry without mTLS serves plain HTTP, and while HTTPS is tried first and falls back, saying so skips the failed probe. Under <code>mtlsStrategy: zarf-managed</code> the registry serves HTTPS and <code>--plain-http</code> would send the push to a port that will not answer it - see <a href="#a-zarf-managed-mtls-registry">A Zarf-managed mTLS registry</a>.</p>
+<p>One sharp edge, which applies to every destination and not just this one: if the package’s images already name the registry you are mirroring <strong>to</strong>, a repository prefix on the destination is silently dropped and the images are pushed back to their own references. That is zarf’s <code>ImageTransformHostWithoutChecksum</code> treating the push as already done. It does not arise for a package built against upstream registries, which is the normal case.</p>
+<p><code>--context</code> picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the <code>kubeconfig</code> setting (<code>KUBECONFIG</code>, else the standard location). <code>--context</code> without <code>--from-zarf-state</code> is an error rather than being ignored, since nothing else here reads a cluster. Under <code>--config</code> the context still chooses which cluster’s credentials and API port are used, and the tunnel supplies the route to it.</p>
+<h3 id="a-zarf-managed-mtls-registry"><a class="header" href="#a-zarf-managed-mtls-registry">A Zarf-managed mTLS registry</a></h3>
+<p><code>zarf init</code> can manage the registry’s certificates itself, recording <code>mtlsStrategy: zarf-managed</code> in state - and from Zarf v1.0.0 that is what a default deployment does. Two things follow, and <code>--from-zarf-state</code> handles both without a flag.</p>
+<p>The registry serves <strong>HTTPS</strong>, never plain HTTP, with a server certificate signed by a private CA named <code>Zarf Registry CA</code>. Nothing in the management node’s trust store covers it, so the CA is read out of the cluster - the <code>ca.crt</code> of the <code>zarf-registry-server-tls</code> secret, the same secret Zarf mounts into the registry pod - and trusted for the push. Under <code>--config</code> that read travels the same SSH channel as the state read, so a fleet with a closed API port is unaffected. <code>--insecure-skip-tls-verify</code> remains available for a deployment whose CA cannot be read, but it should not be needed.</p>
+<p>No client certificate is presented, and that is deliberate. Zarf does issue one - the <code>zarf-registry-client-tls</code> secret, common name <code>zarf-registry-client</code> - but it belongs to the per-node registry proxy, which presents it on a node’s behalf: a node reaches <code>127.0.0.1:5000</code> in plain HTTP, the proxy on that node terminates it and speaks mTLS to the registry. The registry does not require a client certificate from a direct client, so a push authenticates with the push credentials from state and nothing else. Earlier versions of cargoship refused this case outright on the premise that a client certificate was needed; that premise was wrong.</p>
+<p>Note that the images land under their original path and tag, as everywhere else in this guide – <strong>not</strong> Zarf’s <code>pause:3.10-zarf-1234567890</code> form. That is correct for nodes reaching the mirror through a containerd <code>hosts.toml</code>, and it means a workload whose image reference Zarf’s own agent rewrites will not find these copies.</p>
 <h2 id="how-files-are-named"><a class="header" href="#how-files-are-named">How Files Are Named</a></h2>
 <p>A file’s source URL is not a valid repository path, so it is turned into one:</p>
 <div class="table-wrapper">
@@ -2167,6 +2212,7 @@ crane pull --format=oci registry.example.com/cargoship/my-package:1.0.0 ./my-pac
 <p>Every image in the package is pushed, including those belonging to a chart that is currently disabled. A mirror’s job is to hold the content, and enabling that chart later then needs no second pass – the alternative fails on a node at pull time.</p>
 <h2 id="credentials"><a class="header" href="#credentials">Credentials</a></h2>
 <p>Credentials come from the Docker configuration file, the same as <code>publish</code>, <code>pull</code>, and <code>create</code>. <code>docker login harbor.internal</code> before mirroring to a registry that needs authentication.</p>
+<p>The one exception is <code>--from-zarf-state</code>, which reads the push credentials Zarf generated along with the registry – see <a href="#reading-it-from-a-zarf-deployment">above</a>.</p>
 <p>The credentials a cluster configuration carries under <code>spec.config.registries[].auth</code> are <strong>not</strong> used for the push, even when <code>--config</code> supplied the address. Those exist for the nodes to pull with, they are commonly encrypted at rest with age or Ansible Vault, and reusing them here would mean decrypting a fleet’s secrets during what is otherwise a local operation.</p>
 <p>Use <code>--plain-http</code> for a registry serving plain HTTP, and <code>--insecure-skip-tls-verify</code> for one with a certificate the management node does not trust. Without <code>--plain-http</code>, HTTPS is tried first and plain HTTP only if the registry does not serve it.</p>
 <h2 id="how-this-compares"><a class="header" href="#how-this-compares">How This Compares</a></h2>
@@ -4334,6 +4380,7 @@ $ cargoship kube-config --config ./cargoship-config.yaml
 <p>This is not ‘cargoship publish’. That uploads the package as one artifact, to be pulled back as a package. This unpacks it: each image is pushed under the same repository path and tag it had upstream with only the registry host swapped, because that is exactly what a node asks a mirror for once cargoship has written the mirror into its containerd configuration. An image the package carries for several architectures is pushed as an index, so the registry holds every architecture the package did.</p>
 <p>Each file is pushed as a single-layer OCI artifact named after the file and tagged with a digest of the source URL the definition declared, which keeps two releases of the same filename apart.</p>
 <p>Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give –config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.</p>
+<p>–from-zarf-state reads the destination and the push credentials from a zarf deployment’s state instead. Its in-cluster registry sits at an address only a node can reach, so either add –config to tunnel the push through a node over ssh, or name an address this machine reaches.</p>
 <pre><code>cargoship mirror [Package] [REPOSITORY] [flags]
 </code></pre>
 <h3 id="examples-11"><a class="header" href="#examples-11">Examples</a></h3>
@@ -4341,20 +4388,22 @@ $ cargoship kube-config --config ./cargoship-config.yaml
 # Mirror everything the package carries into a registry:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://harbor.internal
 
-# Mirror under a repository prefix, which most hosted registries require:
-$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://harbor.internal/cargoship
-
 # Mirror into the proxy the cluster configuration already declares:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --config ./cluster.yaml
 
 # Mirror only the images, over plain HTTP:
 $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst oci://registry.internal:5000 --images --plain-http
 
+# Mirror into a zarf deployment's in-cluster registry, tunnelled over ssh to a node:
+$ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --config ./cluster.yaml
+
 </code></pre>
 <h3 id="options-14"><a class="header" href="#options-14">Options</a></h3>
 <pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
   -f, --config PATH                             PATH of a cluster configuration to read the destination registry from. See docs/guides/mirror-registry.md.
+      --context NAME                            NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
       --files[=true|false]                      Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
+      --from-zarf-state[=true|false]            Take the destination registry and its push credentials from a zarf deployment. See docs/guides/mirror-registry.md.
   -h, --help[=true|false]                       help for mirror
       --images[=true|false]                     Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
       --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
@@ -10529,6 +10578,10 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <h2 id="what-the-check-actually-does"><a class="header" href="#what-the-check-actually-does">What the check actually does</a></h2>
 <p><code>DetectRemovedHosts</code> runs after fact gathering and before anything is changed, lists the nodes joined to the cluster, and stops the apply when the cluster holds a node no host accounts for, naming each one with its role.</p>
 <p>The list is read by running <code>kubectl get nodes -o json</code> on the leader over the existing SSH connection, which is how every other cluster command in the phases works. <code>LabelNodes</code> is the exception: it builds a Kubernetes client dialled at <code>https://&lt;loadBalancer&gt;:6443</code> from the machine running cargoship. That was not copied here. A cluster whose firewall admits only SSH from outside is an ordinary deployment for cargoship, and a check that runs on every apply must not be the one thing that needs the API port open. Going through the leader also drops the need for the load balancer address and for reading the admin certificates.</p>
+<h3 id="labelnodes-could-now-stop-being-the-exception"><a class="header" href="#labelnodes-could-now-stop-being-the-exception"><code>LabelNodes</code> could now stop being the exception</a></h3>
+<p><a href="../pkg/tunnel/tunnel.go"><code>pkg/tunnel</code></a> carries arbitrary TCP over an SSH <code>direct-tcpip</code> channel, and <code>rest.Config.Dial</code> accepts a dialer directly, so a Kubernetes client can reach <code>127.0.0.1:6443</code> on the leader without the API port being open from anywhere. <code>cargoship mirror --from-zarf-state --config</code> already reads a secret that way. Applied to <code>dynamicClient</code> (<code>pkg/phase/81_label_nodes.go:151</code>) it is about six lines, and TLS keeps working untouched – the <code>Host</code> stays <code>https://&lt;loadBalancer&gt;:6443</code>, so verification still uses the certificate the direct path already verifies against, while the bytes travel through SSH.</p>
+<p>It has not been done, deliberately. <code>LabelNodes</code> runs on every apply against every fleet, so the question is not whether the tunnel works but what should happen for operators whose API server is already reachable: always tunnel, paying an extra SSH connection per apply, or try direct and fall back, adding a second failure mode and a timeout nobody will tune correctly. That is a change to the apply path rather than a new opt-in, and it was left alone rather than decided in passing. Raised and deferred on 2026-11-11.</p>
+<p>What is worth noting either way is that the paragraph above no longer describes a limit of the tooling. It describes a choice about the apply path that is still open.</p>
 <p>Two guards keep it from becoming a nuisance, and both exist because a false positive would stop an apply on a working cluster:</p>
 <ul>
 <li>Nodes are matched to hosts by any shared identifier: the node’s name or any address it reports, against the host’s hostname, private address, or connection address. Names alone are not enough, because an operator can set <code>node-name</code> in the engine config, and matching on names would then report every node in the cluster as removed.</li>
