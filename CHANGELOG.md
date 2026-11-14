@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.42.2](https://github.com/colonel-byte/cargoship/compare/v0.42.1...v0.42.2) (2026-11-14)
+
+
+### Features
+
+* **images:** present a client certificate to a registry that requires one ([#1120](https://github.com/colonel-byte/cargoship/issues/1120)) ([720baa0](https://github.com/colonel-byte/cargoship/commit/720baa0d469f75fd9605911c526b2995dd08fcd5))
+* **mirror:** publish the package alongside the content it unpacks ([#1121](https://github.com/colonel-byte/cargoship/issues/1121)) ([2480963](https://github.com/colonel-byte/cargoship/commit/2480963946ffebb86d99e2775d8c708fe136add4))
+* **phase:** report the phase a run is on to a sink as well as the status file ([#1123](https://github.com/colonel-byte/cargoship/issues/1123)) ([381da32](https://github.com/colonel-byte/cargoship/commit/381da32d043ef228604755885b1db1b2bc76a802))
+
 ## [0.42.1](https://github.com/colonel-byte/cargoship/compare/v0.42.0...v0.42.1) (2026-11-14)
 
 
