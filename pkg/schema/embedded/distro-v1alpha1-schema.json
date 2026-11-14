@@ -420,7 +420,7 @@
           "$ref": "#/$defs/Arches",
           "description": "lists the CPU architectures this distro package targets. It supersedes Architecture, which stays valid for a package targeting a single architecture."
         },
-        "athors": {
+        "authors": {
           "description": "sets the OCI annotation for the contact details of the people or organization responsible for the image.",
           "type": "string"
         },

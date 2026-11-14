@@ -15,6 +15,7 @@
 package distro
 
 import (
+	"encoding/json"
 	"slices"
 	"testing"
 
@@ -210,4 +211,32 @@ func TestZarfDistroSELinuxIsZero(t *testing.T) {
 			require.Equal(t, tt.want, tt.selinux.IsZero())
 		})
 	}
+}
+
+// TestMetadataKeysAreSpelledCorrectly pins the one metadata key that was not.
+//
+// Authors shipped as `athors` for several releases: the Go field read correctly everywhere, so
+// nothing failed, and the misspelling was only visible in the generated schema and the generated
+// documentation table -- which is to say, only to an operator authoring YAML, who had no way to
+// tell it from a deliberate name. Correcting it is a breaking schema change, so this exists to
+// stop the next one being introduced silently.
+func TestMetadataKeysAreSpelledCorrectly(t *testing.T) {
+	t.Parallel()
+
+	b, err := json.Marshal(Metadata{
+		Name:          "rke2",
+		Version:       "1.0.0",
+		Authors:       "someone@example.com",
+		Documentation: "https://example.com",
+		URL:           "https://example.com",
+	})
+	require.NoError(t, err)
+
+	var keys map[string]any
+	require.NoError(t, json.Unmarshal(b, &keys))
+
+	for _, want := range []string{"name", "version", "authors", "documentation", "url"} {
+		require.Contains(t, keys, want, "metadata should marshal a %q key", want)
+	}
+	require.NotContains(t, keys, "athors", "the misspelled key is back")
 }
