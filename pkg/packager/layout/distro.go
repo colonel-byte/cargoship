@@ -100,9 +100,17 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (stri
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
-	// Removes ingest directory that is only used for caching the images with ORAS
-	err = os.Remove(filepath.Join(d.GetImageDirPath(), ingestDir))
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	// Removes the ingest directory ORAS stages image layers in.
+	//
+	// RemoveAll rather than Remove, because Remove fails on a directory that is not empty and
+	// ORAS does leave blobs in this one -- an interrupted pull, or a layer it staged and did
+	// not collect. The result was that `cargoship create` failed at its very last step, after
+	// every image had already been pulled, with "remove .../images/ingest: directory not
+	// empty" and nothing an operator could do about it but delete the directory by hand.
+	//
+	// RemoveAll also treats an absent directory as success, so the ErrNotExist case this used
+	// to carry is no longer a case.
+	if err := os.RemoveAll(filepath.Join(d.GetImageDirPath(), ingestDir)); err != nil {
 		return "", err
 	}
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
