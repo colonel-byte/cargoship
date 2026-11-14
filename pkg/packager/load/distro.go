@@ -33,6 +33,7 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/internal/cfg"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -66,6 +67,12 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 	if err != nil {
 		return v1alpha1.Distro{}, err
 	}
+	// Checked after the parse so that a syntax error is reported by the parser, which says
+	// where, and before anything is resolved so that a definition is never half-processed on
+	// the way to being refused.
+	if err := validateAgainstSchema(disPath.ManifestFile, b); err != nil {
+		return v1alpha1.Distro{}, err
+	}
 	dis, declared, err := resolveArchitectures(dis, opts.Architecture)
 	if err != nil {
 		return v1alpha1.Distro{}, err
@@ -77,6 +84,31 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 	}
 	l.Debug("done layout.DistroDefinition", "duration", time.Since(start))
 	return dis, nil
+}
+
+// validateAgainstSchema checks a definition against the published package schema.
+//
+// This is the same check `cargoship validate` runs, applied where a package is built. Until it
+// was, the two disagreed about what a valid definition is: every constraint the schema states --
+// the patterns, the enums, the lengths, and the 25 `additionalProperties: false` blocks that make
+// a misspelled key an error -- was enforced by an editor and by an explicit `cargoship validate`,
+// and by nothing at all on the path that actually produces a package. A key nobody validated was
+// silently dropped by the decoder, so a definition with `imagePullPolciy` built a package missing
+// whatever that key was meant to set, and said nothing.
+//
+// It validates the bytes rather than the decoded struct, which is the whole point. The decoder
+// has already discarded an unknown key by the time a struct exists, so validating the struct
+// cannot see the typo that matters most.
+func validateAgainstSchema(path string, b []byte) error {
+	doc, err := schema.Decode(b)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	validator, err := schema.NewValidatorFor(schema.KindPackage)
+	if err != nil {
+		return err
+	}
+	return validator.Validate(path, doc)
 }
 
 // resolveArchitectures settles which architectures the package targets.
