@@ -20,11 +20,13 @@ Two other upstream changes are visible in the vendored diff and affect nothing h
 
 ## The lint wall
 
-`golangci-lint run` over the module reports **25** SA1019 findings in six files. CI runs the linter with no path filter (`.github/workflows/scan-lint.yaml`), so this is a red check rather than a warning somebody can ignore. The pre-commit hook does not catch it, because the hook passes the linter only the files a commit touches, and these sites are already committed.
+`golangci-lint run` over the module reports **25** SA1019 findings in six files. The `lint` job in [`.github/workflows/scan-lint.yaml`](../../.github/workflows/scan-lint.yaml) runs the linter with no path filter, so this is a red check rather than a warning somebody can ignore.
+
+A local `prek run --all-files` will not reproduce it, for two separate reasons worth knowing apart. The `prek` job in [`.github/workflows/pre-commit.yaml`](../../.github/workflows/pre-commit.yaml) passes `--skip golangci-lint`, so the hook is not what gates this in CI at all - the `lint` job is. And locally the hook hands the linter only the files being committed, so sites that were already committed before the bump are never passed to it.
 
 | File                                           | Findings | What it uses                                                                                     |
 | ---------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `pkg/packager/actions/actions.go`              | 8        | `variables.VariableConfig` throughout, `template.WithVariables`, `api.Action.SetVariables`        |
+| `pkg/packager/actions/actions.go`              | 8        | `variables.VariableConfig` throughout, `template.WithVariables`, `api.Action.SetVariables`       |
 | `pkg/packager/assemble/actions.go`             | 8        | `variables.New`, `convert.PackageFromV1alpha1`, `v1alpha1.ZarfComponentAction`, `ShouldTemplate` |
 | `pkg/packager/assemble/actions_test.go`        | 5        | `api.Action.SetVariables`, `ShouldTemplate`                                                      |
 | `pkg/packager/actions/actions_test.go`         | 2        | `variables`, `variables.New`                                                                     |
@@ -65,11 +67,11 @@ This is the load-bearing one, and it is the reason the next two exist. Retyping 
 
 The replacement for `variables` is `value.Values` plus `api.Action.SetValues`, and cargoship **already handles both** - `parseAndSetValue` at `pkg/packager/actions/actions.go:150` is the `SetValues` branch, running immediately after the `SetVariables` one in the same closure. So the executor is half migrated already, and what remains is not a mechanical substitution:
 
-| What `variables` does           | What `value.Values` gives | Gap                                                                              |
-| ------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
-| `setVariables` with a `pattern` | `setValues` with a `type` | No regex validation on the way in; `CheckVariablePattern` has no counterpart     |
-| `sensitive`, `autoIndent`       | nothing                   | A sensitive variable's value would stop being redacted, and stop being reindented |
-| `###ZARF_VAR_x###` substitution | Go templating only        | The older pass covers fields Go templating never sees, including a wait action's  |
+| What `variables` does           | What `value.Values` gives  | Gap                                                                               |
+| ------------------------------- | -------------------------- | --------------------------------------------------------------------------------- |
+| `setVariables` with a `pattern` | `setValues` with a `type`  | No regex validation on the way in; `CheckVariablePattern` has no counterpart      |
+| `sensitive`, `autoIndent`       | nothing                    | A sensitive variable's value would stop being redacted, and stop being reindented |
+| `###ZARF_VAR_x###` substitution | Go templating only         | The older pass covers fields Go templating never sees, including a wait action's  |
 | `GetConstants`                  | values merged into one map | Constants and variables stop being separate namespaces inside a template          |
 
 So it is a behaviour change for any `distro.yaml` using `setVariables` with a `pattern` or `sensitive`, on top of the schema break in place 1. That is a feature with its own migration story for operators, which is why the bump left it alone.
