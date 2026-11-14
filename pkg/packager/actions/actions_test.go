@@ -31,14 +31,14 @@ import (
 
 	zarfapi "github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/variables" //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 )
 
 func testVariableConfig(ctx context.Context) *variables.VariableConfig {
 	prompt := func(v zarfapi.InteractiveVariable) (string, error) {
 		return v.Default, nil
 	}
-	return variables.New("zarf", prompt, logger.From(ctx))
+	return variables.New("zarf", prompt, logger.From(ctx)) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 }
 
 func seconds(n int) *int { return &n }

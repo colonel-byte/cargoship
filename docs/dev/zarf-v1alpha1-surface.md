@@ -20,9 +20,17 @@ Two other upstream changes are visible in the vendored diff and affect nothing h
 
 ## The lint wall
 
-`golangci-lint run` over the module reports **25** SA1019 findings in six files. The `lint` job in [`.github/workflows/scan-lint.yaml`](../../.github/workflows/scan-lint.yaml) runs the linter with no path filter, so this is a red check rather than a warning somebody can ignore.
+`golangci-lint run` over the module reports **30** SA1019 findings in six files. The `lint` job in [`.github/workflows/scan-lint.yaml`](../../.github/workflows/scan-lint.yaml) runs the linter with no path filter, so this is a red check rather than a warning somebody can ignore.
 
-A local `prek run --all-files` will not reproduce it, for two separate reasons worth knowing apart. The `prek` job in [`.github/workflows/pre-commit.yaml`](../../.github/workflows/pre-commit.yaml) passes `--skip golangci-lint`, so the hook is not what gates this in CI at all - the `lint` job is. And locally the hook hands the linter only the files being committed, so sites that were already committed before the bump are never passed to it.
+**Count them with the caps off**, or the number is wrong and unstable:
+
+```sh
+golangci-lint run --max-same-issues=0 --max-issues-per-linter=0 2>&1 | grep -c SA1019
+```
+
+golangci-lint's `max-same-issues` defaults to 3, and it groups by message text - so each distinct deprecated symbol reports at most three times and the rest are dropped silently. A plain `golangci-lint run` reported exactly `25 issues` both locally and in CI while naming a *different* 25 each time, which reads as a stable number and is not one. The same applies to any future SA1019 sweep here: the truncated output is not a work list.
+
+A local `prek run --all-files` will not reproduce the findings at all, for two separate reasons worth knowing apart. The `prek` job in [`.github/workflows/pre-commit.yaml`](../../.github/workflows/pre-commit.yaml) passes `--skip golangci-lint`, so the hook is not what gates this in CI - the `lint` job is. And locally the hook hands the linter only the files being committed, so sites already committed before the bump are never passed to it.
 
 | File                                           | Findings | What it uses                                                                                     |
 | ---------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
@@ -78,13 +86,15 @@ So it is a behaviour change for any `distro.yaml` using `setVariables` with a `p
 
 Note also that `api.SetValue.Value` is itself marked deprecated upstream, so the normalized model is not a settled destination either - part of the v1 replacement is already on the way out.
 
-## What to do in the meantime
+## How it is suppressed, and why that way
 
-The honest options, in the order a reader should consider them:
+Every site carries a per-line `//nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md` - **28 directives** covering the 30 findings. `grep -rn 'SA1019' --include='*.go' .` is the index; nothing else in the tree records them.
 
-1. **Leave it, and let CI be red on this one check.** Not viable for long, and while it is red it hides the next real SA1019.
-2. **`//nolint:staticcheck // SA1019: <reason>` at each site.** Local and honest. It costs 25 comments and it makes the surface greppable, which the current state does not. The cheapest thing that keeps CI green without pretending the debt is gone.
-3. **Exclude SA1019 for these six paths in `.golangci.yml`.** Fewer lines than option 2 and strictly worse: a path exclusion also silences the *next* deprecation in those files, and those files are exactly where the next one will be.
-4. **Migrate.** A real change, scoped as above, with a version bump on cargoship's own `Distro` kind and a documented path for operators. It belongs behind its own issue, not inside a dependency bump.
+A path exclusion for these six files in `.golangci.yaml` would have been three lines instead of 28, and was rejected on what it costs rather than on how it reads: an exclusion also silences the *next* deprecation in those files, and these are precisely the files the next one will land in. A per-line directive fails loudly when the line it sits on changes and is flagged by `nolintlint` when it stops suppressing anything, so it cannot outlive what it was written for.
 
-Whichever is picked, `grep -rn 'SA1019' --include='*.go' .` should find the sites afterwards. Nothing else in the tree records them.
+Two mechanical facts about placing these, both of which cost a round trip here:
+
+- **Only a trailing comment works.** A standalone `//nolint` line above a statement suppresses nothing in golangci-lint, and above a `for` block it does not reach the block's contents either. The directive has to be on the reported line.
+- **A trailing comment inside a method chain fights gofmt.** `template.NewObjects(values).WithConstants(...).WithVariables(...)` spans three lines, and a trailing directive on each made gofmt reindent the continuations to seven tabs. Both chains - in `runAction` and in `renderAction` - are now plain statements reassigning an `objs` variable, which is what lets each line carry its own directive and stay formatted. The behaviour is identical: `WithConstants` and `WithVariables` are value-receiver methods returning `Objects`.
+
+The suppression is not the end state. The migration described above is still the actual fix, and it belongs behind its own issue rather than inside a dependency bump.

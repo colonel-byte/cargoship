@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
+	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1" //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
@@ -190,7 +190,7 @@ func TestRenderActionDoesNotMutateTheWaitBlock(t *testing.T) {
 	if action.Wait.Cluster.Name != `{{ .Values.name }}` {
 		t.Fatalf("the original action was rewritten: %q", action.Wait.Cluster.Name)
 	}
-	if rendered.ShouldTemplate() {
+	if rendered.ShouldTemplate() { //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 		t.Fatal("the rendered action is still flagged for templating, so Zarf would render it again")
 	}
 }
@@ -295,8 +295,8 @@ func TestToAPIActionSetMapsEveryField(t *testing.T) {
 	if !action.EnableTemplating {
 		t.Error("template did not become EnableTemplating")
 	}
-	if len(action.SetVariables) != 1 || action.SetVariables[0].Name != "GREETING" {
-		t.Errorf("SetVariables = %+v", action.SetVariables)
+	if len(action.SetVariables) != 1 || action.SetVariables[0].Name != "GREETING" { //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+		t.Errorf("SetVariables = %+v", action.SetVariables) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 	}
 	if len(action.SetValues) != 1 || action.SetValues[0].Key != "greeting" || action.SetValues[0].Type != "string" {
 		t.Errorf("SetValues = %+v", action.SetValues)
@@ -355,8 +355,8 @@ func TestToAPIActionSetMigratesTheDeprecatedSetVariable(t *testing.T) {
 				},
 			},
 		})
-		if len(got.Before[0].SetVariables) != 1 || got.Before[0].SetVariables[0].Name != "GREETING" {
-			t.Fatalf("SetVariables = %+v, want the migrated singular form", got.Before[0].SetVariables)
+		if len(got.Before[0].SetVariables) != 1 || got.Before[0].SetVariables[0].Name != "GREETING" { //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+			t.Fatalf("SetVariables = %+v, want the migrated singular form", got.Before[0].SetVariables) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 		}
 	})
 
@@ -370,8 +370,8 @@ func TestToAPIActionSetMigratesTheDeprecatedSetVariable(t *testing.T) {
 				},
 			},
 		})
-		if len(got.Before[0].SetVariables) != 1 || got.Before[0].SetVariables[0].Name != "NEW" {
-			t.Fatalf("SetVariables = %+v, want only the explicit list", got.Before[0].SetVariables)
+		if len(got.Before[0].SetVariables) != 1 || got.Before[0].SetVariables[0].Name != "NEW" { //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+			t.Fatalf("SetVariables = %+v, want only the explicit list", got.Before[0].SetVariables) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 		}
 	})
 }

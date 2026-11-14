@@ -22,7 +22,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
 	"github.com/invopop/jsonschema"
 	"github.com/k0sproject/dig"
-	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
+	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1" //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 )
 
 // Distro is the root object of a distro package configuration document.

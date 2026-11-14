@@ -22,11 +22,11 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/packager/actions"
 	zarfapi "github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
-	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
+	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1" //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/variables" //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 )
 
 // newVariableConfig builds the variable configuration the onCreate actions share.
@@ -43,7 +43,7 @@ func newVariableConfig(ctx context.Context) *variables.VariableConfig {
 	prompt := func(variable zarfapi.InteractiveVariable) (string, error) {
 		return variable.Default, nil
 	}
-	return variables.New("zarf", prompt, logger.From(ctx))
+	return variables.New("zarf", prompt, logger.From(ctx)) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 }
 
 // runCreateActions runs a set of onCreate actions, rendering each one through
@@ -67,7 +67,7 @@ func newVariableConfig(ctx context.Context) *variables.VariableConfig {
 func runCreateActions(ctx context.Context, basePath string, defaults zarf.ZarfComponentActionDefaults, list []zarf.ZarfComponentAction, values value.Values, varCfg *variables.VariableConfig) error {
 	defaultConfig := toAPIActionSet(zarf.ZarfComponentActionSet{Defaults: defaults}).Defaults
 	for _, action := range list {
-		if action.ShouldTemplate() {
+		if action.ShouldTemplate() { //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 			rendered, err := renderAction(ctx, action, values, varCfg)
 			if err != nil {
 				return err
@@ -109,7 +109,7 @@ func toAPIActionSet(set zarf.ZarfComponentActionSet) zarfapi.ActionSet {
 			{Actions: zarf.ZarfComponentActions{OnCreate: set}},
 		},
 	}
-	return convert.PackageFromV1alpha1(pkg).Components[0].Actions.OnCreate
+	return convert.PackageFromV1alpha1(pkg).Components[0].Actions.OnCreate //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 }
 
 // renderAction returns a copy of action with its templated fields already
@@ -121,9 +121,9 @@ func toAPIActionSet(set zarf.ZarfComponentActionSet) zarfapi.ActionSet {
 // directory, the environment -- goes through the older ###ZARF_VAR_x###
 // substitution, which Zarf still applies on its own.
 func renderAction(ctx context.Context, action zarf.ZarfComponentAction, values value.Values, varCfg *variables.VariableConfig) (zarf.ZarfComponentAction, error) {
-	data := template.NewObjects(values).
-		WithConstants(varCfg.GetConstants()).
-		WithVariables(varCfg.GetSetVariableMap())
+	objs := template.NewObjects(values)
+	objs = objs.WithConstants(varCfg.GetConstants())       //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
+	data := objs.WithVariables(varCfg.GetSetVariableMap()) //nolint:staticcheck // SA1019: v1alpha1 is load-bearing here; see docs/dev/zarf-v1alpha1-surface.md
 
 	render := func(field, s string) (string, error) {
 		out, err := helmvalues.RenderTemplate(s, data, helmvalues.WithCreateFuncs(ctx))
