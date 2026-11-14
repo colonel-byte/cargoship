@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6d4ccecb.js";
+            window.path_to_searchindex_js = "../searchindex-ae9bd339.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-5a9b6c47.js"></script>
@@ -323,6 +323,19 @@ file            2127904768   # 1.98GB -- page cache from the blobs
 <pre><code>cargoship mirror ./package.tar.zst oci://harbor.internal --images
 </code></pre>
 <p>Every image in the package is pushed, including those belonging to a chart that is currently disabled. A mirror’s job is to hold the content, and enabling that chart later then needs no second pass – the alternative fails on a node at pull time.</p>
+<h2 id="publishing-the-package-alongside-it"><a class="header" href="#publishing-the-package-alongside-it">Publishing the Package Alongside It</a></h2>
+<p><code>--publish</code> writes the package itself to the same registry once the mirror has landed, exactly as <code>cargoship publish --record</code> would have:</p>
+<pre><code>cargoship mirror ./package.tar.zst oci://harbor.internal --publish
+</code></pre>
+<p>Reach for it where something downstream has to <strong>install</strong> from this registry rather than pull images through it. A mirror holds every reference a node asks for at runtime and no artifact to install from, so a consumer resolving a package by name finds a <code>mirror</code> record, no <code>package</code> record, and nothing to pull – which is what <a href="https://github.com/colonel-byte/cluster-api-provider-cargoship"><code>cluster-api-provider-cargoship</code></a> reports as <em>recorded as mirrored into this registry but not published into it</em>. An air gap generally wants both halves, and this is one command rather than two.</p>
+<p>Four things about it:</p>
+<ul>
+<li><strong>It runs after the mirror, and only if the mirror succeeded.</strong> A registry advertising a package whose content is not there is worse than a registry with neither.</li>
+<li><strong>It uses the same transport and credentials.</strong> A destination reached through <code>--from-zarf-state</code>, <code>--config</code> or <code>--via-kube</code> – over an SSH channel or the API server’s port-forward, against a certificate signed by a private CA, with credentials that exist only in Zarf’s state – is reached the same way for the publish. Nothing has to be logged into separately.</li>
+<li><strong>The reference is the one <code>publish</code> would have written</strong>: the target’s host and repository prefix, then the package’s own name and version. So a consumer reading the record finds the artifact where the record says it is.</li>
+<li><strong><code>--no-record</code> suppresses both records.</strong> The artifact is still published; what is skipped is the record repository, which is what an operator asking for no records asked for.</li>
+</ul>
+<p>The costs are storage and time: the package’s layers are pushed in addition to the loose content, so a registry holds both. Leave <code>--publish</code> off where the only consumer is a node pulling images.</p>
 <h2 id="credentials"><a class="header" href="#credentials">Credentials</a></h2>
 <p>Credentials come from the Docker configuration file, the same as <code>publish</code>, <code>pull</code>, and <code>create</code>. <code>docker login harbor.internal</code> before mirroring to a registry that needs authentication.</p>
 <p>The one exception is <code>--from-zarf-state</code>, which reads the push credentials Zarf generated along with the registry – see <a href="#reading-it-from-a-zarf-deployment">above</a>.</p>

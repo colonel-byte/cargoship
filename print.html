@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6d4ccecb.js";
+            window.path_to_searchindex_js = "searchindex-ae9bd339.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-5a9b6c47.js"></script>
@@ -396,6 +396,9 @@ cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:
 # Or into a Zarf deployment's in-cluster registry, tunnelled over SSH to a node
 cargoship mirror ./build/cargoship-distro-amd64.tar.zst --from-zarf-state --config ./cluster.yaml
 
+# Or both halves at once: the content a node pulls, and the package a consumer installs from
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://harbor.internal --publish
+
 # Then ask a registry which packages have been mirrored into it
 cargoship ls oci://harbor.internal
 cargoship ls --from-zarf-state --config ./cluster.yaml -o json
@@ -409,7 +412,8 @@ cargoship mirror ./build/cargoship-distro-amd64.tar.zst --via-kube
 cargoship publish ./build/cargoship-distro-amd64.tar.zst oci://ghcr.io/colonel-byte --record
 cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
 </code></pre>
-<p>A finished mirror records which package filled it, as a few kilobytes at <code>cargoship/NAME:VERSION</code>, and <code>ls</code> reads those records back. Two versions of one package are listed side by side, because the record’s tag is the version - that is a registry’s property, not a cluster’s. <code>--name</code> lists one package without needing a credential allowed to read the registry’s catalogue.</p>
+<p>A finished mirror records which package filled it, as a few kilobytes at <code>cargoship:_mirror.NAME.VERSION</code>, and <code>ls</code> reads those records back. Two versions of one package are listed side by side, because the record’s tag carries the version - that is a registry’s property, not a cluster’s. <code>--name</code> lists one package without needing a credential allowed to read the registry’s catalogue.</p>
+<p><code>--publish</code> writes the package itself as well, through the same transport and credentials the mirror used, leaving <code>cargoship:_package.NAME.VERSION</code> beside the mirror’s own record. Reach for it where something downstream has to <em>install</em> from this registry rather than pull images through it: a mirror alone holds everything a node asks for at runtime and no artifact to install from, which is the shape <a href="https://github.com/colonel-byte/cluster-api-provider-cargoship"><code>cluster-api-provider-cargoship</code></a> reports as “recorded as mirrored into this registry but not published into it”.</p>
 <p>See <a href="#mirroring-to-a-registry-guide">Mirroring to a Registry</a> for the naming rules, what a record holds, and how this compares with <code>--registry-override</code> and <code>--content-store</code>.</p>
 <h3 id="9-encrypt-credentials-in-a-config-file"><a class="header" href="#9-encrypt-credentials-in-a-config-file">9. Encrypt Credentials in a Config File</a></h3>
 <p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
@@ -1355,6 +1359,12 @@ ansible-galaxy collection install colonel_byte-cargoship-0.42.1.tar.gz
 <p>The counter is the phase’s position in the list for that module, so <code>docs/phases/apply.md</code> and its siblings read as the same sequence. A phase that fails is printed <code>[failed]</code>, ahead of the failure Ansible itself reports.</p>
 <p>None of this needs configuring. The action plugin creates a temporary status file, points the module at it, polls it while the module runs, and removes it afterwards whether the run succeeded or not.</p>
 <p>Driving the binary directly gets the same progress through the same mechanism: set <code>CARGOSHIP_STATUS_FILE</code> to a path and cargoship rewrites that file as each phase starts and finishes, holding one JSON object – <code>phase</code>, <code>index</code>, <code>total</code>, <code>status</code> (<code>running</code>, <code>completed</code>, or <code>failed</code>), <code>timestamp</code>, and <code>error</code> on a failure. The file is replaced atomically on every transition, so a reader either sees the previous phase or the current one, never a half-written object. It is removed when the run finishes. Leave the variable unset and cargoship writes nothing.</p>
+<p>A caller consuming cargoship as a library has a second way to the same answer, and the file keeps working either way:</p>
+<pre><code class="language-go">ctx, progress := phase.WithProgressSink(ctx)
+go func() { _ = apply.Run(ctx) }()
+// From anywhere: progress.Current() is the phase, its position, and its state.
+</code></pre>
+<p><code>phase.ProgressSink</code> is scoped to the context rather than to the process, which is the whole reason it exists: the status file’s path is global, so two applies running in one process would write the same file. One in-flight apply per object is exactly what <a href="https://github.com/colonel-byte/cluster-api-provider-cargoship"><code>cluster-api-provider-cargoship</code></a> has, and it reports the phase on its <code>Converged</code> condition. Both watchers are updated from one call inside the phase loop, so a state cannot reach one and not the other, and the file is written whether or not a sink is attached – the Ansible plugin needs no change and has none.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="building-from-a-local-content-store"><a class="header" href="#building-from-a-local-content-store">Building From a Local Content Store</a></h1>
 <p>This guide covers building a distro package from a local content store: collecting the images and files on a connected machine, carrying the result across the airlock, and building the package on the other side with nothing fetched over the network.</p>
@@ -2256,6 +2266,19 @@ file            2127904768   # 1.98GB -- page cache from the blobs
 <pre><code>cargoship mirror ./package.tar.zst oci://harbor.internal --images
 </code></pre>
 <p>Every image in the package is pushed, including those belonging to a chart that is currently disabled. A mirror’s job is to hold the content, and enabling that chart later then needs no second pass – the alternative fails on a node at pull time.</p>
+<h2 id="publishing-the-package-alongside-it"><a class="header" href="#publishing-the-package-alongside-it">Publishing the Package Alongside It</a></h2>
+<p><code>--publish</code> writes the package itself to the same registry once the mirror has landed, exactly as <code>cargoship publish --record</code> would have:</p>
+<pre><code>cargoship mirror ./package.tar.zst oci://harbor.internal --publish
+</code></pre>
+<p>Reach for it where something downstream has to <strong>install</strong> from this registry rather than pull images through it. A mirror holds every reference a node asks for at runtime and no artifact to install from, so a consumer resolving a package by name finds a <code>mirror</code> record, no <code>package</code> record, and nothing to pull – which is what <a href="https://github.com/colonel-byte/cluster-api-provider-cargoship"><code>cluster-api-provider-cargoship</code></a> reports as <em>recorded as mirrored into this registry but not published into it</em>. An air gap generally wants both halves, and this is one command rather than two.</p>
+<p>Four things about it:</p>
+<ul>
+<li><strong>It runs after the mirror, and only if the mirror succeeded.</strong> A registry advertising a package whose content is not there is worse than a registry with neither.</li>
+<li><strong>It uses the same transport and credentials.</strong> A destination reached through <code>--from-zarf-state</code>, <code>--config</code> or <code>--via-kube</code> – over an SSH channel or the API server’s port-forward, against a certificate signed by a private CA, with credentials that exist only in Zarf’s state – is reached the same way for the publish. Nothing has to be logged into separately.</li>
+<li><strong>The reference is the one <code>publish</code> would have written</strong>: the target’s host and repository prefix, then the package’s own name and version. So a consumer reading the record finds the artifact where the record says it is.</li>
+<li><strong><code>--no-record</code> suppresses both records.</strong> The artifact is still published; what is skipped is the record repository, which is what an operator asking for no records asked for.</li>
+</ul>
+<p>The costs are storage and time: the package’s layers are pushed in addition to the loose content, so a registry holds both. Leave <code>--publish</code> off where the only consumer is a node pulling images.</p>
 <h2 id="credentials"><a class="header" href="#credentials">Credentials</a></h2>
 <p>Credentials come from the Docker configuration file, the same as <code>publish</code>, <code>pull</code>, and <code>create</code>. <code>docker login harbor.internal</code> before mirroring to a registry that needs authentication.</p>
 <p>The one exception is <code>--from-zarf-state</code>, which reads the push credentials Zarf generated along with the registry – see <a href="#reading-it-from-a-zarf-deployment">above</a>.</p>
@@ -4525,6 +4548,7 @@ $ cargoship ls oci://harbor.internal -o json
 <p>Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give –config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.</p>
 <p>–from-zarf-state reads the destination and the push credentials from a zarf deployment’s state instead. Its in-cluster registry sits at an address only a node can reach, so either add –config to tunnel the push through a node over ssh, or name an address this machine reaches.</p>
 <p>A finished mirror records which package populated it, under cargoship:_mirror.NAME.VERSION, so that ‘cargoship ls’ can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed.</p>
+<p>–publish adds the package itself, as ‘cargoship publish –record’ would have, once the mirror has landed. The two answer different questions – what a node pulls at runtime, and what a consumer pulls to install with – and a registry holding only the first is one a consumer cannot install from. An air gap generally wants both.</p>
 <pre><code>cargoship mirror [Package] [REPOSITORY] [flags]
 </code></pre>
 <h3 id="examples-12"><a class="header" href="#examples-12">Examples</a></h3>
@@ -4555,6 +4579,7 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --conf
       --no-record[=true|false]                                Skip the record a finished mirror writes about itself, which is what makes cargoship ls able to see it.
       --oci-concurrency int                                   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --publish[=true|false]                                  Also publish the package itself to the same registry, so a consumer can pull it. See docs/guides/mirror-registry.md.
       --retries int                                           Number of retries to perform for Cargoship's operations, such as package publishes.
       --tmpdir string                                         Specify the temporary directory to use for intermediate files (default "/tmp")
       --verify verifyMode                                     Verify the Cargoship package signature. (default if-possible)
