@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/signing"
 	"github.com/colonel-byte/cargoship/pkg/utils"
@@ -55,6 +56,12 @@ type LoadOptions struct {
 	// reading it out of a Kubernetes secret, say -- does not have to write it to a file first.
 	// Only applicable to OCI + HTTP.
 	CABundle []byte
+	// ClientCertificate is presented to a registry that requires one of every client. Zero,
+	// which is the usual case, presents none.
+	//
+	// Only applicable to OCI: an http:// source is fetched by a client that presents nothing,
+	// which is the one place this and CABundle are not symmetrical.
+	ClientCertificate images.ClientCertificate
 	// VerificationStrategy for explicit definition
 	layout.VerificationStrategy
 }
@@ -91,6 +98,7 @@ func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroL
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
 			CABundle:             opts.CABundle,
+			ClientCertificate:    opts.ClientCertificate,
 			CachePath:            opts.CachePath,
 		}
 

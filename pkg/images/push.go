@@ -60,6 +60,8 @@ type PushOptions struct {
 	DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 	// CABundle is trusted in addition to the system roots. See ClientOptions.CABundle.
 	CABundle []byte
+	// ClientCertificate is presented to a registry that requires one. See ClientCertificate.
+	ClientCertificate ClientCertificate
 }
 
 // StaticCredential turns a username and password into something ClientOptions takes, and
@@ -136,6 +138,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory, tar
 		Credential:            StaticCredential(host, opts.Username, opts.Password),
 		DialContext:           opts.DialContext,
 		CABundle:              opts.CABundle,
+		ClientCertificate:     opts.ClientCertificate,
 	})
 	if err != nil {
 		return err

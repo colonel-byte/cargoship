@@ -67,6 +67,9 @@ type MirrorOptions struct {
 	// CABundle is trusted in addition to the system roots, which is how a mirror verifies a
 	// registry serving a certificate from a private CA. See images.ClientOptions.CABundle.
 	CABundle []byte
+	// ClientCertificate is presented to a registry that requires one of every client. See
+	// images.ClientCertificate.
+	ClientCertificate images.ClientCertificate
 	// NoRecord skips the record a finished mirror writes about itself. The content is pushed
 	// either way; what is lost is `cargoship ls` being able to say the mirror happened, so a
 	// registry populated with this set looks empty to a listing.
@@ -175,6 +178,7 @@ func registryClient(ctx context.Context, target string, opts MirrorOptions) (*au
 		Credential:            images.StaticCredential(host, opts.Username, opts.Password),
 		DialContext:           opts.DialContext,
 		CABundle:              opts.CABundle,
+		ClientCertificate:     opts.ClientCertificate,
 	})
 	if err != nil {
 		return nil, false, err
@@ -219,6 +223,7 @@ func mirrorImages(ctx context.Context, l *layout.DistroLayout, target string, op
 		Password:              opts.Password,
 		DialContext:           opts.DialContext,
 		CABundle:              opts.CABundle,
+		ClientCertificate:     opts.ClientCertificate,
 	})
 	if err != nil {
 		return 0, err
