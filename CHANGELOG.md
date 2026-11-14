@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.1](https://github.com/colonel-byte/cargoship/compare/v0.42.0...v0.42.1) (2026-11-14)
+
+
+### Features
+
+* **zarfstate:** export the package, and read over a supplied connection ([#1118](https://github.com/colonel-byte/cargoship/issues/1118)) ([c2a1fda](https://github.com/colonel-byte/cargoship/commit/c2a1fda2e631a5d45546d0a8300f30bd5e8cc483))
+
 ## [0.42.0](https://github.com/colonel-byte/cargoship/compare/v0.41.2...v0.42.0) (2026-11-14)
 
 
