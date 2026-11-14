@@ -59,7 +59,7 @@ func PrintFindings(ctx context.Context, lintErr *lint.LintError) {
 	// Header and table go to the same stream; split across stdout and stderr, "2>/dev/null"
 	// left a headerless table and ">/dev/null" a header with no findings.
 	logger.From(ctx).Info("linting composed package definition", "name", lintErr.PackageName)
-	message.TableWithWriter(OutputWriter, []string{"Type", "Path", "Message"}, lintData)
+	message.Table(OutputWriter, []string{"Type", "Path", "Message"}, lintData)
 }
 
 // colorWrap paints str with attr when color is wanted. It defers the whole decision to
