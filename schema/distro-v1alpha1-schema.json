@@ -433,7 +433,8 @@
           "type": "string"
         },
         "name": {
-          "description": "identifies the distro package.",
+          "description": "identifies the distro package. It becomes a repository path component in every\nreference built from the package, so it is bounded -- see MaxNameLength.",
+          "maxLength": 64,
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         },
@@ -454,7 +455,8 @@
           "type": "string"
         },
         "version": {
-          "description": "is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.",
+          "description": "is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.\nIt becomes the tag in every reference built from the package, so it is bounded -- see MaxVersionLength.",
+          "maxLength": 48,
           "type": "string"
         }
       },

@@ -140,6 +140,13 @@ func validateDistro(_ context.Context, dis v1alpha1.Distro, declared api.Arches,
 		return fmt.Errorf("%s: %w", path, err)
 	}
 
+	// The schema bounds these too, but nothing on this path applies the schema -- only
+	// `cargoship validate` and an editor do -- so without this a package builds happily and
+	// fails at the registry on the far side of the gap.
+	if err := v1alpha1.ValidateReferenceLengths(dis.Metadata.Name, dis.Metadata.Version); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+
 	return nil
 }
 

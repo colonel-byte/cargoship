@@ -42,6 +42,13 @@ func ReferenceFromMetadataWithOptions(registryLocation string, pkg distro.Distro
 	if len(pkg.Metadata.Version) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
+	// Checked here as well as on the load path, because a package being published was not
+	// necessarily built by this cargoship: an archive carried from an older one has metadata
+	// that never met the bound, and oras does not enforce the repository name's own length
+	// limit, so without this the push fails as a registry error naming nothing useful.
+	if err := distro.ValidateReferenceLengths(pkg.Metadata.Name, pkg.Metadata.Version); err != nil {
+		return registry.Reference{}, err
+	}
 	if !strings.HasSuffix(registryLocation, "/") {
 		registryLocation = registryLocation + "/"
 	}
