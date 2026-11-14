@@ -47,12 +47,14 @@ type Metadata struct {
 	Architecture api.Arch `json:"architecture,omitempty" jsonschema:"default=amd64"`
 	// Architectures lists the CPU architectures this distro package targets. It supersedes Architecture, which stays valid for a package targeting a single architecture.
 	Architectures api.Arches `json:"architectures,omitempty"`
-	// Name identifies the distro package.
-	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	// Name identifies the distro package. It becomes a repository path component in every
+	// reference built from the package, so it is bounded -- see MaxNameLength.
+	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$,maxLength=64"`
 	// Description explains what this distro package does.
 	Description string `json:"description,omitempty"`
 	// Version is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.
-	Version string `json:"version,omitempty"`
+	// It becomes the tag in every reference built from the package, so it is bounded -- see MaxVersionLength.
+	Version string `json:"version,omitempty" jsonschema:"maxLength=48"`
 	// Annotations holds key-value pairs added to the OCI manifest.
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// URL sets the OCI annotation for more information about the image.
