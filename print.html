@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-88481acc.js";
+            window.path_to_searchindex_js = "searchindex-62793ae3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-10f08c0d.js"></script>
@@ -6176,15 +6176,15 @@ $ cargoship version -o json
 <tr><td><code>annotations</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>holds key-value pairs added to the OCI manifest.</td></tr>
 <tr><td><code>architecture</code></td><td><code>string</code></td><td>no</td><td><code>amd64</code></td><td>is the CPU architecture this distro package targets. Use Architectures to target more than one. One of <code>amd64</code>, <code>arm64</code>, <code>riscv64</code>.</td></tr>
 <tr><td><code>architectures</code></td><td><a href="#arches">Arches</a></td><td>no</td><td></td><td>lists the CPU architectures this distro package targets. It supersedes Architecture, which stays valid for a package targeting a single architecture.</td></tr>
-<tr><td><code>athors</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the OCI annotation for the contact details of the people or organization responsible for the image.</td></tr>
+<tr><td><code>authors</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the OCI annotation for the contact details of the people or organization responsible for the image.</td></tr>
 <tr><td><code>description</code></td><td><code>string</code></td><td>no</td><td></td><td>explains what this distro package does.</td></tr>
 <tr><td><code>documentation</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the OCI annotation for the URL to the image documentation.</td></tr>
-<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the distro package.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the distro package. It becomes a repository path component in every<br>reference built from the package, so it is bounded – see MaxNameLength.</td></tr>
 <tr><td><code>source</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the OCI annotation for the URL to the image source code.</td></tr>
 <tr><td><code>uncompressed</code></td><td><code>boolean</code></td><td>no</td><td></td><td>disables compression for this package when true.</td></tr>
 <tr><td><code>url</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the OCI annotation for more information about the image.</td></tr>
 <tr><td><code>vendor</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the OCI annotation for the name of the organization or individual that distributes the image.</td></tr>
-<tr><td><code>version</code></td><td><code>string</code></td><td>no</td><td></td><td>is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.</td></tr>
+<tr><td><code>version</code></td><td><code>string</code></td><td>no</td><td></td><td>is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.<br>It becomes the tag in every reference built from the package, so it is bounded – see MaxVersionLength.</td></tr>
 </tbody>
 </table>
 </div>
