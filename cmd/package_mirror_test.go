@@ -460,3 +460,145 @@ func TestTargetFromZarfRegistry(t *testing.T) {
 		})
 	}
 }
+
+func TestParseKubeService(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name          string
+		spec          string
+		wantNamespace string
+		wantService   string
+		wantPort      int
+		wantErr       string
+	}{
+		{
+			name:          "the default the bare flag carries",
+			spec:          defaultKubeService,
+			wantNamespace: "zarf",
+			wantService:   "zarf-docker-registry",
+			wantPort:      5000,
+		},
+		{
+			name:          "a service of another name",
+			spec:          "registry/harbor-core:8080",
+			wantNamespace: "registry",
+			wantService:   "harbor-core",
+			wantPort:      8080,
+		},
+		{
+			name:    "no namespace separator",
+			spec:    "zarf-docker-registry:5000",
+			wantErr: "takes namespace/service:port",
+		},
+		{
+			name:    "no port",
+			spec:    "zarf/zarf-docker-registry",
+			wantErr: "takes namespace/service:port",
+		},
+		{
+			name:    "empty namespace",
+			spec:    "/zarf-docker-registry:5000",
+			wantErr: "names no namespace",
+		},
+		{
+			name:    "empty service",
+			spec:    "zarf/:5000",
+			wantErr: "names no service",
+		},
+		{
+			name:    "a port that is not a number",
+			spec:    "zarf/zarf-docker-registry:https",
+			wantErr: "which is not a port number",
+		},
+		{
+			name:    "a port out of range",
+			spec:    "zarf/zarf-docker-registry:70000",
+			wantErr: "which is not a port number",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ns, svc, port, err := parseKubeService(tt.spec)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantNamespace, ns)
+			require.Equal(t, tt.wantService, svc)
+			require.Equal(t, tt.wantPort, port)
+		})
+	}
+}
+
+// TestReadsZarfState pins the rule that removed a redundant flag: --via-kube with no destination
+// named implies --from-zarf-state, because "route into the cluster, destination unspecified" has
+// one sensible answer. --config cannot imply it, since --config alone means something else -- read
+// the proxy a cluster configuration declares -- so the pairing stays explicit there.
+func TestReadsZarfState(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name          string
+		fromZarfState bool
+		viaKube       string
+		explicit      string
+		want          bool
+	}{
+		{
+			name:          "asked for outright",
+			fromZarfState: true,
+			want:          true,
+		},
+		{
+			name:    "a bare --via-kube implies it",
+			viaKube: defaultKubeService,
+			want:    true,
+		},
+		{
+			name:     "a named destination means nothing is read from state",
+			viaKube:  "registry/harbor-core:8080",
+			explicit: "harbor.internal",
+			want:     false,
+		},
+		{
+			name:          "both together is still a state read",
+			fromZarfState: true,
+			viaKube:       defaultKubeService,
+			want:          true,
+		},
+		{
+			name:          "a named destination does not override an explicit --from-zarf-state",
+			fromZarfState: true,
+			explicit:      "harbor.internal",
+			want:          true,
+		},
+		{
+			name: "neither",
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tt.want, readsZarfState(tt.fromZarfState, tt.viaKube, tt.explicit))
+		})
+	}
+}
+
+// TestViaKubeRejectsTwoTunnels covers the one combination --via-kube still refuses. Two routes to
+// the same registry is not a fallback worth having: they authenticate differently, so a push that
+// silently took the other one is one whose failure an operator cannot reason about.
+func TestViaKubeRejectsTwoTunnels(t *testing.T) {
+	t.Parallel()
+
+	o := registryTargetFlags{
+		fromZarfState: true,
+		viaKube:       defaultKubeService,
+		config:        "./cluster.yaml",
+	}
+	_, err := o.resolveTarget(context.Background(), "")
+	require.ErrorContains(t, err, "not both")
+}

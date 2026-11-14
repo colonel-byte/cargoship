@@ -43,21 +43,22 @@ $ cargoship mirror ./cargoship-rke2-amd64-0.1.0.tar.zst --from-zarf-state --conf
 ### Options
 
 ```
-  -a, --architecture string                     Architecture for OCI images and Zarf packages
-  -f, --config PATH                             PATH of a cluster configuration to read the registry from. See docs/guides/mirror-registry.md.
-      --context NAME                            NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
-      --files[=true|false]                      Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
-      --from-zarf-state[=true|false]            Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md.
-  -h, --help[=true|false]                       help for mirror
-      --images[=true|false]                     Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
-      --insecure-skip-tls-verify[=true|false]   Skip validating the registry's TLS certificate. Reduces security; use only with reason.
-  -k, --key string                              Path to public key file for validating signed packages
-      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --plain-http[=true|false]                 Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
-      --retries int                             Number of retries to perform for Cargoship's operations, such as package publishes.
-      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
-      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
-      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -a, --architecture string                                   Architecture for OCI images and Zarf packages
+  -f, --config PATH                                           PATH of a cluster configuration to read the registry from. See docs/guides/mirror-registry.md.
+      --context NAME                                          NAME of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one.
+      --files[=true|false]                                    Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given.
+      --from-zarf-state[=true|false]                          Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md.
+  -h, --help[=true|false]                                     help for mirror
+      --images[=true|false]                                   Mirror only the images the package carries. Mutually exclusive with --files; both are mirrored when neither is given.
+      --insecure-skip-tls-verify[=true|false]                 Skip validating the registry's TLS certificate. Reduces security; use only with reason.
+  -k, --key string                                            Path to public key file for validating signed packages
+      --oci-concurrency int                                   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
+      --retries int                                           Number of retries to perform for Cargoship's operations, such as package publishes.
+      --tmpdir string                                         Specify the temporary directory to use for intermediate files (default "/tmp")
+      --verify verifyMode                                     Verify the Cargoship package signature. (default if-possible)
+      --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Implies --from-zarf-state.
+      --zarf-cache string                                     Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands

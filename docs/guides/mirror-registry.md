@@ -101,9 +101,39 @@ Any controller will do, since the API server listens on loopback on every contro
 
 One thing to know about it: throughput is whatever a single SSH connection gives you, so mirroring many gigabytes this way is slower than a direct push. `--oci-concurrency` opens more channels, but they share the one TCP connection.
 
+#### Tunnelling through the API server
+
+Pass `--via-kube` and the push is carried through the Kubernetes API server's port-forward subresource instead, needing nothing but your kubeconfig:
+
+```
+cargoship mirror ./package.tar.zst --via-kube
+```
+
+`--from-zarf-state` is implied, so it need not be passed: routing into the cluster without naming a destination has one sensible answer, which is the registry that cluster's state records. `--config` cannot imply it the same way, because `--config` on its own means something else entirely -- read the proxy a cluster configuration declares -- so that pairing stays explicit.
+
+**This is the route for a cluster with no SSH.** k3d and kind nodes are containers with no `sshd`, and Talos runs no shell at all, so the SSH tunnel above cannot reach them however the inventory is written. It is also the route when you have a kubeconfig and no host credentials, which is the ordinary situation on a development cluster.
+
+The bare flag reaches `zarf/zarf-docker-registry:5000`, the service Zarf's init package stands the registry up as. Give it a value to name another, as `namespace/service:port`:
+
+```
+cargoship mirror ./package.tar.zst --via-kube registry/harbor-core:8080 oci://harbor.internal
+```
+
+Naming a destination is what makes an in-cluster registry that is **not** Zarf's reachable. An `oci://` argument suppresses the implied state read, so the reference and the credentials are yours -- from the Docker configuration, as everywhere else -- and only the route comes from `--via-kube`. There is no `zarf-state` secret involved, and none has to exist.
+
+The service has to be named because Zarf's state does not record one. What the state records is the address a **node** reaches the registry on -- a NodePort, or the per-node host port the registry proxy listens on -- and neither names anything the API server can forward to. Zarf's own marker service, the one labelled `zarf.dev/connect-name=registry`, carries the namespace and the port but has no selector and therefore no endpoints, which leaves the backing service's name as the one piece that has to be stated.
+
+As with the SSH tunnel, the reference host stays the address Zarf recorded even though nothing dials it. The tunnel decides only where the bytes go, so the mirror is still populated under the reference a node will ask for.
+
+What it needs that the SSH route does not is a reachable API server, which is the thing the SSH route exists to avoid. On an air-gapped fleet whose firewall admits port 22 and nothing else, `--config` remains the only route. Passing both is an error rather than a fallback: they authenticate differently and reach the registry by different routes, so a push that silently took the other one is one whose failure you cannot reason about.
+
+Throughput is not the concern it is for SSH. A port-forward here is one websocket per connection rather than a shared session, so `--oci-concurrency` buys real parallelism, and a 500MB push measured within 5% of the same push through `kubectl port-forward`.
+
+One certificate note: Zarf's registry serves TLS for its in-cluster name, and the reference host is the loopback address Zarf recorded for a node, so hostname validation will not match. `--insecure-skip-tls-verify` is the answer, and it is as safe here as it looks unsafe -- the connection never leaves your machine's API client, and the API server's own TLS is validated normally.
+
 #### Naming a reachable address yourself
 
-The alternative is to give the address this machine reaches the registry on and let `--from-zarf-state` supply only the credentials. A port-forward is the usual way to get one, and a `127.0.0.1` address works exactly as any other:
+The remaining alternative is to give the address this machine reaches the registry on and let `--from-zarf-state` supply only the credentials. `--via-kube` above does this for you; doing it by hand is still worth knowing, because it is what to reach for when the registry is somewhere neither tunnel goes. A port-forward is the usual way to get an address, and a `127.0.0.1` address works exactly as any other:
 
 ```
 kubectl port-forward -n zarf svc/zarf-docker-registry 5000:5000 &
@@ -115,6 +145,37 @@ The loopback address is not treated specially -- it is a destination like any ot
 One sharp edge, which applies to every destination and not just this one: if the package's images already name the registry you are mirroring **to**, a repository prefix on the destination is silently dropped and the images are pushed back to their own references. That is zarf's `ImageTransformHostWithoutChecksum` treating the push as already done. It does not arise for a package built against upstream registries, which is the normal case.
 
 `--context` picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the `kubeconfig` setting (`KUBECONFIG`, else the standard location). `--context` without `--from-zarf-state` is an error rather than being ignored, since nothing else here reads a cluster. Under `--config` the context still chooses which cluster's credentials and API port are used, and the tunnel supplies the route to it.
+
+### The registry pod's memory limit counts what you push
+
+Mirroring several gigabytes into Zarf's in-cluster registry can kill its pod, and the reason is not the registry's own memory. Zarf's init chart gives the deployment a **2Gi memory limit**, and cgroup v2 charges a pod's limit for the **page cache** of every file it writes -- so the blobs a mirror lands become memory charged to the registry, whether or not the registry is still reading them. Where the node is short of free memory the kernel OOM-kills the container rather than reclaiming, and because each restart touches the files again it comes back as a crash loop.
+
+The signature is unmistakable once you know to look, and it is the reason to read the cgroup rather than `kubectl top`, which reports the working set and so shows a healthy figure:
+
+```
+$ kubectl -n zarf get pod -l app=docker-registry
+zarf-docker-registry-...  0/1  CrashLoopBackOff  6
+
+$ # on the node, the pod's cgroup
+memory.max      2147483648   # the 2Gi limit
+memory.current  2134671360   # pinned at it
+anon                 24576   # 24KB -- the registry process itself
+file            2127904768   # 1.98GB -- page cache from the blobs
+```
+
+Deleting the pod clears it immediately, because the cgroup goes with the pod and the replacement starts with nothing charged:
+
+```
+kubectl -n zarf delete pod -l app=docker-registry
+```
+
+To stop it recurring, give the limit room for both the process and the cache of what it writes. `zarf init` has no flag for this, so it is a change to the deployment:
+
+```
+kubectl -n zarf set resources deploy/zarf-docker-registry --limits=memory=4Gi
+```
+
+None of this is affected by how the push is routed -- `--via-kube`, `--config` and a directly dialled address all write the same bytes -- and none of it indicates anything wrong with the package or the mirror. A push interrupted this way is safe to repeat: content already landed is skipped by digest.
 
 ### A Zarf-managed mTLS registry
 

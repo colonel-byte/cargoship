@@ -61,6 +61,8 @@ const (
 	CmdPackageMirrorFlagFiles = "Mirror only the files the package stages. Mutually exclusive with --images; both are mirrored when neither is given."
 	// CmdFlagFromZarfState from-zarf-state flag, shared by mirror and ls
 	CmdFlagFromZarfState = "Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md."
+	// CmdFlagViaKube registry target flag via-kube
+	CmdFlagViaKube = "Tunnel the push through the api server to an in-cluster `SERVICE`, as namespace/service:port. Implies --from-zarf-state."
 	// CmdFlagKubeContext kubeconfig context flag, shared by mirror and ls
 	CmdFlagKubeContext = "`NAME` of the kubeconfig context holding the zarf deployment to read. Requires --from-zarf-state; defaults to the current one."
 	// CmdPackageLsShort ls short

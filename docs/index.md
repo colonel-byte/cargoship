@@ -312,7 +312,12 @@ cargoship ls --from-zarf-state --config ./cluster.yaml -o json
 
 An image keeps its repository path and its tag, and only the registry host changes: `registry.k8s.io/pause:3.10` is pushed as `harbor.internal/pause:3.10`. That is not cosmetic - it is exactly what a node asks a mirror for, because `apply` writes that same proxy address into each host's containerd configuration from `spec.config.registries[].proxy.url`. Passing `--config` reads the destination from that one field, so what gets pushed and what the nodes ask for cannot drift apart.
 
-`--from-zarf-state` reads the destination registry and its push credentials from a Zarf deployment's own state secret, over `--context` or the current kubeconfig context. Zarf's in-cluster registry sits at an address only a node can reach, so add `--config` and one SSH channel to a controller carries both the state read and the push - port 22 is the only port needed, and the kubeconfig supplies identity rather than reachability. Naming an `oci://` address this machine reaches works too, with the credentials still coming from state.
+`--from-zarf-state` reads the destination registry and its push credentials from a Zarf deployment's own state secret, over `--context` or the current kubeconfig context. Zarf's in-cluster registry sits at an address only a node can reach, so add `--config` and one SSH channel to a controller carries both the state read and the push - port 22 is the only port needed, and the kubeconfig supplies identity rather than reachability. Where the nodes have no `sshd` at all - k3d, kind, Talos - `--via-kube` carries the push through the API server's port-forward instead, needing nothing but the kubeconfig, and implying `--from-zarf-state` so it is the only flag needed. Naming an `oci://` address this machine reaches works too, with the credentials still coming from state.
+
+```sh
+# Mirror into a development cluster that has no SSH
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst --via-kube
+```
 
 A finished mirror records which package filled it, as a few kilobytes at `cargoship/NAME:VERSION`, and `ls` reads those records back. Two versions of one package are listed side by side, because the record's tag is the version - that is a registry's property, not a cluster's. `--name` lists one package without needing a credential allowed to read the registry's catalogue.
 
