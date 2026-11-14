@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/pkg/coci"
+	"github.com/colonel-byte/cargoship/pkg/images"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
@@ -51,6 +52,9 @@ type ListMirroredOptions struct {
 	// CABundle is trusted in addition to the system roots, which is how a listing reads a
 	// registry serving a certificate from a private CA. See images.ClientOptions.CABundle.
 	CABundle []byte
+	// ClientCertificate is presented to a registry that requires one of every client. See
+	// images.ClientCertificate.
+	ClientCertificate images.ClientCertificate
 	// Name scopes the listing to one package, which also avoids the registry catalogue
 	// entirely. See ListMirrored.
 	Name string
@@ -77,11 +81,12 @@ func ListMirrored(ctx context.Context, target string, opts ListMirroredOptions) 
 	}
 
 	client, plainHTTP, err := registryClient(ctx, target, MirrorOptions{
-		RemoteOptions: opts.RemoteOptions,
-		Username:      opts.Username,
-		Password:      opts.Password,
-		DialContext:   opts.DialContext,
-		CABundle:      opts.CABundle,
+		RemoteOptions:     opts.RemoteOptions,
+		Username:          opts.Username,
+		Password:          opts.Password,
+		DialContext:       opts.DialContext,
+		CABundle:          opts.CABundle,
+		ClientCertificate: opts.ClientCertificate,
 	})
 	if err != nil {
 		return nil, err

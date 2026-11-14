@@ -161,6 +161,13 @@ func orasTransport(opts ClientOptions) (*retry.Transport, error) {
 	transport = transport.Clone()
 	// Enable / Disable TLS verification based on the config
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} //nolint:gosec // the field is the operator's explicit choice
+	if !opts.ClientCertificate.IsZero() {
+		cert, err := opts.ClientCertificate.Parse()
+		if err != nil {
+			return nil, err
+		}
+		transport.TLSClientConfig.Certificates = []tls.Certificate{cert}
+	}
 	if len(opts.CABundle) > 0 {
 		pool, err := CertPool(opts.CABundle)
 		if err != nil {
@@ -209,6 +216,52 @@ type ClientOptions struct {
 	// from a private CA -- which a zarf-managed-mTLS registry does -- is reached by supplying
 	// its CA here, rather than by turning verification off.
 	CABundle []byte
+	// ClientCertificate is presented to a registry that requires one. Zero, which is the usual
+	// case, presents none. See ClientCertificate.
+	ClientCertificate ClientCertificate
+}
+
+// ClientCertificate is a PEM-encoded client certificate and the key that goes with it, for a
+// registry that requires one of every client.
+//
+// It is the other half of CABundle: that one says which server certificates to trust, this one
+// says what to present when the server asks. A zarf-managed registry needs only the first -- it
+// is configured `clientauth: verify-client-cert-if-given`, so a certificate is verified where one
+// is offered and never demanded -- while a Harbor or a Nexus set to require one needs this.
+//
+// Bytes rather than paths, for the reason distro.LoadOptions.CABundle gives: a caller holding the
+// pair in memory, a controller reading it out of a Kubernetes secret among them, does not have to
+// write either to a file first.
+type ClientCertificate struct {
+	// Certificate is the PEM-encoded certificate, and any intermediates it needs.
+	Certificate []byte
+	// Key is the PEM-encoded private key for it.
+	Key []byte
+}
+
+// IsZero reports whether neither half is set, which is the ordinary case.
+func (c ClientCertificate) IsZero() bool {
+	return len(c.Certificate) == 0 && len(c.Key) == 0
+}
+
+// Parse returns the certificate as crypto/tls wants it.
+//
+// A pair with one half missing is an error rather than a zero certificate: it is a credential
+// somebody meant to supply, and the alternative is a TLS handshake the server closes with no
+// indication of why.
+func (c ClientCertificate) Parse() (tls.Certificate, error) {
+	switch {
+	case len(c.Certificate) == 0:
+		return tls.Certificate{}, errors.New("a client certificate needs the certificate as well as the key")
+	case len(c.Key) == 0:
+		return tls.Certificate{}, errors.New("a client certificate needs the key as well as the certificate")
+	}
+
+	cert, err := tls.X509KeyPair(c.Certificate, c.Key)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("unable to read the client certificate: %w", err)
+	}
+	return cert, nil
 }
 
 // CertPool is the system roots plus the PEM certificates in caBundle.
