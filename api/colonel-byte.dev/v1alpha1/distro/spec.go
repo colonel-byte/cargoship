@@ -60,7 +60,7 @@ type Metadata struct {
 	// URL sets the OCI annotation for more information about the image.
 	URL string `json:"url,omitempty"`
 	// Authors sets the OCI annotation for the contact details of the people or organization responsible for the image.
-	Authors string `json:"athors,omitempty"`
+	Authors string `json:"authors,omitempty"`
 	// Documentation sets the OCI annotation for the URL to the image documentation.
 	Documentation string `json:"documentation,omitempty"`
 	// Source sets the OCI annotation for the URL to the image source code.
