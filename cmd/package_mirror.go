@@ -29,6 +29,7 @@ type packageMirrorOptions struct {
 	ociConcurrency int
 	images         bool
 	files          bool
+	noRecord       bool
 	registryTargetFlags
 	packageVerifyFlags
 }
@@ -50,6 +51,7 @@ func newPackageMirrorCommand() *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", resolvedConfig.DistroOpts.Retry, lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVar(&o.images, "images", false, lang.CmdPackageMirrorFlagImages)
 	cmd.Flags().BoolVar(&o.files, "files", false, lang.CmdPackageMirrorFlagFiles)
+	cmd.Flags().BoolVar(&o.noRecord, "no-record", false, lang.CmdPackageMirrorFlagNoRecord)
 	addRegistryTargetFlags(cmd, &o.registryTargetFlags)
 	cmd.MarkFlagsMutuallyExclusive("images", "files")
 	addVerifyFlags(cmd, &o.packageVerifyFlags)
@@ -110,5 +112,6 @@ func (o *packageMirrorOptions) run(ctx context.Context, args []string) error {
 		Password:       dst.password,
 		DialContext:    dst.dial,
 		CABundle:       dst.caBundle,
+		NoRecord:       o.noRecord,
 	})
 }

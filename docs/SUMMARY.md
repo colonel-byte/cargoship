@@ -182,6 +182,7 @@
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-managed-manifest-glob](agent/choice-managed-manifest-glob.md)
 - [choice-microvm-backend](agent/choice-microvm-backend.md)
+- [choice-mirror-record-layout](agent/choice-mirror-record-layout.md)
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
 - [choice-oci-file-source](agent/choice-oci-file-source.md)
 - [choice-osv-vendor-overrides](agent/choice-osv-vendor-overrides.md)

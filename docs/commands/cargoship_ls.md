@@ -10,7 +10,7 @@ Reads the record every 'cargoship mirror' leaves behind and reports which packag
 
 The registry is named the same three ways 'cargoship mirror' names it -- as an oci:// argument, with --config to read the proxy a cluster configuration declares, or with --from-zarf-state to read a zarf deployment's own registry, tunnelled over ssh when --config names the fleet.
 
-Without --name the registry's catalogue is listed, which needs a credential allowed to read it; --name reads one repository and needs no more than a pull. A listing is what was recorded, so content deleted from the registry by hand still appears.
+Records live in one repository, so a listing is a single tag query and needs no more than a pull -- which is what makes this work on ghcr.io and Docker Hub, where a registry catalogue cannot be read at all. --name narrows it to one package. A listing is what was recorded, so content deleted from the registry by hand still appears.
 
 ```
 cargoship ls [REPOSITORY] [flags]
@@ -23,7 +23,7 @@ cargoship ls [REPOSITORY] [flags]
 # List what has been mirrored into a registry:
 $ cargoship ls oci://harbor.internal
 
-# List one package's versions, without reading the registry catalogue:
+# List one package's versions, newest first:
 $ cargoship ls oci://harbor.internal --name rke2
 
 # List a zarf deployment's in-cluster registry, over ssh to a node:
@@ -42,7 +42,7 @@ $ cargoship ls oci://harbor.internal -o json
       --from-zarf-state[=true|false]                          Take the registry and its credentials from a zarf deployment. See docs/guides/mirror-registry.md.
   -h, --help[=true|false]                                     help for ls
       --insecure-skip-tls-verify[=true|false]                 Skip validating the registry's TLS certificate. Reduces security; use only with reason.
-      --name NAME                                             NAME of one package to list the mirrored versions of, instead of reading the registry's whole catalogue.
+      --name NAME                                             NAME of one package to list the recorded versions of, instead of every package in the registry.
   -o, --output outputFormat                                   Output format. Valid options are: yaml, json.
       --plain-http[=true|false]                               Allow OCI registry connections over HTTP instead of HTTPS. Reduces security; use only with reason.
       --via-kube SERVICE[="zarf/zarf-docker-registry:5000"]   Tunnel the push through the api server to an in-cluster SERVICE, as namespace/service:port. Implies --from-zarf-state.
