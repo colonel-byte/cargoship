@@ -157,3 +157,13 @@ The counter is the phase's position in the list for that module, so `docs/phases
 None of this needs configuring. The action plugin creates a temporary status file, points the module at it, polls it while the module runs, and removes it afterwards whether the run succeeded or not.
 
 Driving the binary directly gets the same progress through the same mechanism: set `CARGOSHIP_STATUS_FILE` to a path and cargoship rewrites that file as each phase starts and finishes, holding one JSON object -- `phase`, `index`, `total`, `status` (`running`, `completed`, or `failed`), `timestamp`, and `error` on a failure. The file is replaced atomically on every transition, so a reader either sees the previous phase or the current one, never a half-written object. It is removed when the run finishes. Leave the variable unset and cargoship writes nothing.
+
+A caller consuming cargoship as a library has a second way to the same answer, and the file keeps working either way:
+
+```go
+ctx, progress := phase.WithProgressSink(ctx)
+go func() { _ = apply.Run(ctx) }()
+// From anywhere: progress.Current() is the phase, its position, and its state.
+```
+
+`phase.ProgressSink` is scoped to the context rather than to the process, which is the whole reason it exists: the status file's path is global, so two applies running in one process would write the same file. One in-flight apply per object is exactly what [`cluster-api-provider-cargoship`](https://github.com/colonel-byte/cluster-api-provider-cargoship) has, and it reports the phase on its `Converged` condition. Both watchers are updated from one call inside the phase loop, so a state cannot reach one and not the other, and the file is written whether or not a sink is attached -- the Ansible plugin needs no change and has none.

@@ -632,11 +632,11 @@ func (m *Manager) Run(ctx context.Context) error {
 	totalPhases := len(m.phases)
 	for i, p := range m.phases {
 		title := p.Title()
-		heartbeat.Update(title, i+1, totalPhases, "running", nil)
+		reportProgress(ctx, title, i+1, totalPhases, StateRunning, nil)
 
 		if err := ctx.Err(); err != nil {
 			result = fmt.Errorf("context canceled before entering phase %q: %w", title, err)
-			heartbeat.Update(title, i+1, totalPhases, "failed", result)
+			reportProgress(ctx, title, i+1, totalPhases, StateFailed, result)
 			return result
 		}
 
@@ -749,10 +749,10 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 
 		if result != nil {
-			heartbeat.Update(title, i+1, totalPhases, "failed", result)
+			reportProgress(ctx, title, i+1, totalPhases, StateFailed, result)
 			return result
 		}
-		heartbeat.Update(title, i+1, totalPhases, "completed", nil)
+		reportProgress(ctx, title, i+1, totalPhases, StateCompleted, nil)
 	}
 
 	if m.DryRun {
