@@ -26,11 +26,11 @@ import (
 	clusterapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/cmd/flags"
 	"github.com/colonel-byte/cargoship/config/lang"
-	"github.com/colonel-byte/cargoship/internal/zarfstate"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"github.com/colonel-byte/cargoship/pkg/kubetunnel"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/colonel-byte/cargoship/pkg/tunnel"
+	"github.com/colonel-byte/cargoship/pkg/zarfstate"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )

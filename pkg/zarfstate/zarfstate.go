@@ -15,6 +15,11 @@
 // Package zarfstate reads the registry half of a Zarf deployment's state secret, so that a
 // mirror can be pointed at a registry Zarf already stands up and authenticate against it with
 // the credentials Zarf already generated.
+//
+// It is in pkg/ rather than internal/ because `cargoship mirror` is not the only thing that has
+// to find that registry: cluster-api-provider-cargoship discovers the packages mirrored into it
+// -- see distro.ListMirrored -- from a controller running inside the same cluster, and a second
+// hand-rolled decode of zarf's state JSON in another module is the copy that drifts.
 package zarfstate
 
 import (
@@ -86,6 +91,12 @@ type Registry struct {
 	NodePort     int    `json:"nodePort"`
 	PushUsername string `json:"pushUsername"`
 	PushPassword string `json:"pushPassword"`
+	// PullUsername and PullPassword are the read-only half, and are all a consumer that only
+	// reads the registry needs -- listing what has been mirrored into it, and pulling a
+	// package back out. decode still insists on the push credentials rather than these,
+	// because zarf writes both and the push half is what a mirror cannot proceed without.
+	PullUsername string `json:"pullUsername"`
+	PullPassword string `json:"pullPassword"`
 	Mode         string `json:"registryMode"`
 	MTLSStrategy string `json:"mtlsStrategy"`
 }
@@ -111,6 +122,16 @@ func (r Registry) UsesMTLS() bool {
 
 // Options say which cluster to read, and how to reach it.
 type Options struct {
+	// RESTConfig is the connection to read over, instead of resolving a kubeconfig. Setting it
+	// makes Kubeconfig and Context moot.
+	//
+	// It exists for the caller that already holds a connection and has no kubeconfig to name:
+	// a controller running inside the cluster is configured from its service account, and
+	// pointing it at the standard kubeconfig location finds nothing there.
+	//
+	// It is copied before Dial is applied to it, so a config shared with the rest of a
+	// caller's process is left as it was found.
+	RESTConfig *rest.Config
 	// Kubeconfig is the file to read. Empty takes the ambient configuration -- KUBECONFIG, else
 	// the standard location.
 	Kubeconfig string
@@ -128,7 +149,7 @@ type Options struct {
 
 // Load reads the registry half of the zarf-state secret.
 func Load(ctx context.Context, opts Options) (Registry, error) {
-	restConfig, err := RESTConfig(opts.Kubeconfig, opts.Context)
+	restConfig, err := restConfigFor(opts)
 	if err != nil {
 		return Registry{}, err
 	}
@@ -155,7 +176,7 @@ func Load(ctx context.Context, opts Options) (Registry, error) {
 // itself does not require one from a direct client, so a push authenticates with the push
 // credentials from state and nothing more.
 func LoadCABundle(ctx context.Context, opts Options) ([]byte, error) {
-	restConfig, err := RESTConfig(opts.Kubeconfig, opts.Context)
+	restConfig, err := restConfigFor(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -257,6 +278,19 @@ func RESTConfig(kubeconfig, kubeContext string) (*rest.Config, error) {
 		return nil, fmt.Errorf("unable to read the kubeconfig: %w", err)
 	}
 	return restConfig, nil
+}
+
+// restConfigFor is the connection a read travels over: the one the caller supplied, or the
+// kubeconfig this package resolves itself.
+//
+// The supplied one is copied because Load and LoadCABundle both set Dial on what they get back,
+// and a caller's own config -- a controller manager's, typically -- is shared with every other
+// client built from it.
+func restConfigFor(opts Options) (*rest.Config, error) {
+	if opts.RESTConfig != nil {
+		return rest.CopyConfig(opts.RESTConfig), nil
+	}
+	return RESTConfig(opts.Kubeconfig, opts.Context)
 }
 
 // decode reads the registry out of the state JSON. It is separate from Load because this is

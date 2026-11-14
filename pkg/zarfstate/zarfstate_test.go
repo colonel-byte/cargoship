@@ -15,10 +15,14 @@
 package zarfstate
 
 import (
+	"context"
 	"encoding/base64"
+	"net"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
 )
 
 // TestDecode covers reading zarf's state JSON. The shape is zarf's, not ours, so these cases
@@ -39,6 +43,8 @@ func TestDecode(t *testing.T) {
 				NodePort:     31999,
 				PushUsername: "zarf-push",
 				PushPassword: "secret",
+				PullUsername: "zarf-pull",
+				PullPassword: "other",
 				Mode:         ModeNodePort,
 			},
 		},
@@ -203,4 +209,43 @@ func TestSecretKey(t *testing.T) {
 			require.Equal(t, tt.want, string(got))
 		})
 	}
+}
+
+func TestRESTConfigFor(t *testing.T) {
+	t.Run("a supplied config is what the read travels over", func(t *testing.T) {
+		supplied := &rest.Config{Host: "https://in-cluster.example:443", BearerToken: "token"}
+
+		got, err := restConfigFor(Options{
+			RESTConfig: supplied,
+			// Ignored, which is the point: a caller holding a connection is not also
+			// expected to have a kubeconfig naming the same cluster.
+			Kubeconfig: "/does/not/exist",
+			Context:    "nor-this-one",
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, supplied.Host, got.Host)
+		require.Equal(t, supplied.BearerToken, got.BearerToken)
+	})
+
+	t.Run("the copy is what gets dialled, not the caller's own config", func(t *testing.T) {
+		supplied := &rest.Config{Host: "https://in-cluster.example:443"}
+
+		got, err := restConfigFor(Options{RESTConfig: supplied})
+		require.NoError(t, err)
+
+		// Load and LoadCABundle both do this to what they are handed.
+		got.Dial = func(context.Context, string, string) (net.Conn, error) { return nil, nil }
+
+		require.NotSame(t, supplied, got)
+		require.Nil(t, supplied.Dial)
+	})
+
+	t.Run("no config falls back to the kubeconfig, and reports a missing one", func(t *testing.T) {
+		t.Setenv("KUBECONFIG", filepath.Join(t.TempDir(), "absent"))
+
+		_, err := restConfigFor(Options{})
+
+		require.ErrorContains(t, err, "unable to read the kubeconfig")
+	})
 }
