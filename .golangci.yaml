@@ -22,6 +22,15 @@ linters:
       # magefiles/pkg/ is ordinary Go and is linted like the rest of the module.
       - magefiles/[^/]*\.go$
       - magefiles/core/
+    rules:
+      # Zarf 1.0 deprecated its whole v1alpha1 surface -- the API types, the variables
+      # package and the convert helpers. Cargoship calls them deliberately: it still reads
+      # v1alpha1 zarf packages, and the onCreate templating in pkg/packager/assemble has no
+      # v1beta1 equivalent yet. Scoped to that one deprecation notice, so any other
+      # deprecated call still fails the lint. See #1109.
+      - linters:
+          - staticcheck
+        text: "SA1019: .*deprecated: Only supported by deprecated v1alpha1 packages"
   enable:
     - errcheck
     - errorlint

@@ -41,7 +41,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/txn2/txeh v1.8.1
 	github.com/xeipuuv/gojsonschema v1.2.0
-	github.com/zarf-dev/zarf v1.0.0
+	github.com/zarf-dev/zarf v1.0.1
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sync v0.25.0
 	golang.org/x/term v0.48.0
