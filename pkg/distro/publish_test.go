@@ -16,6 +16,7 @@ package distro
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"oras.land/oras-go/v2/registry"
@@ -81,5 +82,28 @@ func TestPushToRemoteUsesPlatformAndOptions(t *testing.T) {
 	err := pushToRemote(ctx, layout, ref, opts)
 	if err == nil {
 		t.Fatalf("pushToRemote with invalid cache path did not error")
+	}
+}
+
+// The transport half of PublishOptions has to reach the remote, which is what lets a publish
+// follow a mirror into a registry behind a tunnel or a private CA. A bundle holding no
+// certificate is the cheapest proof that it is read at all: the failure comes from building the
+// transport, before anything is dialled.
+func TestPublishTransportOptionsAreUsed(t *testing.T) {
+	ctx := context.Background()
+	distroLayout := &layout.DistroLayout{}
+	distroLayout.Distro.Metadata.Architecture = "amd64"
+	ref := registry.Reference{Registry: "example.com", Repository: "repo"}
+
+	err := pushToRemote(ctx, distroLayout, ref, PublishOptions{
+		Retries:   1,
+		CachePath: t.TempDir(),
+		CABundle:  []byte("this is not a certificate"),
+	})
+	if err == nil {
+		t.Fatal("pushToRemote with an unusable CA bundle returned no error")
+	}
+	if !strings.Contains(err.Error(), "no certificate found in the CA bundle") {
+		t.Fatalf("pushToRemote error = %q, want the CA bundle to have been read", err)
 	}
 }

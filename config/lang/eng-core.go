@@ -42,7 +42,8 @@ const (
 		"Each file is pushed as a single-layer OCI artifact named after the file and tagged with a digest of the source URL the definition declared, which keeps two releases of the same filename apart.\n\n" +
 		"Give the registry as an oci:// reference, optionally with a repository prefix for a registry that will not accept a push at its root. Give --config instead and the address is read from the registry proxy the cluster configuration declares, which is the same field cargoship writes into each host, so the two cannot disagree. Credentials come from the Docker configuration file, as they do for every other cargoship registry operation.\n\n" +
 		"--from-zarf-state reads the destination and the push credentials from a zarf deployment's state instead. Its in-cluster registry sits at an address only a node can reach, so either add --config to tunnel the push through a node over ssh, or name an address this machine reaches.\n\n" +
-		"A finished mirror records which package populated it, under cargoship:_mirror.NAME.VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed."
+		"A finished mirror records which package populated it, under cargoship:_mirror.NAME.VERSION, so that 'cargoship ls' can answer what a registry holds. The record is a few kilobytes and is written only once everything else has landed.\n\n" +
+		"--publish adds the package itself, as 'cargoship publish --record' would have, once the mirror has landed. The two answer different questions -- what a node pulls at runtime, and what a consumer pulls to install with -- and a registry holding only the first is one a consumer cannot install from. An air gap generally wants both."
 	// CmdPackageMirrorExample mirror example
 	CmdPackageMirrorExample = "\n" +
 		"# Mirror everything the package carries into a registry:\n" +
@@ -83,6 +84,8 @@ const (
 		"$ cargoship ls oci://harbor.internal -o json\n"
 	// CmdPackageMirrorFlagNoRecord mirror flag no-record
 	CmdPackageMirrorFlagNoRecord = "Skip the record a finished mirror writes about itself, which is what makes `cargoship ls` able to see it."
+	// CmdPackageMirrorFlagPublish mirror flag publish
+	CmdPackageMirrorFlagPublish = "Also publish the package itself to the same registry, so a consumer can pull it. See docs/guides/mirror-registry.md."
 	// CmdPackagePublishFlagRecord publish flag record
 	CmdPackagePublishFlagRecord = "Record the published package so `cargoship ls` can find it and resolve the newest version. Off by default."
 	// CmdPackageLsFlagName ls flag name

@@ -155,27 +155,16 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.DistroLayout, er
 	platform := oci.PlatformForArch(opts.Architecture)
 	mods := []oci.Modifier{oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod}
 	// Either one needs a transport of its own: a CA to trust the server with, a certificate to
-	// present when the server asks for one, or both.
-	if len(opts.CABundle) > 0 || !opts.ClientCertificate.IsZero() {
-		base, ok := http.DefaultTransport.(*http.Transport)
-		if !ok {
-			return nil, errors.New("could not get default transport")
-		}
-		transport := base.Clone()
-		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
-		if len(opts.CABundle) > 0 {
-			pool, err := images.CertPool(opts.CABundle)
-			if err != nil {
-				return nil, err
-			}
-			transport.TLSClientConfig.RootCAs = pool
-		}
-		if !opts.ClientCertificate.IsZero() {
-			cert, err := opts.ClientCertificate.Parse()
-			if err != nil {
-				return nil, err
-			}
-			transport.TLSClientConfig.Certificates = []tls.Certificate{cert}
+	// present when the server asks for one, or both. Built by images.Transport, which is what
+	// a push and a registry listing build theirs with too.
+	clientOptions := images.ClientOptions{
+		CABundle:          opts.CABundle,
+		ClientCertificate: opts.ClientCertificate,
+	}
+	if !clientOptions.IsZero() {
+		transport, err := images.Transport(clientOptions)
+		if err != nil {
+			return nil, err
 		}
 		// Modifier order does not matter: WithTransport re-applies an insecure flag that was
 		// already set, so --insecure-skip-tls-verify still wins over a bundle given with it.

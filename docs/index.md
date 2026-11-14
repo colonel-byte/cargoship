@@ -305,6 +305,9 @@ cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://registry.internal:
 # Or into a Zarf deployment's in-cluster registry, tunnelled over SSH to a node
 cargoship mirror ./build/cargoship-distro-amd64.tar.zst --from-zarf-state --config ./cluster.yaml
 
+# Or both halves at once: the content a node pulls, and the package a consumer installs from
+cargoship mirror ./build/cargoship-distro-amd64.tar.zst oci://harbor.internal --publish
+
 # Then ask a registry which packages have been mirrored into it
 cargoship ls oci://harbor.internal
 cargoship ls --from-zarf-state --config ./cluster.yaml -o json
@@ -323,7 +326,9 @@ cargoship publish ./build/cargoship-distro-amd64.tar.zst oci://ghcr.io/colonel-b
 cargoship ls oci://ghcr.io/colonel-byte --name rancher-rke2-multi-cni-cilium -o json
 ```
 
-A finished mirror records which package filled it, as a few kilobytes at `cargoship/NAME:VERSION`, and `ls` reads those records back. Two versions of one package are listed side by side, because the record's tag is the version - that is a registry's property, not a cluster's. `--name` lists one package without needing a credential allowed to read the registry's catalogue.
+A finished mirror records which package filled it, as a few kilobytes at `cargoship:_mirror.NAME.VERSION`, and `ls` reads those records back. Two versions of one package are listed side by side, because the record's tag carries the version - that is a registry's property, not a cluster's. `--name` lists one package without needing a credential allowed to read the registry's catalogue.
+
+`--publish` writes the package itself as well, through the same transport and credentials the mirror used, leaving `cargoship:_package.NAME.VERSION` beside the mirror's own record. Reach for it where something downstream has to *install* from this registry rather than pull images through it: a mirror alone holds everything a node asks for at runtime and no artifact to install from, which is the shape [`cluster-api-provider-cargoship`](https://github.com/colonel-byte/cluster-api-provider-cargoship) reports as "recorded as mirrored into this registry but not published into it".
 
 See [Mirroring to a Registry](guides/mirror-registry.md) for the naming rules, what a record holds, and how this compares with `--registry-override` and `--content-store`.
 

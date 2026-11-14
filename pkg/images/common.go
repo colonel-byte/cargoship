@@ -153,14 +153,26 @@ func addNameAnnotationsToDesc(desc ocispec.Descriptor, ref string) ocispec.Descr
 	return desc
 }
 
-func orasTransport(opts ClientOptions) (*retry.Transport, error) {
-	transport, ok := http.DefaultTransport.(*http.Transport)
+// Transport is the HTTP transport a set of ClientOptions implies: TLS as the CA bundle, the
+// client certificate and InsecureSkipTLSVerify describe it, and the dialer where one carries the
+// connection somewhere other than the reference's own host.
+//
+// Exported because not every consumer of these settings reaches a registry through a client of
+// ours. Zarf's OCI package takes an *http.Transport through oci.WithTransport, which is how a
+// publish and a package pull reach a registry behind a tunnel or a private CA, and building the
+// same thing a second time beside each of them is how two transports come to disagree about one
+// registry. orasTransport is this plus the retry policy.
+func Transport(opts ClientOptions) (*http.Transport, error) {
+	base, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
 		return nil, errors.New("could not get default transport")
 	}
-	transport = transport.Clone()
+	transport := base.Clone()
 	// Enable / Disable TLS verification based on the config
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} //nolint:gosec // the field is the operator's explicit choice
+	transport.TLSClientConfig = &tls.Config{ //nolint:gosec // InsecureSkipVerify is the operator's explicit choice
+		InsecureSkipVerify: opts.InsecureSkipTLSVerify,
+		MinVersion:         tls.VersionTLS12,
+	}
 	if !opts.ClientCertificate.IsZero() {
 		cert, err := opts.ClientCertificate.Parse()
 		if err != nil {
@@ -174,7 +186,6 @@ func orasTransport(opts ClientOptions) (*retry.Transport, error) {
 			return nil, err
 		}
 		transport.TLSClientConfig.RootCAs = pool
-		transport.TLSClientConfig.MinVersion = tls.VersionTLS12
 	}
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
 	transport.ResponseHeaderTimeout = opts.ResponseHeaderTimeout
@@ -183,6 +194,21 @@ func orasTransport(opts ClientOptions) (*retry.Transport, error) {
 		// A cloned DefaultTransport carries HTTP/2, which negotiates over the dialled
 		// connection and would have to be proxied too. Nothing needs it here.
 		transport.ForceAttemptHTTP2 = false
+	}
+	return transport, nil
+}
+
+// IsZero reports whether a set of options asks for nothing a default transport does not already
+// do, in which case a caller handing a transport to somebody else should hand them none.
+func (o ClientOptions) IsZero() bool {
+	return !o.InsecureSkipTLSVerify && len(o.CABundle) == 0 && o.ClientCertificate.IsZero() &&
+		o.DialContext == nil && o.ResponseHeaderTimeout == 0
+}
+
+func orasTransport(opts ClientOptions) (*retry.Transport, error) {
+	transport, err := Transport(opts)
+	if err != nil {
+		return nil, err
 	}
 	return retry.NewTransport(transport), nil
 }

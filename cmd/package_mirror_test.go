@@ -602,3 +602,48 @@ func TestViaKubeRejectsTwoTunnels(t *testing.T) {
 	_, err := o.resolveTarget(context.Background(), "")
 	require.ErrorContains(t, err, "not both")
 }
+
+// The reference --publish writes to, which has to be the namespace rather than a full reference:
+// Publish appends the package's own name and version, so a consumer reading the record finds the
+// artifact where the record says it is.
+func TestPublishReference(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+		want   string
+	}{
+		{
+			name:   "a host alone",
+			target: "harbor.internal",
+			want:   "harbor.internal",
+		},
+		{
+			name:   "a host and a port",
+			target: "127.0.0.1:5000",
+			want:   "127.0.0.1:5000",
+		},
+		{
+			name:   "a repository prefix is kept",
+			target: "ghcr.io/example",
+			want:   "ghcr.io/example",
+		},
+		{
+			name:   "a trailing slash is not a repository",
+			target: "127.0.0.1:5000/",
+			want:   "127.0.0.1:5000",
+		},
+		{
+			name:   "a prefix of several segments",
+			target: "harbor.internal/team/mirror",
+			want:   "harbor.internal/team/mirror",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := publishReference(tt.target).String(); got != tt.want {
+				t.Errorf("publishReference(%q) = %q, want %q", tt.target, got, tt.want)
+			}
+		})
+	}
+}
