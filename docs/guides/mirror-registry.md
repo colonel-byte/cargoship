@@ -146,6 +146,37 @@ One sharp edge, which applies to every destination and not just this one: if the
 
 `--context` picks the kubeconfig context the state is read from, defaulting to the current one, and completes from your kubeconfig on tab. The file itself is the `kubeconfig` setting (`KUBECONFIG`, else the standard location). `--context` without `--from-zarf-state` is an error rather than being ignored, since nothing else here reads a cluster. Under `--config` the context still chooses which cluster's credentials and API port are used, and the tunnel supplies the route to it.
 
+### The registry pod's memory limit counts what you push
+
+Mirroring several gigabytes into Zarf's in-cluster registry can kill its pod, and the reason is not the registry's own memory. Zarf's init chart gives the deployment a **2Gi memory limit**, and cgroup v2 charges a pod's limit for the **page cache** of every file it writes -- so the blobs a mirror lands become memory charged to the registry, whether or not the registry is still reading them. Where the node is short of free memory the kernel OOM-kills the container rather than reclaiming, and because each restart touches the files again it comes back as a crash loop.
+
+The signature is unmistakable once you know to look, and it is the reason to read the cgroup rather than `kubectl top`, which reports the working set and so shows a healthy figure:
+
+```
+$ kubectl -n zarf get pod -l app=docker-registry
+zarf-docker-registry-...  0/1  CrashLoopBackOff  6
+
+$ # on the node, the pod's cgroup
+memory.max      2147483648   # the 2Gi limit
+memory.current  2134671360   # pinned at it
+anon                 24576   # 24KB -- the registry process itself
+file            2127904768   # 1.98GB -- page cache from the blobs
+```
+
+Deleting the pod clears it immediately, because the cgroup goes with the pod and the replacement starts with nothing charged:
+
+```
+kubectl -n zarf delete pod -l app=docker-registry
+```
+
+To stop it recurring, give the limit room for both the process and the cache of what it writes. `zarf init` has no flag for this, so it is a change to the deployment:
+
+```
+kubectl -n zarf set resources deploy/zarf-docker-registry --limits=memory=4Gi
+```
+
+None of this is affected by how the push is routed -- `--via-kube`, `--config` and a directly dialled address all write the same bytes -- and none of it indicates anything wrong with the package or the mirror. A push interrupted this way is safe to repeat: content already landed is skipped by digest.
+
 ### A Zarf-managed mTLS registry
 
 `zarf init` can manage the registry's certificates itself, recording `mtlsStrategy: zarf-managed` in state - and from Zarf v1.0.0 that is what a default deployment does. Two things follow, and `--from-zarf-state` handles both without a flag.
