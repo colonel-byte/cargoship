@@ -218,7 +218,7 @@ func (c *Connection) configureKeepalive(options *Options) {
 // returns has not yet contacted the host.
 func NewConnection(cfg Config, opts ...Option) (*Connection, error) {
 	options := NewOptions(opts...)
-	options.InjectLoggerTo(cfg, log.KeyProtocol, "ssh-config")
+	options.InjectLoggerTo(&cfg, log.KeyProtocol, "ssh-config")
 	if options.IgnoreSSHConfig {
 		cfg.IgnoreSSHConfig = true
 	}
@@ -398,7 +398,15 @@ func (c *Connection) IPAddress() string {
 	return c.Address
 }
 
+// keepaliveTimeout bounds how long IsConnected waits for the server to answer
+// its keepalive. A var, not a const, so tests can lower it.
+var keepaliveTimeout = 10 * time.Second
+
 // IsConnected returns true if the connection is open.
+//
+// It asks the server for a reply. A server that does not answer within
+// keepaliveTimeout is taken to be gone: the connection is closed, which also
+// releases anything else waiting on it, and IsConnected returns false.
 func (c *Connection) IsConnected() bool {
 	c.mu.Lock()
 	client := c.client
@@ -406,8 +414,29 @@ func (c *Connection) IsConnected() bool {
 	if client == nil || client.Conn == nil {
 		return false
 	}
-	_, _, err := client.SendRequest("keepalive@rig", true, nil)
-	return err == nil
+
+	// SendRequest waits for the reply with no way to cancel it, and a
+	// connection that has gone silent never sends one.
+	reply := make(chan error, 1)
+	go func() {
+		_, _, err := client.SendRequest("keepalive@rig", true, nil)
+		reply <- err
+	}()
+
+	timer := time.NewTimer(keepaliveTimeout)
+	defer timer.Stop()
+	select {
+	case err := <-reply:
+		return err == nil
+	case <-timer.C:
+		c.Log().Debug("ssh keepalive went unanswered, closing the connection", log.HostAttr(c))
+		c.mu.Lock()
+		if c.client == client {
+			c.disconnect()
+		}
+		c.mu.Unlock()
+		return false
+	}
 }
 
 // ConfigParser is an instance of rig/v2/sshconfig.Parser - it is exported here for weird design decisions made in rig v0.x and will be removed in rig v2 final.
@@ -457,8 +486,11 @@ func (c *Connection) disconnect() {
 		close(c.done)
 		c.done = nil
 	}
-	c.client.Close()
-	c.client = nil
+	// The transport goes first. Closing the client sends a close over the
+	// proxy command or the bastion's forwarded channel, which blocks if that
+	// link has stalled; with the link already torn down it returns at once.
+	// A bastion's own Disconnect does the same, so nested bastions are torn
+	// down from the bottom up.
 	if c.proxyCmd != nil {
 		if c.proxyCmd.Process != nil {
 			buildKillFunc(c.proxyCmd)()
@@ -469,6 +501,8 @@ func (c *Connection) disconnect() {
 		c.bastion.Disconnect()
 		c.bastion = nil
 	}
+	c.client.Close()
+	c.client = nil
 }
 
 // Disconnect closes the SSH connection.
@@ -1241,11 +1275,12 @@ func (c *Connection) connectViaBastion(ctx context.Context, dst string, config *
 	if !deadline.IsZero() {
 		_ = bconn.SetDeadline(deadline)
 	}
-	client, chans, reqs, err := ssh.NewClientConn(bconn, dst, config)
+	recorder := newPreVersionRecorder(bconn)
+	client, chans, reqs, err := ssh.NewClientConn(recorder, dst, config)
 	agentClose()
 	if err != nil {
 		_ = bconn.Close()
-		return classifyHandshakeError(err, "bastion client connect")
+		return recorder.annotate(classifyHandshakeError(err, "bastion client connect"))
 	}
 	if !deadline.IsZero() {
 		_ = bconn.SetDeadline(time.Time{})
@@ -1449,11 +1484,12 @@ func (c *Connection) Connect(ctx context.Context) error {
 	if !deadline.IsZero() {
 		_ = conn.SetDeadline(deadline)
 	}
-	ncc, chans, reqs, err := ssh.NewClientConn(conn, dst, config)
+	recorder := newPreVersionRecorder(conn)
+	ncc, chans, reqs, err := ssh.NewClientConn(recorder, dst, config)
 	agentClose()
 	if err != nil {
 		_ = conn.Close()
-		return classifyHandshakeError(err, "ssh dial")
+		return recorder.annotate(classifyHandshakeError(err, "ssh dial"))
 	}
 	_ = conn.SetDeadline(time.Time{})
 	c.mu.Lock()
@@ -1540,6 +1576,17 @@ func (c *Connection) pkeySigner(ctx context.Context, agentSigners []ssh.Signer, 
 
 // StartProcess executes a command on the remote host and uses the passed in streams for stdin, stdout and stderr. It returns a Waiter with a .Wait() function that
 // blocks until the command finishes and returns an error if the exit code is not zero.
+//
+// Starting the command and waiting for it are bounded by ctx even when the
+// connection has gone silent. If ctx is done before the command ends, the
+// command is interrupted, and if it has not ended after a short grace period
+// Wait returns ctx's error. On that path, and when StartProcess itself
+// returns an error with ctx done, the goroutines copying the command's
+// streams can still be running: they are cut loose from stdout and stderr
+// first, and stop reading stdin at its next read, but a read or write already
+// in progress cannot be interrupted. A caller that recycles or closes any of
+// the three streams must therefore not do so after a context error from
+// either.
 func (c *Connection) StartProcess(ctx context.Context, cmd string, stdin io.Reader, stdout, stderr io.Writer) (protocol.Waiter, error) {
 	c.mu.Lock()
 	client := c.client
@@ -1549,8 +1596,11 @@ func (c *Connection) StartProcess(ctx context.Context, cmd string, stdin io.Read
 		return nil, errNotConnected
 	}
 
-	session, err := client.NewSession()
+	session, err := newSession(ctx, client)
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("create ssh session: %w", err)
+		}
 		log.Trace(ctx, "ssh session creation failed, attempting reconnect", log.HostAttr(c), log.KeyError, err)
 		c.mu.Lock()
 		c.disconnect()
@@ -1565,29 +1615,31 @@ func (c *Connection) StartProcess(ctx context.Context, cmd string, stdin io.Read
 		if client == nil {
 			return nil, errNotConnected
 		}
-		session, err = client.NewSession()
+		session, err = newSession(ctx, client)
 		if err != nil {
 			return nil, fmt.Errorf("create ssh session: %w", err)
 		}
 	}
 
-	session.Stdin = stdin
-	session.Stdout = stdout
-	session.Stderr = stderr
+	if stdin != nil {
+		session.Stdin = ctxReader{ctx: ctx, reader: stdin}
+	}
+	if stdout == nil {
+		stdout = io.Discard
+	}
+	if stderr == nil {
+		stderr = io.Discard
+	}
+	outW := &detachableWriter{w: stdout}
+	errW := &detachableWriter{w: stderr}
+	session.Stdout = outW
+	session.Stderr = errW
 
-	go func() {
-		<-ctx.Done()
-		if ctx.Err() != nil {
-			_ = session.Signal(ssh.SIGINT)
-			_ = session.Close()
-		}
-	}()
-
-	if err := session.Start(cmd); err != nil {
+	if err := startSession(ctx, session, cmd, outW, errW); err != nil {
 		return nil, fmt.Errorf("start session: %w", err)
 	}
 
-	return session, nil
+	return newSessionWaiter(ctx, session, outW, errW), nil
 }
 
 // setupInteractivePTY configures a PTY on the session for a file-backed stdin

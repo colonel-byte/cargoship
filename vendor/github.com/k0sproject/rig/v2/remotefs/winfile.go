@@ -24,10 +24,12 @@ import (
 var rigrcp string
 
 var (
-	_         fs.File = (*winFile)(nil)
-	rigRcp            = ps.CompressedCmd(rigrcp)
-	errEnded          = errors.New("rigrcp ended")
-	errRemote         = errors.New("remote error")
+	_              fs.File = (*winFile)(nil)
+	rigRcp                 = ps.CompressedCmd(rigrcp)
+	errEnded               = errors.New("rigrcp ended")
+	errRemote              = errors.New("remote error")
+	errNotReadable         = fmt.Errorf("%w: file is not open for reading", fs.ErrClosed)
+	errNotWritable         = fmt.Errorf("%w: file is not open for writing", fs.ErrClosed)
 )
 
 // ErrTimeout is returned by operations on a file on a Windows host when the
@@ -41,9 +43,10 @@ var (
 var ErrTimeout = fmt.Errorf("rigrcp session stalled: %w", context.DeadlineExceeded)
 
 type rcpResponse struct {
-	Err string `json:"error"`
-	N   int64  `json:"n"`
-	Pos int64  `json:"pos"`
+	Err  string `json:"error"`
+	N    int64  `json:"n"`
+	Pos  int64  `json:"pos"`
+	Size int64  `json:"size"`
 }
 
 type winFileDirBase struct {
@@ -63,8 +66,24 @@ func (w *winFileDirBase) Stat() (fs.FileInfo, error) {
 // winFile is a file on a Windows target. It implements fs.File.
 type winFile struct {
 	winFileDirBase
-	stdin  io.WriteCloser
-	stdout *bufio.Reader
+	// pos and size are tracked here rather than asked of the helper: every
+	// read and write carries the offset it applies to, so Seek needs no
+	// round trip. size is the larger of the file's size when it was opened
+	// and the furthest offset this handle has written to.
+	pos  int64
+	size int64
+	// appending sends every write to the end of the file, as O_APPEND does
+	// for an os.File, wherever Seek last left the position. The file is not
+	// opened at its end, so reading still starts at the beginning.
+	appending bool
+	// readable and writable follow the access the caller asked for, not the
+	// wider access fAccess may open the file with on the host, so a
+	// disallowed operation fails here, whatever its size, as it does for
+	// PosixFile.
+	readable bool
+	writable bool
+	stdin    io.WriteCloser
+	stdout   *bufio.Reader
 	// stdinR and stdoutW are the far ends of the pipes behind stdin and
 	// stdout, the ones the rigrcp command itself holds. io.Pipe reports a
 	// CloseWithError to the opposite end, so closing these is what releases
@@ -73,6 +92,9 @@ type winFile struct {
 	stdoutW *io.PipeWriter
 	done    chan struct{}
 	cancel  context.CancelFunc
+	// bound is the context the filesystem is bound to. Once it is done the
+	// session is torn down, and nothing waits on the transport to say so.
+	bound context.Context //nolint:containedctx // file operations take no context of their own
 	// abortErr records why the session was torn down, if it was. Closing the
 	// pipes is what releases a parked transfer, but io.Pipe keeps the first
 	// close error it is given, so a transfer that raced the rigrcp command
@@ -213,42 +235,76 @@ func (w watchedReader) Read(p []byte) (int, error) {
 // io.SeekStart = offset from the beginning of file
 // io.SeekCurrent = offset from the current position
 // io.SeekEnd = offset from the end of file.
+//
+// Seek does not contact the host. The helper holds the file open without
+// sharing, so nothing else can change it meanwhile: its end is its size
+// when it was opened, or the furthest offset written since if that is
+// further.
 func (f *winFile) Seek(offset int64, whence int) (int64, error) {
 	if f.closed.Load() {
 		return 0, f.pathErr(OpSeek, fs.ErrClosed)
 	}
-	var seekOrigin string
+	var base int64
 	switch whence {
 	case io.SeekStart:
-		seekOrigin = "Begin"
 	case io.SeekCurrent:
-		seekOrigin = "Current"
+		base = f.pos
 	case io.SeekEnd:
-		seekOrigin = "End"
+		base = f.size
 	default:
 		return 0, f.pathErr(OpSeek, fmt.Errorf("%w: invalid whence %d", fs.ErrInvalid, whence))
 	}
-	resp, err := f.command(fmt.Sprintf("s %d %s", offset, seekOrigin))
-	if err != nil {
-		return 0, f.pathErr(OpSeek, err)
+	pos := base + offset
+	if pos < 0 {
+		return 0, f.pathErr(OpSeek, fmt.Errorf("%w: negative position %d", fs.ErrInvalid, pos))
 	}
-	return resp.Pos, nil
+	f.pos = pos
+	return pos, nil
 }
+
+// writeCommandSize is the most payload one w command carries; a larger
+// Write goes out as several. The helper reads a command's whole payload
+// into memory before writing it, and takes its length as a PowerShell
+// [int], so this bounds both. It is also how much CopyFrom reads at a time,
+// so an upload costs one command and one completion per this many bytes.
+const writeCommandSize = 4 << 20
 
 // Write writes len(p) bytes from p to the remote file.
 func (f *winFile) Write(p []byte) (int, error) {
 	if f.closed.Load() {
 		return 0, f.pathErr(OpWrite, fs.ErrClosed)
 	}
-	_, err := f.command(fmt.Sprintf("w %d", len(p)))
+	if !f.writable {
+		return 0, f.pathErr(OpWrite, errNotWritable)
+	}
+	written := 0
+	for written < len(p) {
+		n, err := f.writeCommand(p[written:min(written+writeCommandSize, len(p))])
+		written += n
+		if err != nil {
+			return written, err
+		}
+	}
+	return written, nil
+}
+
+// writeCommand sends p to the helper as one w command and waits for it to
+// reach the file. p must not be empty: writing nothing must not move the
+// end, and at a position past it the size bookkeeping below would grow the
+// file on paper only.
+func (f *winFile) writeCommand(p []byte) (int, error) {
+	pos := f.pos
+	if f.appending {
+		pos = f.size
+	}
+	_, err := f.command(fmt.Sprintf("w %d %d", len(p), pos))
 	if err != nil {
 		return 0, f.pathErr(OpWrite, err)
 	}
 	// The payload goes down the same pipe the command did and is just as
-	// unbounded: on a dead session nothing downstream ever reads it. One
-	// call can carry a whole file -- io.Copy hands a bytes.Reader's
-	// contents over in a single Write -- so it goes in chunks, letting the
-	// watchdog tell a stalled write from a large one.
+	// unbounded: on a dead session nothing downstream ever reads it. It can
+	// be up to writeCommandSize, so it goes in chunks, letting the watchdog
+	// tell a stalled write from a large one.
 	dog := f.watch(fmt.Sprintf("writing %d byte payload", len(p)))
 	defer dog.stop()
 	written := 0
@@ -260,6 +316,18 @@ func (f *winFile) Write(p []byte) (int, error) {
 		}
 		dog.progress()
 	}
+	dog.stop()
+	// The reply to "w" only said the helper was ready for the payload. This
+	// one says the payload reached the file, or why it did not.
+	if _, err := f.awaitResponse(f.readResponse(), fmt.Sprintf("completion of %d byte write", len(p))); err != nil {
+		// A failed FileStream.Write is not all or nothing, so how much of
+		// the payload reached the file, and where that left its end, is
+		// unknown. Nothing further can be trusted to land where asked.
+		f.abort(err)
+		return 0, f.pathErr(OpWrite, err)
+	}
+	f.pos = pos + int64(written)
+	f.size = max(f.size, f.pos)
 	return written, nil
 }
 
@@ -268,7 +336,10 @@ func (f *winFile) Read(p []byte) (int, error) {
 	if f.closed.Load() {
 		return 0, f.pathErr(OpRead, fs.ErrClosed)
 	}
-	resp, err := f.command(fmt.Sprintf("r %d", len(p)))
+	if !f.readable {
+		return 0, f.pathErr(OpRead, errNotReadable)
+	}
+	resp, err := f.command(fmt.Sprintf("r %d %d", len(p), f.pos))
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return 0, io.EOF // io.Copy tests for io.EOF by identity, so it must not be wrapped
@@ -284,10 +355,13 @@ func (f *winFile) Read(p []byte) (int, error) {
 	total := 0
 	for total < int(resp.N) {
 		n, err := src.Read(p[total:resp.N])
-		if err != nil {
-			return total, f.pathErr(OpRead, f.abortCause(err))
-		}
 		total += n
+		f.pos += int64(n)
+		if err != nil {
+			err = f.abortCause(err)
+			f.abort(err) // the rest of the payload would be read as the next reply
+			return total, f.pathErr(OpRead, err)
+		}
 	}
 	return total, nil
 }
@@ -302,12 +376,15 @@ func (f *winFile) CopyTo(dst io.Writer) (int64, error) {
 	if f.closed.Load() {
 		return 0, f.pathErr(OpCopyTo, fs.ErrClosed)
 	}
-	resp, err := f.command("r -1")
+	if !f.readable {
+		return 0, f.pathErr(OpCopyTo, errNotReadable)
+	}
+	resp, err := f.command(fmt.Sprintf("r -1 %d", f.pos))
 	if err != nil {
 		return 0, f.pathErr(OpCopyTo, fmt.Errorf("read: %w", err))
 	}
 	if resp.N == 0 {
-		return 0, f.pathErr(OpCopyTo, io.EOF)
+		return 0, nil
 	}
 	dog := f.watch(fmt.Sprintf("copying %d bytes", resp.N))
 	defer dog.stop()
@@ -316,44 +393,106 @@ func (f *winFile) CopyTo(dst io.Writer) (int64, error) {
 	for total < resp.N {
 		n, err := io.CopyN(dst, src, resp.N-total)
 		total += n
+		f.pos += n
 		if err != nil {
-			return total, f.pathErr(OpCopyTo, fmt.Errorf("copy: %w", f.abortCause(err)))
+			// Whether dst refused the data or the stream broke, the rest of
+			// the payload is still on its way and would be read as the next
+			// command's reply, so the session cannot be used again.
+			err = f.abortCause(err)
+			f.abort(err)
+			return total, f.pathErr(OpCopyTo, fmt.Errorf("copy: %w", err))
 		}
 	}
 	return total, nil
 }
 
-// CopyFrom copies the provided io.Reader to the remote file.
+// CopyFrom copies the provided io.Reader to the remote file. It reads src in
+// batches of up to writeCommandSize, so data reaches the file each time a
+// batch fills or src ends, not after every Read src returns.
 func (f *winFile) CopyFrom(src io.Reader) (int64, error) {
-	n, err := io.Copy(f, src)
-	if err != nil {
-		return n, f.pathErr(OpCopyFrom, fmt.Errorf("io.copy: %w", err))
+	if f.closed.Load() {
+		return 0, f.pathErr(OpCopyFrom, fs.ErrClosed)
+	}
+	if !f.writable {
+		return 0, f.pathErr(OpCopyFrom, errNotWritable)
+	}
+	// Not io.Copy: its 32 KiB buffer would make every 32 KiB a command and
+	// a completion of its own. Nor src's io.WriterTo, where it has one: an
+	// *os.File's writes 32 KiB at a time too.
+	buf := make([]byte, writeCommandSize)
+	var total int64
+	for {
+		n, readErr := fill(src, buf)
+		if n > 0 {
+			written, err := f.Write(buf[:n])
+			total += int64(written)
+			if err != nil {
+				return total, f.pathErr(OpCopyFrom, fmt.Errorf("write: %w", err))
+			}
+		}
+		if errors.Is(readErr, io.EOF) {
+			return total, nil
+		}
+		if readErr != nil {
+			return total, f.pathErr(OpCopyFrom, fmt.Errorf("read: %w", readErr))
+		}
+	}
+}
+
+// fill reads from src until buf is full or src returns an error, which,
+// unlike from io.ReadFull, is src's own.
+func fill(src io.Reader, buf []byte) (int, error) {
+	n := 0
+	for n < len(buf) {
+		m, err := src.Read(buf[n:])
+		n += m
+		if err != nil {
+			return n, err //nolint:wrapcheck // the caller wraps it
+		}
 	}
 	return n, nil
 }
 
+// .NET FileAccess values.
+const (
+	accessRead      = "Read"
+	accessWrite     = "Write"
+	accessReadWrite = "ReadWrite"
+)
+
+// fAccess maps flags to a .NET FileAccess. .NET refuses read-only access
+// with the modes that truncate or create exclusively, and appending needs
+// write access, so a read-only open that asks for any of those gets
+// ReadWrite: it can still read, as it asked to.
 func fAccess(flags int) string {
+	needsWrite := flags&os.O_APPEND != 0
+	switch fMode(flags) {
+	case "CreateNew", "Create", "Truncate":
+		needsWrite = true
+	}
 	switch {
-	case flags&(os.O_WRONLY|os.O_TRUNC|os.O_APPEND) != 0:
-		return "Write"
-	case flags&os.O_RDWR != 0:
-		return "ReadWrite"
+	case flags&os.O_WRONLY != 0:
+		return accessWrite
+	case flags&os.O_RDWR != 0 || needsWrite:
+		return accessReadWrite
 	default:
-		return "Read"
+		return accessRead
 	}
 }
 
+// fMode maps flags to a .NET FileMode. O_APPEND is not FileMode.Append,
+// which creates a missing file and refuses read access; Write sends each
+// write to the end of the file instead.
 func fMode(flags int) string {
 	switch {
+	case flags&(os.O_CREATE|os.O_EXCL) == os.O_CREATE|os.O_EXCL:
+		return "CreateNew"
+	case flags&(os.O_CREATE|os.O_TRUNC) == os.O_CREATE|os.O_TRUNC:
+		return "Create"
 	case flags&os.O_CREATE != 0:
-		if flags&os.O_EXCL != 0 {
-			return "CreateNew"
-		}
 		return "OpenOrCreate"
 	case flags&os.O_TRUNC != 0:
 		return "Truncate"
-	case flags&os.O_APPEND != 0:
-		return "Append"
 	default:
 		return "Open"
 	}
@@ -373,21 +512,24 @@ func (f *winFile) open(flags int) error {
 	f.stdoutW = stdoutW
 	f.done = make(chan struct{})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	parent := runnerContext(f.fs.Runner)
+	ctx, cancel := context.WithCancel(parent)
 	f.cancel = cancel
 	cmd, err := f.fs.Start(ctx, rigRcp, cmd.Stdin(stdinR), cmd.Stdout(stdoutW), cmd.Stderr(stderrW), cmd.LogInput(false), cmd.HideOutput())
 	if err != nil {
+		cancel()
 		return f.pathErr(OpOpen, fmt.Errorf("start file daemon: %w", err))
 	}
 	go func() {
 		_, _ = io.Copy(io.Discard, stderrR)
 	}()
+	stopAbort := f.abortWhenDone(parent)
 	go func() {
 		log.Trace(ctx, "rigrcp started")
 		err := cmd.Wait()
 		log.Trace(ctx, "rigrcp exited", log.KeyError, err)
-		close(f.done)
-		f.closed.Store(true)
+		stopAbort()
+		f.ended(parent)
 		_ = stdinR.Close()
 		_ = stdinW.Close()
 		_ = stdoutR.Close()
@@ -405,8 +547,52 @@ func (f *winFile) open(flags int) error {
 		cancel()
 		return f.pathErr(OpOpen, fmt.Errorf("remote error: %s", resp.Err)) //nolint:err113
 	}
+	f.pos = resp.Pos
+	f.size = resp.Size
+	f.appending = flags&os.O_APPEND != 0
+	accessMode := flags & (os.O_WRONLY | os.O_RDWR)
+	f.readable = accessMode != os.O_WRONLY
+	f.writable = accessMode != os.O_RDONLY
 
 	return nil
+}
+
+// abortWhenDone tears the session down as soon as ctx is done, the way the
+// watchdog does, rather than when the transport gets round to returning from
+// Wait: closing the pipes is what releases an operation parked on them. The
+// returned function stops it, once the session has ended by itself.
+func (f *winFile) abortWhenDone(ctx context.Context) func() bool {
+	f.bound = ctx
+	return context.AfterFunc(ctx, func() {
+		f.abort(boundEnded(ctx))
+	})
+}
+
+// boundEnded returns the error for a session ended by ctx, the bound context.
+func boundEnded(ctx context.Context) error {
+	return fmt.Errorf("%w: %w", errEnded, ctx.Err())
+}
+
+// boundDone returns the done channel of the bound context, or nil, which
+// never fires, if there is none.
+func (f *winFile) boundDone() <-chan struct{} {
+	if f.bound == nil {
+		return nil
+	}
+	return f.bound.Done()
+}
+
+// ended marks the session as over once the rigrcp command has exited. If
+// parent, the context the filesystem is bound to, is done, that is why the
+// session ended, and it is recorded so that operations report it rather than
+// a bare errEnded.
+func (f *winFile) ended(parent context.Context) {
+	if parent.Err() != nil {
+		cause := boundEnded(parent)
+		f.abortErr.CompareAndSwap(nil, &cause)
+	}
+	close(f.done)
+	f.closed.Store(true)
 }
 
 // commandTimeout bounds how long a rigrcp session may go without making
@@ -442,26 +628,23 @@ func (f *winFile) timedOut(what string) error {
 // command runs one rigrcp round-trip. Its errors carry no fs.PathError of
 // their own: the public operation that issued the command is the one that
 // names itself, so that a stalled read reports "read", not "open".
-func (f *winFile) command(cmd string) (*rcpResponse, error) { //nolint:cyclop
+func (f *winFile) command(cmd string) (*rcpResponse, error) {
 	if f.closed.Load() {
+		// Keep why the session ended, such as the bound context, alongside
+		// the closed state.
+		if cause := f.abortCause(nil); cause != nil {
+			return nil, fmt.Errorf("%w: %w", fs.ErrClosed, cause)
+		}
 		return nil, fs.ErrClosed
+	}
+
+	var resp <-chan []byte
+	if cmd != "q" {
+		resp = f.readResponse()
 	}
 
 	timer := time.NewTimer(commandTimeout)
 	defer timer.Stop()
-
-	resp := make(chan []byte, 1)
-	if cmd != "q" {
-		go func() {
-			b, err := f.stdout.ReadBytes(0)
-			if err != nil {
-				log.Trace(context.Background(), "failed to read response to rcp quit command", log.KeyError, err)
-				close(resp)
-				return
-			}
-			resp <- b[:len(b)-1] // drop the zero byte
-		}()
-	}
 
 	// The write itself can also block forever on a dead connection: f.stdin
 	// is an io.Pipe with no internal buffer, so it blocks until something
@@ -477,7 +660,7 @@ func (f *winFile) command(cmd string) (*rcpResponse, error) { //nolint:cyclop
 
 	select {
 	case <-f.done:
-		return nil, errEnded
+		return nil, f.abortCause(errEnded)
 	case <-timer.C:
 		return nil, f.timedOut(fmt.Sprintf("writing rcp command %q", cmd))
 	case err := <-writeErr:
@@ -490,37 +673,66 @@ func (f *winFile) command(cmd string) (*rcpResponse, error) { //nolint:cyclop
 		return &rcpResponse{}, nil
 	}
 
-	// The command is on its way, which is progress: give the response its
+	// The command is on its way, which is progress: the response gets its
 	// own full budget rather than whatever the write left of it.
-	timer.Reset(commandTimeout)
+	return f.awaitResponse(resp, fmt.Sprintf("response to rcp command %q", cmd))
+}
+
+// readResponse starts reading the helper's next reply. The channel is
+// closed without a value if the stream ends first.
+func (f *winFile) readResponse() <-chan []byte {
+	resp := make(chan []byte, 1)
+	go func() {
+		b, err := f.stdout.ReadBytes(0)
+		if err != nil {
+			log.Trace(context.Background(), "failed to read rcp response", log.KeyError, err)
+			close(resp)
+			return
+		}
+		resp <- b[:len(b)-1] // drop the zero byte
+	}()
+	return resp
+}
+
+// awaitResponse waits up to commandTimeout for the reply readResponse is
+// reading, and decodes it. what names the reply in a timeout error.
+func (f *winFile) awaitResponse(resp <-chan []byte, what string) (*rcpResponse, error) {
+	timer := time.NewTimer(commandTimeout)
+	defer timer.Stop()
 
 	select {
 	case <-f.done:
-		return nil, errEnded
+		return nil, f.abortCause(errEnded)
 	case <-timer.C:
-		return nil, f.timedOut(fmt.Sprintf("waiting for response to rcp command %q", cmd))
+		return nil, f.timedOut("waiting for " + what)
 	case data, ok := <-resp:
-		out := &rcpResponse{}
 		if !ok {
-			return out, nil // likely just a regular quit
+			return nil, f.abortCause(errEnded)
 		}
-		if len(data) == 0 {
-			return out, fmt.Errorf("%w: invalid empty response to rcp command", errRemote)
-		}
-		if err := json.Unmarshal(data, out); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal rcp response: %w", err)
-		}
-		if e := out.Err; e != "" {
-			if strings.HasPrefix(e, "eof") {
-				return nil, io.EOF
-			}
-			if strings.Contains(e, "does not exist") {
-				return nil, fs.ErrNotExist
-			}
-			return nil, fmt.Errorf("%w: %s", errRemote, e)
-		}
-		return out, nil
+		return parseResponse(data)
 	}
+}
+
+// parseResponse decodes a rigrcp reply, turning a reported error into a Go
+// one.
+func parseResponse(data []byte) (*rcpResponse, error) {
+	out := &rcpResponse{}
+	if len(data) == 0 {
+		return out, fmt.Errorf("%w: invalid empty response to rcp command", errRemote)
+	}
+	if err := json.Unmarshal(data, out); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal rcp response: %w", err)
+	}
+	if e := out.Err; e != "" {
+		if strings.HasPrefix(e, "eof") {
+			return nil, io.EOF
+		}
+		if strings.Contains(e, "does not exist") {
+			return nil, fs.ErrNotExist
+		}
+		return nil, fmt.Errorf("%w: %s", errRemote, e)
+	}
+	return out, nil
 }
 
 func (f *winFile) Close() error {
@@ -560,9 +772,21 @@ func (f *winFile) Close() error {
 
 	select {
 	case <-f.done:
+	case <-f.boundDone():
+		return f.pathErr(OpClose, f.abortCause(boundEnded(f.bound)))
 	case <-timer.C:
 		return f.pathErr(OpClose, f.timedOut("waiting for the rigrcp helper to exit"))
 	}
 
+	// The helper exiting because the filesystem's context ended is not the
+	// clean shutdown the quit asked for.
+	if cause := f.abortCause(nil); isContextErr(cause) {
+		return f.pathErr(OpClose, cause)
+	}
+
 	return nil
+}
+
+func isContextErr(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }

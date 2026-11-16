@@ -338,6 +338,7 @@ func findPrintfError(s string) error {
 
 type waiterWrapper struct {
 	waiter       protocol.Waiter
+	ctx          context.Context //nolint:containedctx // Wait takes no context but reports the one Start was given
 	opts         *ExecOptions
 	isWindows    bool
 	tracer       Tracer
@@ -387,6 +388,7 @@ func (w *waiterWrapper) Wait() error {
 	if waitErr == nil && w.isWindows && !w.opts.AllowWinStderr() && len(stderr) > 0 {
 		waitErr = ErrWroteStderr
 	}
+	waitErr = withContextCause(w.ctx, waitErr)
 	var result error
 	if waitErr != nil {
 		result = &ProcessError{err: waitErr, stderr: stderr}
@@ -434,6 +436,17 @@ func decodeEncoded(cmd string) string {
 		}
 	}
 	return strings.Join(parts, " ")
+}
+
+// withContextCause adds ctx's error to err if ctx is done and err does not
+// already carry it. A command interrupted by its context can report only how
+// it ended, such as an exit status or a signal, and a caller needs to tell a
+// cancellation from a command that failed by itself.
+func withContextCause(ctx context.Context, err error) error {
+	if err == nil || ctx == nil || ctx.Err() == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	return fmt.Errorf("%w: %w", ctx.Err(), err)
 }
 
 // closeAll closes every closer, ignoring individual close errors.
@@ -536,9 +549,15 @@ func (r *Executor) Start(ctx context.Context, command string, opts ...ExecOption
 
 	waiter, err := r.baseConnection().StartProcess(ctx, fullCmd, execOpts.Stdin(), stdout, stderr) //nolint:contextcheck // Stdin() uses trace logger which takes context
 	if err != nil {
-		closeAll(traceClosers)
+		// As in waiterWrapper.Wait: a start abandoned on its context can
+		// still complete, and its output copier be inside these writers.
+		if ctx.Err() != nil {
+			go closeAll(traceClosers)
+		} else {
+			closeAll(traceClosers)
+		}
 		log.Trace(ctx, "start process failed", log.HostAttr(r), log.KeyCommand, redactedCmd, log.KeyError, err)
-		return nil, fmt.Errorf("runner start command: %w", err)
+		return nil, fmt.Errorf("runner start command: %w", withContextCause(ctx, err))
 	}
 
 	if waiter == nil {
@@ -554,6 +573,7 @@ func (r *Executor) Start(ctx context.Context, command string, opts ...ExecOption
 
 	return &waiterWrapper{
 		waiter:       waiter,
+		ctx:          ctx,
 		opts:         execOpts,
 		isWindows:    r.IsWindows(),
 		tracer:       tracer,
@@ -597,9 +617,9 @@ func (r *Executor) ExecOutputContext(ctx context.Context, command string, opts .
 	// to it. Wait gives up on a command whose context has expired while the
 	// host is unresponsive, and the goroutine copying that command's output
 	// can outlive it, so on that one path the buffer is dropped rather than
-	// recycled into an unrelated command. Every other outcome -- a start
-	// failure, a non-zero exit, stderr output -- means the command is done
-	// with it.
+	// recycled into an unrelated command. The same goes for a start that
+	// failed with the context done. Every other outcome -- a start failure, a
+	// non-zero exit, stderr output -- means the command is done with it.
 	recycle := true
 	defer func() {
 		if recycle && out.Cap() <= 64<<10 {
@@ -617,6 +637,8 @@ func (r *Executor) ExecOutputContext(ctx context.Context, command string, opts .
 	// (and drifting from) that canonical form.
 	proc, err := r.Start(ctx, command, opts...)
 	if err != nil {
+		// A start abandoned to ctx can still complete and write to out.
+		recycle = ctx.Err() == nil
 		return "", fmt.Errorf("start command: %w", err)
 	}
 	log.Trace(ctx, "waiting on command", log.HostAttr(r))
