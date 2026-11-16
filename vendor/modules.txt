@@ -115,7 +115,7 @@ github.com/ProtonMail/go-crypto/openpgp/x448
 # github.com/STARRY-S/zip v0.2.3
 ## explicit; go 1.23
 github.com/STARRY-S/zip
-# github.com/agnivade/levenshtein v1.2.1
+# github.com/agnivade/levenshtein v1.2.2
 ## explicit; go 1.21
 github.com/agnivade/levenshtein
 # github.com/andybalholm/brotli v1.3.0
