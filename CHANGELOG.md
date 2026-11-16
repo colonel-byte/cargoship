@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.42.3](https://github.com/colonel-byte/cargoship/compare/v0.42.2...v0.42.3) (2026-11-16)
+
+
+### Bug Fixes
+
+* **mirror:** make --publish work, and let its record use the transport the push did ([#1139](https://github.com/colonel-byte/cargoship/issues/1139)) ([90a6733](https://github.com/colonel-byte/cargoship/commit/90a67330297dfe651d3f47d7068c85afd069b7df))
+
+
+### Miscellaneous
+
+* **examples:** refresh generated examples ([#1125](https://github.com/colonel-byte/cargoship/issues/1125)) ([542b060](https://github.com/colonel-byte/cargoship/commit/542b0607c0cc1fa6e1584c19fb3e5ac3945e277e))
+
+
+### Build
+
+* **deps:** bump almalinux/10-base from `f72ef25` to `4489fd6` in /containers/ubi ([#1126](https://github.com/colonel-byte/cargoship/issues/1126)) ([ce9f705](https://github.com/colonel-byte/cargoship/commit/ce9f7050a638e6b5023521b9f0bd08604eea15ac))
+* **deps:** bump almalinux/10-base from 10.2 to 10.3 in /containers/ansible ([#1128](https://github.com/colonel-byte/cargoship/issues/1128)) ([dc20043](https://github.com/colonel-byte/cargoship/commit/dc2004300444a93a4d13af049a444343599e6efa))
+* **deps:** bump github.com/agnivade/levenshtein from 1.2.1 to 1.2.2 ([#1136](https://github.com/colonel-byte/cargoship/issues/1136)) ([c6ccc18](https://github.com/colonel-byte/cargoship/commit/c6ccc18b877b85babf85189eb5c82d1476580e15))
+* **deps:** bump github.com/davidmz/go-pageant from 1.0.2 to 1.1.0 ([#1133](https://github.com/colonel-byte/cargoship/issues/1133)) ([1d6a539](https://github.com/colonel-byte/cargoship/commit/1d6a539362cc311d7a6a88d9228ae69af97fecb5))
+* **deps:** bump github.com/k0sproject/rig/v2 from 2.2.1 to 2.3.0 ([#1134](https://github.com/colonel-byte/cargoship/issues/1134)) ([ab6029c](https://github.com/colonel-byte/cargoship/commit/ab6029c41a057609e073b3a8a734684ebbc438f8))
+* **deps:** bump github.com/prometheus/common from 0.73.1 to 0.74.0 ([#1135](https://github.com/colonel-byte/cargoship/issues/1135)) ([9634afc](https://github.com/colonel-byte/cargoship/commit/9634afc4a4f79693d4e683810e386c79dfeae65c))
+* **deps:** bump github.com/sigstore/rekor from 1.6.0 to 1.6.1 in the sigstore group ([#1129](https://github.com/colonel-byte/cargoship/issues/1129)) ([1945a2e](https://github.com/colonel-byte/cargoship/commit/1945a2e754b42ff21e793fc372d197b2dcc5439b))
+* **deps:** bump golang.org/x/crypto from 0.58.0 to 0.59.0 in the golang group ([#1130](https://github.com/colonel-byte/cargoship/issues/1130)) ([9c70bb0](https://github.com/colonel-byte/cargoship/commit/9c70bb004887f4fab52973589f4854b2c3694e1e))
+* **deps:** bump google.golang.org/api from 0.311.0 to 0.314.0 ([#1137](https://github.com/colonel-byte/cargoship/issues/1137)) ([607470d](https://github.com/colonel-byte/cargoship/commit/607470d86657037672ff63055c3dd9ecfbd204ed))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit from v0.17.4 to 0.17.5 ([#1127](https://github.com/colonel-byte/cargoship/issues/1127)) ([e06be68](https://github.com/colonel-byte/cargoship/commit/e06be68331c700fb6956c0a2a79cd89958005587))
+* **deps:** bump the cloud-kms group with 2 updates ([#1132](https://github.com/colonel-byte/cargoship/issues/1132)) ([e4223aa](https://github.com/colonel-byte/cargoship/commit/e4223aa6aa6cefa721d772d38385aee4fc58775e))
+* **deps:** bump the docker group with 2 updates ([#1131](https://github.com/colonel-byte/cargoship/issues/1131)) ([324fd6d](https://github.com/colonel-byte/cargoship/commit/324fd6d99e6338df9d99ca3dcd657a08ab34dd37))
+
 ## [0.42.2](https://github.com/colonel-byte/cargoship/compare/v0.42.1...v0.42.2) (2026-11-14)
 
 
