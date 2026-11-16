@@ -147,11 +147,13 @@ func (o *packageMirrorOptions) publishPackage(
 	dst registryTarget,
 	cachePath string,
 ) error {
-	published, err := distro.Publish(ctx, distroLayout, publishReference(dst.registry), distro.PublishOptions{
+	dstRef := publishReference(dst.registry)
+	published, err := distro.Publish(ctx, distroLayout, dstRef, distro.PublishOptions{
 		RemoteOptions:   defaultRemoteOptions(),
 		OCIConcurrency:  o.ociConcurrency,
 		Retries:         o.retries,
 		CachePath:       cachePath,
+		Registry:        &dstRef,
 		SignBlobOptions: signing.DefaultSignBlobOptions(),
 		Username:        dst.username,
 		Password:        dst.password,

@@ -163,7 +163,14 @@ func writePublishRecord(ctx context.Context, l *layout.DistroLayout, dst, publis
 	}
 
 	target := strings.TrimSuffix(dst.String(), "/")
-	client, plainHTTP, err := registryClient(ctx, target, MirrorOptions{RemoteOptions: opts.RemoteOptions})
+	client, plainHTTP, err := registryClient(ctx, target, MirrorOptions{
+		RemoteOptions:     opts.RemoteOptions,
+		Username:          opts.Username,
+		Password:          opts.Password,
+		DialContext:       opts.DialContext,
+		CABundle:          opts.CABundle,
+		ClientCertificate: opts.ClientCertificate,
+	})
 	if err != nil {
 		log.Warn("published, but unable to record it for `cargoship ls`", "reference", published.String(), "error", err)
 		return

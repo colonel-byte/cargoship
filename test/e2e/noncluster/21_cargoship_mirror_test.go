@@ -17,6 +17,8 @@ package noncluster
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/test"
@@ -126,6 +128,36 @@ func TestCargoshipLs(t *testing.T) {
 		require.NoError(t, err)
 		require.JSONEq(t, "[]", stdout)
 	})
+}
+
+// TestCargoshipMirrorPublish exercises mirroring with --publish, ensuring the package artifact
+// itself is published to the destination alongside the mirrored images.
+func TestCargoshipMirrorPublish(t *testing.T) {
+	src := test.SetupInMemoryRegistry(t)
+	pushTestImage(t, src, pauseImageTag)
+	pushTestImage(t, src, ciliumImageTag)
+	pkgPath := imagePackage(t, src)
+
+	addr := test.SetupInMemoryRegistry(t)
+	dst := fmt.Sprintf("oci://%s/e2e-mirror", addr)
+	_, _, err := e2e.Cargoship(t, "mirror", pkgPath, dst, "--images", "--publish", "--plain-http")
+	require.NoError(t, err)
+
+	// Verify that the package itself was published beside the content by pulling it back.
+	pullDir := t.TempDir()
+	packageSrc := fmt.Sprintf("%s/e2e-minimal-image:0.0.1", dst)
+	_, _, err = e2e.Cargoship(t, "pull", packageSrc, "--plain-http", "-o", pullDir)
+	require.NoError(t, err)
+
+	pulled, err := filepath.Glob(filepath.Join(pullDir, "*.tar.zst"))
+	require.NoError(t, err)
+	require.Len(t, pulled, 1, "expected exactly one package pulled back")
+
+	wantBytes, err := os.ReadFile(pkgPath)
+	require.NoError(t, err)
+	gotBytes, err := os.ReadFile(pulled[0])
+	require.NoError(t, err)
+	require.Equal(t, wantBytes, gotBytes, "pulled package must match the published one")
 }
 
 // TestCargoshipMirrorContextNeedsZarfState checks that --context is refused rather than
