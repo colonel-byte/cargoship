@@ -109,13 +109,24 @@ func (s *WinFS) ReadDir(name string) (entries []fs.DirEntry, err error) {
 	return dir.ReadDir(-1)
 }
 
+// closeWritten closes a file that was written to, and reports any close
+// failure through err when the write itself had no complaint. The helper
+// finishes the write on the host when it closes the file, so unlike after a
+// read, a failed close means the data may not be there.
+func closeWritten(f io.Closer, err *error) {
+	if closeErr := f.Close(); *err == nil && closeErr != nil {
+		*err = closeErr
+	}
+}
+
 // closeWithSession closes f, and reports a close that failed because the
 // remote session timed out through err when the operation itself had no
 // complaint. Anything the caller reads or writes afterwards would go to a
 // host that is no longer there, so it must not look like a success.
 func closeWithSession(f io.Closer, err *error) {
 	closeErr := f.Close()
-	if *err == nil && errors.Is(closeErr, ErrTimeout) {
+	// ErrTimeout wraps context.DeadlineExceeded, so this covers it too.
+	if *err == nil && isContextErr(closeErr) {
 		*err = closeErr
 	}
 }
@@ -286,7 +297,8 @@ func (s *WinFS) Open(name string) (fs.File, error) {
 	return f, nil
 }
 
-// OpenFile opens the named remote file with the specified flags. os.O_EXCL and permission bits are ignored on Windows.
+// OpenFile opens the named remote file with the specified flags. Permission bits are ignored on Windows.
+// With os.O_APPEND, every write goes to the end of the file, but reading starts at its beginning, as with os.OpenFile.
 // For a description of the flags, see https://pkg.go.dev/os#pkg-constants
 func (s *WinFS) OpenFile(name string, flags int, _ fs.FileMode) (File, error) {
 	name = ps.ToWindowsPath(name)
@@ -296,9 +308,9 @@ func (s *WinFS) OpenFile(name string, flags int, _ fs.FileMode) (File, error) {
 	}
 	var o opener
 	if fi != nil && fi.IsDir() {
-		o = &winDir{withPath: withPath{name}, fs: s}
+		o = &winDir{winFileDirBase: winFileDirBase{withPath: withPath{name}, fs: s}}
 	} else {
-		o = &winFile{withPath: withPath{name}, fs: s}
+		o = &winFile{winFileDirBase: winFileDirBase{withPath: withPath{name}, fs: s}}
 	}
 	if err := o.open(flags); err != nil {
 		return nil, fmt.Errorf("open: %w", err)
@@ -313,16 +325,18 @@ func (s *WinFS) OpenFile(name string, flags int, _ fs.FileMode) (File, error) {
 
 // ReadFile reads the named file and returns its contents.
 func (s *WinFS) ReadFile(name string) (contents []byte, err error) {
-	f, err := s.Open(name)
+	f, err := s.OpenFile(name, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, fmt.Errorf("readfile %s: %w", name, err)
 	}
 	defer closeWithSession(f, &err)
-	data, err := io.ReadAll(f)
-	if err != nil {
+	// Not io.ReadAll: it calls Read with a small, growing buffer, and every
+	// Read is a rigrcp round trip. CopyTo streams the file in one command.
+	buf := bytes.NewBuffer([]byte{})
+	if _, err = f.CopyTo(buf); err != nil {
 		return nil, fmt.Errorf("readfile %s: %w", name, err)
 	}
-	return data, nil
+	return buf.Bytes(), nil
 }
 
 // WriteFile writes data to the named file, creating it if necessary.
@@ -331,7 +345,7 @@ func (s *WinFS) WriteFile(name string, data []byte, mode fs.FileMode) (err error
 	if err != nil {
 		return fmt.Errorf("writefile %s: %w", name, err)
 	}
-	defer closeWithSession(f, &err)
+	defer closeWritten(f, &err)
 	reader := bytes.NewReader(data)
 	_, err = io.Copy(f, reader)
 	if err != nil {

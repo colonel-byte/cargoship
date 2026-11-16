@@ -701,8 +701,8 @@ github.com/k0sproject/bootloose/pkg/exec
 # github.com/k0sproject/dig v0.4.0
 ## explicit; go 1.21
 github.com/k0sproject/dig
-# github.com/k0sproject/rig/v2 v2.2.1
-## explicit; go 1.27.0
+# github.com/k0sproject/rig/v2 v2.3.0
+## explicit; go 1.26.0
 github.com/k0sproject/rig/v2
 github.com/k0sproject/rig/v2/byteslice
 github.com/k0sproject/rig/v2/cmd

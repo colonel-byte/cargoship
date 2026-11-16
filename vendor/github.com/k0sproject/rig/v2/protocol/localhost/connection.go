@@ -8,10 +8,14 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sync"
+	"time"
 
 	"github.com/k0sproject/rig/v2/protocol"
 	"github.com/k0sproject/rig/v2/sh/shellescape"
 )
+
+const copyWaitDelay = 5 * time.Second
 
 // Connection is a direct localhost connection.
 type Connection struct{}
@@ -100,51 +104,36 @@ func (c *Connection) ExecInteractive(ctx context.Context, cmd string, stdin io.R
 		cmd = "cmd"
 	}
 
+	path, argv, err := parseCommand(cmd)
+	if err != nil {
+		return err
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
 	// try to cast the streams to files, if they are not files, use pipes
-	var stdinR, stdoutW, stderrW *os.File
-	if f, ok := stdin.(*os.File); ok {
-		stdinR = f
-	} else {
-		r, w, err := os.Pipe()
-		if err != nil {
-			return fmt.Errorf("failed to create pipe: %w", err)
+	pipes := &stdioPipes{}
+	defer pipes.release()
+	stdinR, ok := stdin.(*os.File)
+	if !ok {
+		if stdinR, err = pipes.in(stdin); err != nil {
+			return err
 		}
-		go func() {
-			defer w.Close()
-			_, _ = io.Copy(w, stdin)
-		}()
-		stdinR = r
 	}
-	if f, ok := stdout.(*os.File); ok {
-		stdoutW = f
-	} else {
-		r, w, err := os.Pipe()
-		if err != nil {
-			return fmt.Errorf("failed to create pipe: %w", err)
+	stdoutW, ok := stdout.(*os.File)
+	if !ok {
+		if stdoutW, err = pipes.out(stdout); err != nil {
+			return err
 		}
-		go func() {
-			defer r.Close()
-			_, _ = io.Copy(stdout, r)
-		}()
-		stdoutW = w
 	}
-	if f, ok := stderr.(*os.File); ok {
-		stderrW = f
-	} else {
-		r, w, err := os.Pipe()
-		if err != nil {
-			return fmt.Errorf("failed to create pipe: %w", err)
+	stderrW, ok := stderr.(*os.File)
+	if !ok {
+		if stderrW, err = pipes.out(stderr); err != nil {
+			return err
 		}
-		go func() {
-			defer r.Close()
-			_, _ = io.Copy(stderr, r)
-		}()
-		stderrW = w
 	}
 
 	procAttr := &os.ProcAttr{
@@ -152,15 +141,12 @@ func (c *Connection) ExecInteractive(ctx context.Context, cmd string, stdin io.R
 		Dir:   cwd,
 	}
 
-	parts, err := shellescape.Split(cmd)
-	if err != nil {
-		return fmt.Errorf("failed to parse command: %w", err)
-	}
-
-	proc, err := os.StartProcess(parts[0], parts[1:], procAttr) //nolint:gosec // G702: intentional command execution from parsed arguments
+	proc, err := os.StartProcess(path, argv, procAttr) //nolint:gosec // G702: intentional command execution from parsed arguments
 	if err != nil {
 		return fmt.Errorf("failed to start process: %w", err)
 	}
+	pipes.startInput()
+	pipes.closeChildEnds()
 
 	// Kill the process when the context is done, but also stop watching when
 	// the function returns normally so that the goroutine does not leak.
@@ -174,11 +160,119 @@ func (c *Connection) ExecInteractive(ctx context.Context, cmd string, stdin io.R
 		}
 	}()
 
-	if _, err := proc.Wait(); err != nil {
+	state, err := proc.Wait()
+	if err == nil && !state.Success() {
+		err = &exec.ExitError{ProcessState: state}
+	}
+	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err() //nolint:wrapcheck // context error is the real cause
 		}
 		return fmt.Errorf("process wait: %w", err)
 	}
 	return nil
+}
+
+// stdioPipes bridges non-file streams to a child process through os pipes.
+type stdioPipes struct {
+	childEnds []*os.File
+	inW       *os.File
+	inSrc     io.Reader
+	readers   []*os.File
+	copies    sync.WaitGroup
+}
+
+func (p *stdioPipes) in(src io.Reader) (*os.File, error) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pipe: %w", err)
+	}
+	p.childEnds = append(p.childEnds, r)
+	p.inW, p.inSrc = w, src
+	return r, nil
+}
+
+// startInput starts copying stdin once the process is running, so a setup
+// failure can't leave the copier blocked on src.
+func (p *stdioPipes) startInput() {
+	if p.inW == nil {
+		return
+	}
+	w, src := p.inW, p.inSrc
+	p.inW = nil
+	go func() {
+		defer w.Close()
+		_, _ = io.Copy(w, src)
+	}()
+}
+
+func (p *stdioPipes) out(dst io.Writer) (*os.File, error) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pipe: %w", err)
+	}
+	p.childEnds = append(p.childEnds, w)
+	p.readers = append(p.readers, r)
+	p.copies.Go(func() {
+		defer r.Close()
+		_, _ = io.Copy(dst, r)
+	})
+	return w, nil
+}
+
+// closeChildEnds closes the parent's copies of the child's pipe ends so the
+// copiers see EOF once the child exits.
+func (p *stdioPipes) closeChildEnds() {
+	for _, f := range p.childEnds {
+		_ = f.Close()
+	}
+	p.childEnds = nil
+	if p.inW != nil {
+		_ = p.inW.Close()
+		p.inW = nil
+	}
+}
+
+// release closes the child ends and waits for the output copiers. It is
+// deferred before any copier starts so that every return path, including a
+// failed process start, drains them. If the wait times out, a copier may
+// still be writing to its dst after release returns; see wait.
+func (p *stdioPipes) release() {
+	p.closeChildEnds()
+	p.wait()
+}
+
+// wait waits for the output copiers to drain, bounded by copyWaitDelay
+// because a daemonized grandchild can hold the pipe open indefinitely.
+// On timeout a copier may still be writing to its dst after this returns.
+func (p *stdioPipes) wait() {
+	done := make(chan struct{})
+	go func() {
+		p.copies.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(copyWaitDelay):
+		for _, r := range p.readers {
+			_ = r.Close()
+		}
+	}
+}
+
+// parseCommand splits cmd and resolves the executable from PATH. The returned
+// argv includes the program name as argv[0], as os.StartProcess expects.
+func parseCommand(cmd string) (string, []string, error) {
+	parts, err := shellescape.Split(cmd)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to parse command: %w", err)
+	}
+	if len(parts) == 0 || parts[0] == "" {
+		return "", nil, fmt.Errorf("%w: empty command", protocol.ErrValidationFailed)
+	}
+	path, err := exec.LookPath(parts[0])
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to find executable: %w", err)
+	}
+	return path, parts, nil
 }
