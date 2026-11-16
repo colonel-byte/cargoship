@@ -244,7 +244,7 @@ dockers_v2:
     flags:
       - "--pull"
     build_args:
-      ANSIBLE_CORE_VERSION: 2.16.16-2.el10_2.1
+      ANSIBLE_CORE_VERSION: 2.16.19-2.el10
       BASH_COMPLETION_VERSION: 2.11-16.el10
     labels:
       "org.opencontainers.image.description": |-
