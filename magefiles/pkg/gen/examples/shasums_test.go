@@ -16,6 +16,7 @@ package examples
 
 import (
 	"encoding/json"
+	"sort"
 	"testing"
 )
 
@@ -126,4 +127,62 @@ func TestFetchK3sBinarySHAReadsTheCache(t *testing.T) {
 		t.Fatalf("got %q and %q, want %q and %q",
 			v.Arches[0].BinarySHA, v.Arches[1].BinarySHA, amdSum, armSum)
 	}
+}
+
+// Every rke2 release publishes its tarball under the one name rke2.linux-amd64.tar.gz, and the
+// zarf definitions hash the whole archive -- so with one entry per name each rendered version
+// evicted the last, the committed cache held whichever was rendered last, and every run
+// re-downloaded a 230MiB tarball once per version. A name holding different content falls back
+// to a version-qualified key so the versions coexist.
+func TestExampleShasumsVersionedFallback(t *testing.T) {
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	r1 := "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz"
+	r2 := "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+
+	s.record(r1, "aaaa")
+	s.record(r2, "bbbb")
+
+	if e, ok := s.lookup(r1); !ok || e.SHA256 != "aaaa" {
+		t.Fatalf("the first release's digest was evicted by the second: %+v, %v", e, ok)
+	}
+	if e, ok := s.lookup(r2); !ok || e.SHA256 != "bbbb" {
+		t.Fatalf("the second release's digest was not recorded: %+v, %v", e, ok)
+	}
+
+	// The first keeps the plain name; the second takes the version-qualified key, which is the
+	// one archiveKey builds and the one memberKey has always used for this archive's members.
+	if _, ok := s.sums["rke2.linux-amd64.tar.gz"]; !ok {
+		t.Error("the first release should keep the plain file-name key")
+	}
+	if _, ok := s.sums["v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"]; !ok {
+		t.Errorf("the second release has no version-qualified entry: %v", cacheKeys(s))
+	}
+}
+
+// A URL already recorded that now serves different bytes is upstream re-cutting an asset in
+// place, which replaces the entry rather than growing a second one: there is only one file at
+// that URL, and the old digest is simply wrong now.
+func TestExampleShasumsReplacesARecutAsset(t *testing.T) {
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	url := "https://example.com/releases/v1/artifact.tar.gz"
+
+	s.record(url, "aaaa")
+	s.record(url, "bbbb")
+
+	if len(s.sums) != 1 {
+		t.Fatalf("got %d entries, want the re-cut asset to replace the first: %v", len(s.sums), cacheKeys(s))
+	}
+	if e, ok := s.lookup(url); !ok || e.SHA256 != "bbbb" {
+		t.Fatalf("got %+v, %v, want the new digest", e, ok)
+	}
+}
+
+// cacheKeys names what the cache holds, for a failure message.
+func cacheKeys(s *exampleShasums) []string {
+	keys := make([]string, 0, len(s.sums))
+	for k := range s.sums {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

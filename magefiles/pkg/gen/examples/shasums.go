@@ -69,9 +69,10 @@ func (e *exampleShasum) UnmarshalJSON(data []byte) error {
 
 // exampleShasums resolves a remote file's sha256, remembering what it has already hashed.
 // Entries are keyed by file name rather than URL, so the cache reads as a list of the files
-// the examples install; every URL an entry was ever fetched from is kept alongside it, and a
-// file name whose digest changes under a URL not already recorded is re-hashed rather than
-// trusted, since that means the filename was reused for different content.
+// the examples install; every URL an entry was ever fetched from is kept alongside it. A file
+// name upstream publishes different content under -- rke2's release tarball is the one -- falls
+// back to a version-qualified key instead, so the two versions do not evict each other; see
+// store.
 //
 // A file extracted out of an archive is keyed by the archive's name and the path inside it,
 // joined by memberKeySeparator -- rke2.linux-amd64.tar.gz!bin/rke2. That is a separate entry
@@ -89,9 +90,14 @@ type exampleShasums struct {
 	members map[string]map[string]string
 }
 
-// lookup finds a cached entry that url is one of the recorded URLs for.
+// lookup finds a cached entry that url is one of the recorded URLs for, under either key a
+// whole file can be stored under -- its own name, or the version-qualified form store falls
+// back to for a name upstream publishes different content under. See store.
 func (s *exampleShasums) lookup(url string) (exampleShasum, bool) {
-	return s.lookupKey(path.Base(url), url)
+	if e, ok := s.lookupKey(path.Base(url), url); ok {
+		return e, true
+	}
+	return s.lookupKey(archiveKey(url), url)
 }
 
 // lookupKey is lookup against an explicit cache key, for entries not keyed by file name alone.
@@ -100,9 +106,32 @@ func (s *exampleShasums) lookupKey(key, url string) (exampleShasum, bool) {
 	return e, ok && slices.Contains(e.URLs, url)
 }
 
-// store records that url serves a file whose digest is sha256, under the file's own name.
+// store records that url serves a file whose digest is sha256, under the file's own name --
+// or, when that name is already recorded holding different content from a different URL, under
+// the version-qualified key archiveKey builds.
+//
+// The fallback is what keeps a file name upstream reuses from evicting itself. Every rke2
+// release publishes rke2.linux-amd64.tar.gz under that one name, and the zarf definitions hash
+// the whole tarball, so with one entry per name each rendered version replaced the last: the
+// committed cache held whichever version was rendered last, and every run re-downloaded a
+// 230MiB tarball once per version. Twenty-five of those in a run is also how the render came to
+// fail on 502s from the release host.
+//
+// It is a fallback rather than the default because the plain name is load-bearing for the other
+// direction: pkgs.k8s.io serves one kubernetes-cni package, unchanged, from every minor line's
+// own URL, and keying those by URL path would store the same bytes once per line and download
+// them again for each. Same digest means the same entry gains a URL; different digest under a
+// name already taken means a name that is not self-versioning.
+//
+// memberKey already keyed archive members this way, and fetchK3sBinarySHA already stores the
+// k3s binary this way, for exactly this reason -- the comment in members.go claiming whole
+// files do not need it held for every whole file except this one.
 func (s *exampleShasums) store(url, sha256 string) {
-	s.storeKey(path.Base(url), url, sha256)
+	key := path.Base(url)
+	if e, ok := s.sums[key]; ok && e.SHA256 != sha256 && !slices.Contains(e.URLs, url) {
+		key = archiveKey(url)
+	}
+	s.storeKey(key, url, sha256)
 }
 
 // storeKey records that url serves a file whose digest is sha256, under an explicit cache key

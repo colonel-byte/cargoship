@@ -817,7 +817,7 @@
         },
         "insecure": {
           "default": false,
-          "description": "Accept invalid TLS certificates",
+          "description": "Accept invalid TLS certificates when useHTTPS is set; without useHTTPS allow sending the password over plain HTTP",
           "type": "boolean"
         },
         "keyPath": {
