@@ -1,0 +1,51 @@
+---
+# This file is generated in magefiles/templates/k3s/values.yaml.tmpl.
+
+# The values this package is built with. A cluster overrides any of them in its
+# inventory file under spec.config.values, and cargoship checks the result
+# against values.schema.json before it installs anything.
+
+# yaml-language-server: $schema=values.schema.json
+addons:
+  # The bundled charts k3s is told not to install. Setting this in an inventory
+  # replaces the whole list rather than adding to it, so name every chart the
+  # cluster wants left out. This package leaves all of them installed; a cluster
+  # that runs its own ingress or its own load balancer names them here.
+  #
+  # values.schema.json carries the charts k3s 1.37 packages, extracted
+  # from the engine's source, and an editor offers them here as completions. That
+  # list is the engine's own --disable help text, which does not name every chart
+  # the build bundles, so a name outside it is accepted rather than rejected --
+  # cargoship warns when it configures a node with one this build does not package.
+  disabled: []
+chart:
+  # Whether the cluster installs the charts this package carries -- all of them; the gate is
+  # per package, not per chart. Off by default, and note what turning it off again does: a
+  # HelmChart resource owns its release, so a cluster that sets this back to false has the
+  # releases uninstalled on the next apply. See docs/guides/charts.md.
+  enabled: false
+  # The addresses the cloud provider hands to Services of type LoadBalancer, as a CIDR or a
+  # start-end range. A package cannot know which of a cluster's addresses are spare, so it ships
+  # a documentation-range default that works nowhere and the cluster states its own: free,
+  # routable on the nodes' own subnet, and outside whatever DHCP hands out.
+  #
+  # It must also exclude spec.config.loadbalancer. A pool holding the control-plane VIP will
+  # eventually hand it to a Service, and kube-vip then answers for it on whichever node won
+  # that Service -- the API server goes down intermittently, looking like a network fault.
+  addressPool: 192.0.2.200/29
+  # The interface kube-vip adds Service addresses to. Empty lets it take the host's
+  # default-gateway interface, which is what makes one value correct across nodes whose NICs
+  # are not named alike.
+  interface: ""
+podSecurity:
+  # Who pod security admission does not apply to. Setting one of these in an
+  # inventory replaces the whole list rather than adding to it, so carry the
+  # entries below that the cluster still needs -- kube-system and zarf hold
+  # components that do not run under the restricted profile.
+  exemptions:
+    usernames: []
+    runtimeClasses: []
+    namespaces:
+      - kube-system
+      - rook-ceph
+      - zarf

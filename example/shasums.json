@@ -311,6 +311,18 @@
     ],
     "sha256": "393bdbce53eb50c8eb97dd513b218518b7d6e7985dc7b889be956e112a711084"
   },
+  "kube-vip-0.11.2.tgz": {
+    "urls": [
+      "https://github.com/kube-vip/helm-charts/releases/download/kube-vip-0.11.2/kube-vip-0.11.2.tgz"
+    ],
+    "sha256": "cd7b5ab2ed30a3a5ad758d058790c805a21d1f725d779e258f58bf322255721c"
+  },
+  "kube-vip-cloud-provider-0.2.11.tgz": {
+    "urls": [
+      "https://github.com/kube-vip/helm-charts/releases/download/kube-vip-cloud-provider-0.2.11/kube-vip-cloud-provider-0.2.11.tgz"
+    ],
+    "sha256": "44b0784f9ead65a3d55b2f49e92514f1e9bb97f9e1f0367e280ae383491ae37e"
+  },
   "kubeadm-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.0-150500.1.1.aarch64.rpm"

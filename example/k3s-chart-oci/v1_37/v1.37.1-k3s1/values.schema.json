@@ -34,7 +34,7 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Whether the cluster installs the chart. Off in the package, because a chart an example carries to demonstrate the mechanism is not something a cluster should get for having installed the example."
+          "description": "Whether the cluster installs the charts this package carries -- all of them; the gate is per package, not per chart. Off in the package, because a chart an example carries to demonstrate the mechanism is not something a cluster should get for having installed the example."
         },
         "tolerateControlPlane": {
           "type": "boolean",
