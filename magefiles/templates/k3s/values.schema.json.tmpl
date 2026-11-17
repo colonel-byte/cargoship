@@ -24,6 +24,27 @@
       },
       "additionalProperties": false
     },
+{{- with .Chart }}
+    "chart": {
+      "type": "object",
+      "description": "The Helm chart this package carries and the helm controller installs. Turning it off again uninstalls the release: the HelmChart resource owns it, and cargoship prunes the manifest a disabled chart wrote.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the cluster installs the chart. Off in the package, because a chart an example carries to demonstrate the mechanism is not something a cluster should get for having installed the example."
+        }{{ if eq (printf "%s" .Kind) "http" }},
+        "insecureKubeletTLS": {
+          "type": "boolean",
+          "description": "Skip verifying the kubelet's serving certificate. metrics-server cannot verify one on a cluster that has not had kubelet certificates signed; a cluster that has should leave this false."
+        }{{ end }}{{ if eq (printf "%s" .Kind) "oci" }},
+        "tolerateControlPlane": {
+          "type": "boolean",
+          "description": "Run the exporter on the control-plane nodes too, whose taint its DaemonSet has to tolerate."
+        }{{ end }}
+      },
+      "additionalProperties": false
+    },
+{{- end }}
 {{- with .KubeVip }}
     "kubeVip": {
       "type": "object",

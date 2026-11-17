@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -107,6 +108,28 @@ func NewManager(ctx context.Context, opts ManagerOptions) (*phase.Manager, error
 		}
 		if err := opts.Layout.RenderFiles(ctx, values, facts); err != nil {
 			return nil, fmt.Errorf("failed to render the templated files of the package: %w", err)
+		}
+		// A chart's `when` gate, resolved once. The engine implementation that writes the
+		// HelmChart manifest is handed the package and not the cluster's values, so the gate
+		// has to be answered here; the chart's tarball is gated separately, by the file entry
+		// the chart expanded into, through the upload phase's own reading of the same path.
+		opts.Layout.Distro.Spec.Config.ResolveChartDelivery(func(path string) bool {
+			v, ok, err := helmvalues.GetValuePath(values, path)
+			if err != nil || !ok {
+				logger.From(ctx).Warn("chart skipped: its when path is not set in the package's values", "when", path, "error", err)
+				return false
+			}
+			enabled, ok := v.(bool)
+			if !ok {
+				logger.From(ctx).Warn("chart skipped: its when path is not a boolean", "when", path, "value", v)
+				return false
+			}
+			return enabled
+		})
+		// Read after the gate, so a chart the cluster asked for is the only one whose bytes
+		// are loaded.
+		if err := opts.Layout.LoadCharts(ctx); err != nil {
+			return nil, err
 		}
 
 		manager.Distro = &opts.Layout.Distro

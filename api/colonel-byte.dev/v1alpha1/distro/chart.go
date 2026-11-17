@@ -175,11 +175,21 @@ func (c Config) EnabledImages() []string {
 
 func (c Config) images(enabledOnly bool) []string {
 	manifests := ChartManifests(c.Engine)
-	if len(manifests) == 0 {
+	if len(manifests) == 0 && len(c.Charts) == 0 {
 		return c.ImagesConfig.Images
 	}
 
 	out := slices.Clone(c.ImagesConfig.Images)
+	// A packaged chart's own images, in declaration order. Not gated by enabledOnly: a
+	// chart's When gate is answered against a cluster's values, which nothing here has, and
+	// the list these feed is flat.
+	//
+	// shortcut: so a chart a cluster gated off still has its images uploaded -- the same gap
+	// docs/agent/todo-chart-disable-image-gating.md records for a disabled chart manifest.
+	// Upgrade both together; see Chart.Images.
+	for _, chart := range c.Charts {
+		out = append(out, chart.Images...)
+	}
 	// Sorted, because the order of this list reaches the published layer list and
 	// two builds from the same inputs have to produce the same digests.
 	for _, chart := range slices.Sorted(maps.Keys(manifests)) {

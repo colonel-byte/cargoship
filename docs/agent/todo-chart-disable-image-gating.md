@@ -22,3 +22,7 @@ Wiring the disable list into `EnabledImages` is not a one-liner, and the reasons
 Whether `enabled` and `disable` stay two mechanisms or become one. Revisit alongside the user-supplied chart work, which is what forces the question: until then the cost is wasted upload for a chart disabled through `addons.disabled`, which is real but is no worse than the behaviour before per-chart images existed.
 
 See [package-values](../guides/package-values.md) for what each key does today.
+
+## `.spec.config.charts` has the same gap
+
+A chart declared under `.spec.config.charts` carries its images the same way, and its `when` gate holds the chart back without holding its images back. The cause is the same - `Config.images` walks a flat list with no values in scope - so the fix is one change covering both, not two. See `Chart.Images` in [`api/colonel-byte.dev/v1alpha1/distro/charts.go`](../../api/colonel-byte.dev/v1alpha1/distro/charts.go).
