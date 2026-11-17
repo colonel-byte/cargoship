@@ -101,6 +101,30 @@ spec:
 
 The `loadbalancer` address is required. Cargoship adds this to the TLS Subject Alternative Names (SANs) for the Kubernetes API server. This can be a Round-Robin DNS record pointing to your control-plane nodes, or an external load balancer like an AWS NLB.
 
+It is also what cargoship writes as `server:` on every controller that is not the first, so it is the address the second and third controllers join the cluster through, and it is what the kubeconfig `cargoship kube-config` fetches points at. All three uses are the same string, which is why getting it wrong shows up late rather than at install time.
+
+### Pointing the name at the control plane
+
+Three shapes work, and they differ in what DNS has to hold:
+
+| Shape                                | The record                                 | What happens when a controller dies                                 |
+| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------- |
+| Round-robin DNS                      | one `A` record per controller, same name   | clients that do not retry the next answer fail until DNS is updated |
+| An external load balancer            | `A`, or `CNAME` to the balancer's own name | the balancer takes the node out, and nothing in DNS changes         |
+| A VIP held on the nodes (`kube-vip`) | one `A` record, pointing at the VIP        | the VIP moves to another controller; the address does not change    |
+
+The third is what [the kube-vip examples](../../example/rke2-kube-vip) set up, and it is the one with a DNS requirement worth stating explicitly:
+
+- **One `A` record for the name, pointing at the VIP** - not one per controller. The whole point of the VIP is that the address outlives any one node, so round-robin records alongside it defeat it.
+- **Create the record before the install.** `kubeVip.address` is empty by default, so the pod is told to advertise the name from `loadbalancer`, and kube-vip resolves a name rather than rejecting it. The resolution has to succeed on the controller, from its own resolver, by the time the kubelet starts the static pod - and cargoship writes nothing into `/etc/hosts` for the load balancer, only for the fleet's own hosts.
+- **Where it will not resolve at bootstrap, set the IP explicitly.** `spec.config.values.kubeVip.address` takes the address the record points at; leave `loadbalancer` as the name. That is the air-gapped case, where the name is real but the cluster's own resolver does not answer for it yet.
+- **No `PTR` record is needed.** Nothing in cargoship or kube-vip does a reverse lookup on it.
+- **A low TTL buys nothing.** The address does not move - the node holding it does - so there is nothing for a resolver to re-learn when a controller fails.
+
+### The certificate only names what the inventory names
+
+Cargoship writes `tls-san` itself, from `loadbalancer` plus each controller's short and long hostname, and it *assigns* the key rather than adding to it - so a `tls-san` a package definition sets is replaced. Where `loadbalancer` is an FQDN, that means **the VIP's IP address is not on the API server's certificate**: reaching the cluster at `https://<vip>:6443` fails verification even though the address answers. Use the name, which is what the kubeconfig cargoship fetches already does. There is no supported way to add a SAN of your own today.
+
 ## Node Profiles
 
 The optional `.spec.config.profiles` section defines reusable groups of node configurations (e.g., `control`, `infra`, or `worker`). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.

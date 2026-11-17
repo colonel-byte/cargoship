@@ -1,0 +1,114 @@
+---
+# A kube-vip static pod, which holds the cluster's control-plane VIP on whichever controller
+# wins its leader election. Hand-written and shared by every version of the kube-vip flavors of
+# both distros, the way example/k3s/core holds the files every k3s version installs: the pod
+# does not vary by Kubernetes release, so a copy per release would be fifty copies of one file.
+#
+# This is a Go template, rendered by cargoship before it is uploaded, against the package's
+# values (.Values) and what cargoship knows about the cluster (.Cluster). Nothing renders it at
+# package build time -- the template reaches the published package as it is written here, and
+# the install resolves it, which is why the address can come from the inventory rather than from
+# a value baked in at build time.
+#
+# k3s and rke2 both read static pods out of <data-dir>/agent/pod-manifests, so one file serves
+# both; the kubeconfig path is the only thing that differs, and it arrives as a value.
+#
+# The whole body is inside the `enabled` guard on purpose. A disabled kube-vip is not uploaded
+# -- the file entry's `when` gate drops it -- but it is still rendered, and reading
+# .Cluster.LoadBalancer here unguarded would make an inventory with no loadbalancer fail to
+# install a package that was not going to run kube-vip anyway.
+{{- if .Values.kubeVip.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-vip
+  namespace: kube-system
+spec:
+  # The VIP is an address on the host's own network namespace, and kube-vip answers ARP for it.
+  hostNetwork: true
+  # kube-vip talks to the API server it is itself fronting. Resolving "kubernetes" to loopback
+  # keeps that from going through the VIP, which is not up yet while kube-vip is starting.
+  hostAliases:
+    - ip: 127.0.0.1
+      hostnames:
+        - kubernetes
+  containers:
+    - name: kube-vip
+      image: {{ .Values.kubeVip.image }}
+      # The image is in the engine's own tarball directory, imported at startup. A pull policy
+      # that reaches for a registry would hang on an air-gapped host.
+      imagePullPolicy: IfNotPresent
+      args:
+        - manager
+      env:
+        # The address kube-vip advertises.
+        #
+        # It comes from the inventory's spec.config.loadbalancer, which is already what joining
+        # controllers point `server:` at and what goes into the API server's tls-san -- so the
+        # VIP is stated once for the whole cluster, and an inventory that sets neither this nor
+        # that fails the render by name rather than installing a pod with a blank address.
+        #
+        # kubeVip.address overrides it, and the reason it exists is that loadbalancer is a
+        # *hostname* -- that is what the cluster schema calls it, and how most fleets set it.
+        # kube-vip does accept a DNS name and resolve it, but the name then has to resolve on
+        # each controller before the kubelet starts this pod, and cargoship puts nothing in
+        # /etc/hosts for it. Where it will not resolve at bootstrap, set kubeVip.address to the
+        # IP the record points at and leave loadbalancer as the name.
+{{- if .Values.kubeVip.address }}
+        - name: address
+          value: "{{ .Values.kubeVip.address }}"
+{{- else }}
+        - name: address
+          value: "{{ .Cluster.LoadBalancer }}"
+{{- end }}
+        - name: vip_subnet
+          value: "{{ .Values.kubeVip.subnet }}"
+        # Empty lets kube-vip take the host's default-gateway interface, which is what makes
+        # one rendered manifest correct on controllers whose NICs are not named alike. Set it
+        # when the default route is not the interface the VIP belongs on.
+        - name: vip_interface
+          value: "{{ .Values.kubeVip.interface }}"
+        - name: vip_arp
+          value: "true"
+        # Control-plane VIP, with the lease held in the cluster kube-vip is fronting.
+        - name: cp_enable
+          value: "true"
+        - name: cp_namespace
+          value: kube-system
+        - name: vip_leaderelection
+          value: "true"
+        - name: vip_leaseduration
+          value: "{{ .Values.kubeVip.leaseDuration }}"
+        - name: vip_renewdeadline
+          value: "{{ .Values.kubeVip.renewDeadline }}"
+        - name: vip_retryperiod
+          value: "{{ .Values.kubeVip.retryPeriod }}"
+        - name: port
+          value: "{{ .Values.kubeVip.port }}"
+        # Services are MetalLB's or the engine's job here. This package carries the
+        # cloud-provider half of kube-vip for nobody, so leaving it on would start a
+        # controller watching Services with no address pool to hand out.
+        - name: svc_enable
+          value: "false"
+        - name: vip_ddns
+          value: "false"
+        - name: prometheus_server
+          value: "{{ .Values.kubeVip.metricsAddress }}"
+      securityContext:
+        capabilities:
+          add:
+            # NET_ADMIN and NET_RAW to add the address and answer ARP for it; SYS_TIME for the
+            # lease timing.
+            - NET_ADMIN
+            - NET_RAW
+            - SYS_TIME
+      volumeMounts:
+        - name: kubeconfig
+          mountPath: /etc/kubernetes/admin.conf
+  volumes:
+    # The engine's admin kubeconfig, which exists only once the first server has started. Until
+    # then kube-vip restarts, which is expected on a first bring-up and not a failure.
+    - name: kubeconfig
+      hostPath:
+        path: {{ .Values.kubeVip.kubeconfig }}
+{{- end }}

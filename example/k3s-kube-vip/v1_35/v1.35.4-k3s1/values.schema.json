@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "rancher-k3s-kube-vip values",
+  "description": "Generated in magefiles/templates/k3s/values.schema.json.tmpl.",
+  "type": "object",
+  "properties": {
+    "addons": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "type": "array",
+          "description": "The bundled charts k3s is told not to install. Replaces the package's own list rather than adding to it. The components k3s 1.35 packages are offered as suggestions, not as the whole vocabulary: a chart the engine bundles without advertising it under --disable is accepted too, and cargoship warns when it configures a node with a name this build does not package.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "examples": [
+              "coredns",
+              "servicelb",
+              "traefik",
+              "local-storage",
+              "metrics-server",
+              "runtimes"
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "kubeVip": {
+      "type": "object",
+      "description": "The control-plane VIP kube-vip holds on whichever controller wins its lease. The address is not here: it is the inventory's spec.config.loadbalancer, which is also what joining controllers point `server:` at, so the cluster states it once.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the controllers run kube-vip. Off in the package, because the VIP has to be an address nothing else answers for and a package cannot know that it is. Turning it on without a spec.config.loadbalancer fails the install rather than installing a pod with no address."
+        },
+        "address": {
+          "type": "string",
+          "description": "The address kube-vip advertises, when it must not be the one spec.config.loadbalancer names. Empty takes that value, which is right whenever it is an IP or a name every controller resolves; the inventory calls it a hostname, and kube-vip resolving a name has to succeed on the controller before the kubelet starts the pod, which cargoship does nothing to arrange. Set the IP the record points at here and leave loadbalancer as the name."
+        },
+        "image": {
+          "type": "string",
+          "description": "The kube-vip image the static pod runs. Overriding it to one the package does not carry leaves the pod pulling from a registry an air-gapped host cannot reach.",
+          "minLength": 1
+        },
+        "interface": {
+          "type": "string",
+          "description": "The interface the VIP is added to. Empty lets kube-vip take the host's default-gateway interface, which is what makes one manifest correct across controllers whose NICs are not named alike: the manifest is rendered once for the cluster, not once per host."
+        },
+        "subnet": {
+          "type": "string",
+          "description": "The prefix length the VIP is added with. A /32 is the address and nothing else.",
+          "pattern": "^[0-9]{1,3}$"
+        },
+        "port": {
+          "type": "string",
+          "description": "The API server port kube-vip health-checks the control plane on.",
+          "pattern": "^[0-9]{1,5}$"
+        },
+        "kubeconfig": {
+          "type": "string",
+          "description": "The admin kubeconfig on the host that kube-vip holds its lease with. It exists only once the first server has started, so the pod restarts until then; that is expected on a first bring-up.",
+          "minLength": 1
+        },
+        "leaseDuration": {
+          "type": "string",
+          "description": "Leader election lease duration, in seconds.",
+          "pattern": "^[0-9]+$"
+        },
+        "renewDeadline": {
+          "type": "string",
+          "description": "Leader election renew deadline, in seconds. Shorter than leaseDuration.",
+          "pattern": "^[0-9]+$"
+        },
+        "retryPeriod": {
+          "type": "string",
+          "description": "Leader election retry period, in seconds.",
+          "pattern": "^[0-9]+$"
+        },
+        "metricsAddress": {
+          "type": "string",
+          "description": "Where kube-vip serves its Prometheus endpoint. The pod is on the host network, so anything other than a loopback address publishes an unauthenticated endpoint on every address the controller has, the VIP included.",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "podSecurity": {
+      "type": "object",
+      "properties": {
+        "exemptions": {
+          "type": "object",
+          "properties": {
+            "usernames": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Users whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it."
+            },
+            "runtimeClasses": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Runtime classes whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it."
+            },
+            "namespaces": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Namespaces whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it, so name kube-system and zarf as well or the cluster's own components are enforced against."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

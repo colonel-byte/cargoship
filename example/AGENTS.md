@@ -15,6 +15,8 @@ Almost everything under `example/` is generated. Regenerate it with mage; do not
 | `example/upstream-<cni>/<minor>/<version>/distro.yaml`                                                   | `Generate.Examples`, from `magefiles/templates/upstream-distro.yaml.tmpl`, once per CNI flavor                                                                                                                         |
 | `example/upstream-cilium/cni/cilium-<chart>.yaml`                                                        | the same target, rendered with `helm template` and shared by every version of that flavor                                                                                                                              |
 
+Two directories are hand-written in full and own no row above, because no target writes into them: `example/k3s/core`, the files every k3s version installs, and `example/kube-vip`, the static pod the kube-vip flavors of both distros share. Both sit beside the flavor directories and are referenced from a rendered `distro.yaml` by relative path, so moving either one changes a `../` count in a template - see the quirk in the root [`AGENTS.md`](../AGENTS.md).
+
 To change a generated example, edit its template in `magefiles/templates/` and re-run `mage generate:examples`, which re-renders every example directory already on disk. An edit made directly to a rendered file is lost on the next run.
 
 Every path in that table is also marked `linguist-generated` in [`.gitattributes`](../.gitattributes), so a target that starts writing a new file needs a pattern there as well. See the "Keeping `.gitattributes` in sync with the generators" section of the root [`AGENTS.md`](../AGENTS.md).
@@ -57,6 +59,16 @@ exampleMultiMinors = []string{"v1_35", "v1_36"}
 ```
 
 The list is shared by both distros, so adding a line covers the rke2 and the k3s multi-architecture flavors together. Each line added costs the shasum cache another set of arm64 artifacts, which is why the list holds the current lines rather than every line the distros render.
+
+## The kube-vip flavors
+
+`example/rke2-kube-vip` and `example/k3s-kube-vip` carry a kube-vip static pod that holds the cluster's control-plane VIP on whichever controller wins its lease. The pin, the paths, and why each is what it is live in [`magefiles/pkg/gen/examples/kubevip.go`](../magefiles/pkg/gen/examples/kubevip.go); three things about the arrangement are worth knowing before changing it:
+
+- **It is a flavor rather than a value on the existing ones.** `spec.config.imageConfig.images` has no per-value gate - only a chart entry's `enabled` key gates images, and kube-vip is not a chart - so adding kube-vip to `example/k3s-flannel` would upload its image to every host of every cluster that installs one. The flavor is how the image is carried only by a package that wants it, while `kubeVip.enabled` still decides whether the pod runs.
+- **One manifest serves both distros.** k3s and rke2 read static pods from the same path under their data directories, so `example/kube-vip/kube-vip.yaml` is shared, hand-written, and rendered at install time rather than at build time. The two things that differ - the data directory and the admin kubeconfig - reach it as values, from `exampleDistroSpec.kubeVip`.
+- **The VIP address is not a value.** It comes from the inventory's `spec.config.loadbalancer` through `.Cluster.LoadBalancer`, which is the same address joining controllers are given. See [package values](../docs/guides/package-values.md#cluster-what-the-inventory-already-knows).
+
+`TestKubeVipManifestRenders` and `TestKubeVipValuesCoverTheManifest` are what stand in for a render: the manifest is not generated, so nothing else parses it, and a missing quote in it is a static pod a kubelet rejects on an air-gapped controller.
 
 ## The upstream CNI flavors
 

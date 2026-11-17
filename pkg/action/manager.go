@@ -64,7 +64,9 @@ type ManagerOptions struct {
 // rke2-multi-cni-cilium's HelmChartConfig did exactly that, and the CNI never installed. The
 // resolved values are handed to the manager as well, because the `when` gate on a templated file
 // reads Manager.Values and a nil map has no path set, so every gated file is skipped for the whole
-// run without it.
+// run without it. Both renders are also given the cluster facts a template may read under
+// .Cluster, which is how a manifest the package ships - a kube-vip static pod, say - reaches the
+// control-plane address without the inventory having to state it twice.
 //
 // It lived in cmd/ as an unexported helper, with a second copy in the e2e harness, which is how
 // the two of them came to resolve values differently. It is exported because the ordering is not
@@ -96,10 +98,14 @@ func NewManager(ctx context.Context, opts ManagerOptions) (*phase.Manager, error
 		if err != nil {
 			return nil, err
 		}
-		if err := opts.Layout.ApplyValues(values); err != nil {
+		// The cluster facts a package's templates may read, resolved here for the same
+		// reason the values are: both renders have to see the same inputs, and the
+		// inventory is in scope here and in no phase afterwards.
+		cluster := layout.ClusterFacts{LoadBalancer: opts.Cluster.Spec.Config.LoadBalancer}
+		if err := opts.Layout.ApplyValues(values, cluster); err != nil {
 			return nil, err
 		}
-		if err := opts.Layout.RenderFiles(ctx, values); err != nil {
+		if err := opts.Layout.RenderFiles(ctx, values, cluster); err != nil {
 			return nil, fmt.Errorf("failed to render the templated files of the package: %w", err)
 		}
 
