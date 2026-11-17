@@ -265,8 +265,19 @@ func IsContainedPath(s string) bool {
 // here. Overrides come from outside the package - a cluster inventory, say - so
 // they are merged before the schema check, not after: an override that breaks
 // the schema has to fail as loudly as a bad values file would.
-func LoadValues(ctx context.Context, dirPath string, vals distro.Values, overrides ...map[string]any) (map[string]any, error) {
-	merged, err := helmvalues.LoadFiles(ctx, dirPath, "", vals.Files)
+func LoadValues(ctx context.Context, dirPath string, vals distro.Values, overrides ...map[string]any) (_ map[string]any, err error) {
+	// LoadFiles would make its own temp directory under $TMPDIR, which a library consumer with a
+	// read-only root filesystem cannot write to. Creating it here puts the downloaded values files
+	// under the configured base, and keeps the removal LoadFiles skips for a caller-owned dir.
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create a temp dir for values files: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	merged, err := helmvalues.LoadFiles(ctx, dirPath, tmpDir, vals.Files)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read values files: %w", err)
 	}
