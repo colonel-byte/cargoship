@@ -27,6 +27,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -255,6 +256,9 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 		}
 		if provenance != nil {
 			fileSources = append(fileSources, *provenance)
+		}
+		if err := verifyStagedChart(buildPath, chartIdx, chart); err != nil {
+			return nil, err
 		}
 		warnOversizedChart(ctx, buildPath, chartIdx, chart)
 	}
@@ -522,7 +526,11 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			// design, so the combination would otherwise be refused outright. See
 			// docs/agent/todo-content-store-digest-check.md for the check that would make
 			// the guarantee real.
-			if file.Shasum == "" && !pinnedByDigest(file.Source) {
+			//
+			// Scoped to charts for that reason: it is a relaxation bought for the one
+			// resource whose own validator cannot ask for a shasum, and widening it to
+			// every file entry would trade verification away for nothing in return.
+			if file.Shasum == "" && (resourceType != config.ChartsDir || !pinnedByDigest(file.Source)) {
 				return nil, fmt.Errorf("%s holds %s, which declares no shasum: refusing to stage it unverified",
 					store.Describe(), file.Source)
 			}
@@ -768,6 +776,32 @@ type ContentStore interface {
 	Fetch(ctx context.Context, req contentstore.FileRequest, dst string) error
 	// Source names the bundle as the operator spelled it, for messages and provenance.
 	Source() string
+}
+
+// verifyStagedChart refuses a staged chart that is not a gzipped tarball.
+//
+// A local source needs no shasum -- there is no download to verify -- so a truncated or empty
+// file is carried, published and verified without complaint, and the first thing that notices
+// is the helm controller on the cluster, long after apply reported success. A zero-byte chart
+// also used to reach ConfigureEngine as an error, where a nil desired-files map pruned the
+// host's managed directories.
+func verifyStagedChart(buildPath string, idx int, chart distro.Chart) error {
+	staged := filepath.Join(buildPath, config.ChartsDir, strconv.Itoa(idx), chart.TarballName())
+	f, err := os.Open(staged)
+	if err != nil {
+		return fmt.Errorf("reading the staged chart %s: %w", chart.Name, err)
+	}
+	defer f.Close() //nolint:errcheck // read-only, nothing to do with a close error
+
+	// The gzip magic number, which is as much as can be told without unpacking the archive.
+	var magic [3]byte
+	if _, err := io.ReadFull(f, magic[:]); err != nil {
+		return fmt.Errorf("chart %s is not a chart archive: %w", chart.Name, err)
+	}
+	if magic != [3]byte{0x1f, 0x8b, 0x08} {
+		return fmt.Errorf("chart %s is not a gzipped tarball: its source staged %d bytes that do not start with the gzip magic number", chart.Name, len(magic))
+	}
+	return nil
 }
 
 // warnOversizedChart reports a chart big enough to be a problem in etcd.

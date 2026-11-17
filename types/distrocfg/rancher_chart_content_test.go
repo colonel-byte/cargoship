@@ -54,7 +54,7 @@ func TestHelmChartContentIsAChartArchive(t *testing.T) {
 	host.Metadata.IsLeader = true
 	require.NoError(t, d.ConfigureEngine(context.Background(), host, cluster.RuntimeMeta{}, dis))
 
-	written, ok := cfg.files[filepath.Join(d.Data, "server/manifests/hello-chart.yaml")]
+	written, ok := cfg.files[filepath.Join(d.Data, "server/manifests/cargoship-hello-chart.yaml")]
 	require.True(t, ok, "no HelmChart manifest was written")
 
 	var manifest struct {

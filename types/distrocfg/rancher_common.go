@@ -260,7 +260,10 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.Host,
 	if !d.engineServiceRunning(ctx, host) {
 		desired, err := d.DesiredFiles(ctx, host, run, dis)
 		if err != nil {
-			logger.From(ctx).Warn("failed to render desired files", "host", host)
+			// Returned rather than warned past: desired is nil here, and the prune below
+			// treats a nil map as "the package wants none of these", which empties the
+			// registry TLS and state directories of every file they hold.
+			return fmt.Errorf("failed to render the desired files for %s: %w", host, err)
 		}
 		for path, file := range desired {
 			if err := host.WriteFile(path, string(file.Content), file.Mode); err != nil {
@@ -500,8 +503,12 @@ func (d *RancherCommon) helmCharts(cfg distro.Config) (map[string]DesiredFile, e
 
 	files := make(map[string]DesiredFile, len(charts))
 	for _, chart := range charts {
+		// Skipped rather than failed. An error here is an error out of DesiredFiles, and a
+		// chart nobody can write is not a reason to stop describing the rest of the host --
+		// the build refuses an empty tarball, so reaching this is a bug rather than input.
 		if len(chart.Content) == 0 {
-			return nil, fmt.Errorf("chart %s carries no content: its tarball was not read out of the package", chart.Name)
+			logger.Default().Warn("skipping a chart that carries no content: its tarball was not read out of the package", "chart", chart.Name)
+			continue
 		}
 		spec := dig.Mapping{
 			"chartContent": base64.StdEncoding.EncodeToString(chart.Content),
@@ -753,7 +760,7 @@ func (d *RancherCommon) ManagedDirs() []ManagedDir {
 		// Separate from the entry above rather than one wider glob: the two suffixes are
 		// what tell cargoship's own files apart from the engine's bundled manifests in the
 		// same directory, and a glob loose enough to cover both would cover those too.
-		{Path: d.manifestDir(), Glob: "*" + distro.ChartManifestSuffix},
+		{Path: d.manifestDir(), Glob: distro.ChartManifestPrefix + "*" + distro.ChartManifestSuffix},
 	}
 }
 

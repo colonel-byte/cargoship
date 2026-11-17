@@ -17,6 +17,7 @@ package distro
 import (
 	"testing"
 
+	"github.com/k0sproject/dig"
 	"github.com/stretchr/testify/require"
 )
 
@@ -122,7 +123,7 @@ func TestResolveChartDelivery(t *testing.T) {
 }
 
 func TestChartManifestName(t *testing.T) {
-	require.Equal(t, "my-app-chart.yaml", Chart{Name: "my-app"}.ManifestName())
+	require.Equal(t, "cargoship-my-app-chart.yaml", Chart{Name: "my-app"}.ManifestName())
 }
 
 // The projection is what the three directory walkers read a chart as -- the build that stages
@@ -162,4 +163,58 @@ func TestChartImagesAreCarried(t *testing.T) {
 
 	require.Equal(t, []string{"registry.k8s.io/pause:3.10", "registry.example.com/my-app:1.2.3"}, c.AllImages())
 	require.Equal(t, c.AllImages(), c.EnabledImages(), "a chart's When gate cannot be answered here, so both lists carry them")
+}
+
+// The name becomes a HelmChart resource name and a file in the engine's manifest directory, so
+// the decoder has to check it. The generated values schemas carry the same pattern, but a
+// schema is only enforced on the build path -- a definition read back out of a package
+// cargoship did not build reaches ValidateCharts and nothing else.
+func TestValidateChartsRefusesANameThatIsAPath(t *testing.T) {
+	for _, name := range []string{
+		"../../../../../etc/cron.d/x",
+		"my-app/../../x",
+		"My-App",
+		"-my-app",
+		"my_app",
+		"my-app/",
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := Config{
+				Charts: []Chart{
+					{
+						Name:    name,
+						Source:  "my-app-1.2.3.tgz",
+						Version: "1.2.3",
+					},
+				},
+			}
+			require.Error(t, c.ValidateCharts("rke2"))
+		})
+	}
+}
+
+// One name cannot be both a chart this package carries and a chart configuration it writes for
+// a bundled addon: both land in the engine's manifest directory, and the engine's own deploy
+// controller refuses to apply an object another owner already tracks -- which surfaces on the
+// cluster rather than here.
+func TestValidateChartsRefusesANameTheEngineManifestAlreadyUses(t *testing.T) {
+	c := Config{
+		Engine: dig.Mapping{
+			"manifest": dig.Mapping{
+				"traefik": dig.Mapping{"enabled": true},
+			},
+		},
+		Charts: []Chart{
+			{
+				Name:    "traefik",
+				Source:  "traefik-1.2.3.tgz",
+				Version: "1.2.3",
+			},
+		},
+	}
+	require.Error(t, c.ValidateCharts("k3s"))
+
+	c.Charts[0].Name = "my-app"
+	c.Charts[0].Source = "my-app-1.2.3.tgz"
+	require.NoError(t, c.ValidateCharts("k3s"))
 }

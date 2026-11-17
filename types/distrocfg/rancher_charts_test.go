@@ -52,7 +52,7 @@ func TestConfigureEngineWritesAHelmChart(t *testing.T) {
 
 	require.NoError(t, d.ConfigureEngine(context.Background(), host, cluster.RuntimeMeta{}, chartDistro()))
 
-	path := filepath.Join(d.Data, "server/manifests/my-app-chart.yaml")
+	path := filepath.Join(d.Data, "server/manifests/cargoship-my-app-chart.yaml")
 	got := parseWrittenYAML(t, cfg.files, path)
 	require.Equal(t, "HelmChart", got.DigString(keyKind))
 	require.Equal(t, "helm.cattle.io/v1", got.DigString(keyAPIVersion))
@@ -74,7 +74,7 @@ func TestHelmChartIsControllerOnly(t *testing.T) {
 
 	require.NoError(t, d.ConfigureEngine(context.Background(), host, cluster.RuntimeMeta{}, chartDistro()))
 
-	require.NotContains(t, cfg.files, filepath.Join(d.Data, "server/manifests/my-app-chart.yaml"))
+	require.NotContains(t, cfg.files, filepath.Join(d.Data, "server/manifests/cargoship-my-app-chart.yaml"))
 }
 
 // A chart a cluster gated off is left out of the desired set, which is also what gets one
@@ -89,13 +89,18 @@ func TestHelmChartHeldBackByItsGate(t *testing.T) {
 
 	require.NoError(t, d.ConfigureEngine(context.Background(), host, cluster.RuntimeMeta{}, dis))
 
-	require.NotContains(t, cfg.files, filepath.Join(d.Data, "server/manifests/my-app-chart.yaml"))
+	require.NotContains(t, cfg.files, filepath.Join(d.Data, "server/manifests/cargoship-my-app-chart.yaml"))
 }
 
 // A chart whose bytes were never read would be written as a resource with an empty
-// chartContent, which the helm controller answers by failing an install job on the cluster. The
-// writer refuses instead, naming the chart.
-func TestHelmChartRefusesEmptyContent(t *testing.T) {
+// chartContent, which the helm controller answers by failing an install job on the cluster. It
+// is skipped and warned about instead.
+//
+// Skipped rather than refused, which is the part worth asserting: an error out of DesiredFiles
+// leaves the caller with a nil desired set, and the prune that follows reads a nil set as "the
+// package wants none of these" and empties the registry TLS and state directories. The build
+// refuses an empty tarball, so one chart's bookkeeping must not be able to reach that path.
+func TestHelmChartSkipsEmptyContent(t *testing.T) {
 	d := newTestRancher()
 	dis := chartDistro()
 	dis.Spec.Config.Charts[0].Content = nil
@@ -103,9 +108,7 @@ func TestHelmChartRefusesEmptyContent(t *testing.T) {
 	host := cfg.attach(&cluster.Host{Role: cluster.RoleController, Hostname: "node1"})
 	host.Metadata.IsLeader = true
 
-	// DesiredFiles rather than ConfigureEngine: ConfigureEngine warns and writes nothing on a
-	// render failure, the same way it does for every other file it renders, so the error is
-	// only returned to the engine-config-sync phase that checks it.
-	_, err := d.DesiredFiles(context.Background(), host, cluster.RuntimeMeta{}, dis)
-	require.ErrorContains(t, err, "carries no content")
+	desired, err := d.DesiredFiles(context.Background(), host, cluster.RuntimeMeta{}, dis)
+	require.NoError(t, err)
+	require.NotContains(t, desired, filepath.Join(d.Data, "server/manifests/cargoship-my-app-chart.yaml"))
 }

@@ -56,7 +56,7 @@ The two sections look alike and do opposite things.
 | Chart travels      | n/a - the engine already has it              | in the resource, base64    |
 | Removing the entry | stops configuring a chart that keeps running | **uninstalls the release** |
 
-That last row is the one to read twice. A `HelmChart` resource owns its release, cargoship prunes the manifest directory against what the package declares, and the helm controller answers a deleted `HelmChart` by uninstalling the workload. Dropping a chart from a package, or gating it off with `when`, takes the release with it on the next `cargoship apply`. That is the intent - a package is the description of what the cluster runs - but it is destructive, and it is not what dropping a `manifest` entry does.
+That last row is the one to read twice. A `HelmChart` resource owns its release, cargoship prunes the manifest directory against what the package declares, and the helm controller answers a deleted `HelmChart` by uninstalling the workload. The prune only reaches cargoship's own files - every manifest it writes is named `cargoship-<name>-chart.yaml` - so a `HelmChart` a package delivers through `spec.config.files` instead, or one the engine bundles, is left alone. Dropping a chart from a package, or gating it off with `when`, takes the release with it on the next `cargoship apply`. That is the intent - a package is the description of what the cluster runs - but it is destructive, and it is not what dropping a `manifest` entry does.
 
 ## Fields
 
@@ -84,7 +84,7 @@ values: |
     host: {{ .Cluster.LoadBalancer }}
 ```
 
-`when` is how a cluster leaves the chart out entirely: the resource is not written, and the chart's bytes are not even read out of the package. The path has to exist in the package's values and be a boolean; a path that is missing reads as off, with a warning, which is also what a typo looks like.
+`when` is how a cluster leaves the chart out entirely: the resource is not written, and the chart's bytes are not even read out of the package. The path has to exist in the package's values and hold a boolean, and only an explicit `false` gates the chart off: a path that is missing, unreadable, or holding anything other than a boolean fails the apply. That is deliberate, and it is the `when` gate's one sharp edge - reading a missing path as off would mean a renamed values key, or an override that replaced the gate's parent map, silently uninstalling a running release.
 
 Note what `when` does **not** gate: the chart's `images` are carried and uploaded either way. The flat image list has no per-value gate to hang them on, which is the same gap [an `enabled: false` chart manifest has](../agent/todo-chart-disable-image-gating.md).
 

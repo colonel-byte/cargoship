@@ -17,6 +17,7 @@ package distro
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
@@ -168,13 +169,22 @@ func (c Chart) needsShasum() bool {
 // bundled manifests in the same directory, and from the HelmChartConfig files cargoship writes
 // there for bundled charts.
 func (c Chart) ManifestName() string {
-	return c.Name + ChartManifestSuffix
+	return ChartManifestPrefix + c.Name + ChartManifestSuffix
 }
 
-// ChartManifestSuffix is the suffix of every HelmChart manifest cargoship writes. It is also
-// the glob the manifest directory is pruned with, so a chart dropped from a package has its
-// manifest removed -- and the release uninstalled by the helm controller as a result.
-const ChartManifestSuffix = "-chart.yaml"
+// ChartManifestPrefix and ChartManifestSuffix bracket the name of every HelmChart manifest
+// cargoship writes. Together they are also the glob the manifest directory is pruned with, so a
+// chart dropped from a package has its manifest removed -- and the release uninstalled by the
+// helm controller as a result.
+//
+// The prefix is what keeps that prune off files cargoship does not own. Targeting the engine's
+// manifest directory with a spec.config.files entry is an established pattern, and such a file
+// is not in DesiredFiles, so a package shipping its own cilium-chart.yaml there would have had
+// it deleted and its release uninstalled on the next engine-config-sync.
+const (
+	ChartManifestPrefix = "cargoship-"
+	ChartManifestSuffix = "-chart.yaml"
+)
 
 // chartEngines are the distro types whose engine runs a helm controller, and so can install a
 // chart a package carries. The ids are repeated here rather than read from types/distrocfg, for
@@ -197,6 +207,12 @@ var chartEngines = map[string]bool{
 // docs/guides/charts.md.
 const MaxChartContentBytes = 1 << 20
 
+// chartName is the same pattern the generated values schemas enforce on a chart's name: a
+// HelmChart resource name, which is also the stem of the file written into the engine's
+// manifest directory. Anchored, so nothing resolving to a path separator or a parent directory
+// can reach filepath.Join.
+var chartName = regexp.MustCompile(`^[a-z0-9]([a-z0-9\-]*[a-z0-9])?$`)
+
 // ValidateCharts checks what the schema cannot: that this distro can install a chart at all,
 // that no two entries would write one resource, and that anything fetched names a digest.
 //
@@ -211,10 +227,26 @@ func (c *Config) ValidateCharts(distroType string) error {
 		return fmt.Errorf("spec.config.charts is set, but %q has no helm controller to install them: charts are supported on rke2 and k3s", distroType)
 	}
 
+	manifests := ChartManifests(c.Engine)
 	seen := make(map[string]bool, len(c.Charts))
 	for i, chart := range c.Charts {
 		if chart.Name == "" {
 			return fmt.Errorf("spec.config.charts[%d] has no name", i)
+		}
+		// The name is joined onto the engine's manifest directory and written as root on
+		// every controller, so it has to be checked here and not only by the JSON schema:
+		// the schema's pattern is enforced on the build path, and a definition read back out
+		// of a package that cargoship did not build never passes through it.
+		if !chartName.MatchString(chart.Name) {
+			return fmt.Errorf("chart %s is not a valid name: it becomes a HelmChart resource name and a file in the engine's manifest directory, so it must match %s",
+				chart.Name, chartName)
+		}
+		// A chart whose name collides with one of the engine's own bundled addons, or with a
+		// manifest entry this package writes, cannot install: the engine's deploy controller
+		// tracks ownership per addon and refuses to apply an object another owns, so the
+		// error lands on the cluster rather than here.
+		if _, ok := manifests[chart.Name]; ok {
+			return fmt.Errorf("chart %s is also declared under spec.config.engine.manifest: one name cannot be both a carried chart and a chart configuration", chart.Name)
 		}
 		if chart.Source == "" {
 			return fmt.Errorf("chart %s has no source", chart.Name)
