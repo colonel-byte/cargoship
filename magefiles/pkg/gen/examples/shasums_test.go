@@ -186,3 +186,67 @@ func cacheKeys(s *exampleShasums) []string {
 	sort.Strings(keys)
 	return keys
 }
+
+// TestFetchRKE2TarballSHAReadsTheCache is TestFetchK3sBinarySHAReadsTheCache for the rke2
+// tarball: a cached digest must answer without a request, which is what lets a fresh clone
+// re-render the rke2 examples offline. The repo URL is one that fails if it is ever reached.
+func TestFetchRKE2TarballSHAReadsTheCache(t *testing.T) {
+	const (
+		tag      = "v1.35.0%2Brke2r1"
+		amdURL   = "https://github.com/rancher/rke2/releases/download/" + tag + "/rke2.linux-amd64.tar.gz"
+		amdSum   = "aaaa"
+		noRemote = "https://127.0.0.1:1/rancher/rke2"
+	)
+
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	s.storeKey(archiveKey(amdURL), amdURL, amdSum)
+	if _, ok := s.sums[tag+"/rke2.linux-amd64.tar.gz"]; !ok {
+		t.Fatalf("want an entry keyed by tag and tarball name, got keys %v", s.sums)
+	}
+
+	v := exampleVersion{
+		TagURL: tag,
+		Arches: []exampleArch{
+			{
+				Arch:       "amd64",
+				Tarball:    "rke2.linux-amd64.tar.gz",
+				TarballURL: amdURL,
+			},
+		},
+	}
+	if err := fetchRKE2TarballSHA(&v, noRemote, s); err != nil {
+		t.Fatalf("expected the cache to answer without a fetch: %v", err)
+	}
+}
+
+// A digest cached under the bare tarball name -- the shape the cache used before entries were
+// version-qualified -- must not satisfy the lookup, or the one release that happens to hold
+// that key keeps it forever and the committed cache stops being reproducible from an empty
+// one. Reaching for the network here is the correct behaviour, and the unreachable host is
+// what proves the lookup missed.
+func TestFetchRKE2TarballSHAIgnoresALegacyBareKey(t *testing.T) {
+	const (
+		tag      = "v1.35.0%2Brke2r1"
+		amdURL   = "https://github.com/rancher/rke2/releases/download/" + tag + "/rke2.linux-amd64.tar.gz"
+		noRemote = "https://127.0.0.1:1/rancher/rke2"
+	)
+
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	s.storeKey("rke2.linux-amd64.tar.gz", amdURL, "aaaa")
+
+	v := exampleVersion{
+		TagURL: tag,
+		Arches: []exampleArch{
+			{
+				Arch:       "amd64",
+				Tarball:    "rke2.linux-amd64.tar.gz",
+				TarballURL: amdURL,
+			},
+		},
+	}
+	// A transport failure is returned rather than warned past, so a 502 from the release host
+	// cannot silently restore the 230MiB download this function exists to avoid.
+	if err := fetchRKE2TarballSHA(&v, noRemote, s); err == nil {
+		t.Fatal("want the bare-name entry ignored and the fetch attempted, got a cache hit")
+	}
+}

@@ -20,6 +20,7 @@ package examples
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -314,7 +315,8 @@ func fetchRKE2Release(v *exampleVersion, repoURL string, sums *exampleShasums) e
 func fetchRKE2TarballSHA(v *exampleVersion, repoURL string, sums *exampleShasums) error {
 	for i := range v.Arches {
 		a := &v.Arches[i]
-		if _, ok := sums.lookup(a.TarballURL); ok {
+		key := archiveKey(a.TarballURL)
+		if _, ok := sums.lookupKey(key, a.TarballURL); ok {
 			continue
 		}
 
@@ -323,16 +325,23 @@ func fetchRKE2TarballSHA(v *exampleVersion, repoURL string, sums *exampleShasums
 		if err != nil {
 			// A release whose checksum file is missing is not a failure: the template's
 			// own sha256 call still downloads and hashes the tarball, which is what
-			// happened before this existed.
+			// happened before this existed. Anything else -- a timeout, a DNS failure,
+			// one of the 502s this function exists to stop provoking -- is, because
+			// continuing past it silently restores the 230MiB download per version.
+			if !errors.Is(err, errReleaseAssetMissing) {
+				return fmt.Errorf("%s for %s: %w", asset, v.TagURL, err)
+			}
 			fmt.Printf("warning: %s for %s: %v\n", asset, v.TagURL, err)
 			continue
 		}
 		sum, err := releaseAssetSHA(lines, a.Tarball)
 		if err != nil {
+			// The checksum file is published but names no tarball, which is the same
+			// not-published case as above rather than a transport failure.
 			fmt.Printf("warning: %s for %s: %v\n", asset, v.TagURL, err)
 			continue
 		}
-		sums.storeKey(archiveKey(a.TarballURL), a.TarballURL, sum)
+		sums.storeKey(key, a.TarballURL, sum)
 	}
 	return nil
 }
@@ -473,7 +482,7 @@ const exampleOCITimeout = 30 * time.Second
 // publish one of these, in the ordinary "<sha256>  <name>" form.
 func releaseAssetSHA(lines []string, asset string) (string, error) {
 	for _, line := range lines {
-		// "<sha256>  k3s", alongside the airgap tarballs.
+		// "<sha256>  k3s" or "<sha256>  rke2.linux-amd64.tar.gz", alongside the airgap tarballs.
 		if sum, name, ok := strings.Cut(line, " "); ok && strings.TrimSpace(name) == asset {
 			return sum, nil
 		}
