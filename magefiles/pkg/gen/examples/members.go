@@ -47,8 +47,11 @@ const memberKeySeparator = "!"
 //
 //	v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2
 //
-// Whole-file entries do not need this -- an RPM or a deb carries its version in its own file
-// name -- so they stay keyed by file name and the cache still reads as an inventory.
+// Most whole-file entries do not need this -- an RPM or a deb carries its version in its own
+// file name -- so they stay keyed by file name and the cache still reads as an inventory. The
+// exception is the release tarball above, whose name every release reuses: exampleShasums.store
+// falls back to this key for a name already holding different content, which is what keeps the
+// versions from evicting each other.
 func memberKey(url, member string) string {
 	return archiveKey(url) + memberKeySeparator + path.Clean(member)
 }

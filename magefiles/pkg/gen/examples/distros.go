@@ -226,7 +226,7 @@ var exampleDistros = []exampleDistroSpec{
 					v.TagURL, a.Tarball)
 			}
 		},
-		fetch: fetchRKE2EtcdVersion,
+		fetch: fetchRKE2Release,
 		// RKE2 installs from RPMs, and Rancher removes an rke2rN's RPMs once the next
 		// revision supersedes it, long before the git tag goes anywhere. Every architecture
 		// of a build is published and pulled together, so the first one answers for all.
@@ -284,6 +284,57 @@ var exampleDistros = []exampleDistroSpec{
 func exampleRKE2RPM(pkg, minor, rpmVersion, rpmArch string) string {
 	return fmt.Sprintf("https://rpm.rancher.io/rke2/latest/%s/centos/9/%s/rke2-%s-%s-0.el9.%s.rpm",
 		minor, rpmArch, pkg, rpmVersion, rpmArch)
+}
+
+// fetchRKE2Release fills in everything only an rke2 release can answer: the bundled etcd
+// version, and the digest of the release tarball.
+func fetchRKE2Release(v *exampleVersion, repoURL string, sums *exampleShasums) error {
+	if err := fetchRKE2EtcdVersion(v, repoURL, sums); err != nil {
+		return err
+	}
+	return fetchRKE2TarballSHA(v, repoURL, sums)
+}
+
+// fetchRKE2TarballSHA records the release tarball's digest from the checksum file the release
+// publishes, rather than leaving it to be arrived at by downloading the tarball.
+//
+// The digest is wanted by the zarf definitions, which declare the tarball as a file and hash it
+// with the templates' sha256 function. That function downloads what it is given, and the rke2
+// tarball is about 230MiB -- so rendering the twenty-five versions of the flavor that asks for
+// zarf definitions moved something like six gigabytes per run, every run, to compute numbers
+// upstream had already published. It is also what made the render fail outright: the release
+// host answers that volume with 502s.
+//
+// Recording it here means the template's own call finds it in the cache and fetches nothing.
+// fetchK3sBinarySHA does the same thing for the k3s binary, for the same reason.
+//
+// Only the whole tarball is covered. The files extracted out of it still need the archive
+// streamed -- a checksum file cannot give a digest for a path inside an archive -- but those
+// entries are keyed per version and so are cached once rather than re-fetched; see store.
+func fetchRKE2TarballSHA(v *exampleVersion, repoURL string, sums *exampleShasums) error {
+	for i := range v.Arches {
+		a := &v.Arches[i]
+		if _, ok := sums.lookup(a.TarballURL); ok {
+			continue
+		}
+
+		asset := fmt.Sprintf("sha256sum-%s.txt", a.Arch)
+		lines, err := fetchReleaseLines(repoURL, v.TagURL, asset)
+		if err != nil {
+			// A release whose checksum file is missing is not a failure: the template's
+			// own sha256 call still downloads and hashes the tarball, which is what
+			// happened before this existed.
+			fmt.Printf("warning: %s for %s: %v\n", asset, v.TagURL, err)
+			continue
+		}
+		sum, err := releaseAssetSHA(lines, a.Tarball)
+		if err != nil {
+			fmt.Printf("warning: %s for %s: %v\n", asset, v.TagURL, err)
+			continue
+		}
+		sums.storeKey(archiveKey(a.TarballURL), a.TarballURL, sum)
+	}
+	return nil
 }
 
 // rke2HardenedEtcd matches the etcd version out of RKE2's hardened-etcd image reference, e.g.
@@ -356,7 +407,7 @@ func fetchK3sBinarySHA(v *exampleVersion, repoURL string, sums *exampleShasums) 
 		if err != nil {
 			return err
 		}
-		sum, err := k3sBinarySHA(lines, exampleK3sBinary(a.Arch))
+		sum, err := releaseAssetSHA(lines, exampleK3sBinary(a.Arch))
 		if err != nil {
 			return fmt.Errorf("%s for %s: %w", asset, v.TagURL, err)
 		}
@@ -418,13 +469,14 @@ func exampleK3sPinned(ref, digest string) string {
 // unreachable fails the render rather than hanging it.
 const exampleOCITimeout = 30 * time.Second
 
-// k3sBinarySHA picks one binary's digest out of a release checksum file's lines.
-func k3sBinarySHA(lines []string, binary string) (string, error) {
+// releaseAssetSHA picks one asset's digest out of a release checksum file's lines. Both distros
+// publish one of these, in the ordinary "<sha256>  <name>" form.
+func releaseAssetSHA(lines []string, asset string) (string, error) {
 	for _, line := range lines {
 		// "<sha256>  k3s", alongside the airgap tarballs.
-		if sum, name, ok := strings.Cut(line, " "); ok && strings.TrimSpace(name) == binary {
+		if sum, name, ok := strings.Cut(line, " "); ok && strings.TrimSpace(name) == asset {
 			return sum, nil
 		}
 	}
-	return "", fmt.Errorf("no %s entry", binary)
+	return "", fmt.Errorf("no %s entry", asset)
 }
