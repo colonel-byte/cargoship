@@ -16,6 +16,8 @@ package layout
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -202,6 +204,53 @@ func TestLoadValuesOverrides(t *testing.T) {
 	bad := map[string]any{"cilium": map[string]any{"enabled": "yes"}}
 	if _, err := LoadValues(context.Background(), dir, vals, bad); err == nil {
 		t.Fatal("LoadValues accepted an override that violates the schema")
+	}
+}
+
+// A URL values file is the one path that reaches LoadFiles' temp directory, so
+// it is the only way to check that the directory lands under the configured
+// base rather than $TMPDIR. A library consumer with a read-only root filesystem
+// has nowhere else to write, and nothing else in this file covers the line:
+// LoadFiles returns before it touches tmpDir when every path is local.
+func TestLoadValuesURLUsesConfiguredTempDirectory(t *testing.T) {
+	base := t.TempDir()
+	prev := config.CommonOptions.TempDirectory
+	t.Cleanup(func() { config.CommonOptions.TempDirectory = prev })
+	config.CommonOptions.TempDirectory = base
+
+	// Pointing $TMPDIR at a path that cannot be created stands in for the
+	// read-only root filesystem a controller runs with: the download has
+	// nowhere to go unless it goes under the configured base. Without that,
+	// this test passes whether or not the base is honoured.
+	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "absent", "tmp"))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// The handler runs on the server's goroutine, so a write failure is an
+		// Errorf rather than a Fatal off the test goroutine.
+		if _, err := w.Write([]byte("replicas: 2\n")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	vals := distro.Values{Files: []string{srv.URL + "/values.yaml"}}
+	merged, err := LoadValues(context.Background(), t.TempDir(), vals)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if merged["replicas"] != 2 {
+		t.Fatalf("replicas = %v, want 2 from the served file", merged["replicas"])
+	}
+
+	// The temp directory is created here and removed here, so the configured
+	// base is empty again - a controller's mounted volume does not accumulate
+	// downloaded values files across reconciles.
+	left, err := os.ReadDir(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(left) != 0 {
+		t.Fatalf("%d entries left under the configured temp directory, want 0", len(left))
 	}
 }
 
