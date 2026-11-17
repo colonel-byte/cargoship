@@ -10573,6 +10573,12 @@
     ],
     "sha256": "9f45d76e52eb79a28a89336a34e5324c7e729409249422b37372ebb19198a228"
   },
+  "v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "dfcfa35690705021339176391fb5c4bee5d15b2505e68c201a5302c257429bad"
+  },
   "v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10602,6 +10608,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
+  },
+  "v1.35.0%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "e39c9320a6db6171d429b675e67e3fc2c4358814ea7a4e16eea5e1dc54b95801"
   },
   "v1.35.0%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -10633,6 +10645,12 @@
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
   },
+  "v1.35.0%2Brke2r3/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r3/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "c2ad00298e9bc61815ec9dda21d6bceca5043fad281c67e9b338fb3af04e9398"
+  },
   "v1.35.0%2Brke2r3/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r3/rke2.linux-amd64.tar.gz"
@@ -10662,6 +10680,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r3/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
+  },
+  "v1.35.0%2Brke2r3/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r3/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "c318fe0b0af0b52d8c1d0a319c21e372bb721c0dce1b991e06ce0856e7abda20"
   },
   "v1.35.0%2Brke2r3/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -10705,6 +10729,12 @@
     ],
     "sha256": "c8d08bc38ad51be20ba531b3c412855c38d534f99cdff30fde6891b6f555a846"
   },
+  "v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "d37faed8b42963755798aeea1076260eea32bde816f2a1c6ce1fe51e2071d2ec"
+  },
   "v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10734,6 +10764,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.1%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "9a7bd127c29159a53eaf94302d32c839dd8bfe6c56a07af0d119e1bb467a0756"
+  },
+  "v1.35.1%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.1%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "eb8b9b4cdb2baa86621d90f289ab5494b1d50ed3e9bd340033506ddb24c8fb8e"
   },
   "v1.35.1%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -10777,6 +10813,12 @@
     ],
     "sha256": "0c780ef4b6275bd27c77ed64a647fa1d859b1bd60597ad420f3243c261e5ffb6"
   },
+  "v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "4685cdac99b2288668b7f00b69e6848412949fbdc71ba065de7688b6b1647a70"
+  },
   "v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10806,6 +10848,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "f06707bd3486ebc9773146af1e027704cd6093d0a7087ffb12373af1d299967f"
   },
   "v1.35.10%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -10849,6 +10897,12 @@
     ],
     "sha256": "228809a7ef47d25c1bdbe746944931ec2fd2edf842b9cf50f1dd4f9ec2505b0e"
   },
+  "v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "73d6923a1f78a0f185bc9fa32474d9489ef20294eecac977f9e475788e2dfb07"
+  },
   "v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10878,6 +10932,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.2%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "2e8565ceac576b2e63926fdbf3e29a09e897fe166e117bec037556d50ac3236f"
   },
   "v1.35.2%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -10921,6 +10981,12 @@
     ],
     "sha256": "7c450b3b8c6101ae904c95c00db0f8fab275be1d3fc6533e8852eabc30327e0d"
   },
+  "v1.35.3%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "4bfedf34d112d3ad887da8ff7879014f532022c44002351dc4f8ef8b6430ed43"
+  },
   "v1.35.3%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -10950,6 +11016,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.3%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "e21f7edf0ca64e6c52b4d99032d9e3be33dbf72ae77e4bc258f86315e2158fad"
   },
   "v1.35.3%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -10981,6 +11053,12 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.3%2Brke2r3/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r3/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "394235d22a63f5b491192215267eb328296a9c40811c8b0a2088a638961dbae1"
+  },
   "v1.35.3%2Brke2r3/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r3/rke2.linux-amd64.tar.gz"
@@ -11010,6 +11088,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r3/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.3%2Brke2r3/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r3/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "572bfb0810ca6ccc4b75cad55d7b15b1ed52e1ef4602aeaac0236b869b598e4a"
   },
   "v1.35.3%2Brke2r3/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11053,6 +11137,12 @@
     ],
     "sha256": "53eab87ef5601265a6cbd09756840646693e71db84ee8578884d8f7749345a73"
   },
+  "v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "ce0a273ad72fed6451b9602e5d5d55e7bddd767ee8b7f4dcee10598902ff93cd"
+  },
   "v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11082,6 +11172,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.4%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.4%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "0f91bce740c246aea434aa67e9538feaf35766467e26342f44b6315d74ebd708"
   },
   "v1.35.4%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11125,6 +11221,12 @@
     ],
     "sha256": "aced90bea6a4e025abef4cf6db7d8cc316a7d20a2b963f809852a37f2b9dbc03"
   },
+  "v1.35.5%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "9c62265713410f0da65a6d22ab4e52bda62a73cca378bed89251bf0f592e3866"
+  },
   "v1.35.5%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11154,6 +11256,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.5%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "d5b41d9dd53515ff054eddaf8c6f11dc6b4abbc19d1c6a7cfd286e8975b94d0c"
   },
   "v1.35.5%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11185,6 +11293,12 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.35.5%2Brke2r2/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r2/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "981fe069466519dd9acb6ca832e4f138075b955776ef48b860cc628ad0cf9bc2"
+  },
   "v1.35.5%2Brke2r2/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r2/rke2.linux-amd64.tar.gz"
@@ -11214,6 +11328,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r2/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.5%2Brke2r2/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.5%2Brke2r2/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "f914242fa180e38121f1ad436b36288c164e60ed49a110075478ed2966aed447"
   },
   "v1.35.5%2Brke2r2/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11257,6 +11377,12 @@
     ],
     "sha256": "64c71644eb83d48f54da43c86ee8ba0ddff69db87e11d96a48fec7a965b1bc80"
   },
+  "v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "110c1170861635f55857ee50422fecdbf5d24b49e089fccc397a04419db59497"
+  },
   "v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11286,6 +11412,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.6%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.6%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "9ad3f472ed0a0ffc282fbe374dddd51409b9c4b99a217787a516108ced7dc215"
   },
   "v1.35.6%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11329,6 +11461,12 @@
     ],
     "sha256": "4875d2a7dd7be60020ddcce44aed92d46d4d8d867f038bdceeca9a20558fa613"
   },
+  "v1.35.7%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.7%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "7a29a6fbf512903a6a4611a289bcb3bdf01ddeea9df1a09b1bd1f210f3d6948a"
+  },
   "v1.35.7%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.7%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11358,6 +11496,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.7%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.7%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.7%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "0887d7b1e08dc7eb5ec57ad1db2d38149d879d224ddaf6f808e31dfa36ba1c9f"
   },
   "v1.35.7%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11401,6 +11545,12 @@
     ],
     "sha256": "898476e008704289382377ef19946f23b511cf2678042cb5c8aef991e64f840a"
   },
+  "v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "805f26f1e7e875b7721515d7a3e55b79b86124252a8c9191f5fc3f06523af26f"
+  },
   "v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11430,6 +11580,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.8%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "2fc92e6736d0288e8541ddd63d710be5e1af78d9844db5e14830c5a55e8344f2"
   },
   "v1.35.8%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11473,6 +11629,12 @@
     ],
     "sha256": "6176dd12c512e177af998e6035920f6283c5fdbd5adfdff85c103a7fdf2a00b5"
   },
+  "v1.35.9%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.9%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "e2ed0b37d06d16d823289c0117e43d98c7677d65b778ae4370827243776c295e"
+  },
   "v1.35.9%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.35.9%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11502,6 +11664,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.35.9%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.35.9%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.35.9%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "41a2595f4d07c456f603e17e03b9b9c75ac69de1d8d3bdcf598f750a674e510d"
   },
   "v1.35.9%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11545,6 +11713,12 @@
     ],
     "sha256": "5a4e4e76ddacb7997384746992439b9a75ed930d8d2b9caf1938571d416d8a0e"
   },
+  "v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "c50d2d4e6b05b3e8647475a7af3707836d5eae154b05d306a606e3ab20be22f0"
+  },
   "v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11574,6 +11748,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.0%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.0%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "fcce877e0c95bfc6d9014c884275620de73884143b4b540be9de31f0156f6ab3"
   },
   "v1.36.0%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11617,6 +11797,12 @@
     ],
     "sha256": "2240e9f7fd8cf36e9998d7ef18781975780d724b59408174618ec15b410891dc"
   },
+  "v1.36.1%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "4de11ebab86097a67ec30a5084786ac6edd266f08001f9a8ab1caf547cc9c18a"
+  },
   "v1.36.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11646,6 +11832,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.1%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "f0f61b6c4369a197ee699c749d36e0de96f692fb00c50fa9d5127fa85c95aaad"
   },
   "v1.36.1%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11677,6 +11869,12 @@
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
   },
+  "v1.36.1%2Brke2r2/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r2/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "424082101e94d07eec415481e01d5cc534cb3bea4d6c85036f608c21ae58ccd2"
+  },
   "v1.36.1%2Brke2r2/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r2/rke2.linux-amd64.tar.gz"
@@ -11706,6 +11904,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r2/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.1%2Brke2r2/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.1%2Brke2r2/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "b90ccfb7142a09ffc671a79da81fc0215f65612e306fce3b1bfdd14682e3dd44"
   },
   "v1.36.1%2Brke2r2/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11749,6 +11953,12 @@
     ],
     "sha256": "1dc5fc17f15c28fa0a3f011cee28ad613f918c3d967a426e5a05d43ddb239817"
   },
+  "v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "ea2f9234810a8166b5534d656c647f30bf9b2af6831a198df52df9c901b4f514"
+  },
   "v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11778,6 +11988,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.2%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.2%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "997048a66024cf35c973a90dfa9edae0a2d9c4b9c8587a355b801b2a6db632bb"
   },
   "v1.36.2%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11821,6 +12037,12 @@
     ],
     "sha256": "c9a209103f480f163b7c6a56f00862b4481927b284dc29a3716bb70d886691a8"
   },
+  "v1.36.3%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.3%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "5bbc6315131af7f435385d0ed63f14788ef2a858ac482f8b9146cf3a1a1582d3"
+  },
   "v1.36.3%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.3%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11850,6 +12072,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.3%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.3%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.3%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "af50c3352ccb4d86c1fda24424707f9d4078b2a296245d832143ae283cd5fdbd"
   },
   "v1.36.3%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11893,6 +12121,12 @@
     ],
     "sha256": "c920706346d5ad4e5cd3c7bf1bb09ce71ebe07fec829e513e40f1caf98aed8bb"
   },
+  "v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "7bcbd3167d6947e1d79cdf722acdc740b28021fefb50dd5b974a1980776d4079"
+  },
   "v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11922,6 +12156,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "e6a8b0b6fa899e457614c6160debcd24524c6e149e805b3d741fb3d281ca228a"
   },
   "v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -11965,6 +12205,12 @@
     ],
     "sha256": "135e34cb9e8a1cfae3cb55577789e93501efe7edc080a8b2630458a85b07721e"
   },
+  "v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "4fdbe8a8a32517fbcb6e80c71ca393b96828fbb87685102d9058b51527f9278d"
+  },
   "v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -11994,6 +12240,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.5%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "244454bed11d9525452e10a2e5055da5d5fc6b61928ca3fae778bc4254ce467f"
   },
   "v1.36.5%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -12037,6 +12289,12 @@
     ],
     "sha256": "49dcecdb4f64f5e92bdc52d204d407fb39729e492f09074488125ee58b6f2895"
   },
+  "v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "e111ac6333ddb2b819d133a413914d4456dd2195a3d694865cb7acda5bf81ae4"
+  },
   "v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -12066,6 +12324,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "19988cc4e78a9e04cfdec3977c2cada60975b0c401e44cb7406159e7154482e3"
   },
   "v1.36.6%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -12109,6 +12373,12 @@
     ],
     "sha256": "9bc2c128a597bf7c10ee45df844f2838251ba53806f7673d7fea24a6cb1b6a99"
   },
+  "v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "57eed94ca59e1245234ad1f97d84a29a31c0b02a59760af3b7d4338c40d5b513"
+  },
   "v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -12138,6 +12408,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.37.0%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.0%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "fe98d738ee2b052674cd59ac6f28ffb3c28bf9e9cfdb025cf6ae1e03971ffd10"
   },
   "v1.37.0%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -12181,6 +12457,12 @@
     ],
     "sha256": "a1561ca4aef8b99f5588a840d4468ac39c8c1cd92470bbcb9634823fa221741a"
   },
+  "v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "909445617c4aedbaa150d36bc3cb0c575dc9e892140d6f3d4b57dbd02d7f411c"
+  },
   "v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -12210,6 +12492,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.37.1%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "ba168981e0d5178283c586806658c6377b9a5ffbbcb5748a2376d47c2d1708a1"
   },
   "v1.37.1%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
@@ -12253,6 +12541,12 @@
     ],
     "sha256": "a779ccf1e5e2e33a62f5a29c2f1c0bbf99431e100579d4c10f0aa0742a6aa84b"
   },
+  "v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+    ],
+    "sha256": "0568f48d772c7feff7056062225d5ba82fb3f73ea7acaea63862fe601dae6d92"
+  },
   "v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz!bin/rke2": {
     "urls": [
       "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
@@ -12282,6 +12576,12 @@
       "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
     ],
     "sha256": "30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1"
+  },
+  "v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz": {
+    "urls": [
+      "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz"
+    ],
+    "sha256": "849bf989b079e330f73d142259b1be4d2fd487927431555e7544cf1687627822"
   },
   "v1.37.2%2Brke2r1/rke2.linux-arm64.tar.gz!bin/rke2": {
     "urls": [
