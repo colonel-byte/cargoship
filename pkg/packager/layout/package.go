@@ -313,12 +313,12 @@ func LoadValues(ctx context.Context, dirPath string, vals distro.Values, overrid
 // executed is the text the package author wrote. A value that arrives from a
 // cluster inventory and happens to contain "{{" is written through as the
 // characters it is.
-func (d *DistroLayout) ApplyValues(values map[string]any) error {
+func (d *DistroLayout) ApplyValues(values map[string]any, cluster ClusterFacts) error {
 	if d.Distro.Spec.Config.Engine == nil {
 		d.Distro.Spec.Config.Engine = dig.Mapping{}
 	}
 
-	rendered, err := helmvalues.EvaluateValuesTemplates(d.Distro.Spec.Config.Engine, templateData(values))
+	rendered, err := helmvalues.EvaluateValuesTemplates(d.Distro.Spec.Config.Engine, templateData(values, cluster))
 	if err != nil {
 		return fmt.Errorf("unable to render the engine configuration: %w", err)
 	}
@@ -355,7 +355,7 @@ func (d *DistroLayout) ApplyValues(values map[string]any) error {
 // Templating is opt-in per file because most of what a package ships is a tarball or an
 // RPM, and a template pass over one of those would either corrupt it or fail on a brace
 // that happens to appear in the middle of a binary.
-func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any) error {
+func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any, cluster ClusterFacts) error {
 	render := func(dir string, files v1alpha1.Files) error {
 		for i, f := range files {
 			if f == nil || !f.IsTemplate() {
@@ -366,7 +366,7 @@ func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any) e
 			if err != nil {
 				return fmt.Errorf("unable to read %s for templating: %w", f.Target, err)
 			}
-			out, err := helmvalues.RenderTemplate(string(raw), templateData(values))
+			out, err := helmvalues.RenderTemplate(string(raw), templateData(values, cluster))
 			if err != nil {
 				return fmt.Errorf("unable to render %s: %w", f.Target, err)
 			}
@@ -391,11 +391,45 @@ func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any) e
 	return render(config.OSDir, d.Distro.Spec.Config.OS.Files)
 }
 
+// ClusterFacts is what a package's templates may read about the cluster being installed,
+// under the .Cluster root. It is deliberately a handful of named fields rather than the
+// inventory itself: every field here is a name a package author writes into a manifest and
+// cannot be renamed afterwards without breaking their package, so each one is a decision.
+//
+// A control-plane VIP is why it exists. kube-vip advertises an address that cargoship
+// already knows - the inventory's spec.config.loadbalancer, which is what joining
+// controllers point `server:` at and what goes into the API server's tls-san - and a
+// package that had to be told it again in its own values would be one address written
+// twice, with nothing reconciling the two. The failure that invites is quiet: a cluster
+// bootstraps on controller one and the join fails on controller two.
+type ClusterFacts struct {
+	// LoadBalancer is the inventory's spec.config.loadbalancer: the address clients and
+	// joining nodes use to reach the control plane.
+	LoadBalancer string
+}
+
+// templateRoot is the .Cluster root as a map, holding only the facts the inventory set.
+//
+// A map rather than the struct, because an unset fact has to be a missing key: that is
+// what RenderTemplate rejects by name, so a manifest interpolating a VIP the inventory
+// never set gets an error naming the file instead of shipping a blank address. The
+// alternative - a struct with a zero string - renders empty and installs.
+//
+// `{{ if .Cluster.LoadBalancer }}` and `{{ with }}` still read a fact that is absent, so a
+// template can keep a cluster fact optional; see the noValue comment in pkg/helmvalues.
+func (f ClusterFacts) templateRoot() map[string]any {
+	root := map[string]any{}
+	if f.LoadBalancer != "" {
+		root["LoadBalancer"] = f.LoadBalancer
+	}
+	return root
+}
+
 // templateData is what a package's templates are evaluated against. Values are
-// namespaced under .Values, the spelling ZEP-0021 and Helm charts both use, which
-// leaves the other roots free for whatever a template is given access to later.
-func templateData(values map[string]any) map[string]any {
-	return map[string]any{"Values": values}
+// namespaced under .Values, the spelling ZEP-0021 and Helm charts both use, and
+// what cargoship knows about the cluster under .Cluster.
+func templateData(values map[string]any, cluster ClusterFacts) map[string]any {
+	return map[string]any{"Values": values, "Cluster": cluster.templateRoot()}
 }
 
 // Values returns the merged, schema-checked values the package was built with,

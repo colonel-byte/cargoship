@@ -379,6 +379,22 @@ spec:
     # selector matches, and no later phase renames or installs them, so a tool here is in place
     # as soon as the upload finishes.
     files:
+{{- with .KubeVip }}
+      # The control-plane VIP's static pod. Phase 50 puts it in place before the engine is
+      # configured or started, so it is there by the time the kubelet first reads its manifest
+      # directory.
+      - source: {{ .Source }}
+        target: {{ .Target }}
+        # Rendered against the package's values and the cluster's own facts before upload: the
+        # VIP comes from the inventory's spec.config.loadbalancer rather than from a value
+        # here, so the address kube-vip advertises and the one joining controllers are given
+        # cannot disagree.
+        template: true
+        perm: "0600"
+        selector:
+          profile: controller
+          when: .kubeVip.enabled
+{{- end }}
 {{- range $arch := .Arches }}
       - source: {{ $arch.EtcdURL }}
         extractPath: etcd-{{ $.EtcdVersion }}-linux-{{ $arch.Arch }}/etcdctl
@@ -603,4 +619,10 @@ spec:
 {{- range .CNIImages }}
         - {{ . }}
 {{- end }}
+{{- end }}
+{{- with .KubeVip }}
+        # The control-plane VIP. The tarball lands in the directory above, which rke2 imports
+        # from when it starts -- so the image is in containerd before the kubelet first reads
+        # the static pod, which is what keeps the pod off a registry no host can reach.
+        - {{ .Image }}
 {{- end }}

@@ -296,7 +296,7 @@ func TestApplyValues(t *testing.T) {
 	t.Run("a value the cluster sets is projected", func(t *testing.T) {
 		l := ciliumLayout(mappings)
 		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		enc := cilium(t, l)
@@ -312,7 +312,7 @@ func TestApplyValues(t *testing.T) {
 
 	t.Run("a value no one sets keeps the package default", func(t *testing.T) {
 		l := ciliumLayout(mappings)
-		if err := l.ApplyValues(map[string]any{}); err != nil {
+		if err := l.ApplyValues(map[string]any{}, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if enc := cilium(t, l); enc["enabled"] != false {
@@ -323,7 +323,7 @@ func TestApplyValues(t *testing.T) {
 	t.Run("no mappings is a no-op", func(t *testing.T) {
 		l := ciliumLayout(nil)
 		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if enc := cilium(t, l); enc["enabled"] != false {
@@ -336,7 +336,7 @@ func TestApplyValues(t *testing.T) {
 			{Source: ".cilium.encryption.enabled", Target: "manifest.rke2-cilium"},
 		})
 		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
-		if err := l.ApplyValues(values); err == nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err == nil {
 			t.Fatal("ApplyValues accepted a target path without a leading dot")
 		}
 	})
@@ -363,7 +363,7 @@ func TestApplyValuesProjectsAList(t *testing.T) {
 		values := map[string]any{"addons": map[string]any{
 			"disabled": []any{"rke2-ingress-nginx", "rke2-traefik", "rke2-traefik-crd"},
 		}}
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		// Read it the way the distro does, through the mapping Dup rebuilds: a
@@ -378,7 +378,7 @@ func TestApplyValuesProjectsAList(t *testing.T) {
 
 	t.Run("an empty list is still a list", func(t *testing.T) {
 		l := layout()
-		if err := l.ApplyValues(map[string]any{"addons": map[string]any{"disabled": []any{}}}); err != nil {
+		if err := l.ApplyValues(map[string]any{"addons": map[string]any{"disabled": []any{}}}, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if got := l.Distro.Spec.Config.Engine.DigMapping("config")["disable"]; !reflect.DeepEqual(got, []any{}) {
@@ -388,7 +388,7 @@ func TestApplyValuesProjectsAList(t *testing.T) {
 
 	t.Run("a cluster that sets nothing keeps the package's list", func(t *testing.T) {
 		l := layout()
-		if err := l.ApplyValues(map[string]any{}); err != nil {
+		if err := l.ApplyValues(map[string]any{}, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		got := l.Distro.Spec.Config.Engine.DigMapping("config")["disable"]
@@ -430,7 +430,7 @@ func TestApplyValuesMixedManifest(t *testing.T) {
 
 	t.Run("a string sibling is left alone", func(t *testing.T) {
 		l := mixedLayout(mappings)
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if enc := cilium(t, l); enc["enabled"] != true {
@@ -450,7 +450,7 @@ func TestApplyValuesMixedManifest(t *testing.T) {
 	// be there for the caller that renders the HelmChartConfig files.
 	t.Run("the manifest section still digs", func(t *testing.T) {
 		l := mixedLayout(mappings)
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		engine := l.Distro.Spec.Config.Engine
@@ -471,7 +471,7 @@ func TestApplyValuesMixedManifest(t *testing.T) {
 		l := mixedLayout([]distro.ValueMapping{
 			{Source: ".cilium.encryption.enabled", Target: `.manifest.rancher-vsphere-cpi.vCenter.host`},
 		})
-		if err := l.ApplyValues(values); err == nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err == nil {
 			t.Fatal("ApplyValues wrote through a chart entry that is a string")
 		}
 	})
@@ -509,7 +509,7 @@ func TestApplyValuesRendersTemplates(t *testing.T) {
 	// value has, not as the text of it, so the engine reads a YAML boolean.
 	t.Run("a templated scalar keeps its type", func(t *testing.T) {
 		l := templatedLayout()
-		if err := l.ApplyValues(templateValues(true, false)); err != nil {
+		if err := l.ApplyValues(templateValues(true, false), ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if enc := cilium(t, l); enc["enabled"] != true {
@@ -533,7 +533,7 @@ func TestApplyValuesRendersTemplates(t *testing.T) {
 			},
 		} {
 			l := templatedLayout()
-			if err := l.ApplyValues(templateValues(false, tt.autoscale)); err != nil {
+			if err := l.ApplyValues(templateValues(false, tt.autoscale), ClusterFacts{}); err != nil {
 				t.Fatal(err)
 			}
 			got, ok := l.Distro.Spec.Config.Engine.Dig("manifest", "rke2-coredns").(string)
@@ -568,7 +568,7 @@ func TestApplyValuesRendersTemplates(t *testing.T) {
 		}
 		encryption["type"] = "{{ .Values.cilium.encryption.enabled }}"
 
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if got := cilium(t, l)["type"]; got != "{{ .Values.cilium.encryption.enabled }}" {
@@ -578,7 +578,7 @@ func TestApplyValuesRendersTemplates(t *testing.T) {
 
 	t.Run("a template naming a value no one defines is an error", func(t *testing.T) {
 		l := templatedLayout()
-		if err := l.ApplyValues(map[string]any{}); err == nil {
+		if err := l.ApplyValues(map[string]any{}, ClusterFacts{}); err == nil {
 			t.Fatal("ApplyValues rendered a template whose values are missing")
 		}
 	})
@@ -616,7 +616,7 @@ func TestRenderFiles(t *testing.T) {
 	l := &DistroLayout{Distro: d, dirPath: root}
 
 	values := map[string]any{"registry": map[string]any{"address": "127.0.0.1:31999"}}
-	if err := l.RenderFiles(context.Background(), values); err != nil {
+	if err := l.RenderFiles(context.Background(), values, ClusterFacts{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -657,6 +657,49 @@ func TestRenderFiles(t *testing.T) {
 	}
 }
 
+// A package template reads the control-plane address out of the inventory rather than out of
+// its own values, so that a kube-vip manifest and the `server:` its joining controllers are
+// given cannot name two different addresses.
+//
+// The unset case is the one worth asserting: it has to be an error rather than an empty
+// string, because a static pod advertising no address is a cluster that bootstraps on
+// controller one and fails to join controller two, with nothing in between saying why.
+func TestRenderFilesReadsClusterFacts(t *testing.T) {
+	const tmpl = "address: {{ .Cluster.LoadBalancer }}\n"
+
+	yes := true
+	stage := func(t *testing.T) (*DistroLayout, string) {
+		t.Helper()
+		root := t.TempDir()
+		path := stageFile(t, root, string(config.FilesDir), 0, "kube-vip.yaml", tmpl)
+		d := distro.Distro{}
+		d.Spec.Config.Files = v1alpha1.Files{{Target: "/etc/kubernetes/kube-vip.yaml", Template: &yes}}
+		return &DistroLayout{Distro: d, dirPath: root}, path
+	}
+
+	t.Run("set", func(t *testing.T) {
+		l, path := stage(t)
+		cluster := ClusterFacts{LoadBalancer: "kube.cargoship.test"}
+		if err := l.RenderFiles(context.Background(), map[string]any{}, cluster); err != nil {
+			t.Fatal(err)
+		}
+		got, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != "address: kube.cargoship.test\n" {
+			t.Fatalf("%s = %q, want the inventory's loadbalancer", path, got)
+		}
+	})
+
+	t.Run("unset", func(t *testing.T) {
+		l, _ := stage(t)
+		if err := l.RenderFiles(context.Background(), map[string]any{}, ClusterFacts{}); err == nil {
+			t.Fatal("RenderFiles rendered a cluster fact the inventory never set")
+		}
+	})
+}
+
 func TestRenderFilesReportsAMissingValue(t *testing.T) {
 	root := t.TempDir()
 	stageFile(t, root, string(config.FilesDir), 0, "registries.yaml", "address: {{ .Values.registry.address }}\n")
@@ -666,7 +709,7 @@ func TestRenderFilesReportsAMissingValue(t *testing.T) {
 	d.Spec.Config.Files = v1alpha1.Files{{Target: "/etc/rancher/rke2/registries.yaml", Template: &yes}}
 	l := &DistroLayout{Distro: d, dirPath: root}
 
-	if err := l.RenderFiles(context.Background(), map[string]any{}); err == nil {
+	if err := l.RenderFiles(context.Background(), map[string]any{}, ClusterFacts{}); err == nil {
 		t.Fatal("RenderFiles rendered a file whose values are missing")
 	}
 }
@@ -699,7 +742,7 @@ func TestApplyValuesCannotDisableAChartThePackageDidNotOfferUp(t *testing.T) {
 
 	t.Run("no mapping means no route", func(t *testing.T) {
 		l := ciliumLayout(nil)
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if got, ok := enabled(t, l); ok {
@@ -711,7 +754,7 @@ func TestApplyValuesCannotDisableAChartThePackageDidNotOfferUp(t *testing.T) {
 		l := ciliumLayout([]distro.ValueMapping{
 			{Source: ".cilium.enabled", Target: ".manifest.rke2-cilium.encryption.enabled"},
 		})
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		if got, ok := enabled(t, l); ok {
@@ -727,7 +770,7 @@ func TestApplyValuesCannotDisableAChartThePackageDidNotOfferUp(t *testing.T) {
 		l := ciliumLayout([]distro.ValueMapping{
 			{Source: ".addons.cilium.enabled", Target: ".manifest.rke2-cilium.enabled"},
 		})
-		if err := l.ApplyValues(values); err != nil {
+		if err := l.ApplyValues(values, ClusterFacts{}); err != nil {
 			t.Fatal(err)
 		}
 		got, ok := enabled(t, l)

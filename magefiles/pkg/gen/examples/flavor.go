@@ -44,6 +44,7 @@ type exampleFlavor struct {
 	arches            []string           // the architectures its examples target; amd64 alone when empty
 	minors            []string           // v1_36 -- the minor lines it renders, all of them when empty
 	binaryOCI         bool               // whether the engine binary is taken out of an OCI artifact rather than a release download
+	kubeVip           bool               // whether it carries a kube-vip static pod for the control-plane VIP
 }
 
 // exampleImageList is one of upstream's airgap image manifests, and the chart entries that
