@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.42.4](https://github.com/colonel-byte/cargoship/compare/v0.42.3...v0.42.4) (2026-11-17)
+
+
+### Bug Fixes
+
+* **layout:** load values files into the configured temp directory ([#1150](https://github.com/colonel-byte/cargoship/issues/1150)) ([6cef8c2](https://github.com/colonel-byte/cargoship/commit/6cef8c29dbd01f2596a84f7a504a40c8a405e9a3))
+
+
+### Documentation
+
+* **agents:** require generated examples to land in a pull request of their own ([#1145](https://github.com/colonel-byte/cargoship/issues/1145)) ([7f733f4](https://github.com/colonel-byte/cargoship/commit/7f733f4cc95c95d99d10ac8186a261c96cc38e0c))
+
+
+### Build
+
+* **deps:** bump almalinux/10-base from 10.2 to 10.3 in /containers/ubi ([#1147](https://github.com/colonel-byte/cargoship/issues/1147)) ([549048f](https://github.com/colonel-byte/cargoship/commit/549048f613632c16e974412434e0d8d2586e5d09))
+* **deps:** bump google.golang.org/api from 0.314.0 to 0.315.0 ([#1149](https://github.com/colonel-byte/cargoship/issues/1149)) ([fd19d15](https://github.com/colonel-byte/cargoship/commit/fd19d152153ff9ea0f26a284c91a68094e575c1b))
+* **deps:** bump https://github.com/google/keep-sorted from v0.10.0 to 0.11.0 ([#1148](https://github.com/colonel-byte/cargoship/issues/1148)) ([f121415](https://github.com/colonel-byte/cargoship/commit/f121415c9e9f2b32169d72db366589ae534f83a2))
+
 ## [0.42.3](https://github.com/colonel-byte/cargoship/compare/v0.42.2...v0.42.3) (2026-11-16)
 
 
