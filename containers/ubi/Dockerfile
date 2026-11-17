@@ -14,7 +14,7 @@
 
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/almalinux/10-base:10.2@sha256:4489fd6a9f9e01070ba4d6cad9772442cc7a4e6cabd7860395bea990b0077194
+FROM ghcr.io/almalinux/10-base:10.3@sha256:677055c28c1b3f2d31f7f83e0d7be802519b9632ce1362a2bf2f0070c176c8fd
 
 ARG TARGETPLATFORM
 ARG BASH_COMPLETION_VERSION="2.11-16.el10"
