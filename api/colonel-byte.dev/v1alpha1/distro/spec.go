@@ -197,6 +197,11 @@ type Config struct {
 	OS OS `json:"os,omitempty"`
 	// Engine holds configuration passed through to the distro engine.
 	Engine dig.Mapping `json:"engine,omitempty"`
+	// Charts lists Helm charts the package carries and deploys through the Rancher engines'
+	// helm controller. Unlike an Engine manifest entry, which configures a chart the engine
+	// already bundles, a chart here is one the package owns -- so removing it from a package
+	// uninstalls the release. See Chart.
+	Charts []Chart `json:"charts,omitempty"`
 	// Manifests lists on-host paths -- each one the Target of a Files entry -- that cargoship
 	// kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by
 	// Files; this is only the marker that says "and apply this one," e.g. for a CNI a package

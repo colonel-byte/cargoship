@@ -30,6 +30,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	v1alpha1 "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1"
+	distroapi "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/contentstore"
 	"github.com/colonel-byte/cargoship/pkg/haulerstore"
@@ -242,6 +243,11 @@ func mirrorFiles(ctx context.Context, l *layout.DistroLayout, target string, cli
 	}{
 		{dir: config.FilesDir, files: l.Distro.Spec.Config.Files},
 		{dir: config.OSDir, files: l.Distro.Spec.Config.OS.Files},
+		// Charts are mirrored for the same reason files are: the mirror re-publishes the
+		// sources a definition declared so a later build can be pointed at a registry
+		// instead of the internet. A chart is not uploaded to a host, but it is fetched at
+		// build time, which is the half a mirror serves.
+		{dir: config.ChartsDir, files: distroapi.ChartFiles(l.Distro.Spec.Config.Charts)},
 	} {
 		for i, f := range set.files {
 			if f == nil {

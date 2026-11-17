@@ -16,6 +16,11 @@
 package config
 
 const (
+	// ChartsDir is the directory inside a package that holds the Helm chart tarballs
+	// `.spec.config.charts` declares, one per entry, under the entry's index. Nothing
+	// uploads these: a chart reaches the cluster inside the HelmChart resource cargoship
+	// writes, so the bytes are read here on the management node and never land on a host.
+	ChartsDir = "charts"
 	// FilesDir string key
 	FilesDir = "files"
 	// ImagesDir string key

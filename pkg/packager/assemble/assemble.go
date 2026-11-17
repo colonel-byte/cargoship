@@ -242,6 +242,23 @@ func AssembleDistro(ctx context.Context, d distro.Distro, distroPath string, opt
 		}
 	}
 
+	// A chart tarball is fetched, verified and staged exactly like a file -- it can be a local
+	// path, a URL or an oci:// reference, and all three are fileGrabber's job already. What it
+	// is not is uploaded: a chart reaches the cluster inside the HelmChart resource cargoship
+	// writes, so these bytes are read back on the management node and never land on a host.
+	// That is why charts get a staging directory of their own rather than file entries.
+	for chartIdx, file := range distro.ChartFiles(d.Spec.Config.Charts) {
+		chart := d.Spec.Config.Charts[chartIdx]
+		provenance, err := fileGrabber(ctx, config.ChartsDir, buildPath, distroPath, chartIdx, *file, opts.FileOverrides, opts.ContentStore, opts.ociOptions(), nil)
+		if err != nil {
+			return nil, fmt.Errorf("unable to stage chart %d (%s): %w", chartIdx, chart.Name, err)
+		}
+		if provenance != nil {
+			fileSources = append(fileSources, *provenance)
+		}
+		warnOversizedChart(ctx, buildPath, chartIdx, chart)
+	}
+
 	componentImages := []transform.Image{}
 	for _, src := range d.Spec.Config.AllImages() {
 		refInfo, err := transform.ParseImageRef(src)
@@ -493,7 +510,19 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			// Store content is bytes whoever wrote the distro definition never saw, exactly
 			// like override content, so the same rule applies: without a declared shasum
 			// there is nothing to verify it against and it is refused.
-			if file.Shasum == "" {
+			//
+			// A source naming a digest is let through, and it is worth being exact about
+			// what that does and does not buy. For a registry fetch the digest is
+			// self-enforcing: the fetch asks for it and the bytes are checked against it.
+			// Here it is not -- the store is indexed by an original-ref annotation it wrote
+			// itself, and Fetch verifies the layer against a descriptor the store supplied,
+			// so nothing compares what the store holds to the digest the definition named.
+			// This is a decision to trust a content store for a source that pins one, not a
+			// guarantee; it exists because a chart pinned by digest carries no shasum by
+			// design, so the combination would otherwise be refused outright. See
+			// docs/agent/todo-content-store-digest-check.md for the check that would make
+			// the guarantee real.
+			if file.Shasum == "" && !pinnedByDigest(file.Source) {
 				return nil, fmt.Errorf("%s holds %s, which declares no shasum: refusing to stage it unverified",
 					store.Describe(), file.Source)
 			}
@@ -739,4 +768,21 @@ type ContentStore interface {
 	Fetch(ctx context.Context, req contentstore.FileRequest, dst string) error
 	// Source names the bundle as the operator spelled it, for messages and provenance.
 	Source() string
+}
+
+// warnOversizedChart reports a chart big enough to be a problem in etcd.
+//
+// A chart travels inside its HelmChart resource, so it is stored in etcd, and base64 is a third
+// larger than the tarball. A chart close to etcd's default value limit installs today and fails
+// the day it grows, with an error on the cluster that nobody connects back to the package. It is
+// a warning rather than a build failure because the limit is the cluster's to raise and the
+// package author may well know theirs is raised.
+func warnOversizedChart(ctx context.Context, buildPath string, idx int, chart distro.Chart) {
+	staged := filepath.Join(buildPath, config.ChartsDir, strconv.Itoa(idx), chart.TarballName())
+	info, err := os.Stat(staged)
+	if err != nil || info.Size() <= distro.MaxChartContentBytes {
+		return
+	}
+	logger.From(ctx).Warn("chart is large enough to be refused by etcd once base64-encoded into its HelmChart resource; raise the cluster's --max-request-bytes or carry it another way",
+		"chart", chart.Name, "bytes", info.Size(), "limit", distro.MaxChartContentBytes)
 }

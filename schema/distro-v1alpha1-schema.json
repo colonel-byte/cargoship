@@ -135,6 +135,80 @@
       },
       "type": "object"
     },
+    "Chart": {
+      "additionalProperties": false,
+      "description": "is one Helm chart the package carries and deploys, as distinct from `.spec.config.engine.manifest`, which configures a chart the engine already bundles.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "createNamespace": {
+          "description": "has the helm controller create TargetNamespace if it is absent.",
+          "type": "boolean"
+        },
+        "images": {
+          "description": "lists the images the chart needs, carried in the package alongside\nimageConfig.images.\n\nshortcut: these are carried and uploaded whether or not When gates the chart off,\nbecause the flat image list has no per-value gate to hang them on -- the same gap\ndocs/agent/todo-chart-disable-image-gating.md records for a disabled chart manifest.\nUpgrade both together.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "name": {
+          "description": "is the HelmChart resource's name, and the stem of the manifest file cargoship\nwrites for it. It is a Kubernetes object name, so it is bounded the way one is.",
+          "maxLength": 253,
+          "pattern": "^[a-z0-9]([a-z0-9\\-]*[a-z0-9])?$",
+          "type": "string"
+        },
+        "shasum": {
+          "description": "is the SHA-256 the tarball is verified against when the package is built.\n\nRequired for a source that is fetched, and optional for a local file. The asymmetry is\nthe same one --file-override and --content-store are held to: a local path is a file\nthe package author chose and can see, while bytes arriving over a network are bytes\nnobody has looked at, and a chart installs into the cluster with whatever permissions\nits templates ask for. An `oci://` source pinned by digest carries its own guarantee\nand needs no shasum.",
+          "type": "string"
+        },
+        "source": {
+          "description": "is where the chart tarball comes from: a path relative to the package\ndefinition, an absolute path, an http(s) URL, or an `oci://` reference to a chart\npublished as an OCI artifact, which is how `helm push` publishes one.\n\nWhatever it names, what lands in the package is a `.tgz`, because that is what the\nhelm controller installs from on a host that can reach no chart repository. A `repo:`\nand `version:` pair is deliberately not accepted: it would have the cluster resolve\nthe chart, which is the one thing an air-gapped cluster cannot do.",
+          "examples": [
+            "charts/my-app-1.2.3.tgz",
+            "https://example.com/charts/my-app-1.2.3.tgz",
+            "oci://registry.example.com/charts/my-app:1.2.3"
+          ],
+          "type": "string"
+        },
+        "targetNamespace": {
+          "description": "is the namespace the release is installed into. The helm controller\ndefaults it to the chart's own, which is usually not what an operator wants.",
+          "type": "string"
+        },
+        "values": {
+          "description": "the Helm values cargoship writes to this chart's HelmChart, as a YAML string or a mapping. Rendered as a Go template against the package's values first.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "version": {
+          "description": "is the chart version, used to name the tarball when Source does not -- an\n`oci://` reference names a repository and a tag, not a file. It is required for such a\nsource and ignored for one that already ends in a tarball name.",
+          "examples": [
+            "1.2.3"
+          ],
+          "type": "string"
+        },
+        "when": {
+          "description": "is an optional values path (e.g. \".myApp.enabled\") gating whether the chart is\ndelivered and deployed at all. An empty path means always.",
+          "examples": [
+            ".myApp.enabled"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "source"
+      ],
+      "type": "object"
+    },
     "Config": {
       "additionalProperties": false,
       "description": "holds the configuration for the distro engine.",
@@ -142,6 +216,13 @@
         "^x-": {}
       },
       "properties": {
+        "charts": {
+          "description": "lists Helm charts the package carries and deploys through the Rancher engines'\nhelm controller. Unlike an Engine manifest entry, which configures a chart the engine\nalready bundles, a chart here is one the package owns -- so removing it from a package\nuninstalls the release. See Chart.",
+          "items": {
+            "$ref": "#/$defs/Chart"
+          },
+          "type": "array"
+        },
         "engine": {
           "description": "holds configuration passed through to the distro engine.",
           "patternProperties": {

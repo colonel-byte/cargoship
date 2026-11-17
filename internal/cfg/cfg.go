@@ -120,6 +120,13 @@ func decodeV1Alpha1(_ context.Context, node ast.Node) (distro.Distro, error) {
 	if err := goyaml.NodeToValue(node, &pkg); err != nil {
 		return distro.Distro{}, err
 	}
+	// Every path that reads a definition comes through here -- the build that stages a
+	// package's charts, and the load of a built package that reads them back -- so a
+	// definition declaring a chart this engine cannot install is refused before anything is
+	// fetched rather than at the point the manifest would have been written.
+	if err := pkg.Spec.Config.ValidateCharts(pkg.Spec.Type); err != nil {
+		return distro.Distro{}, err
+	}
 	return pkg, nil
 }
 

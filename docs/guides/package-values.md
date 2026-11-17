@@ -312,6 +312,8 @@ Templating is deliberately not applied everywhere. Three surfaces render:
   The file is rendered once, in place in the extracted package, before any phase uploads it.
 - **`spec.actions.onCreate`** -- per action, when the action sets `template: true`. This renders at build time, on the machine building the package, and covers the action's `cmd` and its `wait` block.
 
+- **`spec.config.charts[].values`** -- always, like the engine configuration. A chart a package carries is configured by templating its values, since a mapping cannot reach it; see [charts](charts.md). Nothing else about a chart entry renders - its `source` and `shasum` were spent when the package was built, so a template in one would name bytes the package does not hold.
+
 `spec.config.os.sysctl`, `spec.config.os.environment`, `spec.config.os.fapolicyd`, and `spec.config.os.selinux` do not render.
 
 A template that names a value the package does not define is an error, not an empty string, on every surface.
