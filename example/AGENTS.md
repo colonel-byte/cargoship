@@ -19,6 +19,19 @@ To change a generated example, edit its template in `magefiles/templates/` and r
 
 Every path in that table is also marked `linguist-generated` in [`.gitattributes`](../.gitattributes), so a target that starts writing a new file needs a pattern there as well. See the "Keeping `.gitattributes` in sync with the generators" section of the root [`AGENTS.md`](../AGENTS.md).
 
+## What lands here goes in a pull request of its own
+
+**A change under `example/` does not share a pull request with the code change that prompted it.** Where both are needed they are two layers of a stacked PR: the generator, template, or package-format change first, then the rendered output on top of it. A render that is only a re-render - a bumped pin, a backfilled release line, a refreshed cached asset - is a pull request on its own, since there is no code to review alongside it.
+
+The reason is what a reviewer can see. One new flavor is twenty-odd directories and several thousand lines of rendered YAML, and `mage generate:examples` re-renders every directory already on disk, so a template edit of twenty lines arrives inside a diff nobody reads to the end. `linguist-generated` collapses the files and does nothing for the review: what needs checking is the template and the generator, and that is exactly what gets buried.
+
+Two practical notes:
+
+- **Check the split before pushing.** `git show --stat <lower branch> -- example/` should print nothing. Running `mage generate:examples` with the wrong branch checked out is the easy way to get this wrong, and once a reviewer is reading, the fix is a rebase of every layer above.
+- **A test fixture is not an example.** Fixtures live under `test/`, and this rule does not reach them.
+
+The root [`AGENTS.md`](../AGENTS.md#generated-examples-go-in-a-pull-request-of-their-own) carries the same rule beside the stacked-branch naming, which is where the layer numbering is described.
+
 ## Adding a release line
 
 `Generate.ExampleLine` backfills a whole minor line: it lists every non-RC tag of that distro on that line and renders each one, into every flavor directory of that distro that covers the line. The leading `v` is optional.

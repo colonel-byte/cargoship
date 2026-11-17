@@ -288,6 +288,20 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 
 Before creating or updating a pull request description, read [`.github/pull_request_template.md`](.github/pull_request_template.md) and follow the format rules in [`.github/AGENTS.md`](.github/AGENTS.md#writing-a-pull-request-description).
 
+### Generated examples go in a pull request of their own
+
+A change that adds or re-renders anything under [`example/`](example/) does not share a pull request with the code change that prompted it. Where both are needed, they are two layers of a stacked PR: the generator, template, or package-format change first, then the rendered output on top of it.
+
+This is about what a reviewer can see. One new flavor is twenty-odd directories and several thousand lines of rendered YAML, and a `generate:examples` run that touches an existing template re-renders every directory already on disk - so the twenty lines that were actually written end up buried in a diff nobody can read to the end. GitHub collapses `linguist-generated` files, which helps with the file list and not at all with the review: the reasoning that needs checking is in the template and the generator, and it is the thing that disappears.
+
+So:
+
+- **A generator or template change, and the examples it renders, are separate layers.** The lower layer carries `magefiles/`, the API types, the writers - whatever was reasoned about. The upper layer carries `example/` and nothing else.
+- **A render that is only a re-render is its own pull request.** Bumping a pin, backfilling a release line, refreshing a cached asset: there is no code to review, so there is nothing for it to be mixed with.
+- **Check the split before pushing, not after.** `git show --stat <branch> -- example/` on the lower layer should print nothing. It is easy to leave rendered output in the wrong layer by running `mage generate:examples` while the wrong branch is checked out, and the fix once a reviewer is reading is a rebase of everything above it.
+
+The one thing that does belong with the code is a *fixture* a test reads - those live under `test/`, not `example/`, and the rule does not reach them.
+
 ### Naming the branches in a stacked PR
 
 Every branch in a stack is named `stack/<n>-<2-3 word header>`:
