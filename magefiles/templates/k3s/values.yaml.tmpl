@@ -18,6 +18,26 @@ addons:
   # the build bundles, so a name outside it is accepted rather than rejected --
   # cargoship warns when it configures a node with one this build does not package.
   disabled: []
+{{- with .Chart }}
+chart:
+  # Whether the cluster installs the chart this package carries. Off by default, and note what
+  # turning it off again does: the HelmChart resource is what owns the release, so a cluster
+  # that sets this back to false has the release uninstalled on the next apply. See
+  # docs/guides/charts.md.
+  enabled: false
+{{- if eq (printf "%s" .Kind) "http" }}
+  # Skip verifying the kubelet's serving certificate. metrics-server cannot verify one on a
+  # cluster that has not had kubelet certificates signed, which is most of them; a cluster that
+  # has should leave this false.
+  insecureKubeletTLS: true
+{{- end }}
+{{- if eq (printf "%s" .Kind) "oci" }}
+  # Run the exporter on the control-plane nodes too, which carry a taint its DaemonSet has to
+  # tolerate. Node metrics from the controllers are usually wanted; a cluster that keeps
+  # workloads off them entirely can say so here.
+  tolerateControlPlane: true
+{{- end }}
+{{- end }}
 {{- with .KubeVip }}
 kubeVip:
   # Whether the controllers run kube-vip, which holds the cluster's control-plane VIP on

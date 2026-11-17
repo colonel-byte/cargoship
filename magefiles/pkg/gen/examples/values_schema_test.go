@@ -53,6 +53,13 @@ func TestValuesTemplatesMatchTheirSchemas(t *testing.T) {
 				if f.kubeVip {
 					data["KubeVip"] = spec.kubeVip
 				}
+				// The chart block is resolved for its own kind, because the values a
+				// flavor exposes are the chart's vocabulary and differ per chart. A
+				// remote-source flavor is resolved offline from a fixture, since the
+				// pair being checked here does not depend on the digest.
+				if f.chart != chartSourceNone {
+					data["Chart"] = &exampleChart{Kind: f.chart, Name: "chart"}
+				}
 
 				var schema helmvalues.Schema
 				values := map[string]any{}

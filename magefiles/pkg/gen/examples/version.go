@@ -77,6 +77,10 @@ type exampleVersion struct {
 	// and nil for every other one -- so a template guards the whole feature with one
 	// `{{ with .KubeVip }}`.
 	KubeVip *exampleKubeVip
+
+	// Chart is the packaged Helm chart block, set only for a flavor that carries one. Like
+	// KubeVip, nil everywhere else so a template needs one guard.
+	Chart *exampleChart
 }
 
 // exampleArch is one architecture's share of an example: the files a distro publishes once
@@ -105,7 +109,7 @@ type exampleArch struct {
 // newExampleVersion derives every version-varying field of an example from one tag and the
 // flavor being rendered, except what has to be fetched -- the image lists, and whatever the
 // distro's own fetch hook adds.
-func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exampleVersion, error) {
+func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) (exampleVersion, error) {
 	semver, err := engineconfig.TagVersion(tag)
 	if err != nil {
 		return exampleVersion{}, err
@@ -141,6 +145,16 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 			return exampleVersion{}, fmt.Errorf("flavor %s asks for kube-vip, which %s declares no paths for", f.flavorName(), spec.name)
 		}
 		v.KubeVip = spec.kubeVip
+	}
+
+	// The chart does not vary by Kubernetes release either, and resolving it is what fills in
+	// the digest a definition records, so it is done once here rather than in a template.
+	if f.chart != chartSourceNone {
+		chart, err := resolveExampleChart(f.chart, sums)
+		if err != nil {
+			return exampleVersion{}, err
+		}
+		v.Chart = chart
 	}
 
 	if spec.derive != nil {

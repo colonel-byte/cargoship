@@ -285,3 +285,12 @@ func hashURL(url string) (string, error) {
 	fmt.Printf("Hashed %s (%.1f MiB)\n", url, float64(n)/(1<<20))
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
+
+// emptyShasums is a cache holding nothing, for a test that renders a version whose fields do
+// not depend on a digest.
+func emptyShasums() *exampleShasums {
+	return &exampleShasums{
+		sums:    map[string]exampleShasum{},
+		members: map[string]map[string]string{},
+	}
+}

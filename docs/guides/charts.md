@@ -93,7 +93,8 @@ Note what `when` does **not** gate: the chart's `images` are carried and uploade
 `source` takes any of four things, and all four are fetched when the package is **built**, on the management node, never by the cluster:
 
 ```yaml
-# A file beside the definition.
+# A file beside the definition. No example ships one - see below - but it is the simplest form,
+# and the right one for a chart your own build produced.
 - name: my-app
   source: charts/my-app-1.2.3.tgz
 
@@ -124,6 +125,12 @@ A chart's tarball is a file in the package, so everything that already applies t
 - **`--registry-override`** rewrites the registry of an `oci://` chart source, the same way it rewrites an image's.
 - The **build record** names what was actually read: an overridden or store-resolved chart appears in `build.fileSources` with its declared source, what it resolved to, and the digest it was verified against.
 
+### Why no example carries a chart tarball
+
+`source` taking a local path is the simplest of the four, and the examples deliberately do not use it: a `.tgz` committed to a source tree is bytes nobody reviews, in a format no reviewer can diff, and the xz-utils backdoor was exactly that shape. The two example flavors fetch instead, and each is pinned by a digest a reader can check against upstream.
+
+That is a judgement about what belongs in *this* repository, not a limitation. A local path is right whenever the chart is built by the same pipeline as the package - `helm package` into a directory, point `source` at it, and the tarball never has to be committed anywhere.
+
 ### A fetched chart has to name a digest
 
 `shasum` is optional for a local path and required for anything fetched - an `oci://` reference pinned by `@sha256:` excepted, since that is already a digest. A package that leaves it out is refused when it is built rather than carrying a chart nobody verified.
@@ -146,11 +153,10 @@ The one thing it is not is a `files` entry. That is the distinction worth knowin
 
 ## The examples
 
-Three generated examples carry a chart, one per kind of source, and they are the shortest way to see a complete definition:
+Two generated examples carry a chart, and they are the shortest way to see a complete definition:
 
 | Example                  | Source                                                        |
 | :----------------------- | :------------------------------------------------------------ |
-| `example/k3s-chart`      | a chart committed in this repository                          |
 | `example/k3s-chart-http` | `metrics-server`, downloaded and verified against a shasum    |
 | `example/k3s-chart-oci`  | `prometheus-node-exporter`, from a registry, pinned by digest |
 

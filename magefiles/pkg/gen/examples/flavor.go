@@ -45,7 +45,24 @@ type exampleFlavor struct {
 	minors            []string           // v1_36 -- the minor lines it renders, all of them when empty
 	binaryOCI         bool               // whether the engine binary is taken out of an OCI artifact rather than a release download
 	kubeVip           bool               // whether it carries a kube-vip static pod for the control-plane VIP
+	chart             chartSource        // where the Helm chart it carries comes from; none when empty
 }
+
+// chartSource is where a chart flavor reads its chart from. The two are not interchangeable
+// demonstrations: each is a different path through the build -- a download verified against a
+// digest, and an OCI artifact pinned by manifest digest -- and they are the two an operator
+// actually uses. A local path works too and is documented, but no example ships a chart tarball;
+// see resolveExampleChart.
+type chartSource string
+
+const (
+	// chartSourceNone is every flavor that carries no chart.
+	chartSourceNone chartSource = ""
+	// chartSourceHTTP is a chart downloaded from a chart repository.
+	chartSourceHTTP chartSource = "http"
+	// chartSourceOCI is a chart pulled from a registry as an OCI artifact.
+	chartSourceOCI chartSource = "oci"
+)
 
 // exampleImageList is one of upstream's airgap image manifests, and the chart entries that
 // declare the images in it.

@@ -70,6 +70,24 @@ The list is shared by both distros, so adding a line covers the rke2 and the k3s
 
 `TestKubeVipManifestRenders` and `TestKubeVipValuesCoverTheManifest` are what stand in for a render: the manifest is not generated, so nothing else parses it, and a missing quote in it is a static pod a kubelet rejects on an air-gapped controller.
 
+## The chart flavors
+
+Two flavors carry a Helm chart and have the cluster install it through k3s's helm controller, which is what `.spec.config.charts` does - see [charts](../docs/guides/charts.md). They differ in one thing, deliberately: where the chart comes from, which is the part that differs in practice and takes a different path through the build.
+
+| Flavor                   | Chart                      | Comes from                                      | Pinned by                               |
+| :----------------------- | :------------------------- | :---------------------------------------------- | :-------------------------------------- |
+| `example/k3s-chart-http` | `metrics-server`           | its GitHub release asset                        | a shasum in `example/shasums.json`      |
+| `example/k3s-chart-oci`  | `prometheus-node-exporter` | `oci://ghcr.io/prometheus-community/charts/...` | the manifest digest its tag resolved to |
+
+The pins and the reasoning live in [`magefiles/pkg/gen/examples/charts.go`](../magefiles/pkg/gen/examples/charts.go). Four things to know before changing them:
+
+- **No flavor carries a chart tarball committed here, and that is the point.** `.spec.config.charts` accepts a local path, and it is the first form the guide documents - but a `.tgz` in a source tree is bytes nobody reviews in a format no reviewer can diff, which is the shape the xz-utils backdoor took. Both example charts are fetched and pinned by a digest a reader can check against upstream. Do not add a committed archive to make a third flavor; `.gitignore` still ignores `*.tgz` and that is deliberate.
+- **k3s only, for both.** The writer is `RancherCommon`'s, so rke2 installs these identically, and a twin flavor per distro would render twenty more directories apiece to demonstrate the same mechanism.
+- **Both render for the newest line only** (`exampleChartMinors`). Where a chart comes from has nothing to do with the Kubernetes version: the section and the resource cargoship writes are the same on every line.
+- **The OCI flavor's entry carries no shasum, on purpose.** Its source names a digest, which is the guarantee a shasum would be; cargoship refuses an `oci://` tag that carries neither. `TestRenderedChartExampleDecodes` runs both rendered definitions through the decoder, where that validation lives, and asserts every chart is pinned one way or the other.
+
+Each flavor's values file exposes exactly one knob of its own beside `chart.enabled`, because what a cluster can configure is the chart's own vocabulary - `chart.insecureKubeletTLS`, `chart.tolerateControlPlane`. The values templates branch on `.Chart.Kind` for that.
+
 ## The upstream CNI flavors
 
 Upstream ships no CNI, and a cluster without one comes up with every pod stuck at `ContainerCreating`. So each upstream example carries one: `example/upstream-cilium`, `example/upstream-canal` and `example/upstream-flannel`, declared in `upstreamCNIFlavors` in [`magefiles/pkg/gen/examples/upstream_cni.go`](../magefiles/pkg/gen/examples/upstream_cni.go). The manifest goes to the controllers as a `files` entry and is named in `spec.config.manifests`, which cargoship kubectl-applies from the leader once `kubeadm init` has formed the cluster.

@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "rancher-k3s-chart-http values",
+  "description": "Generated in magefiles/templates/k3s/values.schema.json.tmpl.",
+  "type": "object",
+  "properties": {
+    "addons": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "type": "array",
+          "description": "The bundled charts k3s is told not to install. Replaces the package's own list rather than adding to it. The components k3s 1.37 packages are offered as suggestions, not as the whole vocabulary: a chart the engine bundles without advertising it under --disable is accepted too, and cargoship warns when it configures a node with a name this build does not package.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "examples": [
+              "coredns",
+              "servicelb",
+              "traefik",
+              "local-storage",
+              "metrics-server",
+              "runtimes",
+              "gateway-api-crd"
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "chart": {
+      "type": "object",
+      "description": "The Helm chart this package carries and the helm controller installs. Turning it off again uninstalls the release: the HelmChart resource owns it, and cargoship prunes the manifest a disabled chart wrote.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the cluster installs the chart. Off in the package, because a chart an example carries to demonstrate the mechanism is not something a cluster should get for having installed the example."
+        },
+        "insecureKubeletTLS": {
+          "type": "boolean",
+          "description": "Skip verifying the kubelet's serving certificate. metrics-server cannot verify one on a cluster that has not had kubelet certificates signed; a cluster that has should leave this false."
+        }
+      },
+      "additionalProperties": false
+    },
+    "podSecurity": {
+      "type": "object",
+      "properties": {
+        "exemptions": {
+          "type": "object",
+          "properties": {
+            "usernames": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Users whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it."
+            },
+            "runtimeClasses": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Runtime classes whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it."
+            },
+            "namespaces": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Namespaces whose pods skip pod security admission entirely. Replaces the package's list rather than adding to it, so name kube-system and zarf as well or the cluster's own components are enforced against."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
