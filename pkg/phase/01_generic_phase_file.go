@@ -39,7 +39,8 @@ import (
 
 func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.Host, dir, perm, owner string) error {
 	logger.From(ctx).Debug("ensuring directory exists", "host", h, "dir", dir)
-	if !h.FileExist(dir) {
+	created := !h.FileExist(dir)
+	if created {
 		targetPerm := perm
 		if targetPerm == "" {
 			targetPerm = "0755"
@@ -65,7 +66,14 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.Host, dir, perm
 		}
 	}
 
+	// A directory the package said nothing about and did not create is left as it is. Several
+	// of these are the engine's own -- /var/lib/rancher/<engine>/agent goes on to hold kubelet
+	// kubeconfigs and client CA material -- and chmodding them to the 0755 default on every
+	// apply loosened whatever mode the engine had chosen.
 	if perm == "" {
+		if !created {
+			return nil
+		}
 		perm = "0755"
 	}
 

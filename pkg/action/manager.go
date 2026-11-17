@@ -101,11 +101,11 @@ func NewManager(ctx context.Context, opts ManagerOptions) (*phase.Manager, error
 		// The cluster facts a package's templates may read, resolved here for the same
 		// reason the values are: both renders have to see the same inputs, and the
 		// inventory is in scope here and in no phase afterwards.
-		cluster := layout.ClusterFacts{LoadBalancer: opts.Cluster.Spec.Config.LoadBalancer}
-		if err := opts.Layout.ApplyValues(values, cluster); err != nil {
+		facts := layout.ClusterFacts{LoadBalancer: opts.Cluster.Spec.Config.LoadBalancer}
+		if err := opts.Layout.ApplyValues(values, facts); err != nil {
 			return nil, err
 		}
-		if err := opts.Layout.RenderFiles(ctx, values, cluster); err != nil {
+		if err := opts.Layout.RenderFiles(ctx, values, facts); err != nil {
 			return nil, fmt.Errorf("failed to render the templated files of the package: %w", err)
 		}
 

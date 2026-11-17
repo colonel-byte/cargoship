@@ -318,7 +318,7 @@ A template that names a value the package does not define is an error, not an em
 
 ## `.Cluster`: what the inventory already knows
 
-Every surface above also gets a `.Cluster` root, holding what cargoship knows about the cluster it is installing rather than what the package ships. It is a short list, and it is meant to stay short: a package author writes these names into a manifest and cannot change them afterwards without breaking their package.
+The two surfaces that render at install time - `spec.config.engine` and the `files` entries - also get a `.Cluster` root, holding what cargoship knows about the cluster it is installing rather than what the package ships. `spec.actions.onCreate` does not: it renders at build time on the machine building the package, where there is no inventory and no cluster to know anything about, so `{{ .Cluster.LoadBalancer }}` in an action fails the build rather than the install. It is a short list, and it is meant to stay short: a package author writes these names into a manifest and cannot change them afterwards without breaking their package.
 
 | Path                    | What it holds                                                                                                 |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- |

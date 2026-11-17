@@ -700,6 +700,38 @@ func TestRenderFilesReadsClusterFacts(t *testing.T) {
 	})
 }
 
+// The engine configuration gets the same .Cluster root the files do, and asserting it matters
+// more here than there: this surface renders on a scalar that merely contains "{{" rather than
+// on an explicit template: true, so it is the one where a missing root shows up as an unrendered
+// literal landing in the engine's own config file rather than as an error.
+func TestApplyValuesReadsClusterFacts(t *testing.T) {
+	stage := func() *DistroLayout {
+		d := distro.Distro{}
+		d.Spec.Config.Engine = map[string]any{"tls-san": "{{ .Cluster.LoadBalancer }}"}
+		return &DistroLayout{Distro: d, dirPath: t.TempDir()}
+	}
+
+	t.Run("set", func(t *testing.T) {
+		l := stage()
+		if err := l.ApplyValues(map[string]any{}, ClusterFacts{LoadBalancer: "kube.cargoship.test"}); err != nil {
+			t.Fatal(err)
+		}
+		got, ok, err := helmvalues.GetValuePath(l.Distro.Spec.Config.Engine, ".tls-san")
+		if err != nil || !ok {
+			t.Fatalf("reading .tls-san: %v (found %v)", err, ok)
+		}
+		if got != "kube.cargoship.test" {
+			t.Fatalf(".tls-san = %v, want the inventory's loadbalancer", got)
+		}
+	})
+
+	t.Run("unset", func(t *testing.T) {
+		if err := stage().ApplyValues(map[string]any{}, ClusterFacts{}); err == nil {
+			t.Fatal("ApplyValues rendered a cluster fact the inventory never set")
+		}
+	})
+}
+
 func TestRenderFilesReportsAMissingValue(t *testing.T) {
 	root := t.TempDir()
 	stageFile(t, root, string(config.FilesDir), 0, "registries.yaml", "address: {{ .Values.registry.address }}\n")

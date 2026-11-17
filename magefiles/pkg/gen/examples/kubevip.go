@@ -29,7 +29,7 @@ const (
 	// hashed here, so there is no checksum to re-derive either. What to check when moving it:
 	//
 	//   - the env var names in example/kube-vip/kube-vip.yaml are still the ones
-	//     pkg/kubevip/config_envvar.go defines for the new release. They are the pod's whole
+	//     upstream kube-vip's own pkg/kubevip/config_envvar.go defines for the new release. They are the pod's whole
 	//     configuration surface, so a renamed one is a pod that starts and advertises
 	//     nothing, with no error anybody sees.
 	//   - the release still publishes a linux/amd64 image under kubeVipImageRepo.

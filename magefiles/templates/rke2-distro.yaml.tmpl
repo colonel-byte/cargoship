@@ -391,6 +391,11 @@ spec:
         # cannot disagree.
         template: true
         perm: "0600"
+        # The engine owns every directory above the manifest one, and goes on to keep kubelet
+        # kubeconfigs and client CA material in them. On a first install this entry is uploaded
+        # before the engine exists, so cargoship is what creates them -- at 0755 by default,
+        # which the engine's own MkdirAll then leaves alone for the life of the host.
+        dirPerm: "0750"
         selector:
           profile: controller
           when: .kubeVip.enabled

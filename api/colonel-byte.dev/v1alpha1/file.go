@@ -46,6 +46,8 @@ type File struct {
 	Name string `json:"name,omitempty"`
 	// PermMode sets the permissions cargoship applies to the file. It accepts an octal string or an integer, for example "0644" or 644.
 	PermMode any `json:"perm,omitempty"`
+	// DirPermMode sets the permissions cargoship applies to the directories it creates to hold the file. It accepts an octal string or an integer, for example "0750" or 750, and defaults to 0755. Set it where the file's own directory should not be world-readable; a directory that already exists is left as it is.
+	DirPermMode any `json:"dirPerm,omitempty"`
 	// Selector controls whether cargoship uploads this file to a given node.
 	Selector BinarySelector `json:"selector,omitempty"`
 	// Shasum verifies the file when cargoship sources the distro package.
@@ -68,7 +70,7 @@ type File struct {
 	Category string `json:"-"`
 	// PermString is the octal permission string cargoship applies to the file. Cargoship derives it from PermMode at runtime.
 	PermString string `json:"-"`
-	// DirPermString is the octal permission string cargoship applies to the file's parent directory.
+	// DirPermString is the octal permission string cargoship applies to the directories it creates for the file. Cargoship derives it from DirPermMode at runtime.
 	DirPermString string `json:"-"`
 	// OriginalTarget is the target path before cargoship renames it during install. Cargoship uses it to move the file back into place.
 	OriginalTarget string `json:"-"`
@@ -127,7 +129,8 @@ func (u *File) Owner() string {
 	return strings.TrimSuffix(fmt.Sprintf("%s:%s", u.User, u.Group), ":")
 }
 
-// UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.
+// UnmarshalYAML unmarshals the YAML data, then converts PermMode and DirPermMode into their
+// octal string forms.
 func (u *File) UnmarshalYAML(unmarshal func(any) error) error {
 	type uploadFile File
 	yu := (*uploadFile)(u)
@@ -141,6 +144,12 @@ func (u *File) UnmarshalYAML(unmarshal func(any) error) error {
 		return err
 	}
 	u.PermString = fp
+
+	dp, err := permToString(u.DirPermMode)
+	if err != nil {
+		return err
+	}
+	u.DirPermString = dp
 
 	return nil
 }

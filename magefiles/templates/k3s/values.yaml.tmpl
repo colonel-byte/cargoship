@@ -42,7 +42,9 @@ kubeVip:
   # controller before the kubelet starts this pod -- cargoship does not put the load balancer in
   # /etc/hosts, so an air-gapped fleet whose DNS does not answer for it would get a pod that
   # cannot work out what to advertise. Set the IP the record points at here and leave
-  # loadbalancer as the name.
+  # loadbalancer as the name. Do the same where loadbalancer is round-robin DNS, one A record
+  # per controller: kube-vip would resolve it to one controller's own address and ARP for that,
+  # taking the API server down in a way that reads as a network fault rather than as a value.
   address: ""
   # The interface the VIP is added to. Empty lets kube-vip take the host's default-gateway
   # interface, which is what makes one manifest correct across controllers whose NICs are not

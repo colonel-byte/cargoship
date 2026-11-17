@@ -97,8 +97,10 @@ spec:
       securityContext:
         capabilities:
           add:
-            # NET_ADMIN and NET_RAW to add the address and answer ARP for it; SYS_TIME for the
-            # lease timing.
+            # NET_ADMIN and NET_RAW to add the address and answer ARP for it. SYS_TIME is what
+            # upstream's own `kube-vip manifest pod` emits, and is kept so this manifest is the
+            # one upstream supports rather than a variant of it -- nothing here needs to set the
+            # host clock, so drop it if a cluster's policy will not carry it.
             - NET_ADMIN
             - NET_RAW
             - SYS_TIME
@@ -111,4 +113,8 @@ spec:
     - name: kubeconfig
       hostPath:
         path: {{ .Values.kubeVip.kubeconfig }}
+        # Without this the runtime creates the path as a *directory* when it does not exist
+        # yet, and the engine can then never write its kubeconfig there. A mount failure and a
+        # restarting pod is the behaviour the comment above already expects.
+        type: File
 {{- end }}
