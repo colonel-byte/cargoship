@@ -153,12 +153,92 @@ The one thing it is not is a `files` entry. That is the distinction worth knowin
 
 ## The examples
 
-Two generated examples carry a chart, and they are the shortest way to see a complete definition:
+Three generated examples carry a chart, and they are the shortest way to see a complete definition:
 
 | Example                  | Source                                                        |
 | :----------------------- | :------------------------------------------------------------ |
 | `example/k3s-chart-http` | `metrics-server`, downloaded and verified against a shasum    |
 | `example/k3s-chart-oci`  | `prometheus-node-exporter`, from a registry, pinned by digest |
+| `example/k3s-service-lb` | kube-vip plus its cloud provider - two charts in one package  |
+
+## Worked example: kube-vip from its charts
+
+kube-vip is the case worth walking through, because it is the one where the choice between a chart and a static pod is forced rather than a preference, and the answer differs by job.
+
+### Service load balancers - the chart, and two of them
+
+`example/k3s-service-lb` is this, rendered. kube-vip in service mode watches Services of type LoadBalancer and answers ARP for whatever address each one holds; it does not decide the addresses. The `kube-vip-cloud-provider` chart does that, out of a pool it reads from a ConfigMap its own chart renders. Carrying the first without the second installs a controller that advertises nothing and leaves every Service `Pending`, so the pair is the unit:
+
+```yaml
+charts:
+  - name: kube-vip
+    source: https://github.com/kube-vip/helm-charts/releases/download/kube-vip-0.11.2/kube-vip-0.11.2.tgz
+    shasum: cd7b5ab2...
+    targetNamespace: kube-system
+    images:
+      - ghcr.io/kube-vip/kube-vip:v1.3.1
+    values: |
+      image:
+        tag: v1.3.1
+      env:
+        svc_enable: "true"
+        svc_election: "true"
+        cp_enable: "false"
+  - name: kube-vip-cloud-provider
+    source: https://github.com/kube-vip/helm-charts/releases/download/kube-vip-cloud-provider-0.2.11/kube-vip-cloud-provider-0.2.11.tgz
+    shasum: 44b0784f...
+    targetNamespace: kube-system
+    images:
+      - docker.io/kubevip/kube-vip-cloud-provider:v0.0.13
+    values: |
+      cm:
+        data:
+          cidr-default: "{{ .Values.chart.addressPool }}"
+```
+
+Two things about it are worth copying. `image.tag` is pinned to the same kube-vip release the static pod flavor carries rather than left at the chart's `appVersion`, which lags - two packages in one repository disagreeing about which kube-vip they ship is a question nobody should have to answer. And the address pool is a *value*, not a default: a package cannot know which of a cluster's addresses are spare, so it ships a documentation-range placeholder that works nowhere and the cluster says.
+
+### A control-plane VIP - the chart can do it, but not at bootstrap
+
+The same chart holds the control-plane VIP, with `cp_enable` on and the address set:
+
+```yaml
+charts:
+  - name: kube-vip
+    source: https://github.com/kube-vip/helm-charts/releases/download/kube-vip-0.11.2/kube-vip-0.11.2.tgz
+    shasum: cd7b5ab2...
+    targetNamespace: kube-system
+    images:
+      - ghcr.io/kube-vip/kube-vip:v1.3.1
+    values: |
+      image:
+        tag: v1.3.1
+      config:
+        address: "{{ .Cluster.LoadBalancer }}"
+      env:
+        cp_enable: "true"
+        svc_enable: "false"
+        vip_leaderelection: "true"
+        lb_enable: "true"
+        lb_port: "6443"
+```
+
+`{{ .Cluster.LoadBalancer }}` is the inventory's own `spec.config.loadbalancer` - see [package values](package-values.md#cluster-what-the-inventory-already-knows) - so the VIP is stated once for the cluster and the chart reads it.
+
+**This cannot replace the static pod on a fresh install, and the reason is ordering rather than taste.** The chart installs a DaemonSet, and cargoship delivers a chart by writing a `HelmChart` resource for the engine's helm controller to act on - which needs an API server. But the VIP *is* how the second and third controllers reach the API server: cargoship writes `server: https://<loadbalancer>:<supervisor port>` on every controller after the first - 6443 on k3s, 9345 on rke2. So on a greenfield multi-controller cluster the chart cannot bring the address up in time, and controller two times out joining. A static pod has no such problem: the kubelet starts it from disk before the API server exists, which is why `example/k3s-kube-vip` and `example/rke2-kube-vip` use one.
+
+So:
+
+| Job                                   | Use                                   | Why                                                                                 |
+| :------------------------------------ | :------------------------------------ | :---------------------------------------------------------------------------------- |
+| Control-plane VIP, fresh install      | the static pod                        | it is up before the API server, which is when joining controllers need the address  |
+| Control-plane VIP, cluster already up | either; the chart is the better shape | scoped RBAC, upgradeable with helm, no admin kubeconfig on disk in a privileged pod |
+| Moving an existing VIP onto the chart | both, in that order                   | set `kubeVip.enabled: false` in the same apply, or two kube-vips hold one address   |
+| Service load balancers                | the charts                            | nothing to bootstrap, and the cloud provider has no static-pod equivalent           |
+
+What the static pod costs is worth being explicit about: it mounts the engine's admin kubeconfig - cluster-admin - into a host-network pod with `NET_ADMIN`, `NET_RAW` and `SYS_TIME`. The charts ship a ServiceAccount with a narrow ClusterRole instead. That is the argument for moving a control-plane VIP onto the chart once the cluster exists, and it is a real one; it just cannot be the thing that brings the cluster up.
+
+Switching an already-installed cluster over is two changes in one apply, not one. Setting `chart.enabled: true` while `kubeVip.enabled` is still true leaves the static pod on disk and started by every kubelet, with the chart's DaemonSet configured to hold the same address - so set `kubeVip.enabled: false` at the same time, which drops the static pod from the package's desired files and has phase 50 prune it.
 
 ## Ordering
 

@@ -50,7 +50,7 @@ type exampleChart struct {
 	Values string
 }
 
-// resolveExampleChart is the chart block for one flavor, by where its chart comes from.
+// resolveExampleCharts are the chart blocks for one flavor, by where its charts come from.
 //
 // No flavor carries a chart tarball committed in this repository, and that is deliberate: a
 // `.tgz` in a source tree is bytes nobody reviews, in a file format a reviewer cannot diff, and
@@ -58,12 +58,22 @@ type exampleChart struct {
 // the first thing documented in docs/guides/charts.md -- but an example that shipped one would
 // be asking every reader to trust an opaque blob to demonstrate a feature two fetched charts
 // demonstrate just as well.
-func resolveExampleChart(src chartSource, sums *exampleShasums) (*exampleChart, error) {
+func resolveExampleCharts(src chartSource, sums *exampleShasums) ([]*exampleChart, error) {
 	switch src {
 	case chartSourceHTTP:
-		return newExampleHTTPChart(sums)
+		chart, err := newExampleHTTPChart(sums)
+		if err != nil {
+			return nil, err
+		}
+		return []*exampleChart{chart}, nil
 	case chartSourceOCI:
-		return newExampleOCIChart(sums)
+		chart, err := newExampleOCIChart(sums)
+		if err != nil {
+			return nil, err
+		}
+		return []*exampleChart{chart}, nil
+	case chartSourceServiceLB:
+		return newExampleServiceLBCharts(sums)
 	default:
 		return nil, fmt.Errorf("unknown chart source %q", src)
 	}
@@ -192,4 +202,89 @@ func pinChartReference(ref string, sums *exampleShasums) (string, error) {
 	}
 	sums.storeKey(ref, ref, resolution.Reference)
 	return resolution.Reference, nil
+}
+
+// kube-vip's Service load balancer, which is two charts rather than one.
+//
+// kube-vip in service mode watches Services of type LoadBalancer and answers ARP for whatever
+// address each one was given. It does not decide the addresses: the cloud provider does, out of
+// a pool it reads from a ConfigMap. A package carrying the first without the second installs a
+// controller that advertises nothing, and every Service stays Pending - so the pair is the unit,
+// and it is why a flavor carries a list of charts.
+//
+// Both are pinned the way the http flavor's chart is: the release asset's URL, and the digest
+// the shasum cache hashes it to once. Moving either means editing the version here and re-running
+// mage generate:examples.
+const (
+	exampleSvcLBChartVersion   = "0.11.2"
+	exampleSvcLBCloudVersion   = "0.2.11"
+	exampleSvcLBChartNamespace = "kube-system"
+
+	// exampleSvcLBImage is the kube-vip image the chart's DaemonSet runs. It is pinned to the
+	// same release the kube-vip static pod flavor carries rather than to the chart's own
+	// appVersion, which lags: two examples in one repository disagreeing about which kube-vip
+	// it ships is a question nobody should have to answer.
+	exampleSvcLBImage = "ghcr.io/kube-vip/kube-vip:" + kubeVipVersion
+	// exampleSvcLBCloudVersionTag is the cloud provider release the package carries, which is
+	// the chart's own appVersion. It is named here once because it is spent twice -- as the
+	// image the package carries, and as the image.tag the chart is given -- and the chart
+	// defaults that tag to .Chart.AppVersion when it is not set. Left unset, a chart bump to a
+	// version with a newer appVersion renders a Deployment pointing at an image nothing in the
+	// package carries: it builds, renders and tests green, then sits in ImagePullBackOff on an
+	// air-gapped cluster with no LoadBalancer addresses handed out and nothing pointing back
+	// at this constant. Bump it with exampleSvcLBCloudVersion, from the new chart's appVersion.
+	exampleSvcLBCloudVersionTag = "v0.0.13"
+	exampleSvcLBCloudImage      = "docker.io/kubevip/kube-vip-cloud-provider:" + exampleSvcLBCloudVersionTag
+)
+
+// exampleSvcLBChartURL is where the kube-vip helm charts are published: a release asset per
+// chart, not an OCI artifact -- ghcr.io/kube-vip/helm-charts serves no tags.
+func exampleSvcLBChartURL(name, version string) string {
+	return fmt.Sprintf("https://github.com/kube-vip/helm-charts/releases/download/%s-%s/%s-%s.tgz",
+		name, version, name, version)
+}
+
+// newExampleServiceLBCharts is the chart pair, each hashed through the shared cache.
+func newExampleServiceLBCharts(sums *exampleShasums) ([]*exampleChart, error) {
+	kubeVip, err := exampleSvcLBChart("kube-vip", exampleSvcLBChartVersion, sums)
+	if err != nil {
+		return nil, err
+	}
+	cloud, err := exampleSvcLBChart("kube-vip-cloud-provider", exampleSvcLBCloudVersion, sums)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeVip.Images = []string{exampleSvcLBImage}
+	// svc_enable without cp_enable: this flavor is the Service load balancer, and the
+	// control-plane VIP is the kube-vip flavor's static pod. svc_election spreads the
+	// Services across the nodes rather than parking all of them on one leader.
+	kubeVip.Values = "image:\n  tag: " + kubeVipVersion + "\nenv:\n  svc_enable: \"true\"\n  svc_election: \"true\"\n  cp_enable: \"false\"\n  lb_enable: \"false\"\n  vip_interface: \"{{ .Values.chart.interface }}\"\n"
+
+	cloud.Images = []string{exampleSvcLBCloudImage}
+	// The pool the cloud provider hands out, as the ConfigMap its own chart renders. A
+	// package cannot know a cluster's spare addresses, so the range is a value.
+	cloud.Values = "image:\n  tag: " + exampleSvcLBCloudVersionTag + "\ncm:\n  data:\n    cidr-default: \"{{ .Values.chart.addressPool }}\"\n"
+
+	return []*exampleChart{kubeVip, cloud}, nil
+}
+
+// exampleSvcLBChart is one of the pair: its URL, and the digest the cache hashes it to.
+func exampleSvcLBChart(name, version string, sums *exampleShasums) (*exampleChart, error) {
+	url := exampleSvcLBChartURL(name, version)
+	digest, err := sums.get(url)
+	if err != nil {
+		return nil, err
+	}
+	if digest == "" {
+		return nil, fmt.Errorf("%s is no longer published: move the pinned %s chart version", url, name)
+	}
+	return &exampleChart{
+		Kind:      chartSourceServiceLB,
+		Name:      name,
+		Source:    url,
+		Version:   version,
+		Shasum:    digest,
+		Namespace: exampleSvcLBChartNamespace,
+	}, nil
 }

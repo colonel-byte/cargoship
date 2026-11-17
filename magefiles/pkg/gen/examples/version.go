@@ -78,9 +78,15 @@ type exampleVersion struct {
 	// `{{ with .KubeVip }}`.
 	KubeVip *exampleKubeVip
 
-	// Chart is the packaged Helm chart block, set only for a flavor that carries one. Like
-	// KubeVip, nil everywhere else so a template needs one guard.
-	Chart *exampleChart
+	// Charts are the packaged Helm chart blocks, in the order the definition declares them.
+	// Empty for every flavor that carries none, so a template needs one guard. It is a list
+	// because a chart is rarely alone in practice: kube-vip's Service load balancer is the
+	// chart plus the cloud provider that hands it an address pool, and a package that
+	// carried one without the other would install a controller with nothing to allocate.
+	Charts []*exampleChart
+	// ChartKind is where this flavor's charts come from, which is what the values templates
+	// branch on -- the knobs a flavor exposes are its charts' vocabulary, not cargoship's.
+	ChartKind chartSource
 }
 
 // exampleArch is one architecture's share of an example: the files a distro publishes once
@@ -150,11 +156,12 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor, sums
 	// The chart does not vary by Kubernetes release either, and resolving it is what fills in
 	// the digest a definition records, so it is done once here rather than in a template.
 	if f.chart != chartSourceNone {
-		chart, err := resolveExampleChart(f.chart, sums)
+		charts, err := resolveExampleCharts(f.chart, sums)
 		if err != nil {
 			return exampleVersion{}, err
 		}
-		v.Chart = chart
+		v.Charts = charts
+		v.ChartKind = f.chart
 	}
 
 	if spec.derive != nil {

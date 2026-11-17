@@ -18,24 +18,39 @@ addons:
   # the build bundles, so a name outside it is accepted rather than rejected --
   # cargoship warns when it configures a node with one this build does not package.
   disabled: []
-{{- with .Chart }}
+{{- if .Charts }}
 chart:
-  # Whether the cluster installs the chart this package carries. Off by default, and note what
-  # turning it off again does: the HelmChart resource is what owns the release, so a cluster
-  # that sets this back to false has the release uninstalled on the next apply. See
-  # docs/guides/charts.md.
+  # Whether the cluster installs the charts this package carries -- all of them; the gate is
+  # per package, not per chart. Off by default, and note what turning it off again does: a
+  # HelmChart resource owns its release, so a cluster that sets this back to false has the
+  # releases uninstalled on the next apply. See docs/guides/charts.md.
   enabled: false
-{{- if eq (printf "%s" .Kind) "http" }}
+{{- if eq (printf "%s" .ChartKind) "http" }}
   # Skip verifying the kubelet's serving certificate. metrics-server cannot verify one on a
   # cluster that has not had kubelet certificates signed, which is most of them; a cluster that
   # has should leave this false.
   insecureKubeletTLS: true
 {{- end }}
-{{- if eq (printf "%s" .Kind) "oci" }}
+{{- if eq (printf "%s" .ChartKind) "oci" }}
   # Run the exporter on the control-plane nodes too, which carry a taint its DaemonSet has to
   # tolerate. Node metrics from the controllers are usually wanted; a cluster that keeps
   # workloads off them entirely can say so here.
   tolerateControlPlane: true
+{{- end }}
+{{- if eq (printf "%s" .ChartKind) "service-lb" }}
+  # The addresses the cloud provider hands to Services of type LoadBalancer, as a CIDR or a
+  # start-end range. A package cannot know which of a cluster's addresses are spare, so it ships
+  # a documentation-range default that works nowhere and the cluster states its own: free,
+  # routable on the nodes' own subnet, and outside whatever DHCP hands out.
+  #
+  # It must also exclude spec.config.loadbalancer. A pool holding the control-plane VIP will
+  # eventually hand it to a Service, and kube-vip then answers for it on whichever node won
+  # that Service -- the API server goes down intermittently, looking like a network fault.
+  addressPool: 192.0.2.200/29
+  # The interface kube-vip adds Service addresses to. Empty lets it take the host's
+  # default-gateway interface, which is what makes one value correct across nodes whose NICs
+  # are not named alike.
+  interface: ""
 {{- end }}
 {{- end }}
 {{- with .KubeVip }}

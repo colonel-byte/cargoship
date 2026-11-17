@@ -24,22 +24,31 @@
       },
       "additionalProperties": false
     },
-{{- with .Chart }}
+{{- if .Charts }}
     "chart": {
       "type": "object",
       "description": "The Helm chart this package carries and the helm controller installs. Turning it off again uninstalls the release: the HelmChart resource owns it, and cargoship prunes the manifest a disabled chart wrote.",
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Whether the cluster installs the chart. Off in the package, because a chart an example carries to demonstrate the mechanism is not something a cluster should get for having installed the example."
-        }{{ if eq (printf "%s" .Kind) "http" }},
+          "description": "Whether the cluster installs the charts this package carries -- all of them; the gate is per package, not per chart. Off in the package, because a chart an example carries to demonstrate the mechanism is not something a cluster should get for having installed the example."
+        }{{ if eq (printf "%s" .ChartKind) "http" }},
         "insecureKubeletTLS": {
           "type": "boolean",
           "description": "Skip verifying the kubelet's serving certificate. metrics-server cannot verify one on a cluster that has not had kubelet certificates signed; a cluster that has should leave this false."
-        }{{ end }}{{ if eq (printf "%s" .Kind) "oci" }},
+        }{{ end }}{{ if eq (printf "%s" .ChartKind) "oci" }},
         "tolerateControlPlane": {
           "type": "boolean",
           "description": "Run the exporter on the control-plane nodes too, whose taint its DaemonSet has to tolerate."
+        }{{ end }}{{ if eq (printf "%s" .ChartKind) "service-lb" }},
+        "addressPool": {
+          "type": "string",
+          "description": "The addresses the cloud provider hands to Services of type LoadBalancer, as a CIDR or a start-end range. Must be free, routable on the nodes' own subnet, and outside whatever DHCP hands out - a package ships a documentation-range default that works nowhere, because it cannot know a cluster's spare addresses. It must also exclude spec.config.loadbalancer: a pool holding the control-plane VIP eventually hands it to a Service, and kube-vip answers for it on whichever node won that Service, taking the API server down intermittently.",
+          "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[0-9]{1,2}|[ ]*-[ ]*([0-9]{1,3}\\.){3}[0-9]{1,3})$"
+        },
+        "interface": {
+          "type": "string",
+          "description": "The interface kube-vip adds Service addresses to. Empty lets it take the host's default-gateway interface, which is what makes one value correct across nodes whose NICs are not named alike."
         }{{ end }}
       },
       "additionalProperties": false
