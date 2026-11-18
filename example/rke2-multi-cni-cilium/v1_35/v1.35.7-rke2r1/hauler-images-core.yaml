@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 # Do not edit; see example/AGENTS.md.
-# yaml-language-server: $schema=../../../../schema/hauler-manifest.json
+# yaml-language-server: $schema=https://hauler.dev/schemas/v1/hauler-manifest.json
 apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:
