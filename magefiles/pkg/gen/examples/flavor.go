@@ -62,6 +62,9 @@ const (
 	chartSourceHTTP chartSource = "http"
 	// chartSourceOCI is a chart pulled from a registry as an OCI artifact.
 	chartSourceOCI chartSource = "oci"
+	// chartSourceServiceLB is kube-vip's Service load balancer: two charts, which is the
+	// shape most real deployments have and the one a single-chart flavor cannot show.
+	chartSourceServiceLB chartSource = "service-lb"
 )
 
 // exampleImageList is one of upstream's airgap image manifests, and the chart entries that

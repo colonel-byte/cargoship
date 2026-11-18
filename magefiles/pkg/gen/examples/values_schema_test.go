@@ -58,7 +58,8 @@ func TestValuesTemplatesMatchTheirSchemas(t *testing.T) {
 				// remote-source flavor is resolved offline from a fixture, since the
 				// pair being checked here does not depend on the digest.
 				if f.chart != chartSourceNone {
-					data["Chart"] = &exampleChart{Kind: f.chart, Name: "chart"}
+					data["Charts"] = []*exampleChart{{Kind: f.chart, Name: "chart"}}
+					data["ChartKind"] = f.chart
 				}
 
 				var schema helmvalues.Schema

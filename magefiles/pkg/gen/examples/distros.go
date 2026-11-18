@@ -315,6 +315,20 @@ var exampleDistros = []exampleDistroSpec{
 				minors: exampleChartMinors,
 			},
 			{
+				// kube-vip's Service load balancer: the chart plus the cloud provider
+				// that hands it an address pool, which is the one flavor carrying more
+				// than one chart. It is the counterpart to example/k3s-kube-vip, whose
+				// static pod holds the *control-plane* VIP -- and that one cannot be a
+				// chart, because the VIP has to exist before the API server a chart is
+				// installed through. See docs/guides/charts.md.
+				cni:    "flannel",
+				name:   "service-lb",
+				dir:    "example/k3s-service-lb",
+				chart:  chartSourceServiceLB,
+				values: exampleK3sValues,
+				minors: exampleChartMinors,
+			},
+			{
 				cni:    "flannel",
 				name:   "multi",
 				dir:    "example/k3s-multi",

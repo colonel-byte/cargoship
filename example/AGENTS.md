@@ -64,7 +64,7 @@ The list is shared by both distros, so adding a line covers the rke2 and the k3s
 
 `example/rke2-kube-vip` and `example/k3s-kube-vip` carry a kube-vip static pod that holds the cluster's control-plane VIP on whichever controller wins its lease. The pin, the paths, and why each is what it is live in [`magefiles/pkg/gen/examples/kubevip.go`](../magefiles/pkg/gen/examples/kubevip.go); three things about the arrangement are worth knowing before changing it:
 
-- **It is a flavor rather than a value on the existing ones.** `spec.config.imageConfig.images` has no per-value gate - only a chart entry's `enabled` key gates images, and kube-vip is not a chart - so adding kube-vip to `example/k3s-flannel` would upload its image to every host of every cluster that installs one. The flavor is how the image is carried only by a package that wants it, while `kubeVip.enabled` still decides whether the pod runs.
+- **It is a flavor rather than a value on the existing ones.** `spec.config.imageConfig.images` has no per-value gate - only a chart entry's `enabled` key gates images, and the static pod is not a chart (the Service load balancer below is, and gates its images that way) - so adding kube-vip to `example/k3s-flannel` would upload its image to every host of every cluster that installs one. The flavor is how the image is carried only by a package that wants it, while `kubeVip.enabled` still decides whether the pod runs.
 - **One manifest serves both distros.** k3s and rke2 read static pods from the same path under their data directories, so `example/kube-vip/kube-vip.yaml` is shared, hand-written, and rendered at install time rather than at build time. The two things that differ - the data directory and the admin kubeconfig - reach it as values, from `exampleDistroSpec.kubeVip`.
 - **The VIP address is not a value.** It comes from the inventory's `spec.config.loadbalancer` through `.Cluster.LoadBalancer`, which is the same address joining controllers are given. See [package values](../docs/guides/package-values.md#cluster-what-the-inventory-already-knows).
 
@@ -72,21 +72,24 @@ The list is shared by both distros, so adding a line covers the rke2 and the k3s
 
 ## The chart flavors
 
-Two flavors carry a Helm chart and have the cluster install it through k3s's helm controller, which is what `.spec.config.charts` does - see [charts](../docs/guides/charts.md). They differ in one thing, deliberately: where the chart comes from, which is the part that differs in practice and takes a different path through the build.
+Three flavors carry a Helm chart and have the cluster install it through k3s's helm controller, which is what `.spec.config.charts` does - see [charts](../docs/guides/charts.md). They differ in where the chart comes from, which is the part that differs in practice and takes a different path through the build.
 
-| Flavor                   | Chart                      | Comes from                                      | Pinned by                               |
-| :----------------------- | :------------------------- | :---------------------------------------------- | :-------------------------------------- |
-| `example/k3s-chart-http` | `metrics-server`           | its GitHub release asset                        | a shasum in `example/shasums.json`      |
-| `example/k3s-chart-oci`  | `prometheus-node-exporter` | `oci://ghcr.io/prometheus-community/charts/...` | the manifest digest its tag resolved to |
+| Flavor                   | Chart                           | Comes from                                      | Pinned by                                |
+| :----------------------- | :------------------------------ | :---------------------------------------------- | :--------------------------------------- |
+| `example/k3s-chart-http` | `metrics-server`                | its GitHub release asset                        | a shasum in `example/shasums.json`       |
+| `example/k3s-chart-oci`  | `prometheus-node-exporter`      | `oci://ghcr.io/prometheus-community/charts/...` | the manifest digest its tag resolved to  |
+| `example/k3s-service-lb` | `kube-vip` + its cloud provider | their GitHub release assets                     | a shasum each, in `example/shasums.json` |
 
-The pins and the reasoning live in [`magefiles/pkg/gen/examples/charts.go`](../magefiles/pkg/gen/examples/charts.go). Four things to know before changing them:
+The pins and the reasoning live in [`magefiles/pkg/gen/examples/charts.go`](../magefiles/pkg/gen/examples/charts.go). Six things to know before changing them:
 
-- **No flavor carries a chart tarball committed here, and that is the point.** `.spec.config.charts` accepts a local path, and it is the first form the guide documents - but a `.tgz` in a source tree is bytes nobody reviews in a format no reviewer can diff, which is the shape the xz-utils backdoor took. Both example charts are fetched and pinned by a digest a reader can check against upstream. Do not add a committed archive to make a third flavor; `.gitignore` still ignores `*.tgz` and that is deliberate.
-- **k3s only, for both.** The writer is `RancherCommon`'s, so rke2 installs these identically, and a twin flavor per distro would render twenty more directories apiece to demonstrate the same mechanism.
-- **Both render for the newest line only** (`exampleChartMinors`). Where a chart comes from has nothing to do with the Kubernetes version: the section and the resource cargoship writes are the same on every line.
-- **The OCI flavor's entry carries no shasum, on purpose.** Its source names a digest, which is the guarantee a shasum would be; cargoship refuses an `oci://` tag that carries neither. `TestRenderedChartExampleDecodes` runs both rendered definitions through the decoder, where that validation lives, and asserts every chart is pinned one way or the other.
+- **No flavor carries a chart tarball committed here, and that is the point.** `.spec.config.charts` accepts a local path, and it is the first form the guide documents - but a `.tgz` in a source tree is bytes nobody reviews in a format no reviewer can diff, which is the shape the xz-utils backdoor took. Every example chart is fetched and pinned by a digest a reader can check against upstream. Do not add a committed archive to make a third flavor; `.gitignore` still ignores `*.tgz` and that is deliberate.
+- **k3s only, for all three.** The writer is `RancherCommon`'s, so rke2 installs these identically, and a twin flavor per distro would render twenty more directories apiece to demonstrate the same mechanism.
+- **`example/k3s-service-lb` carries two charts, and has to.** kube-vip in service mode answers ARP for Service addresses; the `kube-vip-cloud-provider` chart is what decides them, from a pool its own chart renders into a ConfigMap. One without the other installs a controller that advertises nothing and leaves every Service `Pending`. It is also the only flavor exercising a chart list rather than a single entry - `exampleVersion.Charts`, and the `range` in the distro template.
+- **It is the counterpart to the kube-vip flavors above, not a replacement.** Those hold the *control-plane* VIP with a static pod, which a chart cannot do on a fresh install: cargoship delivers a chart as a `HelmChart` the helm controller acts on, and that needs the API server the VIP is how the other controllers reach. [charts](../docs/guides/charts.md) has the worked comparison, including the control-plane-via-chart form for a cluster that is already up.
+- **All three render for the newest line only** (`exampleChartMinors`). Where a chart comes from has nothing to do with the Kubernetes version: the section and the resource cargoship writes are the same on every line.
+- **The OCI flavor's entry carries no shasum, on purpose.** Its source names a digest, which is the guarantee a shasum would be; cargoship refuses an `oci://` tag that carries neither. `TestRenderedChartExampleDecodes` runs every rendered definition through the decoder, where that validation lives, and asserts every chart is pinned one way or the other.
 
-Each flavor's values file exposes exactly one knob of its own beside `chart.enabled`, because what a cluster can configure is the chart's own vocabulary - `chart.insecureKubeletTLS`, `chart.tolerateControlPlane`. The values templates branch on `.Chart.Kind` for that.
+Each flavor's values file exposes only what its own charts read beside `chart.enabled`, because what a cluster can configure is the charts' vocabulary rather than cargoship's - `chart.insecureKubeletTLS`, `chart.tolerateControlPlane`, `chart.addressPool` and `chart.interface`. The values templates branch on `.ChartKind` for that.
 
 ## The upstream CNI flavors
 

@@ -13,6 +13,20 @@
 # k3s and rke2 both read static pods out of <data-dir>/agent/pod-manifests, so one file serves
 # both; the kubeconfig path is the only thing that differs, and it arrives as a value.
 #
+# This is the *bootstrap* mechanism, and it is a static pod rather than kube-vip's own Helm
+# chart for one reason: the kubelet starts it from disk before the API server exists, which is
+# when it is needed. Cargoship delivers a chart as a HelmChart resource for the engine's helm
+# controller to act on, and that needs an API server -- which on a fresh multi-controller
+# cluster is reached *through* this VIP, since cargoship writes `server: https://<lb>:<supervisor port>` (6443 on k3s, 9345 on rke2) on
+# every controller after the first. A chart cannot bring up the address its own installation
+# depends on.
+#
+# What this costs is worth knowing: the pod mounts the engine's admin kubeconfig -- cluster
+# admin -- into a host-network pod holding NET_ADMIN, NET_RAW and SYS_TIME. kube-vip's chart
+# ships a ServiceAccount with a narrow ClusterRole instead, which is the better shape once the
+# cluster exists. See docs/guides/charts.md for that form, and for example/k3s-service-lb,
+# which uses the charts for Service load balancers where no bootstrap problem arises.
+#
 # The whole body is inside the `enabled` guard on purpose. A disabled kube-vip is not uploaded
 # -- the file entry's `when` gate drops it -- but it is still rendered, and reading
 # .Cluster.LoadBalancer here unguarded would make an inventory with no loadbalancer fail to
