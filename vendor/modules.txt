@@ -1037,7 +1037,7 @@ github.com/sigstore/sigstore-go/pkg/tlog
 github.com/sigstore/sigstore-go/pkg/tuf
 github.com/sigstore/sigstore-go/pkg/util
 github.com/sigstore/sigstore-go/pkg/verify
-# github.com/sigstore/timestamp-authority/v2 v2.2.0
+# github.com/sigstore/timestamp-authority/v2 v2.2.1
 ## explicit; go 1.27
 github.com/sigstore/timestamp-authority/v2/pkg/verification
 github.com/sigstore/timestamp-authority/v2/pkg/x509
