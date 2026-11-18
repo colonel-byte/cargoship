@@ -1,0 +1,85 @@
+---
+# This file is generated in magefiles/templates/rke2/values.yaml.tmpl.
+
+# The values this package is built with. A cluster overrides any of them in its
+# inventory file under spec.config.values, and cargoship checks the result
+# against values.schema.json before it installs anything.
+
+# yaml-language-server: $schema=values.schema.json
+addons:
+  # The bundled charts rke2 is told not to install. Setting this in an inventory
+  # replaces the whole list rather than adding to it, so name every chart the
+  # cluster wants left out, including the ones listed here.
+  #
+  # values.schema.json carries the charts rke2 1.35 packages, extracted
+  # from the engine's source, and an editor offers them here as completions. That
+  # list is the engine's own --disable help text, which does not name every chart
+  # the build bundles, so any rke2- chart is accepted rather than only those --
+  # cargoship warns when it configures a node with one this build does not package.
+  disabled:
+    - rke2-ingress-nginx
+kubeVip:
+  # Whether the controllers run kube-vip, which holds the cluster's control-plane VIP on
+  # whichever of them wins its lease. Off by default: the VIP has to be an address nothing
+  # else answers for, and a package cannot know that it is.
+  #
+  # The address is not stated here by default. It is the inventory's spec.config.loadbalancer,
+  # which is already what joining controllers point `server:` at and what goes into the API
+  # server's tls-san, so the cluster states it once; `address` below overrides it for the case
+  # that cannot work. Turning this on with neither set fails the install with the file it could
+  # not render, rather than installing a pod with no address.
+  enabled: false
+  # The kube-vip release this package carries the image for. Overriding it to something the
+  # package does not carry leaves the static pod pulling from a registry an air-gapped host
+  # cannot reach.
+  image: ghcr.io/kube-vip/kube-vip:v1.3.1
+  # The address kube-vip advertises, when it must not be the one the inventory names.
+  #
+  # Empty takes spec.config.loadbalancer, which is the point of the `.Cluster` root and right
+  # whenever that value is an IP or a name every controller already resolves. But the inventory
+  # calls that field a *hostname*, and kube-vip resolving a name has to succeed on the
+  # controller before the kubelet starts this pod -- cargoship does not put the load balancer in
+  # /etc/hosts, so an air-gapped fleet whose DNS does not answer for it would get a pod that
+  # cannot work out what to advertise. Set the IP the record points at here and leave
+  # loadbalancer as the name. Do the same where loadbalancer is round-robin DNS, one A record
+  # per controller: kube-vip would resolve it to one controller's own address and ARP for that,
+  # taking the API server down in a way that reads as a network fault rather than as a value.
+  address: ""
+  # The interface the VIP is added to. Empty lets kube-vip take the host's default-gateway
+  # interface, which is what makes one manifest correct across controllers whose NICs are not
+  # named alike -- cargoship renders the manifest once for the cluster, not once per host.
+  interface: ""
+  # The prefix length the VIP is added with. A /32 is the address and nothing else.
+  subnet: "32"
+  # The API server port kube-vip health-checks the control plane on.
+  port: "6443"
+  # Where the engine writes the admin kubeconfig kube-vip holds its lease with.
+  kubeconfig: /etc/rancher/rke2/rke2.yaml
+  # Leader election timings, in seconds. The defaults are kube-vip's own.
+  leaseDuration: "5"
+  renewDeadline: "3"
+  retryPeriod: "1"
+  # Where kube-vip serves its Prometheus endpoint. The pod is on the host network, so an
+  # address other than loopback publishes an unauthenticated endpoint on every address the
+  # controller has, the VIP included.
+  metricsAddress: "127.0.0.1:2112"
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
+  # Who pod security admission does not apply to. Setting one of these in an
+  # inventory replaces the whole list rather than adding to it, so carry the
+  # entries below that the cluster still needs -- kube-system and zarf hold
+  # components that do not run under the restricted profile.
+  exemptions:
+    usernames: []
+    runtimeClasses: []
+    namespaces:
+      - kube-system
+      - rook-ceph
+      - zarf
+tools:
+  etcdctl:
+    # Optional debug CLI installed on control-plane hosts.
+    enabled: false
