@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.42.5](https://github.com/colonel-byte/cargoship/compare/v0.42.4...v0.42.5) (2026-11-18)
+
+
+### Bug Fixes
+
+* **coci:** pull the values files and schema layers with the package ([#1162](https://github.com/colonel-byte/cargoship/issues/1162)) ([e272c29](https://github.com/colonel-byte/cargoship/commit/e272c298d2934d5f726913525d80476aa2cc447f))
+* **examples:** stop the release tarball digest evicting itself from the shasum cache ([#1140](https://github.com/colonel-byte/cargoship/issues/1140)) ([3fcb987](https://github.com/colonel-byte/cargoship/commit/3fcb9878b32feb03cc20faea79668535ace541f7))
+
+
+### Miscellaneous
+
+* **examples:** record the per-release tarball digests the cache fix can now hold ([#1151](https://github.com/colonel-byte/cargoship/issues/1151)) ([d6acb98](https://github.com/colonel-byte/cargoship/commit/d6acb982db37bd0e428bdca246e7d0cb70687cb6))
+
+
+### Build
+
+* **deps:** bump github.com/sigstore/timestamp-authority/v2 from 2.2.0 to 2.2.1 in the sigstore group ([#1160](https://github.com/colonel-byte/cargoship/issues/1160)) ([f3cc75a](https://github.com/colonel-byte/cargoship/commit/f3cc75ae4928b98234f0900b0c468c6c89521a5a))
+
 ## [0.42.4](https://github.com/colonel-byte/cargoship/compare/v0.42.3...v0.42.4) (2026-11-17)
 
 
