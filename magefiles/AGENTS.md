@@ -47,7 +47,7 @@ When adding automation, keep the two halves honest with each other. A mage targe
 
 `magefiles/templates/*/values.yaml.tmpl` and `magefiles/templates/*/values.schema.json.tmpl` are two sides of one contract, and a package whose values do not satisfy its schema fails to build. Add a value to one and describe it in the other, in the same change. `TestValuesTemplatesMatchTheirSchemas` renders every flavor's pair and checks them against each other with the validator cargoship itself uses, so a half-finished change fails there rather than on an air-gapped management node.
 
-A third side is easy to forget: a value only reaches the chart it configures if `magefiles/templates/<distro>-distro.yaml.tmpl` maps it. A key in both the values file and the schema with no `spec.values.mappings` entry is a setting an operator can set and nothing reads.
+A third side is easy to forget: a value only reaches the chart it configures if `magefiles/templates/<distro>-distro.yaml.tmpl` maps it. A key in both the values file and the schema with no `spec.values.mappings` entry is a setting an operator can set and nothing reads - unless a templated `spec.config.files` entry reads it instead, which is the second consumer and the one a mapping-shaped search misses. Every `kubeVip.*` key is that case: none of them are mapped, and all of them are interpolated by the static pod manifest the kube-vip flavors upload.
 
 These schemas define everything inline -- no `$ref`, `$dynamicRef` or `$recursiveRef`, including local `$defs`, which `pkg/helmvalues` rejects by name so that a package carries its whole schema. See [package values](../docs/guides/package-values.md). Nested Kubernetes types (tolerations, affinity) are therefore spelled out in place, repeated per chart.
 

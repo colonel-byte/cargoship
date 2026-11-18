@@ -72,6 +72,11 @@ type exampleVersion struct {
 
 	// EtcdVersion is the release tag of etcd for optional debug tooling.
 	EtcdVersion string
+
+	// KubeVip is the control-plane VIP block, set only for a flavor that carries kube-vip
+	// and nil for every other one -- so a template guards the whole feature with one
+	// `{{ with .KubeVip }}`.
+	KubeVip *exampleKubeVip
 }
 
 // exampleArch is one architecture's share of an example: the files a distro publishes once
@@ -127,6 +132,16 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 		v.Arches = append(v.Arches, exampleArch{Arch: arch, RPMArch: rpmArch})
 	}
 	v.MultiArch = len(v.Arches) > 1
+
+	// The kube-vip block is the distro's rather than the version's -- the static pod does not
+	// vary by Kubernetes release -- so a flavor that asks for one takes the distro's as it
+	// stands. Nothing writes through it, which is what makes sharing the pointer safe.
+	if f.kubeVip {
+		if spec.kubeVip == nil {
+			return exampleVersion{}, fmt.Errorf("flavor %s asks for kube-vip, which %s declares no paths for", f.flavorName(), spec.name)
+		}
+		v.KubeVip = spec.kubeVip
+	}
 
 	if spec.derive != nil {
 		spec.derive(&v)

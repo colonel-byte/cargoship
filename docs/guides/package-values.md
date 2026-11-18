@@ -316,6 +316,24 @@ Templating is deliberately not applied everywhere. Three surfaces render:
 
 A template that names a value the package does not define is an error, not an empty string, on every surface.
 
+## `.Cluster`: what the inventory already knows
+
+The two surfaces that render at install time - `spec.config.engine` and the `files` entries - also get a `.Cluster` root, holding what cargoship knows about the cluster it is installing rather than what the package ships. `spec.actions.onCreate` does not: it renders at build time on the machine building the package, where there is no inventory and no cluster to know anything about, so `{{ .Cluster.LoadBalancer }}` in an action fails the build rather than the install. It is a short list, and it is meant to stay short: a package author writes these names into a manifest and cannot change them afterwards without breaking their package.
+
+| Path                    | What it holds                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `.Cluster.LoadBalancer` | The inventory's `spec.config.loadbalancer` - the address clients and joining nodes reach the control plane on |
+
+The point is to avoid asking a cluster for something it has already said. `spec.config.loadbalancer` is what joining controllers point `server:` at and what goes into the API server's `tls-san`; a package that needed the same address in its own values would be one address written twice, with nothing reconciling the two. `example/rke2-kube-vip` and `example/k3s-kube-vip` are the worked case - a kube-vip static pod that advertises the control-plane VIP:
+
+```yaml
+env:
+  - name: address
+    value: "{{ .Cluster.LoadBalancer }}"
+```
+
+A fact the inventory did not set is absent rather than empty, so interpolating one is an error naming the file, the same as a missing value. `{{ if .Cluster.LoadBalancer }}` and `{{ with }}` still work, which is how a template keeps a cluster fact optional - the kube-vip manifest guards its whole body that way, so a package whose kube-vip is switched off still installs on a cluster that set no load balancer.
+
 ## Rendered manifests on a running cluster
 
 The `HelmChartConfig` manifests a template produces are written to the engine's manifest directory, which the Rancher engines re-read on their own. Cargoship marks them as not requiring a restart: `cargoship engine-config-sync` compares them on disk, writes the drift in place, and logs the paths it wrote. No node is drained for a values change that lands only in manifests.

@@ -48,6 +48,11 @@ func TestValuesTemplatesMatchTheirSchemas(t *testing.T) {
 					"Minor":         "v1.35",
 					"Addons":        []string{"rke2-coredns"},
 				}
+				// Without this the kube-vip block is skipped by its own `with` guard and
+				// the pair validates having described nothing.
+				if f.kubeVip {
+					data["KubeVip"] = spec.kubeVip
+				}
 
 				var schema helmvalues.Schema
 				values := map[string]any{}

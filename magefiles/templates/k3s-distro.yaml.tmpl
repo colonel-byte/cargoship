@@ -52,6 +52,28 @@ spec:
       - source: .podSecurity.exemptions.namespaces
         target: .podSecurity.plugins[0].configuration.exemptions.namespaces
   config:
+{{- with .KubeVip }}
+    # Files that are not part of an install method. Phase 50 uploads these to every host the
+    # selector matches, before the engine is configured or started, so a static pod here is in
+    # place by the time the kubelet first reads its manifest directory.
+    files:
+      - source: {{ .Source }}
+        target: {{ .Target }}
+        # Rendered against the package's values and the cluster's own facts before upload: the
+        # VIP comes from the inventory's spec.config.loadbalancer rather than from a value
+        # here, so the address kube-vip advertises and the one joining controllers are given
+        # cannot disagree.
+        template: true
+        perm: "0600"
+        # The engine owns every directory above the manifest one, and goes on to keep kubelet
+        # kubeconfigs and client CA material in them. On a first install this entry is uploaded
+        # before the engine exists, so cargoship is what creates them -- at 0755 by default,
+        # which the engine's own MkdirAll then leaves alone for the life of the host.
+        dirPerm: "0750"
+        selector:
+          profile: controller
+          when: .kubeVip.enabled
+{{- end }}
     engine:
       config:
         cluster-cidr: 10.42.0.0/16
@@ -225,4 +247,10 @@ spec:
       images:
 {{- range .CoreImages }}
         - {{ . }}
+{{- end }}
+{{- with .KubeVip }}
+        # The control-plane VIP. The tarball lands in the directory above, which k3s imports
+        # from when it starts -- so the image is in containerd before the kubelet first reads
+        # the static pod, which is what keeps the pod off a registry no host can reach.
+        - {{ .Image }}
 {{- end }}

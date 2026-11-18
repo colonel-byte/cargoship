@@ -80,6 +80,12 @@ type exampleDistroSpec struct {
 	haulerTemplates []string
 	zarfTemplates   []string
 
+	// kubeVip is the control-plane VIP block a flavor of this distro gets when it asks for
+	// one. Per distro because the two fields that are not kube-vip's own follow from the
+	// engine: where its kubelet reads static pods, and where it writes the admin kubeconfig
+	// the pod holds its lease with. Nil for a distro no kube-vip flavor is declared for.
+	kubeVip *exampleKubeVip
+
 	// coreImages is the release's own image manifest: everything the distro ships before a
 	// flavor adds its CNI's images. RKE2 splits the two, k3s publishes one combined list.
 	// Either way an example's images are what that release ships, not a list rebuilt here.
@@ -141,6 +147,10 @@ var exampleDistros = []exampleDistroSpec{
 		// writeExampleContentManifests.
 		haulerTemplates: exampleRKE2Hauler,
 		zarfTemplates:   exampleRKE2Zarf,
+		// rke2 serves the API on 6443 and the supervisor joining nodes use on 9345. kube-vip
+		// health-checks the API port; in ARP mode it holds the address rather than
+		// forwarding a port, so the supervisor is reachable on the VIP either way.
+		kubeVip: newExampleKubeVip("/var/lib/rancher/rke2", "/etc/rancher/rke2/rke2.yaml", "6443"),
 		flavors: []exampleFlavor{
 			{
 				cni:               "cilium",
@@ -205,6 +215,24 @@ var exampleDistros = []exampleDistroSpec{
 				// before reversing this; nothing watches them.
 			},
 			{
+				// A control-plane VIP, held by kube-vip on whichever controller wins its
+				// lease. It is its own flavor rather than a value on the others because
+				// the image has to be carried whether or not a given cluster turns the
+				// pod on: spec.config.imageConfig.images has no per-value gate, so adding
+				// kube-vip to an existing flavor would upload its image to every host of
+				// every cluster that installs one.
+				//
+				// canal rather than cilium, and amd64 alone, to keep the flavor about the
+				// one thing it demonstrates.
+				cni:     "canal",
+				name:    "kube-vip",
+				dir:     "example/rke2-kube-vip",
+				kubeVip: true,
+				// canal needs no chart manifest, so its images stay in the flat list.
+				imageLists: []exampleImageList{{asset: "rke2-images-canal.linux-amd64.txt"}},
+				values:     exampleRKE2Values,
+			},
+			{
 				cni:  "canal",
 				name: "multi-cni-canal",
 				dir:  "example/rke2-multi-cni-canal",
@@ -237,10 +265,21 @@ var exampleDistros = []exampleDistroSpec{
 		name:       "k3s",
 		template:   "magefiles/templates/k3s-distro.yaml.tmpl",
 		coreImages: "k3s-images.txt",
+		// Same paths as rke2 one directory over, and the same two ports.
+		kubeVip: newExampleKubeVip("/var/lib/rancher/k3s", "/etc/rancher/k3s/k3s.yaml", "6443"),
 		// k3s ships its CNI in the binary, so flannel is what a stock k3s runs, and its
 		// images are already in k3s-images.txt.
 		flavors: []exampleFlavor{
 			{cni: "flannel", dir: "example/k3s-flannel", values: exampleK3sValues},
+			{
+				// The control-plane VIP flavor; see its rke2 twin for why it is a flavor
+				// of its own rather than a value on the others.
+				cni:     "flannel",
+				name:    "kube-vip",
+				dir:     "example/k3s-kube-vip",
+				kubeVip: true,
+				values:  exampleK3sValues,
+			},
 			{
 				cni:    "flannel",
 				name:   "multi",
