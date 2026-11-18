@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5c1c1d92.js";
+            window.path_to_searchindex_js = "searchindex-237781e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-5a9b6c47.js"></script>
+        <script src="toc-705bec50.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -514,6 +514,8 @@ metadata:
 </code></pre>
 <p>The corresponding JSON schemas are automatically generated from Go structs into <code>schema/</code>, and <code>cargoship schema</code> writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; <code>cargoship validate</code> checks a file against the right one without an editor.</p>
 <p>An inventory authoring guide is available in <a href="#inventory-configuration-guide">Setting up an inventory</a>, and the full set of guides – image tarballs, file and registry overrides, credential encryption, multi-architecture packages, firewalls – is under <a href="guides"><code>docs/guides/</code></a>.</p>
+<p>A package can also carry a Helm chart and have the cluster install it through the Rancher engines’ helm controller, with the chart tarball travelling in the package rather than being pulled from a repository - see <a href="#deploying-a-helm-chart-from-a-package">Deploying a Helm chart from a package</a>.</p>
+<p>A package’s own settings, and the templates that spend them, are covered in <a href="#package-values">Package values</a>. A template also reads what the inventory already states, under <code>.Cluster</code>: <code>example/rke2-kube-vip</code> and <code>example/k3s-kube-vip</code> use it to ship a kube-vip static pod that advertises the control-plane VIP the inventory’s <code>loadbalancer</code> names, so the address is written once for the cluster rather than once per package.</p>
 <h3 id="the-zarfdev-group-is-deprecated"><a class="header" href="#the-zarfdev-group-is-deprecated">The <code>zarf.dev</code> group is deprecated</a></h3>
 <p>These documents used to declare <code>apiVersion: zarf.dev/v1alpha1</code> with <code>kind: ZarfCluster</code> and <code>kind: ZarfDistro</code>. That group belongs to the upstream Zarf project, which defines its own kinds under it, so cargoship moved to a group it owns.</p>
 <p>Both spellings are accepted, in any combination, and a document using the old one needs no change today:</p>
@@ -1365,6 +1367,147 @@ go func() { _ = apply.Run(ctx) }()
 // From anywhere: progress.Current() is the phase, its position, and its state.
 </code></pre>
 <p><code>phase.ProgressSink</code> is scoped to the context rather than to the process, which is the whole reason it exists: the status file’s path is global, so two applies running in one process would write the same file. One in-flight apply per object is exactly what <a href="https://github.com/colonel-byte/cluster-api-provider-cargoship"><code>cluster-api-provider-cargoship</code></a> has, and it reports the phase on its <code>Converged</code> condition. Both watchers are updated from one call inside the phase loop, so a state cannot reach one and not the other, and the file is written whether or not a sink is attached – the Ansible plugin needs no change and has none.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="deploying-a-helm-chart-from-a-package"><a class="header" href="#deploying-a-helm-chart-from-a-package">Deploying a Helm chart from a package</a></h1>
+<p>A package can carry a Helm chart and have the cluster install it. <code>.spec.config.charts</code> is the section, the Rancher engines’ helm controller is what installs it, and the chart tarball travels in the package like any other file - so nothing reaches for a chart repository on a network that has none.</p>
+<pre><code class="language-yaml">spec:
+  type: rke2
+  config:
+    charts:
+      - name: my-app
+        source: charts/my-app-1.2.3.tgz
+        targetNamespace: my-app
+        createNamespace: true
+        when: .myApp.enabled
+        images:
+          - registry.example.com/my-app:1.2.3
+        values: |
+          replicas: {{ .Values.myApp.replicas }}
+</code></pre>
+<p>That writes one <code>HelmChart</code> resource into the engine’s manifest directory on every controller, carrying the chart itself:</p>
+<pre><code class="language-yaml">apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: my-app
+  namespace: kube-system
+spec:
+  chartContent: H4sIAAAAAAAA/...   # the tarball, base64
+  targetNamespace: my-app
+  createNamespace: true
+  valuesContent: |
+    replicas: 2
+</code></pre>
+<p><code>chartContent</code> is the helm controller’s own air-gap mechanism: the chart goes to the API server with the resource, and the install job reads it from there. Nothing is served and nothing is fetched, which makes a chart <strong>the one thing a package delivers that never lands on a node’s filesystem</strong> - cargoship reads the tarball out of the extracted package on the management node and writes it into the manifest.</p>
+<h3 id="the-size-ceiling"><a class="header" href="#the-size-ceiling">The size ceiling</a></h3>
+<p>Because the chart is in the resource, it is in etcd, and base64 is a third larger than the tarball. etcd refuses a value over about 1.5MB by default, so a chart approaching that fails to install with an etcd error nothing connects back to the package.</p>
+<p>Cargoship warns at build time above 1MiB of tarball rather than refusing, because the limit is the cluster’s to raise (<code>--max-request-bytes</code>) and an operator may well have raised it. If a chart is genuinely too large, the options are to trim what the chart carries (vendored CRDs and bundled subcharts are the usual weight) or to deliver it as a <code>files</code> entry and apply it another way.</p>
+<p>Note that the chart ends up in etcd regardless of how it arrives: the helm controller stores it in the release’s own Secret once installed. What <code>chartContent</code> adds is one more copy of it, in the resource.</p>
+<h2 id="this-is-not-enginemanifest"><a class="header" href="#this-is-not-enginemanifest">This is not <code>engine.manifest</code></a></h2>
+<p>The two sections look alike and do opposite things.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th><code>.spec.config.engine.manifest</code></th><th><code>.spec.config.charts</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Writes</td><td><code>HelmChartConfig</code></td><td><code>HelmChart</code></td></tr>
+<tr><td>Owns the release</td><td>no - the engine bundled the chart</td><td>yes - the package did</td></tr>
+<tr><td>Chart comes from</td><td>the engine’s own bundle</td><td>the package</td></tr>
+<tr><td>Chart travels</td><td>n/a - the engine already has it</td><td>in the resource, base64</td></tr>
+<tr><td>Removing the entry</td><td>stops configuring a chart that keeps running</td><td><strong>uninstalls the release</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>That last row is the one to read twice. A <code>HelmChart</code> resource owns its release, cargoship prunes the manifest directory against what the package declares, and the helm controller answers a deleted <code>HelmChart</code> by uninstalling the workload. The prune only reaches cargoship’s own files - every manifest it writes is named <code>cargoship-&lt;name&gt;-chart.yaml</code> - so a <code>HelmChart</code> a package delivers through <code>spec.config.files</code> instead, or one the engine bundles, is left alone. Dropping a chart from a package, or gating it off with <code>when</code>, takes the release with it on the next <code>cargoship apply</code>. That is the intent - a package is the description of what the cluster runs - but it is destructive, and it is not what dropping a <code>manifest</code> entry does.</p>
+<h2 id="fields"><a class="header" href="#fields">Fields</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td>The <code>HelmChart</code>’s name, and the stem of the file cargoship writes. Must be unique in the package</td></tr>
+<tr><td><code>source</code></td><td>Where the chart tarball comes from at build time: a local path, an http(s) URL, or an <code>oci://</code> reference</td></tr>
+<tr><td><code>version</code></td><td>The chart version, which names the tarball when <code>source</code> does not. Required for an <code>oci://</code> source</td></tr>
+<tr><td><code>shasum</code></td><td>SHA-256 the tarball is verified against when the package is built. Required for a fetched source</td></tr>
+<tr><td><code>targetNamespace</code></td><td>The namespace the release installs into. The resource itself always lives in <code>kube-system</code>, where the controller watches</td></tr>
+<tr><td><code>createNamespace</code></td><td>Have the helm controller create <code>targetNamespace</code> if it is absent</td></tr>
+<tr><td><code>values</code></td><td>The chart’s Helm values, as a YAML string or a mapping. Rendered as a Go template first</td></tr>
+<tr><td><code>images</code></td><td>The images the chart needs, carried in the package alongside <code>imageConfig.images</code></td></tr>
+<tr><td><code>when</code></td><td>A values path gating whether the chart is delivered and deployed at all</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="what-a-cluster-can-change"><a class="header" href="#what-a-cluster-can-change">What a cluster can change</a></h2>
+<p><code>values</code> is rendered as a Go template against the package’s values and the cluster’s facts, the same way an engine manifest entry’s values are - see <a href="#package-values">package values</a>. That is the one way a cluster configures a chart: <code>spec.values.mappings</code> targets are relative to <code>spec.config.engine</code>, so a mapping cannot reach a chart entry.</p>
+<pre><code class="language-yaml"># In the package:
+values: |
+  replicas: {{ .Values.myApp.replicas }}
+  ingress:
+    host: {{ .Cluster.LoadBalancer }}
+</code></pre>
+<p><code>when</code> is how a cluster leaves the chart out entirely: the resource is not written, and the chart’s bytes are not even read out of the package. The path has to exist in the package’s values and hold a boolean, and only an explicit <code>false</code> gates the chart off: a path that is missing, unreadable, or holding anything other than a boolean fails the apply. That is deliberate, and it is the <code>when</code> gate’s one sharp edge - reading a missing path as off would mean a renamed values key, or an override that replaced the gate’s parent map, silently uninstalling a running release.</p>
+<p>Note what <code>when</code> does <strong>not</strong> gate: the chart’s <code>images</code> are carried and uploaded either way. The flat image list has no per-value gate to hang them on, which is the same gap <a href="#the-engines-disable-key-does-not-gate-a-charts-images">an <code>enabled: false</code> chart manifest has</a>.</p>
+<h2 id="where-the-tarball-comes-from"><a class="header" href="#where-the-tarball-comes-from">Where the tarball comes from</a></h2>
+<p><code>source</code> takes any of four things, and all four are fetched when the package is <strong>built</strong>, on the management node, never by the cluster:</p>
+<pre><code class="language-yaml"># A file beside the definition. No example ships one - see below - but it is the simplest form,
+# and the right one for a chart your own build produced.
+- name: my-app
+  source: charts/my-app-1.2.3.tgz
+
+# An http(s) URL. A shasum is required - see below.
+- name: my-app
+  source: https://charts.example.com/my-app-1.2.3.tgz
+  shasum: 5f0c5ee6...
+
+# A chart published as an OCI artifact, which is what `helm push` produces. The reference names
+# a repository and a tag rather than a file, so `version` is what names the tarball.
+- name: my-app
+  source: oci://registry.example.com/charts/my-app:1.2.3
+  version: 1.2.3
+  shasum: 5f0c5ee6...
+
+# The same, pinned by digest, which needs no shasum: the reference is the guarantee.
+- name: my-app
+  source: oci://registry.example.com/charts/my-app@sha256:5f0c5ee6...
+  version: 1.2.3
+</code></pre>
+<p>There is deliberately no <code>repo:</code> plus <code>version:</code> form. The helm controller supports one, and it would have the <em>cluster</em> resolve the chart against a repository - which is the one thing an air-gapped cluster cannot do. What reaches a node is always a tarball the package carried.</p>
+<p>A chart’s tarball is a file in the package, so everything that already applies to a packaged file applies to it unchanged:</p>
+<ul>
+<li><strong><code>--file-override</code></strong> redirects an http(s) chart source to a mirror or a local directory, matching on URL prefix like any other file.</li>
+<li><strong><code>--content-store</code></strong> resolves a chart out of a hauler store or a zarf package, keyed on the source the definition declared - so a chart synced into a store alongside the rest of a release is read from there rather than fetched. A Helm chart published as an OCI artifact is recognised as a file in such a store, and named the way <code>helm package</code> names it, from the chart name and version the manifest records. Note that a store is <em>trusted</em> for a source pinned by digest rather than checked against it: see <a href="#a-content-store-is-trusted-for-a-digest-pinned-source-and-need-not-be">the note on that</a>.</li>
+<li><strong><code>--registry-override</code></strong> rewrites the registry of an <code>oci://</code> chart source, the same way it rewrites an image’s.</li>
+<li>The <strong>build record</strong> names what was actually read: an overridden or store-resolved chart appears in <code>build.fileSources</code> with its declared source, what it resolved to, and the digest it was verified against.</li>
+</ul>
+<h3 id="why-no-example-carries-a-chart-tarball"><a class="header" href="#why-no-example-carries-a-chart-tarball">Why no example carries a chart tarball</a></h3>
+<p><code>source</code> taking a local path is the simplest of the four, and the examples deliberately do not use it: a <code>.tgz</code> committed to a source tree is bytes nobody reviews, in a format no reviewer can diff, and the xz-utils backdoor was exactly that shape. The two example flavors fetch instead, and each is pinned by a digest a reader can check against upstream.</p>
+<p>That is a judgement about what belongs in <em>this</em> repository, not a limitation. A local path is right whenever the chart is built by the same pipeline as the package - <code>helm package</code> into a directory, point <code>source</code> at it, and the tarball never has to be committed anywhere.</p>
+<h3 id="a-fetched-chart-has-to-name-a-digest"><a class="header" href="#a-fetched-chart-has-to-name-a-digest">A fetched chart has to name a digest</a></h3>
+<p><code>shasum</code> is optional for a local path and required for anything fetched - an <code>oci://</code> reference pinned by <code>@sha256:</code> excepted, since that is already a digest. A package that leaves it out is refused when it is built rather than carrying a chart nobody verified.</p>
+<p>This is stricter than a file entry, which only forces a shasum when an override or a content store redirects it. A chart earns the extra strictness: it installs into the cluster with whatever RBAC and privileges its own templates ask for, so “bytes from a URL nobody checked” is a different proposition than it is for a binary that lands on disk.</p>
+<h2 id="only-the-rancher-engines"><a class="header" href="#only-the-rancher-engines">Only the Rancher engines</a></h2>
+<p>k3s and rke2 run the helm controller; upstream Kubernetes does not. A package that declares <code>charts</code> with <code>spec.type: upstream</code> is refused when it is built rather than built with the charts dropped. For upstream, render the chart to plain manifests and use <code>.spec.config.manifests</code>, which cargoship <code>kubectl apply</code>s from the leader.</p>
+<h2 id="what-is-already-in-the-package"><a class="header" href="#what-is-already-in-the-package">What is already in the package</a></h2>
+<p>The helm controller runs each install as a Job using <code>rancher/klipper-helm</code>, which both engines already carry in their own image lists - so nothing extra is needed for the installer itself. The chart’s <em>own</em> images are yours to declare, in <code>images</code> above or in <code>imageConfig.images</code>.</p>
+<h2 id="where-the-chart-sits-in-a-built-package"><a class="header" href="#where-the-chart-sits-in-a-built-package">Where the chart sits in a built package</a></h2>
+<p>Under <code>charts/&lt;index&gt;/&lt;tarball&gt;</code>, one directory per entry in declaration order - beside <code>files/</code> and <code>os/</code>, and staged by the same machinery. It is a layer of the published artifact like any other, so <code>cargoship publish</code>, <code>pull</code> and <code>mirror</code> all carry it.</p>
+<p>The one thing it is not is a <code>files</code> entry. That is the distinction worth knowing if you go looking: a chart has no <code>target</code>, nothing uploads it, and a package that delivered it to every controller as well would be carrying it twice.</p>
+<h2 id="the-examples"><a class="header" href="#the-examples">The examples</a></h2>
+<p>Two generated examples carry a chart, and they are the shortest way to see a complete definition:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Example</th><th style="text-align: left">Source</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>example/k3s-chart-http</code></td><td style="text-align: left"><code>metrics-server</code>, downloaded and verified against a shasum</td></tr>
+<tr><td style="text-align: left"><code>example/k3s-chart-oci</code></td><td style="text-align: left"><code>prometheus-node-exporter</code>, from a registry, pinned by digest</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="ordering"><a class="header" href="#ordering">Ordering</a></h2>
+<p>The helm controller applies charts in no guaranteed order, and a chart whose dependencies are not up yet retries rather than failing for good. A chart that needs the CNI, or a CRD another chart installs, will come up late rather than not at all - but nothing in the package can express “after that one”.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="building-from-a-local-content-store"><a class="header" href="#building-from-a-local-content-store">Building From a Local Content Store</a></h1>
 <p>This guide covers building a distro package from a local content store: collecting the images and files on a connected machine, carrying the result across the airlock, and building the package on the other side with nothing fetched over the network.</p>
@@ -2868,9 +3011,30 @@ spec:
 <li>
 <p><strong><code>spec.actions.onCreate</code></strong> – per action, when the action sets <code>template: true</code>. This renders at build time, on the machine building the package, and covers the action’s <code>cmd</code> and its <code>wait</code> block.</p>
 </li>
+<li>
+<p><strong><code>spec.config.charts[].values</code></strong> – always, like the engine configuration. A chart a package carries is configured by templating its values, since a mapping cannot reach it; see <a href="#deploying-a-helm-chart-from-a-package">charts</a>. Nothing else about a chart entry renders - its <code>source</code> and <code>shasum</code> were spent when the package was built, so a template in one would name bytes the package does not hold.</p>
+</li>
 </ul>
 <p><code>spec.config.os.sysctl</code>, <code>spec.config.os.environment</code>, <code>spec.config.os.fapolicyd</code>, and <code>spec.config.os.selinux</code> do not render.</p>
 <p>A template that names a value the package does not define is an error, not an empty string, on every surface.</p>
+<h2 id="cluster-what-the-inventory-already-knows"><a class="header" href="#cluster-what-the-inventory-already-knows"><code>.Cluster</code>: what the inventory already knows</a></h2>
+<p>The two surfaces that render at install time - <code>spec.config.engine</code> and the <code>files</code> entries - also get a <code>.Cluster</code> root, holding what cargoship knows about the cluster it is installing rather than what the package ships. <code>spec.actions.onCreate</code> does not: it renders at build time on the machine building the package, where there is no inventory and no cluster to know anything about, so <code>{{ .Cluster.LoadBalancer }}</code> in an action fails the build rather than the install. It is a short list, and it is meant to stay short: a package author writes these names into a manifest and cannot change them afterwards without breaking their package.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Path</th><th>What it holds</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.Cluster.LoadBalancer</code></td><td>The inventory’s <code>spec.config.loadbalancer</code> - the address clients and joining nodes reach the control plane on</td></tr>
+</tbody>
+</table>
+</div>
+<p>The point is to avoid asking a cluster for something it has already said. <code>spec.config.loadbalancer</code> is what joining controllers point <code>server:</code> at and what goes into the API server’s <code>tls-san</code>; a package that needed the same address in its own values would be one address written twice, with nothing reconciling the two. <code>example/rke2-kube-vip</code> and <code>example/k3s-kube-vip</code> are the worked case - a kube-vip static pod that advertises the control-plane VIP:</p>
+<pre><code class="language-yaml">env:
+  - name: address
+    value: "{{ .Cluster.LoadBalancer }}"
+</code></pre>
+<p>A fact the inventory did not set is absent rather than empty, so interpolating one is an error naming the file, the same as a missing value. <code>{{ if .Cluster.LoadBalancer }}</code> and <code>{{ with }}</code> still work, which is how a template keeps a cluster fact optional - the kube-vip manifest guards its whole body that way, so a package whose kube-vip is switched off still installs on a cluster that set no load balancer.</p>
 <h2 id="rendered-manifests-on-a-running-cluster"><a class="header" href="#rendered-manifests-on-a-running-cluster">Rendered manifests on a running cluster</a></h2>
 <p>The <code>HelmChartConfig</code> manifests a template produces are written to the engine’s manifest directory, which the Rancher engines re-read on their own. Cargoship marks them as not requiring a restart: <code>cargoship engine-config-sync</code> compares them on disk, writes the drift in place, and logs the paths it wrote. No node is drained for a values change that lands only in manifests.</p>
 <h2 id="available-functions"><a class="header" href="#available-functions">Available functions</a></h2>
@@ -3473,6 +3637,31 @@ cargoship validate --kind config ./cargoship-config.yaml
     loadbalancer: bubbles-kc.test.com
 </code></pre>
 <p>The <code>loadbalancer</code> address is required. Cargoship adds this to the TLS Subject Alternative Names (SANs) for the Kubernetes API server. This can be a Round-Robin DNS record pointing to your control-plane nodes, or an external load balancer like an AWS NLB.</p>
+<p>It is also what cargoship writes as <code>server:</code> on every controller that is not the first, so it is the address the second and third controllers join the cluster through, and it is what the kubeconfig <code>cargoship kube-config</code> fetches points at. All three uses are the same string, which is why getting it wrong shows up late rather than at install time.</p>
+<h3 id="pointing-the-name-at-the-control-plane"><a class="header" href="#pointing-the-name-at-the-control-plane">Pointing the name at the control plane</a></h3>
+<p>Three shapes work, and they differ in what DNS has to hold:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Shape</th><th>The record</th><th>What happens when a controller dies</th></tr>
+</thead>
+<tbody>
+<tr><td>Round-robin DNS</td><td>one <code>A</code> record per controller, same name</td><td>clients that do not retry the next answer fail until DNS is updated</td></tr>
+<tr><td>An external load balancer</td><td><code>A</code>, or <code>CNAME</code> to the balancer’s own name</td><td>the balancer takes the node out, and nothing in DNS changes</td></tr>
+<tr><td>A VIP held on the nodes (<code>kube-vip</code>)</td><td>one <code>A</code> record, pointing at the VIP</td><td>the VIP moves to another controller; the address does not change</td></tr>
+</tbody>
+</table>
+</div>
+<p>The third is what <a href="../example/rke2-kube-vip">the kube-vip examples</a> set up, and it is the one with a DNS requirement worth stating explicitly:</p>
+<ul>
+<li><strong>One <code>A</code> record for the name, pointing at the VIP</strong> - not one per controller. The whole point of the VIP is that the address outlives any one node, so round-robin records alongside it defeat it.</li>
+<li><strong>Create the record before the install.</strong> <code>kubeVip.address</code> is empty by default, so the pod is told to advertise the name from <code>loadbalancer</code>, and kube-vip resolves a name rather than rejecting it. The resolution has to succeed on the controller, from its own resolver, by the time the kubelet starts the static pod - and cargoship writes nothing into <code>/etc/hosts</code> for the load balancer, only for the fleet’s own hosts.</li>
+<li><strong>Where it will not resolve at bootstrap, set the IP explicitly.</strong> <code>spec.config.values.kubeVip.address</code> takes the address the record points at; leave <code>loadbalancer</code> as the name. That is the air-gapped case, where the name is real but the cluster’s own resolver does not answer for it yet.</li>
+<li><strong>No <code>PTR</code> record is needed.</strong> Nothing in cargoship or kube-vip does a reverse lookup on it.</li>
+<li><strong>A low TTL buys nothing.</strong> The address does not move - the node holding it does - so there is nothing for a resolver to re-learn when a controller fails.</li>
+</ul>
+<h3 id="the-certificate-only-names-what-the-inventory-names"><a class="header" href="#the-certificate-only-names-what-the-inventory-names">The certificate only names what the inventory names</a></h3>
+<p>Cargoship writes <code>tls-san</code> itself, from <code>loadbalancer</code> plus each controller’s short and long hostname, and it <em>assigns</em> the key rather than adding to it - so a <code>tls-san</code> a package definition sets is replaced. Where <code>loadbalancer</code> is an FQDN, that means <strong>the VIP’s IP address is not on the API server’s certificate</strong>: reaching the cluster at <code>https://&lt;vip&gt;:6443</code> fails verification even though the address answers. Use the name, which is what the kubeconfig cargoship fetches already does. There is no supported way to add a SAN of your own today.</p>
 <h2 id="node-profiles"><a class="header" href="#node-profiles">Node Profiles</a></h2>
 <p>The optional <code>.spec.config.profiles</code> section defines reusable groups of node configurations (e.g., <code>control</code>, <code>infra</code>, or <code>worker</code>). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.</p>
 <pre><code class="language-yaml">spec:
@@ -6294,6 +6483,29 @@ $ cargoship version -o json
 </div>
 </div>
 
+<h3 id="chart"><a class="header" href="#chart">Chart</a></h3>
+<p>is one Helm chart the package carries and deploys, as distinct from <code>.spec.config.engine.manifest</code>, which configures a chart the engine already bundles.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>createNamespace</code></td><td><code>boolean</code></td><td>no</td><td></td><td>has the helm controller create TargetNamespace if it is absent.</td></tr>
+<tr><td><code>images</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the images the chart needs, carried in the package alongside<br>imageConfig.images.<br><br>shortcut: these are carried and uploaded whether or not When gates the chart off,<br>because the flat image list has no per-value gate to hang them on – the same gap<br>docs/agent/todo-chart-disable-image-gating.md records for a disabled chart manifest.<br>Upgrade both together.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the HelmChart resource’s name, and the stem of the manifest file cargoship<br>writes for it. It is a Kubernetes object name, so it is bounded the way one is.</td></tr>
+<tr><td><code>shasum</code></td><td><code>string</code></td><td>no</td><td></td><td>is the SHA-256 the tarball is verified against when the package is built.<br><br>Required for a source that is fetched, and optional for a local file. The asymmetry is<br>the same one –file-override and –content-store are held to: a local path is a file<br>the package author chose and can see, while bytes arriving over a network are bytes<br>nobody has looked at, and a chart installs into the cluster with whatever permissions<br>its templates ask for. An <code>oci://</code> source pinned by digest carries its own guarantee<br>and needs no shasum.</td></tr>
+<tr><td><code>source</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where the chart tarball comes from: a path relative to the package<br>definition, an absolute path, an http(s) URL, or an <code>oci://</code> reference to a chart<br>published as an OCI artifact, which is how <code>helm push</code> publishes one.<br><br>Whatever it names, what lands in the package is a <code>.tgz</code>, because that is what the<br>helm controller installs from on a host that can reach no chart repository. A <code>repo:</code><br>and <code>version:</code> pair is deliberately not accepted: it would have the cluster resolve<br>the chart, which is the one thing an air-gapped cluster cannot do.</td></tr>
+<tr><td><code>targetNamespace</code></td><td><code>string</code></td><td>no</td><td></td><td>is the namespace the release is installed into. The helm controller<br>defaults it to the chart’s own, which is usually not what an operator wants.</td></tr>
+<tr><td><code>values</code></td><td><code>string</code> or object</td><td>no</td><td></td><td>the Helm values cargoship writes to this chart’s HelmChart, as a YAML string or a mapping. Rendered as a Go template against the package’s values first.</td></tr>
+<tr><td><code>version</code></td><td><code>string</code></td><td>no</td><td></td><td>is the chart version, used to name the tarball when Source does not – an<br><code>oci://</code> reference names a repository and a tag, not a file. It is required for such a<br>source and ignored for one that already ends in a tarball name.</td></tr>
+<tr><td><code>when</code></td><td><code>string</code></td><td>no</td><td></td><td>is an optional values path (e.g. “.myApp.enabled”) gating whether the chart is<br>delivered and deployed at all. An empty path means always.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
 <h3 id="config-1"><a class="header" href="#config-1">Config</a></h3>
 <p>holds the configuration for the distro engine.</p>
 <div class="schema-table">
@@ -6303,6 +6515,7 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>charts</code></td><td>array of <a href="#chart">Chart</a></td><td>no</td><td></td><td>lists Helm charts the package carries and deploys through the Rancher engines’<br>helm controller. Unlike an Engine manifest entry, which configures a chart the engine<br>already bundles, a chart here is one the package owns – so removing it from a package<br>uninstalls the release. See Chart.</td></tr>
 <tr><td><code>engine</code></td><td>object</td><td>no</td><td></td><td>holds configuration passed through to the distro engine.</td></tr>
 <tr><td><code>files</code></td><td><a href="#files-2">Files</a></td><td>no</td><td></td><td>lists files that cargoship writes to every host, no matter which install method it uses.</td></tr>
 <tr><td><code>imageConfig</code></td><td><a href="#imageconfig">ImageConfig</a></td><td>no</td><td></td><td>holds settings for the images bundled with the package.</td></tr>
@@ -6323,6 +6536,7 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>data</code></td><td><code>string</code></td><td>no</td><td></td><td>holds the inline file content.</td></tr>
+<tr><td><code>dirPerm</code></td><td>any</td><td>no</td><td></td><td>sets the permissions cargoship applies to the directories it creates to hold the file. It accepts an octal string or an integer, for example “0750” or 750, and defaults to 0755. Set it where the file’s own directory should not be world-readable; a directory that already exists is left as it is.</td></tr>
 <tr><td><code>executable</code></td><td><code>boolean</code></td><td>no</td><td></td><td>sets executable permissions on the file when true. On a host running fapolicyd, the prepare phase also writes an allow rule for the file’s target path, so a package’s own executables are not denied by policy.</td></tr>
 <tr><td><code>extractPath</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path cargoship extracts from a tarball.</td></tr>
 <tr><td><code>group</code></td><td><code>string</code></td><td>no</td><td></td><td>is the group that owns the file.</td></tr>
@@ -11299,6 +11513,25 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 <h2 id="what-to-decide"><a class="header" href="#what-to-decide">What to decide</a></h2>
 <p>Whether <code>enabled</code> and <code>disable</code> stay two mechanisms or become one. Revisit alongside the user-supplied chart work, which is what forces the question: until then the cost is wasted upload for a chart disabled through <code>addons.disabled</code>, which is real but is no worse than the behaviour before per-chart images existed.</p>
 <p>See <a href="#package-values">package-values</a> for what each key does today.</p>
+<h2 id="specconfigcharts-has-the-same-gap"><a class="header" href="#specconfigcharts-has-the-same-gap"><code>.spec.config.charts</code> has the same gap</a></h2>
+<p>A chart declared under <code>.spec.config.charts</code> carries its images the same way, and its <code>when</code> gate holds the chart back without holding its images back. The cause is the same - <code>Config.images</code> walks a flat list with no values in scope - so the fix is one change covering both, not two. See <code>Chart.Images</code> in <a href="../api/colonel-byte.dev/v1alpha1/distro/charts.go"><code>api/colonel-byte.dev/v1alpha1/distro/charts.go</code></a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="a-content-store-is-trusted-for-a-digest-pinned-source-and-need-not-be"><a class="header" href="#a-content-store-is-trusted-for-a-digest-pinned-source-and-need-not-be">A content store is trusted for a digest-pinned source, and need not be</a></h1>
+<p><code>fileGrabber</code> refuses store content for a file that declares no shasum, because a store holds bytes whoever wrote the definition never saw. One case is let through: a source that names a digest, <code>oci://registry.example.com/charts/my-app@sha256:...</code>.</p>
+<p>That exception is a trust decision rather than a verification, and the distinction is easy to lose:</p>
+<ul>
+<li><strong>For a registry fetch the digest enforces itself.</strong> The fetch asks the registry for that digest and the transport checks the bytes against it, so a mirror serving something else fails whatever the mirror intended. That is why <code>--registry-override</code> is allowed on a digest-pinned source with no shasum.</li>
+<li><strong>For a content store it does not.</strong> <code>haulerstore</code> indexes an artifact by the <code>original-ref</code> annotation on its manifest - a string the store’s author wrote - and <code>Store.Fetch</code> reads the layer named by a descriptor from the store’s own manifest. oras verifies the layer against <em>that</em> descriptor, so the read is internally consistent and nothing ever compares what the store holds to the digest the definition named. A store could carry an artifact annotated with any reference at all.</li>
+</ul>
+<p>Nothing is currently broken by it: a chart pinned by digest carries no shasum by design, so before the exception the combination was refused outright and no working configuration relied on the refusal. But the asymmetry should not survive on the strength of a comment.</p>
+<h2 id="what-the-check-would-be"><a class="header" href="#what-the-check-would-be">What the check would be</a></h2>
+<p>The digest in an <code>oci://</code> reference is the artifact’s <em>manifest</em> digest, and the store has the manifest. So:</p>
+<ol>
+<li>Keep the manifest descriptor on <code>haulerstore.file</code> beside the layer descriptor - the index pass in <code>Store.index</code> already holds it where <code>file</code> is built.</li>
+<li>Expose it through <code>contentstore</code>, so a caller can ask what manifest the store matched.</li>
+<li>In <code>fileGrabber</code>, where <code>pinnedByDigest(file.Source)</code> is true, compare that manifest digest to the one in the reference and refuse on mismatch.</li>
+</ol>
+<p>Then the layer is verified against the manifest by oras, the manifest is verified against the definition by the comparison, and the exception is a guarantee rather than a trust decision. It is a small change; it is separate from the chart work only because the chart work is what made the exception necessary.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="todo-persist-archives-fetched-for-an-extractpath-file"><a class="header" href="#todo-persist-archives-fetched-for-an-extractpath-file">TODO: persist archives fetched for an <code>extractPath</code> file</a></h1>
 <blockquote>

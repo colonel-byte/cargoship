@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5c1c1d92.js";
+            window.path_to_searchindex_js = "../searchindex-237781e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-5a9b6c47.js"></script>
+        <script src="../toc-705bec50.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -262,6 +262,29 @@
 </div>
 </div>
 
+<h3 id="chart"><a class="header" href="#chart">Chart</a></h3>
+<p>is one Helm chart the package carries and deploys, as distinct from <code>.spec.config.engine.manifest</code>, which configures a chart the engine already bundles.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>createNamespace</code></td><td><code>boolean</code></td><td>no</td><td></td><td>has the helm controller create TargetNamespace if it is absent.</td></tr>
+<tr><td><code>images</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the images the chart needs, carried in the package alongside<br>imageConfig.images.<br><br>shortcut: these are carried and uploaded whether or not When gates the chart off,<br>because the flat image list has no per-value gate to hang them on – the same gap<br>docs/agent/todo-chart-disable-image-gating.md records for a disabled chart manifest.<br>Upgrade both together.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the HelmChart resource’s name, and the stem of the manifest file cargoship<br>writes for it. It is a Kubernetes object name, so it is bounded the way one is.</td></tr>
+<tr><td><code>shasum</code></td><td><code>string</code></td><td>no</td><td></td><td>is the SHA-256 the tarball is verified against when the package is built.<br><br>Required for a source that is fetched, and optional for a local file. The asymmetry is<br>the same one –file-override and –content-store are held to: a local path is a file<br>the package author chose and can see, while bytes arriving over a network are bytes<br>nobody has looked at, and a chart installs into the cluster with whatever permissions<br>its templates ask for. An <code>oci://</code> source pinned by digest carries its own guarantee<br>and needs no shasum.</td></tr>
+<tr><td><code>source</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where the chart tarball comes from: a path relative to the package<br>definition, an absolute path, an http(s) URL, or an <code>oci://</code> reference to a chart<br>published as an OCI artifact, which is how <code>helm push</code> publishes one.<br><br>Whatever it names, what lands in the package is a <code>.tgz</code>, because that is what the<br>helm controller installs from on a host that can reach no chart repository. A <code>repo:</code><br>and <code>version:</code> pair is deliberately not accepted: it would have the cluster resolve<br>the chart, which is the one thing an air-gapped cluster cannot do.</td></tr>
+<tr><td><code>targetNamespace</code></td><td><code>string</code></td><td>no</td><td></td><td>is the namespace the release is installed into. The helm controller<br>defaults it to the chart’s own, which is usually not what an operator wants.</td></tr>
+<tr><td><code>values</code></td><td><code>string</code> or object</td><td>no</td><td></td><td>the Helm values cargoship writes to this chart’s HelmChart, as a YAML string or a mapping. Rendered as a Go template against the package’s values first.</td></tr>
+<tr><td><code>version</code></td><td><code>string</code></td><td>no</td><td></td><td>is the chart version, used to name the tarball when Source does not – an<br><code>oci://</code> reference names a repository and a tag, not a file. It is required for such a<br>source and ignored for one that already ends in a tarball name.</td></tr>
+<tr><td><code>when</code></td><td><code>string</code></td><td>no</td><td></td><td>is an optional values path (e.g. “.myApp.enabled”) gating whether the chart is<br>delivered and deployed at all. An empty path means always.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
 <h3 id="config"><a class="header" href="#config">Config</a></h3>
 <p>holds the configuration for the distro engine.</p>
 <div class="schema-table">
@@ -271,6 +294,7 @@
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>charts</code></td><td>array of <a href="#chart">Chart</a></td><td>no</td><td></td><td>lists Helm charts the package carries and deploys through the Rancher engines’<br>helm controller. Unlike an Engine manifest entry, which configures a chart the engine<br>already bundles, a chart here is one the package owns – so removing it from a package<br>uninstalls the release. See Chart.</td></tr>
 <tr><td><code>engine</code></td><td>object</td><td>no</td><td></td><td>holds configuration passed through to the distro engine.</td></tr>
 <tr><td><code>files</code></td><td><a href="#files">Files</a></td><td>no</td><td></td><td>lists files that cargoship writes to every host, no matter which install method it uses.</td></tr>
 <tr><td><code>imageConfig</code></td><td><a href="#imageconfig">ImageConfig</a></td><td>no</td><td></td><td>holds settings for the images bundled with the package.</td></tr>
@@ -291,6 +315,7 @@
 </thead>
 <tbody>
 <tr><td><code>data</code></td><td><code>string</code></td><td>no</td><td></td><td>holds the inline file content.</td></tr>
+<tr><td><code>dirPerm</code></td><td>any</td><td>no</td><td></td><td>sets the permissions cargoship applies to the directories it creates to hold the file. It accepts an octal string or an integer, for example “0750” or 750, and defaults to 0755. Set it where the file’s own directory should not be world-readable; a directory that already exists is left as it is.</td></tr>
 <tr><td><code>executable</code></td><td><code>boolean</code></td><td>no</td><td></td><td>sets executable permissions on the file when true. On a host running fapolicyd, the prepare phase also writes an allow rule for the file’s target path, so a package’s own executables are not denied by policy.</td></tr>
 <tr><td><code>extractPath</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path cargoship extracts from a tarball.</td></tr>
 <tr><td><code>group</code></td><td><code>string</code></td><td>no</td><td></td><td>is the group that owns the file.</td></tr>

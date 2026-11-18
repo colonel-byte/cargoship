@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5c1c1d92.js";
+            window.path_to_searchindex_js = "searchindex-237781e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-5a9b6c47.js"></script>
+        <script src="toc-705bec50.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -516,6 +516,8 @@ metadata:
 </code></pre>
 <p>The corresponding JSON schemas are automatically generated from Go structs into <code>schema/</code>, and <code>cargoship schema</code> writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; <code>cargoship validate</code> checks a file against the right one without an editor.</p>
 <p>An inventory authoring guide is available in <a href="guides/setup-inv.html">Setting up an inventory</a>, and the full set of guides – image tarballs, file and registry overrides, credential encryption, multi-architecture packages, firewalls – is under <a href="guides"><code>docs/guides/</code></a>.</p>
+<p>A package can also carry a Helm chart and have the cluster install it through the Rancher engines’ helm controller, with the chart tarball travelling in the package rather than being pulled from a repository - see <a href="guides/charts.html">Deploying a Helm chart from a package</a>.</p>
+<p>A package’s own settings, and the templates that spend them, are covered in <a href="guides/package-values.html">Package values</a>. A template also reads what the inventory already states, under <code>.Cluster</code>: <code>example/rke2-kube-vip</code> and <code>example/k3s-kube-vip</code> use it to ship a kube-vip static pod that advertises the control-plane VIP the inventory’s <code>loadbalancer</code> names, so the address is written once for the cluster rather than once per package.</p>
 <h3 id="the-zarfdev-group-is-deprecated"><a class="header" href="#the-zarfdev-group-is-deprecated">The <code>zarf.dev</code> group is deprecated</a></h3>
 <p>These documents used to declare <code>apiVersion: zarf.dev/v1alpha1</code> with <code>kind: ZarfCluster</code> and <code>kind: ZarfDistro</code>. That group belongs to the upstream Zarf project, which defines its own kinds under it, so cargoship moved to a group it owns.</p>
 <p>Both spellings are accepted, in any combination, and a document using the old one needs no change today:</p>

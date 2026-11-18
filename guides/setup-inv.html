@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5c1c1d92.js";
+            window.path_to_searchindex_js = "../searchindex-237781e3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-5a9b6c47.js"></script>
+        <script src="../toc-705bec50.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -243,6 +243,31 @@ cargoship validate --kind config ./cargoship-config.yaml
     loadbalancer: bubbles-kc.test.com
 </code></pre>
 <p>The <code>loadbalancer</code> address is required. Cargoship adds this to the TLS Subject Alternative Names (SANs) for the Kubernetes API server. This can be a Round-Robin DNS record pointing to your control-plane nodes, or an external load balancer like an AWS NLB.</p>
+<p>It is also what cargoship writes as <code>server:</code> on every controller that is not the first, so it is the address the second and third controllers join the cluster through, and it is what the kubeconfig <code>cargoship kube-config</code> fetches points at. All three uses are the same string, which is why getting it wrong shows up late rather than at install time.</p>
+<h3 id="pointing-the-name-at-the-control-plane"><a class="header" href="#pointing-the-name-at-the-control-plane">Pointing the name at the control plane</a></h3>
+<p>Three shapes work, and they differ in what DNS has to hold:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Shape</th><th>The record</th><th>What happens when a controller dies</th></tr>
+</thead>
+<tbody>
+<tr><td>Round-robin DNS</td><td>one <code>A</code> record per controller, same name</td><td>clients that do not retry the next answer fail until DNS is updated</td></tr>
+<tr><td>An external load balancer</td><td><code>A</code>, or <code>CNAME</code> to the balancer’s own name</td><td>the balancer takes the node out, and nothing in DNS changes</td></tr>
+<tr><td>A VIP held on the nodes (<code>kube-vip</code>)</td><td>one <code>A</code> record, pointing at the VIP</td><td>the VIP moves to another controller; the address does not change</td></tr>
+</tbody>
+</table>
+</div>
+<p>The third is what <a href="../../example/rke2-kube-vip">the kube-vip examples</a> set up, and it is the one with a DNS requirement worth stating explicitly:</p>
+<ul>
+<li><strong>One <code>A</code> record for the name, pointing at the VIP</strong> - not one per controller. The whole point of the VIP is that the address outlives any one node, so round-robin records alongside it defeat it.</li>
+<li><strong>Create the record before the install.</strong> <code>kubeVip.address</code> is empty by default, so the pod is told to advertise the name from <code>loadbalancer</code>, and kube-vip resolves a name rather than rejecting it. The resolution has to succeed on the controller, from its own resolver, by the time the kubelet starts the static pod - and cargoship writes nothing into <code>/etc/hosts</code> for the load balancer, only for the fleet’s own hosts.</li>
+<li><strong>Where it will not resolve at bootstrap, set the IP explicitly.</strong> <code>spec.config.values.kubeVip.address</code> takes the address the record points at; leave <code>loadbalancer</code> as the name. That is the air-gapped case, where the name is real but the cluster’s own resolver does not answer for it yet.</li>
+<li><strong>No <code>PTR</code> record is needed.</strong> Nothing in cargoship or kube-vip does a reverse lookup on it.</li>
+<li><strong>A low TTL buys nothing.</strong> The address does not move - the node holding it does - so there is nothing for a resolver to re-learn when a controller fails.</li>
+</ul>
+<h3 id="the-certificate-only-names-what-the-inventory-names"><a class="header" href="#the-certificate-only-names-what-the-inventory-names">The certificate only names what the inventory names</a></h3>
+<p>Cargoship writes <code>tls-san</code> itself, from <code>loadbalancer</code> plus each controller’s short and long hostname, and it <em>assigns</em> the key rather than adding to it - so a <code>tls-san</code> a package definition sets is replaced. Where <code>loadbalancer</code> is an FQDN, that means <strong>the VIP’s IP address is not on the API server’s certificate</strong>: reaching the cluster at <code>https://&lt;vip&gt;:6443</code> fails verification even though the address answers. Use the name, which is what the kubeconfig cargoship fetches already does. There is no supported way to add a SAN of your own today.</p>
 <h2 id="node-profiles"><a class="header" href="#node-profiles">Node Profiles</a></h2>
 <p>The optional <code>.spec.config.profiles</code> section defines reusable groups of node configurations (e.g., <code>control</code>, <code>infra</code>, or <code>worker</code>). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.</p>
 <pre><code class="language-yaml">spec:
