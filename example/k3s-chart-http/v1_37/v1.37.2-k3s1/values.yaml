@@ -19,10 +19,10 @@ addons:
   # cargoship warns when it configures a node with one this build does not package.
   disabled: []
 chart:
-  # Whether the cluster installs the chart this package carries. Off by default, and note what
-  # turning it off again does: the HelmChart resource is what owns the release, so a cluster
-  # that sets this back to false has the release uninstalled on the next apply. See
-  # docs/guides/charts.md.
+  # Whether the cluster installs the charts this package carries -- all of them; the gate is
+  # per package, not per chart. Off by default, and note what turning it off again does: a
+  # HelmChart resource owns its release, so a cluster that sets this back to false has the
+  # releases uninstalled on the next apply. See docs/guides/charts.md.
   enabled: false
   # Skip verifying the kubelet's serving certificate. metrics-server cannot verify one on a
   # cluster that has not had kubelet certificates signed, which is most of them; a cluster that

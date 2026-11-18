@@ -45,8 +45,8 @@ spec:
       - source: .podSecurity.exemptions.namespaces
         target: .podSecurity.plugins[0].configuration.exemptions.namespaces
   config:
-    # A Helm chart the package carries and the cluster installs, through the helm controller
-    # k3s runs. The tarball travels inside the HelmChart resource cargoship writes, so nothing
+    # The Helm charts the package carries and the cluster installs, through the helm controller
+    # k3s runs. Each tarball travels inside the HelmChart resource cargoship writes, so nothing
     # reaches for a chart repository and nothing lands on a node's filesystem.
     #
     # Removing an entry here uninstalls the release, which is what makes it different from an
