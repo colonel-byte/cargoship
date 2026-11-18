@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.43.0](https://github.com/colonel-byte/cargoship/compare/v0.42.5...v0.43.0) (2026-11-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **examples:** let a flavor carry several charts, and add kube-vip's Service load balancer ([#1157](https://github.com/colonel-byte/cargoship/issues/1157))
+* **api:** add .spec.config.charts, deploying a packaged chart via HelmChart ([#1154](https://github.com/colonel-byte/cargoship/issues/1154))
+* **api:** give package templates a .Cluster root, and a kube-vip flavor to spend it ([#1152](https://github.com/colonel-byte/cargoship/issues/1152))
+
+### Features
+
+* **api:** add .spec.config.charts, deploying a packaged chart via HelmChart ([#1154](https://github.com/colonel-byte/cargoship/issues/1154)) ([d8b6791](https://github.com/colonel-byte/cargoship/commit/d8b6791f9eba5d62a4dd4a69f4df24d4dff5ccbb))
+* **api:** give package templates a .Cluster root, and a kube-vip flavor to spend it ([#1152](https://github.com/colonel-byte/cargoship/issues/1152)) ([284c4f9](https://github.com/colonel-byte/cargoship/commit/284c4f9469cbbf980c667fdad4fa29f02ece6c6d))
+* **examples:** let a flavor carry several charts, and add kube-vip's Service load balancer ([#1157](https://github.com/colonel-byte/cargoship/issues/1157)) ([0c7b5f0](https://github.com/colonel-byte/cargoship/commit/0c7b5f0bdf78937c7beee573f341417f74250d94))
+
+
+### Miscellaneous
+
+* **examples:** re-render the hauler manifests against the published schema ([#1164](https://github.com/colonel-byte/cargoship/issues/1164)) ([af98a10](https://github.com/colonel-byte/cargoship/commit/af98a10af6890032789ed7789a3c85f609b2b743))
+* **examples:** render kube-vip's Service load balancer flavor ([#1158](https://github.com/colonel-byte/cargoship/issues/1158)) ([ad68490](https://github.com/colonel-byte/cargoship/commit/ad68490d756c5ac2e97abea2849be06049cdedd7))
+* **examples:** render the kube-vip control-plane VIP flavors ([#1153](https://github.com/colonel-byte/cargoship/issues/1153)) ([ad452bd](https://github.com/colonel-byte/cargoship/commit/ad452bd89c563db7a2ed5ad628c62e705c96d7ac))
+* **examples:** render two k3s flavors carrying a chart from a URL and a registry ([#1155](https://github.com/colonel-byte/cargoship/issues/1155)) ([d081ddb](https://github.com/colonel-byte/cargoship/commit/d081ddb73f34a451a60bc695d6f8313f22fbc260))
+* **schema:** point the hauler manifest header at hauler's published schema ([#1163](https://github.com/colonel-byte/cargoship/issues/1163)) ([d892f1b](https://github.com/colonel-byte/cargoship/commit/d892f1b8eb30ab7c0fe1a4e35aebff93cac0ebc7))
+
 ## [0.42.5](https://github.com/colonel-byte/cargoship/compare/v0.42.4...v0.42.5) (2026-11-18)
 
 
