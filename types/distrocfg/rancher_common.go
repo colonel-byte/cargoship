@@ -260,7 +260,10 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.Host,
 	if !d.engineServiceRunning(ctx, host) {
 		desired, err := d.DesiredFiles(ctx, host, run, dis)
 		if err != nil {
-			logger.From(ctx).Warn("failed to render desired files", "host", host)
+			// Returned rather than warned past: desired is nil here, and the prune below
+			// treats a nil map as "the package wants none of these", which empties the
+			// registry TLS and state directories of every file they hold.
+			return fmt.Errorf("failed to render the desired files for %s: %w", host, err)
 		}
 		for path, file := range desired {
 			if err := host.WriteFile(path, string(file.Content), file.Mode); err != nil {
@@ -401,6 +404,13 @@ func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.Host, run 
 		for path, df := range manifests {
 			files[path] = df
 		}
+		charts, err := d.helmCharts(dis.Spec.Config)
+		if err != nil {
+			return nil, err
+		}
+		for path, df := range charts {
+			files[path] = df
+		}
 	}
 
 	if path, df, ok, err := DistroReleaseDesiredFile(dis, files); err != nil {
@@ -460,6 +470,79 @@ func (d *RancherCommon) helmChartConfigs(nodeConfig dig.Mapping) (map[string]Des
 			return nil, fmt.Errorf("rendering HelmChartConfig for chart %s: %w", chart, err)
 		}
 		files[filepath.Join(d.manifestDir(), chart+helmChartConfigSuffix)] = DesiredFile{
+			Content:   b,
+			Mode:      modeConfigFile,
+			NoRestart: true,
+		}
+	}
+	return files, nil
+}
+
+// helmCharts renders `.spec.config.charts` into one HelmChart file per chart, keyed by the path
+// it is written to.
+//
+// The chart travels inside the resource, base64-encoded in chartContent, rather than being
+// uploaded to the node and pointed at. That is the helm controller's own airgap mechanism and
+// it is what makes a chart need nothing on a host's filesystem: the bytes are read out of the
+// extracted package on the management node, the resource carries them to the API server, and
+// the install job reads them from there. The chart ends up in etcd either way -- the release's
+// own Secret holds it once installed -- so the cost is one more copy of it, and the ceiling is
+// etcd's value limit; see distro.MaxChartContentBytes.
+//
+// Like a HelmChartConfig, the engine's helm controller is what acts on the result, so a changed
+// value reaches the chart without the node being drained. Unlike one, the resource owns the
+// release: a chart dropped from the package has its file pruned from the manifest directory,
+// and the helm controller answers a deleted HelmChart by uninstalling the workload. That is the
+// intended behaviour -- a package is the description of what the cluster runs -- but it is the
+// reason this file's name is globbed by ManagedDirs rather than left for a human to clean up.
+func (d *RancherCommon) helmCharts(cfg distro.Config) (map[string]DesiredFile, error) {
+	charts := cfg.DeliveredCharts()
+	if len(charts) == 0 {
+		return nil, nil
+	}
+
+	files := make(map[string]DesiredFile, len(charts))
+	for _, chart := range charts {
+		// Skipped rather than failed. An error here is an error out of DesiredFiles, and a
+		// chart nobody can write is not a reason to stop describing the rest of the host --
+		// the build refuses an empty tarball, so reaching this is a bug rather than input.
+		if len(chart.Content) == 0 {
+			logger.Default().Warn("skipping a chart that carries no content: its tarball was not read out of the package", "chart", chart.Name)
+			continue
+		}
+		spec := dig.Mapping{
+			"chartContent": base64.StdEncoding.EncodeToString(chart.Content),
+		}
+		if chart.TargetNamespace != "" {
+			spec["targetNamespace"] = chart.TargetNamespace
+		}
+		if chart.CreateNamespace {
+			spec["createNamespace"] = true
+		}
+		if chart.Values != nil {
+			values, err := helmValuesContent(chart.Values)
+			if err != nil {
+				return nil, fmt.Errorf("rendering helm values for chart %s: %w", chart.Name, err)
+			}
+			spec["valuesContent"] = values
+		}
+
+		b, err := marshalYAML(dig.Mapping{
+			keyAPIVersion: "helm.cattle.io/v1",
+			keyKind:       "HelmChart",
+			keyMetadata: map[string]string{
+				"name": chart.Name,
+				// The resource lives in kube-system whatever it installs into, because
+				// that is where the helm controller watches; targetNamespace is what
+				// decides where the release lands.
+				"namespace": "kube-system",
+			},
+			keySpec: spec,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("rendering HelmChart for chart %s: %w", chart.Name, err)
+		}
+		files[filepath.Join(d.manifestDir(), chart.ManifestName())] = DesiredFile{
 			Content:   b,
 			Mode:      modeConfigFile,
 			NoRestart: true,
@@ -674,6 +757,10 @@ func (d *RancherCommon) ManagedDirs() []ManagedDir {
 		{Path: registryTLSDir},
 		{Path: StateDir},
 		{Path: d.manifestDir(), Glob: "*" + helmChartConfigSuffix},
+		// Separate from the entry above rather than one wider glob: the two suffixes are
+		// what tell cargoship's own files apart from the engine's bundled manifests in the
+		// same directory, and a glob loose enough to cover both would cover those too.
+		{Path: d.manifestDir(), Glob: distro.ChartManifestPrefix + "*" + distro.ChartManifestSuffix},
 	}
 }
 

@@ -477,6 +477,8 @@ The corresponding JSON schemas are automatically generated from Go structs into 
 
 An inventory authoring guide is available in [Setting up an inventory](guides/setup-inv.md), and the full set of guides -- image tarballs, file and registry overrides, credential encryption, multi-architecture packages, firewalls -- is under [`docs/guides/`](guides).
 
+A package can also carry a Helm chart and have the cluster install it through the Rancher engines' helm controller, with the chart tarball travelling in the package rather than being pulled from a repository - see [Deploying a Helm chart from a package](guides/charts.md).
+
 A package's own settings, and the templates that spend them, are covered in [Package values](guides/package-values.md). A template also reads what the inventory already states, under `.Cluster`: `example/rke2-kube-vip` and `example/k3s-kube-vip` use it to ship a kube-vip static pod that advertises the control-plane VIP the inventory's `loadbalancer` names, so the address is written once for the cluster rather than once per package.
 
 ### The `zarf.dev` group is deprecated

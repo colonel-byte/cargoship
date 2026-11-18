@@ -104,6 +104,7 @@ func TestManagedDirs(t *testing.T) {
 		{Path: registryTLSDir},
 		{Path: StateDir},
 		{Path: "/var/lib/rancher/rke2/server/manifests", Glob: "*-config.yaml"},
+		{Path: "/var/lib/rancher/rke2/server/manifests", Glob: "cargoship-*-chart.yaml"},
 	}, d.ManagedDirs())
 }
 

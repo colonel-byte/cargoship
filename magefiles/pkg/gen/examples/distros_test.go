@@ -80,7 +80,7 @@ func TestNewExampleVersionBinarySource(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			v, err := newExampleVersion("v1.37.2+k3s1", spec, tc.flavor)
+			v, err := newExampleVersion("v1.37.2+k3s1", spec, tc.flavor, emptyShasums())
 			if err != nil {
 				t.Fatalf("newExampleVersion: %v", err)
 			}

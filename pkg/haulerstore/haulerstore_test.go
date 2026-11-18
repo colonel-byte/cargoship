@@ -252,6 +252,43 @@ func TestOpenDoesNotModifyStore(t *testing.T) {
 	}
 }
 
+// An OCI Helm chart has a Helm config media type and an untitled layer, and is indexed as a
+// file rather than an image.
+func TestHelmChartOCIArtifactIsAFile(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "store")
+	layer := writeBlob(t, dir, "application/vnd.cncf.helm.chart.content.v1.tar+gzip", []byte("chart-tarball"), nil)
+	config := writeJSONBlob(t, dir, MediaTypeHelmConfig, map[string]string{})
+	manifest := writeJSONBlob(t, dir, ocispec.MediaTypeImageManifest, ocispec.Manifest{
+		Versioned: specsVersioned,
+		MediaType: ocispec.MediaTypeImageManifest,
+		Config:    config,
+		Layers:    []ocispec.Descriptor{layer},
+		Annotations: map[string]string{
+			ocispec.AnnotationTitle:   "my-chart",
+			ocispec.AnnotationVersion: "1.2.3",
+		},
+	})
+	manifest.Annotations = map[string]string{
+		AnnotationOriginalRef: "ghcr.io/example/charts/my-chart:1.2.3",
+		AnnotationKind:        "dev.hauler/image",
+	}
+	writeIndex(t, dir, []ocispec.Descriptor{manifest})
+
+	s, err := Open(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close() //nolint:errcheck
+
+	name, ok := fileFor(t, s, "ghcr.io/example/charts/my-chart:1.2.3")
+	if !ok {
+		t.Fatal("Helm chart OCI artifact was not indexed as a file")
+	}
+	if name != "my-chart-1.2.3.tgz" {
+		t.Errorf("file name %q, want my-chart-1.2.3.tgz", name)
+	}
+}
+
 // An artifact stored under an image config but carrying a layer title is file content, which is
 // how hauler holds release binaries.
 func TestImageConfigWithTitledLayerIsAFile(t *testing.T) {

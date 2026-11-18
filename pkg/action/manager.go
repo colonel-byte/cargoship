@@ -16,10 +16,12 @@ package action
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -108,6 +110,34 @@ func NewManager(ctx context.Context, opts ManagerOptions) (*phase.Manager, error
 		if err := opts.Layout.RenderFiles(ctx, values, facts); err != nil {
 			return nil, fmt.Errorf("failed to render the templated files of the package: %w", err)
 		}
+		// A chart's `when` gate, resolved once. The engine implementation that writes the
+		// HelmChart manifest is handed the package and not the cluster's values, so the gate
+		// has to be answered here; the chart's tarball is gated separately, by the file entry
+		// the chart expanded into, through the upload phase's own reading of the same path.
+		//
+		// Only an explicit false gates a chart off. A path that cannot be read, is not set,
+		// or does not hold a boolean is an error rather than a skip: a skipped chart has its
+		// manifest pruned from the engine's manifest directory, which the helm controller
+		// answers by uninstalling the release -- so a renamed values key or an override that
+		// replaced the gate's parent map would take a running workload down, with one warning
+		// line as the only trace.
+		var gateErr error
+		opts.Layout.Distro.Spec.Config.ResolveChartDelivery(func(path string) bool {
+			deliver, err := chartGate(values, path)
+			if err != nil {
+				gateErr = errors.Join(gateErr, err)
+				return false
+			}
+			return deliver
+		})
+		if gateErr != nil {
+			return nil, fmt.Errorf("failed to resolve which charts this cluster asked for: %w", gateErr)
+		}
+		// Read after the gate, so a chart the cluster asked for is the only one whose bytes
+		// are loaded.
+		if err := opts.Layout.LoadCharts(ctx); err != nil {
+			return nil, err
+		}
 
 		manager.Distro = &opts.Layout.Distro
 		manager.Values = values
@@ -120,4 +150,25 @@ func NewManager(ctx context.Context, opts ManagerOptions) (*phase.Manager, error
 	}
 
 	return manager, nil
+}
+
+// chartGate answers one chart's when path out of a cluster's resolved values.
+//
+// Only an explicit false gates a chart off. Everything else is an error, because a chart left
+// out of the delivered set has its manifest pruned from the engine's manifest directory and the
+// helm controller answers that by uninstalling the release -- so a renamed values key, or an
+// override that replaced the gate's parent map, would take a running workload down.
+func chartGate(values map[string]any, path string) (bool, error) {
+	v, ok, err := helmvalues.GetValuePath(values, path)
+	if err != nil {
+		return false, fmt.Errorf("reading the when path %s: %w", path, err)
+	}
+	if !ok {
+		return false, fmt.Errorf("the when path %s is not set in the package's values", path)
+	}
+	enabled, ok := v.(bool)
+	if !ok {
+		return false, fmt.Errorf("the when path %s holds %T rather than a boolean", path, v)
+	}
+	return enabled, nil
 }

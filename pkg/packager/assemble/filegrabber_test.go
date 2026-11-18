@@ -1003,3 +1003,96 @@ func TestFileGrabberDoesNotCacheMembersWithoutAnArchiveDigest(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, members, "a URL-sourced archive has no digest to key a member cache on")
 }
+
+// chartTarball is a minimal gzipped tarball, which is as much of a chart as the staging checks
+// look at.
+func chartTarball(t *testing.T) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	body := []byte("apiVersion: v2\nname: my-app\nversion: 1.2.3\n")
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "my-app/Chart.yaml", Size: int64(len(body)), Mode: 0o644}))
+	_, err := tw.Write(body)
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, gz.Close())
+	return buf.Bytes()
+}
+
+// The staged path of a chart is derived three times from the same parts -- here when it is
+// staged, in verifyStagedChart and warnOversizedChart beside it, and again in
+// DistroLayout.LoadCharts, which reads the bytes back out of the extracted package. Nothing
+// ties those spellings together, and a chart staged where LoadCharts does not look for it fails
+// at install time with a read error naming a path that is in the package.
+func TestFileGrabberStagesAChartWhereLoadChartsLooksForIt(t *testing.T) {
+	tarball := chartTarball(t)
+	sum := sha256.Sum256(tarball)
+
+	distroPath := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(distroPath, "my-app-1.2.3.tgz"), tarball, 0o600))
+
+	chart := distro.Chart{
+		Name:    "my-app",
+		Source:  "my-app-1.2.3.tgz",
+		Version: "1.2.3",
+		Shasum:  hex.EncodeToString(sum[:]),
+	}
+	file := distro.ChartFiles([]distro.Chart{chart})[0]
+
+	buildPath := t.TempDir()
+	const idx = 2
+	_, err := fileGrabber(context.Background(), config.ChartsDir, buildPath, distroPath, idx, *file, nil, nil, ociOptions{}, nil)
+	require.NoError(t, err)
+
+	// The spelling LoadCharts uses, written out rather than shared, so that a change to
+	// either one fails here instead of on a cluster.
+	staged := filepath.Join(buildPath, config.ChartsDir, strconv.Itoa(idx), chart.TarballName())
+	got, err := os.ReadFile(filepath.Clean(staged))
+	require.NoError(t, err)
+	require.Equal(t, tarball, got)
+
+	require.NoError(t, verifyStagedChart(buildPath, idx, chart))
+}
+
+// A local source needs no shasum, so nothing upstream of this refuses an empty or truncated
+// file. Left to the cluster, it surfaces as a failed install job long after apply reported
+// success -- and an empty chart used to reach the engine configuration as an error, where a nil
+// desired-files map pruned the host's managed directories.
+func TestVerifyStagedChartRefusesSomethingThatIsNotAChart(t *testing.T) {
+	chart := distro.Chart{
+		Name:    "my-app",
+		Source:  "my-app-1.2.3.tgz",
+		Version: "1.2.3",
+	}
+	buildPath := t.TempDir()
+	dir := filepath.Join(buildPath, config.ChartsDir, "0")
+	require.NoError(t, os.MkdirAll(dir, 0o700))
+	staged := filepath.Join(dir, chart.TarballName())
+
+	for _, tc := range []struct {
+		name string
+		body []byte
+	}{
+		{
+			name: "empty",
+			body: nil,
+		},
+		{
+			name: "truncated",
+			body: []byte{0x1f},
+		},
+		{
+			name: "not gzip",
+			body: []byte("apiVersion: v2\n"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, os.WriteFile(staged, tc.body, 0o600))
+			require.Error(t, verifyStagedChart(buildPath, 0, chart))
+		})
+	}
+
+	require.NoError(t, os.WriteFile(staged, chartTarball(t), 0o600))
+	require.NoError(t, verifyStagedChart(buildPath, 0, chart))
+}

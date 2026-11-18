@@ -77,6 +77,8 @@ const (
 	// what cargoship writes when it mirrors a package's files to a registry, so that what the
 	// mirror holds is a shape this reader and hauler's own tooling both already understand.
 	MediaTypeFileConfigHTTP = "application/vnd.content.hauler.file.http.config.v1+json"
+	// MediaTypeHelmConfig is what Helm and OCI registries record for a packaged Helm chart.
+	MediaTypeHelmConfig = "application/vnd.cncf.helm.config.v1+json"
 )
 
 // fileConfigMediaTypes is the set above, for classifying a manifest on the way in.
@@ -84,6 +86,7 @@ var fileConfigMediaTypes = map[string]bool{
 	MediaTypeFileConfigLocal:     true,
 	MediaTypeFileConfigDirectory: true,
 	MediaTypeFileConfigHTTP:      true,
+	MediaTypeHelmConfig:          true,
 }
 
 // file is a file artifact held in the store. It is internal to the reader: a caller asks for a
@@ -270,6 +273,24 @@ func fileLayer(manifest ocispec.Manifest) (file, bool, error) {
 		}
 	}
 	if entry.name == "" {
+		// A Helm chart OCI artifact carries a single content layer without a title annotation.
+		// Fall back to the manifest's title or chart name and version annotations, or "chart.tgz".
+		if manifest.Config.MediaType == MediaTypeHelmConfig && len(manifest.Layers) == 1 {
+			layer := manifest.Layers[0]
+			title := manifest.Annotations[ocispec.AnnotationTitle]
+			if version := manifest.Annotations[ocispec.AnnotationVersion]; title != "" && version != "" {
+				title = fmt.Sprintf("%s-%s.tgz", title, version)
+			} else if title != "" && !strings.HasSuffix(title, ".tgz") && !strings.HasSuffix(title, ".tar.gz") {
+				title += ".tgz"
+			}
+			if title == "" {
+				title = "chart.tgz"
+			}
+			entry.descriptor = layer
+			entry.name = title
+			entry.titled[title] = layer
+			return entry, true, nil
+		}
 		// A file artifact with no titled layer has no name to restore it under, so there is
 		// nothing useful to return; treating it as an image would be worse.
 		return file{}, false, errors.New("hauler file artifact carries no titled layer")

@@ -340,6 +340,24 @@ func (d *DistroLayout) ApplyValues(values map[string]any, cluster ClusterFacts) 
 	// reading it -- the engine manifest section would come back empty for a
 	// caller that reached it without duplicating the configuration first.
 	d.Distro.Spec.Config.Engine = d.Distro.Spec.Config.Engine.Dup()
+
+	// A chart's values are templated for the same reason an engine manifest entry's are, and
+	// are rendered here rather than in the loop above because `.spec.config.charts` is a typed
+	// list: EvaluateValuesTemplates walks mappings, slices and strings, not struct fields.
+	// Nothing else about a chart entry renders -- its source and checksum were spent when the
+	// package was built, so a template in one would name bytes that are not in the package.
+	for i := range d.Distro.Spec.Config.Charts {
+		chart := &d.Distro.Spec.Config.Charts[i]
+		if chart.Values == nil {
+			continue
+		}
+		rendered, err := helmvalues.EvaluateValuesTemplates(chart.Values, templateData(values, cluster))
+		if err != nil {
+			return fmt.Errorf("unable to render the values of chart %s: %w", chart.Name, err)
+		}
+		chart.Values = rendered
+	}
+
 	return nil
 }
 
@@ -423,6 +441,31 @@ func (f ClusterFacts) templateRoot() map[string]any {
 		root["LoadBalancer"] = f.LoadBalancer
 	}
 	return root
+}
+
+// LoadCharts reads each chart's tarball out of the extracted package into Chart.Content, which
+// is what the HelmChart resource carries.
+//
+// It is read once here rather than per host, because the bytes are the same for every
+// controller and a chart is the one thing cargoship delivers through the API server instead of
+// over SSH -- so there is no upload phase to hang it off. A gated-off chart is skipped: its
+// resource is never written, so its bytes are never wanted, and reading them would be the only
+// reason the package's size mattered to a cluster that asked for none of it.
+func (d *DistroLayout) LoadCharts(ctx context.Context) error {
+	for i := range d.Distro.Spec.Config.Charts {
+		chart := &d.Distro.Spec.Config.Charts[i]
+		if !chart.Deliver {
+			continue
+		}
+		staged := filepath.Join(d.dirPath, config.ChartsDir, strconv.Itoa(i), chart.TarballName())
+		content, err := os.ReadFile(staged)
+		if err != nil {
+			return fmt.Errorf("unable to read the tarball of chart %s: %w", chart.Name, err)
+		}
+		chart.Content = content
+		logger.From(ctx).Debug("read chart from package", "chart", chart.Name, "staged", staged, "bytes", len(content))
+	}
+	return nil
 }
 
 // templateData is what a package's templates are evaluated against. Values are

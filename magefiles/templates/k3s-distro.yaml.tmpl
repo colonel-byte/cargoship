@@ -52,6 +52,45 @@ spec:
       - source: .podSecurity.exemptions.namespaces
         target: .podSecurity.plugins[0].configuration.exemptions.namespaces
   config:
+{{- with .Chart }}
+    # A Helm chart the package carries and the cluster installs, through the helm controller
+    # k3s runs. The tarball travels inside the HelmChart resource cargoship writes, so nothing
+    # reaches for a chart repository and nothing lands on a node's filesystem.
+    #
+    # Removing an entry here uninstalls the release, which is what makes it different from an
+    # engine manifest entry -- see docs/guides/charts.md.
+    charts:
+      - name: {{ .Name }}
+        source: {{ .Source }}
+{{- with .Version }}
+        version: {{ . }}
+{{- end }}
+{{- if .Shasum }}
+        shasum: {{ .Shasum }}
+{{- else }}
+        # No shasum: the source is pinned by digest, which is the guarantee a shasum would be.
+{{- end }}
+        targetNamespace: {{ .Namespace }}
+        createNamespace: true
+        # Off in the package: a chart an example carries to demonstrate the mechanism is not
+        # something a cluster should get because it installed the example.
+        when: .chart.enabled
+{{- with .Images }}
+        # The chart's own images, carried in the package so its pods have something to pull on
+        # a host that can reach no registry.
+        images:
+{{- range . }}
+          - {{ . }}
+{{- end }}
+{{- end }}
+{{- with .Values }}
+        # The chart's values, templated against the package's own values -- which is the one
+        # way a cluster configures a chart cargoship delivers, since a values mapping targets
+        # the engine configuration and cannot reach here.
+        values: |
+{{ . | indent 10 }}
+{{- end }}
+{{- end }}
 {{- with .KubeVip }}
     # Files that are not part of an install method. Phase 50 uploads these to every host the
     # selector matches, before the engine is configured or started, so a static pod here is in

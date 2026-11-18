@@ -57,7 +57,7 @@ func exampleFuncs(sums *exampleShasums) helmvalues.Option {
 // The git tag surviving is what makes these renderable in the first place, so it is the
 // distro's own artifacts that get checked.
 func writeExample(funcs helmvalues.Option, repoURL, tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) (string, error) {
-	v, err := newExampleVersion(tag, spec, f)
+	v, err := newExampleVersion(tag, spec, f, sums)
 	if err != nil {
 		return "", err
 	}

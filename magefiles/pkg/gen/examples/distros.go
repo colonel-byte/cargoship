@@ -53,6 +53,14 @@ var (
 	}
 )
 
+// exampleChartMinors gates the chart flavors to the newest line.
+//
+// They demonstrate where a chart comes from, which has nothing to do with the Kubernetes
+// version: the section a chart is declared in, and the resource cargoship writes for it, are the
+// same on every line. Rendering them for every line would commit sixty directories differing
+// only in the engine version beside them.
+var exampleChartMinors = []string{"v1_37"}
+
 // exampleRPMArches maps a Go architecture to the name rpm.rancher.io publishes it under.
 var exampleRPMArches = map[string]string{
 	"amd64": "x86_64",
@@ -279,6 +287,32 @@ var exampleDistros = []exampleDistroSpec{
 				dir:     "example/k3s-kube-vip",
 				kubeVip: true,
 				values:  exampleK3sValues,
+			},
+			{
+				// A package that carries a Helm chart and deploys it through the helm
+				// controller, downloaded and verified against a digest.
+				//
+				// k3s rather than rke2 for both chart flavors: the writer is
+				// RancherCommon's, so rke2 installs these identically, and a twin flavor
+				// per distro would render twenty more directories apiece to demonstrate
+				// the same mechanism. Two flavors rather than one because the chart's
+				// *source* is the part that differs in practice.
+				cni:    "flannel",
+				name:   "chart-http",
+				dir:    "example/k3s-chart-http",
+				chart:  chartSourceHTTP,
+				values: exampleK3sValues,
+				minors: exampleChartMinors,
+			},
+			{
+				// A chart pulled from a registry as an OCI artifact, pinned to the digest
+				// its tag resolved to -- which is why its entry carries no shasum.
+				cni:    "flannel",
+				name:   "chart-oci",
+				dir:    "example/k3s-chart-oci",
+				chart:  chartSourceOCI,
+				values: exampleK3sValues,
+				minors: exampleChartMinors,
 			},
 			{
 				cni:    "flannel",
