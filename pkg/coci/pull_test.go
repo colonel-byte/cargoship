@@ -217,3 +217,28 @@ func TestAssembleLayersMetadataOnly(t *testing.T) {
 	}
 	require.ElementsMatch(t, []string{config.DistroYAML, config.Checksums}, titles)
 }
+
+func TestAssembleLayersValues(t *testing.T) {
+	root := &oci.Manifest{}
+	fetcher := newFakeFetcher()
+	// The values paths are the ones create packaged the files under, which is what it
+	// records back into the distro.yaml it publishes.
+	distroYAML := "metadata:\n  name: test-package\nspec:\n  values:\n    files:\n      - values/0-values.yaml\n      - values/1-missing.yaml\n    schema: values/values.schema.json\n"
+	fetcher.addLayer(root, config.DistroYAML, []byte(distroYAML))
+	fetcher.addLayer(root, "values/0-values.yaml", []byte("replicas: 3\n"))
+	// values/1-missing.yaml has no layer, so it should be skipped rather than error.
+	fetcher.addLayer(root, filepath.Join(config.ValuesDir, config.ValuesSchema), []byte(`{"type":"object"}`))
+
+	got, err := AssembleLayers(context.Background(), root, fetcher)
+	require.NoError(t, err)
+
+	var titles []string
+	for _, d := range got {
+		titles = append(titles, d.Annotations[ocispec.AnnotationTitle])
+	}
+	require.ElementsMatch(t, []string{
+		config.DistroYAML,
+		"values/0-values.yaml",
+		filepath.Join(config.ValuesDir, config.ValuesSchema),
+	}, titles)
+}

@@ -138,6 +138,18 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		layers = append(layers, fileLayers...)
 	}
 
+	// Create rewrote Spec.Values to the paths it packaged the files under, so they are
+	// located verbatim rather than rebuilt from an index the way Config.Files are.
+	for _, path := range append([]string{dis.Spec.Values.Schema}, dis.Spec.Values.Files...) {
+		if path == "" {
+			continue
+		}
+		desc := root.Locate(path)
+		if !oci.IsEmptyDescriptor(desc) {
+			layers = append(layers, desc)
+		}
+	}
+
 	return oci.RemoveDuplicateDescriptors(layers), nil
 }
 
