@@ -16,6 +16,7 @@ package examples
 
 import (
 	"encoding/json"
+	"sort"
 	"testing"
 )
 
@@ -125,5 +126,127 @@ func TestFetchK3sBinarySHAReadsTheCache(t *testing.T) {
 	if v.Arches[0].BinarySHA != amdSum || v.Arches[1].BinarySHA != armSum {
 		t.Fatalf("got %q and %q, want %q and %q",
 			v.Arches[0].BinarySHA, v.Arches[1].BinarySHA, amdSum, armSum)
+	}
+}
+
+// Every rke2 release publishes its tarball under the one name rke2.linux-amd64.tar.gz, and the
+// zarf definitions hash the whole archive -- so with one entry per name each rendered version
+// evicted the last, the committed cache held whichever was rendered last, and every run
+// re-downloaded a 230MiB tarball once per version. A name holding different content falls back
+// to a version-qualified key so the versions coexist.
+func TestExampleShasumsVersionedFallback(t *testing.T) {
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	r1 := "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2.linux-amd64.tar.gz"
+	r2 := "https://github.com/rancher/rke2/releases/download/v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"
+
+	s.record(r1, "aaaa")
+	s.record(r2, "bbbb")
+
+	if e, ok := s.lookup(r1); !ok || e.SHA256 != "aaaa" {
+		t.Fatalf("the first release's digest was evicted by the second: %+v, %v", e, ok)
+	}
+	if e, ok := s.lookup(r2); !ok || e.SHA256 != "bbbb" {
+		t.Fatalf("the second release's digest was not recorded: %+v, %v", e, ok)
+	}
+
+	// The first keeps the plain name; the second takes the version-qualified key, which is the
+	// one archiveKey builds and the one memberKey has always used for this archive's members.
+	if _, ok := s.sums["rke2.linux-amd64.tar.gz"]; !ok {
+		t.Error("the first release should keep the plain file-name key")
+	}
+	if _, ok := s.sums["v1.37.2%2Brke2r1/rke2.linux-amd64.tar.gz"]; !ok {
+		t.Errorf("the second release has no version-qualified entry: %v", cacheKeys(s))
+	}
+}
+
+// A URL already recorded that now serves different bytes is upstream re-cutting an asset in
+// place, which replaces the entry rather than growing a second one: there is only one file at
+// that URL, and the old digest is simply wrong now.
+func TestExampleShasumsReplacesARecutAsset(t *testing.T) {
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	url := "https://example.com/releases/v1/artifact.tar.gz"
+
+	s.record(url, "aaaa")
+	s.record(url, "bbbb")
+
+	if len(s.sums) != 1 {
+		t.Fatalf("got %d entries, want the re-cut asset to replace the first: %v", len(s.sums), cacheKeys(s))
+	}
+	if e, ok := s.lookup(url); !ok || e.SHA256 != "bbbb" {
+		t.Fatalf("got %+v, %v, want the new digest", e, ok)
+	}
+}
+
+// cacheKeys names what the cache holds, for a failure message.
+func cacheKeys(s *exampleShasums) []string {
+	keys := make([]string, 0, len(s.sums))
+	for k := range s.sums {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// TestFetchRKE2TarballSHAReadsTheCache is TestFetchK3sBinarySHAReadsTheCache for the rke2
+// tarball: a cached digest must answer without a request, which is what lets a fresh clone
+// re-render the rke2 examples offline. The repo URL is one that fails if it is ever reached.
+func TestFetchRKE2TarballSHAReadsTheCache(t *testing.T) {
+	const (
+		tag      = "v1.35.0%2Brke2r1"
+		amdURL   = "https://github.com/rancher/rke2/releases/download/" + tag + "/rke2.linux-amd64.tar.gz"
+		amdSum   = "aaaa"
+		noRemote = "https://127.0.0.1:1/rancher/rke2"
+	)
+
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	s.storeKey(archiveKey(amdURL), amdURL, amdSum)
+	if _, ok := s.sums[tag+"/rke2.linux-amd64.tar.gz"]; !ok {
+		t.Fatalf("want an entry keyed by tag and tarball name, got keys %v", s.sums)
+	}
+
+	v := exampleVersion{
+		TagURL: tag,
+		Arches: []exampleArch{
+			{
+				Arch:       "amd64",
+				Tarball:    "rke2.linux-amd64.tar.gz",
+				TarballURL: amdURL,
+			},
+		},
+	}
+	if err := fetchRKE2TarballSHA(&v, noRemote, s); err != nil {
+		t.Fatalf("expected the cache to answer without a fetch: %v", err)
+	}
+}
+
+// A digest cached under the bare tarball name -- the shape the cache used before entries were
+// version-qualified -- must not satisfy the lookup, or the one release that happens to hold
+// that key keeps it forever and the committed cache stops being reproducible from an empty
+// one. Reaching for the network here is the correct behaviour, and the unreachable host is
+// what proves the lookup missed.
+func TestFetchRKE2TarballSHAIgnoresALegacyBareKey(t *testing.T) {
+	const (
+		tag      = "v1.35.0%2Brke2r1"
+		amdURL   = "https://github.com/rancher/rke2/releases/download/" + tag + "/rke2.linux-amd64.tar.gz"
+		noRemote = "https://127.0.0.1:1/rancher/rke2"
+	)
+
+	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	s.storeKey("rke2.linux-amd64.tar.gz", amdURL, "aaaa")
+
+	v := exampleVersion{
+		TagURL: tag,
+		Arches: []exampleArch{
+			{
+				Arch:       "amd64",
+				Tarball:    "rke2.linux-amd64.tar.gz",
+				TarballURL: amdURL,
+			},
+		},
+	}
+	// A transport failure is returned rather than warned past, so a 502 from the release host
+	// cannot silently restore the 230MiB download this function exists to avoid.
+	if err := fetchRKE2TarballSHA(&v, noRemote, s); err == nil {
+		t.Fatal("want the bare-name entry ignored and the fetch attempted, got a cache hit")
 	}
 }

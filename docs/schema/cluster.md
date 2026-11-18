@@ -353,19 +353,19 @@ holds the configuration and hosts for a cluster.
 
 <div class="schema-table">
 
-| Property        | Type                    | Required | Default         | Description                                           |
-| --------------- | ----------------------- | -------- | --------------- | ----------------------------------------------------- |
-| `address`       | `string`                | yes      |                 | Address of the remote host                            |
-| `bastion`       | [SSHConfig](#sshconfig) | no       |                 | Optional SSH bastion                                  |
-| `caCertPath`    | `string`                | no       |                 | Path to CA certificate                                |
-| `certPath`      | `string`                | no       |                 | Path to client certificate                            |
-| `insecure`      | `boolean`               | no       | `false`         | Accept invalid TLS certificates                       |
-| `keyPath`       | `string`                | no       |                 | Path to client key                                    |
-| `password`      | `string`                | no       |                 | Password for WinRM authentication                     |
-| `port`          | `integer`               | no       |                 | WinRM port (default 5985; 5986 when useHTTPS is true) |
-| `tlsServerName` | `string`                | no       |                 | TLS server name override                              |
-| `useHttps`      | `boolean`               | no       | `false`         | Use HTTPS for WinRM                                   |
-| `useNtlm`       | `boolean`               | no       | `false`         | Use NTLM authentication                               |
-| `user`          | `string`                | no       | `Administrator` | User to authenticate as                               |
+| Property        | Type                    | Required | Default         | Description                                                                                                       |
+| --------------- | ----------------------- | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `address`       | `string`                | yes      |                 | Address of the remote host                                                                                        |
+| `bastion`       | [SSHConfig](#sshconfig) | no       |                 | Optional SSH bastion                                                                                              |
+| `caCertPath`    | `string`                | no       |                 | Path to CA certificate                                                                                            |
+| `certPath`      | `string`                | no       |                 | Path to client certificate                                                                                        |
+| `insecure`      | `boolean`               | no       | `false`         | Accept invalid TLS certificates when useHTTPS is set; without useHTTPS allow sending the password over plain HTTP |
+| `keyPath`       | `string`                | no       |                 | Path to client key                                                                                                |
+| `password`      | `string`                | no       |                 | Password for WinRM authentication                                                                                 |
+| `port`          | `integer`               | no       |                 | WinRM port (default 5985; 5986 when useHTTPS is true)                                                             |
+| `tlsServerName` | `string`                | no       |                 | TLS server name override                                                                                          |
+| `useHttps`      | `boolean`               | no       | `false`         | Use HTTPS for WinRM                                                                                               |
+| `useNtlm`       | `boolean`               | no       | `false`         | Use NTLM authentication                                                                                           |
+| `user`          | `string`                | no       | `Administrator` | User to authenticate as                                                                                           |
 
 </div>

@@ -20,6 +20,7 @@ package examples
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -257,6 +258,9 @@ func downloadLines(url string) ([]string, error) {
 	defer resp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
 
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("fetching %s: %s: %w", url, resp.Status, errReleaseAssetMissing)
+		}
 		return nil, fmt.Errorf("fetching %s: %s", url, resp.Status)
 	}
 
@@ -266,6 +270,12 @@ func downloadLines(url string) ([]string, error) {
 	}
 	return splitReleaseLines(body), nil
 }
+
+// errReleaseAssetMissing marks a release asset upstream does not publish, as distinct from a
+// transport failure reaching for one. A caller that treats a missing asset as something to
+// work around needs to tell the two apart, because every other error is a reason to stop --
+// see fetchRKE2TarballSHA.
+var errReleaseAssetMissing = errors.New("release asset not published")
 
 // fetchImageList downloads one of a release's airgap image manifests and returns its
 // non-empty lines, in file order.
