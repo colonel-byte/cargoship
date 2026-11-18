@@ -4879,6 +4879,12 @@
     ],
     "sha256": "fbe479bf9b303fc88bd7c61769687235efa36f684e8ec5e97d45d08669dd1d4d"
   },
+  "metrics-server-3.14.0.tgz": {
+    "urls": [
+      "https://github.com/kubernetes-sigs/metrics-server/releases/download/metrics-server-helm-chart-3.14.0/metrics-server-3.14.0.tgz"
+    ],
+    "sha256": "c2ca1185c01e6e7f53dd1b7d131f0c9b3fa50e003ed068b784563a1b5a3422a1"
+  },
   "oci://docker.io/rancher/k3s:v1.35.0-k3s1": {
     "urls": [
       "oci://docker.io/rancher/k3s:v1.35.0-k3s1"
@@ -5010,6 +5016,12 @@
       "oci://docker.io/rancher/k3s:v1.37.2-k3s1"
     ],
     "sha256": "21ea6e0fac4e3930c2ce8aa40ddd41a8b18cb3e9a0222c030dc005e7e88c4332"
+  },
+  "oci://ghcr.io/prometheus-community/charts/prometheus-node-exporter:4.13.1": {
+    "urls": [
+      "oci://ghcr.io/prometheus-community/charts/prometheus-node-exporter:4.13.1"
+    ],
+    "sha256": "oci://ghcr.io/prometheus-community/charts/prometheus-node-exporter@sha256:fca6a82d91b2d611d0fcf640aa061d13a816d4f8e5364c40ddd966c05b1b6dc6"
   },
   "rke2-agent-1.31.14~rke2r1-0.el9.x86_64.rpm": {
     "urls": [
