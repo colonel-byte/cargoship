@@ -123,7 +123,20 @@ The third is what [the kube-vip examples](../../example/rke2-kube-vip) set up, a
 
 ### The certificate only names what the inventory names
 
-Cargoship writes `tls-san` itself, from `loadbalancer` plus each controller's short and long hostname, and it *assigns* the key rather than adding to it - so a `tls-san` a package definition sets is replaced. Where `loadbalancer` is an FQDN, that means **the VIP's IP address is not on the API server's certificate**: reaching the cluster at `https://<vip>:6443` fails verification even though the address answers. Use the name, which is what the kubeconfig cargoship fetches already does. There is no supported way to add a SAN of your own today.
+Cargoship writes `tls-san` itself, from `loadbalancer` plus each controller's short and long hostname, and it *assigns* the key rather than adding to it - so a `tls-san` a package definition sets is replaced. Where `loadbalancer` is an FQDN, that means **the VIP's IP address is not on the API server's certificate** unless you name it: reaching the cluster at `https://<vip>:6443` fails verification even though the address answers.
+
+`.spec.config.tlsSan` is where the rest go. Cargoship appends them to the derived names, so the list holds only what nothing can derive - the VIP's address, an external DNS alias, a bastion or proxy a client dials:
+
+```yaml
+spec:
+  config:
+    loadbalancer: bubbles-kc.test.com
+    tlsSan:
+      - 10.0.0.1
+      - bubbles.external.test.com
+```
+
+Either a name or an IP address is accepted, and duplicates of a derived name are dropped rather than written twice. A load balancer or proxy in front of the API server does not change this: the certificate is still the API server's own, so every name a client uses to reach it has to be on it. A SAN added after the cluster is up only takes effect once the API server's serving certificate is reissued, and cargoship does not do that for you.
 
 ## Node Profiles
 

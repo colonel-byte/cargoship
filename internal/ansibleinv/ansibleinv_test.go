@@ -242,9 +242,11 @@ func TestTranslateCarriesClusterMetaThrough(t *testing.T) {
 				"control": {Engine: cluster.HostEngine{NodeLabels: map[string]string{"adrp.xyz/purpose-control": "true"}}},
 			},
 			Values: map[string]any{"addons": map[string]any{"disabled": []any{"rke2-ingress-nginx"}}},
+			TLSSan: []string{"10.0.0.1", "bubbles.external.test.com"},
 		},
 	)
 	require.NoError(t, err)
+	require.Equal(t, []string{"10.0.0.1", "bubbles.external.test.com"}, out.Spec.Config.TLSSan)
 	require.Contains(t, out.Spec.Config.Profiles, "control")
 	require.Equal(t, "true", out.Spec.Config.Profiles["control"].Engine.NodeLabels["adrp.xyz/purpose-control"])
 	require.Contains(t, out.Spec.Config.Values, "addons")

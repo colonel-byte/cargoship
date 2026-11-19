@@ -60,6 +60,9 @@ type ClusterMeta struct {
 	Name string `json:"name"`
 	// LoadBalancer is the hostname clients use to reach the control plane.
 	LoadBalancer string `json:"loadbalancer"`
+	// TLSSan lists extra names and addresses for the API server certificate, on top of the
+	// loadbalancer and the controllers' hostnames.
+	TLSSan []string `json:"tlsSan,omitempty"`
 	// Profiles maps a profile name to the host and engine overrides a host can select.
 	Profiles map[string]cluster.Profiles `json:"profiles,omitempty"`
 	// Registries lists the container registries the cluster uses.
@@ -114,6 +117,7 @@ func Translate(in Input, meta ClusterMeta) (*cluster.Cluster, error) {
 		Spec: cluster.Spec{
 			Config: cluster.Config{
 				LoadBalancer: meta.LoadBalancer,
+				TLSSan:       meta.TLSSan,
 				Registries:   meta.Registries,
 				Profiles:     profiles,
 				Values:       meta.Values,

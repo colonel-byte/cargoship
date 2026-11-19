@@ -48,6 +48,13 @@
           },
           "type": "array"
         },
+        "tlsSan": {
+          "description": "lists extra names and addresses to put on the controllers' API server certificate, on top of the loadbalancer and each controller's short and long hostname, which cargoship adds itself. Either a name or an IP address is accepted. This is what a cluster reached through a VIP or a proxy needs: `loadbalancer` is one address, and any other name a client dials -- the VIP's address where `loadbalancer` is a name, an external DNS alias, a bastion -- fails certificate verification unless it is listed here.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "values": {
           "description": "overrides the values the distro package was built with. It is the same\nnested structure the package ships, addressed by the same dotted paths, and it\nmust still satisfy the package's values schema. Keys the package does not\ndefine are kept, so a cluster can carry values a later package version reads.",
           "type": "object"

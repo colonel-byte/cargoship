@@ -20,6 +20,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"github.com/colonel-byte/cargoship/pkg/utils"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -71,6 +72,10 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.Cluster, d *di
 		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.Hostname(h))
 		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.LongHostname(h))
 	}
+
+	// The operator's own names go on last: a cluster reached through a VIP, a proxy or an
+	// external alias needs those on the certificate too, and nothing derives them.
+	p.run.ControllerTLS = helpers.Unique(append(p.run.ControllerTLS, c.Spec.Config.TLSSan...))
 
 	p.run.ControllerToken = ""
 	if p.run.Leader.FileExist(p.Distro.JoinTokenPath()) {
