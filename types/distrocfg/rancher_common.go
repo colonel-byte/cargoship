@@ -519,6 +519,9 @@ func (d *RancherCommon) helmCharts(cfg distro.Config) (map[string]DesiredFile, e
 		if chart.CreateNamespace {
 			spec["createNamespace"] = true
 		}
+		if chart.Bootstrap {
+			spec["bootstrap"] = true
+		}
 		if chart.Values != nil {
 			values, err := helmValuesContent(chart.Values)
 			if err != nil {

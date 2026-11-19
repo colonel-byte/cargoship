@@ -68,9 +68,39 @@ That last row is the one to read twice. A `HelmChart` resource owns its release,
 | `shasum`          | SHA-256 the tarball is verified against when the package is built. Required for a fetched source                         |
 | `targetNamespace` | The namespace the release installs into. The resource itself always lives in `kube-system`, where the controller watches |
 | `createNamespace` | Have the helm controller create `targetNamespace` if it is absent                                                        |
+| `bootstrap`       | Install the chart the way the engine installs its own CNI - before the cluster has finished forming. See below           |
 | `values`          | The chart's Helm values, as a YAML string or a mapping. Rendered as a Go template first                                  |
 | `images`          | The images the chart needs, carried in the package alongside `imageConfig.images`                                        |
 | `when`            | A values path gating whether the chart is delivered and deployed at all                                                  |
+
+## A chart the cluster cannot form without
+
+The helm controller installs a chart by running a Job, and an ordinary Job is an ordinary pod: it is scheduled once a node is `Ready`, it takes an address from the CNI, and it reaches the API server through the `kubernetes` ClusterIP, which needs kube-proxy or a CNI that replaced it. A chart whose job is to *provide* one of those cannot wait for all three.
+
+`bootstrap: true` is how the engine installs its own CNI, and it is available to a package's charts for the same reason - see [RKE2's Helm integration](https://docs.rke2.io/add-ons/helm). It changes the job, not the chart:
+
+| Ordinary chart                              | `bootstrap: true`                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------ |
+| Scheduled anywhere, control plane preferred | Pinned to a control-plane node                                           |
+| Waits for the node to be `Ready`            | Tolerates `not-ready` and `network-unavailable`                          |
+| Pod network, from the CNI                   | Host network, so no CNI is needed                                        |
+| API server via the `kubernetes` ClusterIP   | API server at `127.0.0.1`, so no kube-proxy or CNI replacement is needed |
+
+```yaml
+charts:
+  - name: kube-vip
+    source: https://example.invalid/charts/kube-vip-0.11.2.tgz
+    shasum: cd7b5ab2ed30a3a5ad758d058790c805a21d1f725d779e258f58bf322255721c
+    targetNamespace: kube-system
+    bootstrap: true
+```
+
+The case this exists for is a control-plane VIP. Cargoship writes `server: https://<lb>:<supervisor port>` on every controller after the first, so the address has to be answered before the second controller joins - which is before the CNI is up, and well before any ordinary Job could run.
+
+Two things it does not do, and the first is easy to assume it does:
+
+- **It does not reach the workload the chart installs.** The flag changes the install Job. A DaemonSet that Job creates is an ordinary pod with its ServiceAccount's in-cluster config, pointed at the `kubernetes` ClusterIP by the kubelet - so on a cluster with kube-proxy disabled, it waits for the CNI even though the Job did not. A chart whose workload has to run that early needs the same substitution in its own pod spec, usually by setting `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` in the chart's values.
+- **It is not a free upgrade.** A host-networked job on a not-ready node runs where no CNI has been consulted and no network policy applies. Set it for the charts a cluster cannot form without and leave it off for everything else; a chart that merely *would like* to be early is an ordinary chart.
 
 ## What a cluster can change
 

@@ -73,6 +73,29 @@ type Chart struct {
 	TargetNamespace string `json:"targetNamespace,omitempty"`
 	// CreateNamespace has the helm controller create TargetNamespace if it is absent.
 	CreateNamespace bool `json:"createNamespace,omitempty"`
+	// Bootstrap marks the chart as one the cluster needs in order to finish coming up, which
+	// changes how the helm controller runs its install job rather than what it installs.
+	//
+	// The ordinary job is an ordinary pod: it is scheduled once a node is Ready, it gets an
+	// address from the CNI, and it reaches the API server through the `kubernetes` ClusterIP,
+	// which needs kube-proxy or a CNI replacing it. None of that holds while a cluster is
+	// still forming, so a chart that has to install *before* the CNI cannot be an ordinary
+	// job. A bootstrap one is host-networked, is pinned to a control-plane node, tolerates
+	// `node.kubernetes.io/not-ready` and `network-unavailable`, and is handed
+	// KUBERNETES_SERVICE_HOST=127.0.0.1 so it talks to the local API server directly.
+	//
+	// This is what the Rancher engines install their own CNI charts with, and it is the
+	// reason a chart can carry a control-plane VIP at all: kube-vip's chart has to be
+	// installed before the controllers that join through the VIP, which is before the CNI on
+	// a first bring-up. See https://docs.rke2.io/add-ons/helm.
+	//
+	// It is not a free upgrade for every chart. A host-networked job on a not-ready node is
+	// a job running where no network policy applies and no CNI has been consulted, so set it
+	// for the charts a cluster cannot form without and leave it off for the rest.
+	//
+	// Only the Rancher engines honour it, the same way they are the only ones that read this
+	// section at all.
+	Bootstrap bool `json:"bootstrap,omitempty"`
 	// Values is the chart's Helm values, as a YAML string or a mapping. Cargoship writes it
 	// to the HelmChart's valuesContent, and renders it as a Go template first, so a value a
 	// cluster sets reaches the chart -- the same spelling `.spec.config.engine.manifest`
