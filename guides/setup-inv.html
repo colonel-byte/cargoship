@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f8e80bdf.js";
+            window.path_to_searchindex_js = "../searchindex-7f5d860a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-705bec50.js"></script>
@@ -267,7 +267,16 @@ cargoship validate --kind config ./cargoship-config.yaml
 <li><strong>A low TTL buys nothing.</strong> The address does not move - the node holding it does - so there is nothing for a resolver to re-learn when a controller fails.</li>
 </ul>
 <h3 id="the-certificate-only-names-what-the-inventory-names"><a class="header" href="#the-certificate-only-names-what-the-inventory-names">The certificate only names what the inventory names</a></h3>
-<p>Cargoship writes <code>tls-san</code> itself, from <code>loadbalancer</code> plus each controller’s short and long hostname, and it <em>assigns</em> the key rather than adding to it - so a <code>tls-san</code> a package definition sets is replaced. Where <code>loadbalancer</code> is an FQDN, that means <strong>the VIP’s IP address is not on the API server’s certificate</strong>: reaching the cluster at <code>https://&lt;vip&gt;:6443</code> fails verification even though the address answers. Use the name, which is what the kubeconfig cargoship fetches already does. There is no supported way to add a SAN of your own today.</p>
+<p>Cargoship writes <code>tls-san</code> itself, from <code>loadbalancer</code> plus each controller’s short and long hostname, and it <em>assigns</em> the key rather than adding to it - so a <code>tls-san</code> a package definition sets is replaced. Where <code>loadbalancer</code> is an FQDN, that means <strong>the VIP’s IP address is not on the API server’s certificate</strong> unless you name it: reaching the cluster at <code>https://&lt;vip&gt;:6443</code> fails verification even though the address answers.</p>
+<p><code>.spec.config.tlsSan</code> is where the rest go. Cargoship appends them to the derived names, so the list holds only what nothing can derive - the VIP’s address, an external DNS alias, a bastion or proxy a client dials:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    loadbalancer: bubbles-kc.test.com
+    tlsSan:
+      - 10.0.0.1
+      - bubbles.external.test.com
+</code></pre>
+<p>Either a name or an IP address is accepted, and duplicates of a derived name are dropped rather than written twice. A load balancer or proxy in front of the API server does not change this: the certificate is still the API server’s own, so every name a client uses to reach it has to be on it. A SAN added after the cluster is up only takes effect once the API server’s serving certificate is reissued, and cargoship does not do that for you.</p>
 <h2 id="node-profiles"><a class="header" href="#node-profiles">Node Profiles</a></h2>
 <p>The optional <code>.spec.config.profiles</code> section defines reusable groups of node configurations (e.g., <code>control</code>, <code>infra</code>, or <code>worker</code>). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.</p>
 <pre><code class="language-yaml">spec:

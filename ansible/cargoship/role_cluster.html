@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-f8e80bdf.js";
+            window.path_to_searchindex_js = "../../searchindex-7f5d860a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-705bec50.js"></script>
@@ -199,7 +199,7 @@
 <tbody>
 <tr><td><code>cargoship_action</code></td><td><code>str</code></td><td><code>apply</code></td><td>The cargoship action to run. It selects which module the role calls. One of <code>apply</code>, <code>prepare</code>, <code>engine_config_sync</code>, <code>reset</code>, <code>kube_config</code>.</td></tr>
 <tr><td><code>cargoship_package</code></td><td><code>str</code></td><td><code>""</code></td><td>The distro package to install, stage, or synchronise from. Required by every action except <code>reset</code> and <code>kube_config</code>, which install nothing.</td></tr>
-<tr><td><code>cargoship_cluster</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The settings that belong to the cluster rather than to any host. <code>name</code> and <code>loadbalancer</code> are required; <code>profiles</code>, <code>registries</code>, and <code>values</code> are optional and take the shape the inventory schema documents. See the inventory guide for the full document.</td></tr>
+<tr><td><code>cargoship_cluster</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The settings that belong to the cluster rather than to any host. <code>name</code> and <code>loadbalancer</code> are required; <code>tlsSan</code>, <code>profiles</code>, <code>registries</code>, and <code>values</code> are optional and take the shape the inventory schema documents. See the inventory guide for the full document.</td></tr>
 <tr><td><code>cargoship_cluster_name</code></td><td><code>str</code></td><td><code>""</code></td><td>The cluster name, as a variable of its own rather than a key inside <code>cargoship_cluster</code>. Wins over <code>cargoship_cluster.name</code> when both are set. Left empty it changes nothing.</td></tr>
 <tr><td><code>cargoship_cluster_loadbalancer</code></td><td><code>str</code></td><td><code>""</code></td><td>The hostname clients use to reach the control plane, as a variable of its own. Wins over <code>cargoship_cluster.loadbalancer</code> when both are set. Left empty it changes nothing.</td></tr>
 <tr><td><code>cargoship_cluster_profiles</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The cluster’s profiles, as a variable of its own. Wins over <code>cargoship_cluster.profiles</code> when both are set. Left empty it changes nothing.</td></tr>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f8e80bdf.js";
+            window.path_to_searchindex_js = "../searchindex-7f5d860a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-705bec50.js"></script>
@@ -271,6 +271,7 @@
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>bootstrap</code></td><td><code>boolean</code></td><td>no</td><td></td><td>marks the chart as one the cluster needs in order to finish coming up, which<br>changes how the helm controller runs its install job rather than what it installs.<br><br>The ordinary job is an ordinary pod: it is scheduled once a node is Ready, it gets an<br>address from the CNI, and it reaches the API server through the <code>kubernetes</code> ClusterIP,<br>which needs kube-proxy or a CNI replacing it. None of that holds while a cluster is<br>still forming, so a chart that has to install <em>before</em> the CNI cannot be an ordinary<br>job. A bootstrap one is host-networked, is pinned to a control-plane node, tolerates<br><code>node.kubernetes.io/not-ready</code> and <code>network-unavailable</code>, and is handed<br>KUBERNETES_SERVICE_HOST=127.0.0.1 so it talks to the local API server directly.<br><br>This is what the Rancher engines install their own CNI charts with, and it is the<br>reason a chart can carry a control-plane VIP at all: kube-vip’s chart has to be<br>installed before the controllers that join through the VIP, which is before the CNI on<br>a first bring-up. See https://docs.rke2.io/add-ons/helm.<br><br>It is not a free upgrade for every chart. A host-networked job on a not-ready node is<br>a job running where no network policy applies and no CNI has been consulted, so set it<br>for the charts a cluster cannot form without and leave it off for the rest.<br><br>Only the Rancher engines honour it, the same way they are the only ones that read this<br>section at all.</td></tr>
 <tr><td><code>createNamespace</code></td><td><code>boolean</code></td><td>no</td><td></td><td>has the helm controller create TargetNamespace if it is absent.</td></tr>
 <tr><td><code>images</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the images the chart needs, carried in the package alongside<br>imageConfig.images.<br><br>shortcut: these are carried and uploaded whether or not When gates the chart off,<br>because the flat image list has no per-value gate to hang them on – the same gap<br>docs/agent/todo-chart-disable-image-gating.md records for a disabled chart manifest.<br>Upgrade both together.</td></tr>
 <tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the HelmChart resource’s name, and the stem of the manifest file cargoship<br>writes for it. It is a Kubernetes object name, so it is bounded the way one is.</td></tr>

@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f8e80bdf.js";
+            window.path_to_searchindex_js = "searchindex-7f5d860a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-705bec50.js"></script>
@@ -1432,12 +1432,42 @@ spec:
 <tr><td><code>shasum</code></td><td>SHA-256 the tarball is verified against when the package is built. Required for a fetched source</td></tr>
 <tr><td><code>targetNamespace</code></td><td>The namespace the release installs into. The resource itself always lives in <code>kube-system</code>, where the controller watches</td></tr>
 <tr><td><code>createNamespace</code></td><td>Have the helm controller create <code>targetNamespace</code> if it is absent</td></tr>
+<tr><td><code>bootstrap</code></td><td>Install the chart the way the engine installs its own CNI - before the cluster has finished forming. See below</td></tr>
 <tr><td><code>values</code></td><td>The chart’s Helm values, as a YAML string or a mapping. Rendered as a Go template first</td></tr>
 <tr><td><code>images</code></td><td>The images the chart needs, carried in the package alongside <code>imageConfig.images</code></td></tr>
 <tr><td><code>when</code></td><td>A values path gating whether the chart is delivered and deployed at all</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="a-chart-the-cluster-cannot-form-without"><a class="header" href="#a-chart-the-cluster-cannot-form-without">A chart the cluster cannot form without</a></h2>
+<p>The helm controller installs a chart by running a Job, and an ordinary Job is an ordinary pod: it is scheduled once a node is <code>Ready</code>, it takes an address from the CNI, and it reaches the API server through the <code>kubernetes</code> ClusterIP, which needs kube-proxy or a CNI that replaced it. A chart whose job is to <em>provide</em> one of those cannot wait for all three.</p>
+<p><code>bootstrap: true</code> is how the engine installs its own CNI, and it is available to a package’s charts for the same reason - see <a href="https://docs.rke2.io/add-ons/helm">RKE2’s Helm integration</a>. It changes the job, not the chart:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Ordinary chart</th><th><code>bootstrap: true</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Scheduled anywhere, control plane preferred</td><td>Pinned to a control-plane node</td></tr>
+<tr><td>Waits for the node to be <code>Ready</code></td><td>Tolerates <code>not-ready</code> and <code>network-unavailable</code></td></tr>
+<tr><td>Pod network, from the CNI</td><td>Host network, so no CNI is needed</td></tr>
+<tr><td>API server via the <code>kubernetes</code> ClusterIP</td><td>API server at <code>127.0.0.1</code>, so no kube-proxy or CNI replacement is needed</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-yaml">charts:
+  - name: kube-vip
+    source: https://example.invalid/charts/kube-vip-0.11.2.tgz
+    shasum: cd7b5ab2ed30a3a5ad758d058790c805a21d1f725d779e258f58bf322255721c
+    targetNamespace: kube-system
+    bootstrap: true
+</code></pre>
+<p>The case this exists for is a control-plane VIP. Cargoship writes <code>server: https://&lt;lb&gt;:&lt;supervisor port&gt;</code> on every controller after the first, so the address has to be answered before the second controller joins - which is before the CNI is up, and well before any ordinary Job could run.</p>
+<p>Two things it does not do, and the first is easy to assume it does:</p>
+<ul>
+<li><strong>It does not reach the workload the chart installs.</strong> The flag changes the install Job. A DaemonSet that Job creates is an ordinary pod with its ServiceAccount’s in-cluster config, pointed at the <code>kubernetes</code> ClusterIP by the kubelet - so on a cluster with kube-proxy disabled, it waits for the CNI even though the Job did not. A chart whose workload has to run that early needs the same substitution in its own pod spec, usually by setting <code>KUBERNETES_SERVICE_HOST</code> and <code>KUBERNETES_SERVICE_PORT</code> in the chart’s values.</li>
+<li><strong>It is not a free upgrade.</strong> A host-networked job on a not-ready node runs where no CNI has been consulted and no network policy applies. Set it for the charts a cluster cannot form without and leave it off for everything else; a chart that merely <em>would like</em> to be early is an ordinary chart.</li>
+</ul>
 <h2 id="what-a-cluster-can-change"><a class="header" href="#what-a-cluster-can-change">What a cluster can change</a></h2>
 <p><code>values</code> is rendered as a Go template against the package’s values and the cluster’s facts, the same way an engine manifest entry’s values are - see <a href="#package-values">package values</a>. That is the one way a cluster configures a chart: <code>spec.values.mappings</code> targets are relative to <code>spec.config.engine</code>, so a mapping cannot reach a chart entry.</p>
 <pre><code class="language-yaml"># In the package:
@@ -3731,7 +3761,16 @@ cargoship validate --kind config ./cargoship-config.yaml
 <li><strong>A low TTL buys nothing.</strong> The address does not move - the node holding it does - so there is nothing for a resolver to re-learn when a controller fails.</li>
 </ul>
 <h3 id="the-certificate-only-names-what-the-inventory-names"><a class="header" href="#the-certificate-only-names-what-the-inventory-names">The certificate only names what the inventory names</a></h3>
-<p>Cargoship writes <code>tls-san</code> itself, from <code>loadbalancer</code> plus each controller’s short and long hostname, and it <em>assigns</em> the key rather than adding to it - so a <code>tls-san</code> a package definition sets is replaced. Where <code>loadbalancer</code> is an FQDN, that means <strong>the VIP’s IP address is not on the API server’s certificate</strong>: reaching the cluster at <code>https://&lt;vip&gt;:6443</code> fails verification even though the address answers. Use the name, which is what the kubeconfig cargoship fetches already does. There is no supported way to add a SAN of your own today.</p>
+<p>Cargoship writes <code>tls-san</code> itself, from <code>loadbalancer</code> plus each controller’s short and long hostname, and it <em>assigns</em> the key rather than adding to it - so a <code>tls-san</code> a package definition sets is replaced. Where <code>loadbalancer</code> is an FQDN, that means <strong>the VIP’s IP address is not on the API server’s certificate</strong> unless you name it: reaching the cluster at <code>https://&lt;vip&gt;:6443</code> fails verification even though the address answers.</p>
+<p><code>.spec.config.tlsSan</code> is where the rest go. Cargoship appends them to the derived names, so the list holds only what nothing can derive - the VIP’s address, an external DNS alias, a bastion or proxy a client dials:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    loadbalancer: bubbles-kc.test.com
+    tlsSan:
+      - 10.0.0.1
+      - bubbles.external.test.com
+</code></pre>
+<p>Either a name or an IP address is accepted, and duplicates of a derived name are dropped rather than written twice. A load balancer or proxy in front of the API server does not change this: the certificate is still the API server’s own, so every name a client uses to reach it has to be on it. A SAN added after the cluster is up only takes effect once the API server’s serving certificate is reissued, and cargoship does not do that for you.</p>
 <h2 id="node-profiles"><a class="header" href="#node-profiles">Node Profiles</a></h2>
 <p>The optional <code>.spec.config.profiles</code> section defines reusable groups of node configurations (e.g., <code>control</code>, <code>infra</code>, or <code>worker</code>). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.</p>
 <pre><code class="language-yaml">spec:
@@ -5927,6 +5966,7 @@ $ cargoship version -o json
 <tr><td><code>loadbalancer</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the hostname clients use to reach the cluster control plane.</td></tr>
 <tr><td><code>profiles</code></td><td>map[string]<a href="#profiles-1">Profiles</a></td><td>no</td><td></td><td>maps a profile name to host and engine overrides that a host can select.</td></tr>
 <tr><td><code>registries</code></td><td>array of <a href="#registries">Registries</a></td><td>no</td><td></td><td>lists the container registries the cluster uses.</td></tr>
+<tr><td><code>tlsSan</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists extra names and addresses to put on the controllers’ API server certificate, on top of the loadbalancer and each controller’s short and long hostname, which cargoship adds itself. Either a name or an IP address is accepted. This is what a cluster reached through a VIP or a proxy needs: <code>loadbalancer</code> is one address, and any other name a client dials – the VIP’s address where <code>loadbalancer</code> is a name, an external DNS alias, a bastion – fails certificate verification unless it is listed here.</td></tr>
 <tr><td><code>values</code></td><td>object</td><td>no</td><td></td><td>overrides the values the distro package was built with. It is the same<br>nested structure the package ships, addressed by the same dotted paths, and it<br>must still satisfy the package’s values schema. Keys the package does not<br>define are kept, so a cluster can carry values a later package version reads.</td></tr>
 </tbody>
 </table>
@@ -6562,6 +6602,7 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>bootstrap</code></td><td><code>boolean</code></td><td>no</td><td></td><td>marks the chart as one the cluster needs in order to finish coming up, which<br>changes how the helm controller runs its install job rather than what it installs.<br><br>The ordinary job is an ordinary pod: it is scheduled once a node is Ready, it gets an<br>address from the CNI, and it reaches the API server through the <code>kubernetes</code> ClusterIP,<br>which needs kube-proxy or a CNI replacing it. None of that holds while a cluster is<br>still forming, so a chart that has to install <em>before</em> the CNI cannot be an ordinary<br>job. A bootstrap one is host-networked, is pinned to a control-plane node, tolerates<br><code>node.kubernetes.io/not-ready</code> and <code>network-unavailable</code>, and is handed<br>KUBERNETES_SERVICE_HOST=127.0.0.1 so it talks to the local API server directly.<br><br>This is what the Rancher engines install their own CNI charts with, and it is the<br>reason a chart can carry a control-plane VIP at all: kube-vip’s chart has to be<br>installed before the controllers that join through the VIP, which is before the CNI on<br>a first bring-up. See https://docs.rke2.io/add-ons/helm.<br><br>It is not a free upgrade for every chart. A host-networked job on a not-ready node is<br>a job running where no network policy applies and no CNI has been consulted, so set it<br>for the charts a cluster cannot form without and leave it off for the rest.<br><br>Only the Rancher engines honour it, the same way they are the only ones that read this<br>section at all.</td></tr>
 <tr><td><code>createNamespace</code></td><td><code>boolean</code></td><td>no</td><td></td><td>has the helm controller create TargetNamespace if it is absent.</td></tr>
 <tr><td><code>images</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the images the chart needs, carried in the package alongside<br>imageConfig.images.<br><br>shortcut: these are carried and uploaded whether or not When gates the chart off,<br>because the flat image list has no per-value gate to hang them on – the same gap<br>docs/agent/todo-chart-disable-image-gating.md records for a disabled chart manifest.<br>Upgrade both together.</td></tr>
 <tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the HelmChart resource’s name, and the stem of the manifest file cargoship<br>writes for it. It is a Kubernetes object name, so it is bounded the way one is.</td></tr>
@@ -7348,7 +7389,7 @@ $ cargoship version -o json
 <tbody>
 <tr><td><code>cargoship_action</code></td><td><code>str</code></td><td><code>apply</code></td><td>The cargoship action to run. It selects which module the role calls. One of <code>apply</code>, <code>prepare</code>, <code>engine_config_sync</code>, <code>reset</code>, <code>kube_config</code>.</td></tr>
 <tr><td><code>cargoship_package</code></td><td><code>str</code></td><td><code>""</code></td><td>The distro package to install, stage, or synchronise from. Required by every action except <code>reset</code> and <code>kube_config</code>, which install nothing.</td></tr>
-<tr><td><code>cargoship_cluster</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The settings that belong to the cluster rather than to any host. <code>name</code> and <code>loadbalancer</code> are required; <code>profiles</code>, <code>registries</code>, and <code>values</code> are optional and take the shape the inventory schema documents. See the inventory guide for the full document.</td></tr>
+<tr><td><code>cargoship_cluster</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The settings that belong to the cluster rather than to any host. <code>name</code> and <code>loadbalancer</code> are required; <code>tlsSan</code>, <code>profiles</code>, <code>registries</code>, and <code>values</code> are optional and take the shape the inventory schema documents. See the inventory guide for the full document.</td></tr>
 <tr><td><code>cargoship_cluster_name</code></td><td><code>str</code></td><td><code>""</code></td><td>The cluster name, as a variable of its own rather than a key inside <code>cargoship_cluster</code>. Wins over <code>cargoship_cluster.name</code> when both are set. Left empty it changes nothing.</td></tr>
 <tr><td><code>cargoship_cluster_loadbalancer</code></td><td><code>str</code></td><td><code>""</code></td><td>The hostname clients use to reach the control plane, as a variable of its own. Wins over <code>cargoship_cluster.loadbalancer</code> when both are set. Left empty it changes nothing.</td></tr>
 <tr><td><code>cargoship_cluster_profiles</code></td><td><code>dict</code></td><td><code>{}</code></td><td>The cluster’s profiles, as a variable of its own. Wins over <code>cargoship_cluster.profiles</code> when both are set. Left empty it changes nothing.</td></tr>

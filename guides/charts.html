@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f8e80bdf.js";
+            window.path_to_searchindex_js = "../searchindex-7f5d860a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-705bec50.js"></script>
@@ -246,12 +246,42 @@ spec:
 <tr><td><code>shasum</code></td><td>SHA-256 the tarball is verified against when the package is built. Required for a fetched source</td></tr>
 <tr><td><code>targetNamespace</code></td><td>The namespace the release installs into. The resource itself always lives in <code>kube-system</code>, where the controller watches</td></tr>
 <tr><td><code>createNamespace</code></td><td>Have the helm controller create <code>targetNamespace</code> if it is absent</td></tr>
+<tr><td><code>bootstrap</code></td><td>Install the chart the way the engine installs its own CNI - before the cluster has finished forming. See below</td></tr>
 <tr><td><code>values</code></td><td>The chart’s Helm values, as a YAML string or a mapping. Rendered as a Go template first</td></tr>
 <tr><td><code>images</code></td><td>The images the chart needs, carried in the package alongside <code>imageConfig.images</code></td></tr>
 <tr><td><code>when</code></td><td>A values path gating whether the chart is delivered and deployed at all</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="a-chart-the-cluster-cannot-form-without"><a class="header" href="#a-chart-the-cluster-cannot-form-without">A chart the cluster cannot form without</a></h2>
+<p>The helm controller installs a chart by running a Job, and an ordinary Job is an ordinary pod: it is scheduled once a node is <code>Ready</code>, it takes an address from the CNI, and it reaches the API server through the <code>kubernetes</code> ClusterIP, which needs kube-proxy or a CNI that replaced it. A chart whose job is to <em>provide</em> one of those cannot wait for all three.</p>
+<p><code>bootstrap: true</code> is how the engine installs its own CNI, and it is available to a package’s charts for the same reason - see <a href="https://docs.rke2.io/add-ons/helm">RKE2’s Helm integration</a>. It changes the job, not the chart:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Ordinary chart</th><th><code>bootstrap: true</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Scheduled anywhere, control plane preferred</td><td>Pinned to a control-plane node</td></tr>
+<tr><td>Waits for the node to be <code>Ready</code></td><td>Tolerates <code>not-ready</code> and <code>network-unavailable</code></td></tr>
+<tr><td>Pod network, from the CNI</td><td>Host network, so no CNI is needed</td></tr>
+<tr><td>API server via the <code>kubernetes</code> ClusterIP</td><td>API server at <code>127.0.0.1</code>, so no kube-proxy or CNI replacement is needed</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-yaml">charts:
+  - name: kube-vip
+    source: https://example.invalid/charts/kube-vip-0.11.2.tgz
+    shasum: cd7b5ab2ed30a3a5ad758d058790c805a21d1f725d779e258f58bf322255721c
+    targetNamespace: kube-system
+    bootstrap: true
+</code></pre>
+<p>The case this exists for is a control-plane VIP. Cargoship writes <code>server: https://&lt;lb&gt;:&lt;supervisor port&gt;</code> on every controller after the first, so the address has to be answered before the second controller joins - which is before the CNI is up, and well before any ordinary Job could run.</p>
+<p>Two things it does not do, and the first is easy to assume it does:</p>
+<ul>
+<li><strong>It does not reach the workload the chart installs.</strong> The flag changes the install Job. A DaemonSet that Job creates is an ordinary pod with its ServiceAccount’s in-cluster config, pointed at the <code>kubernetes</code> ClusterIP by the kubelet - so on a cluster with kube-proxy disabled, it waits for the CNI even though the Job did not. A chart whose workload has to run that early needs the same substitution in its own pod spec, usually by setting <code>KUBERNETES_SERVICE_HOST</code> and <code>KUBERNETES_SERVICE_PORT</code> in the chart’s values.</li>
+<li><strong>It is not a free upgrade.</strong> A host-networked job on a not-ready node runs where no CNI has been consulted and no network policy applies. Set it for the charts a cluster cannot form without and leave it off for everything else; a chart that merely <em>would like</em> to be early is an ordinary chart.</li>
+</ul>
 <h2 id="what-a-cluster-can-change"><a class="header" href="#what-a-cluster-can-change">What a cluster can change</a></h2>
 <p><code>values</code> is rendered as a Go template against the package’s values and the cluster’s facts, the same way an engine manifest entry’s values are - see <a href="package-values.html">package values</a>. That is the one way a cluster configures a chart: <code>spec.values.mappings</code> targets are relative to <code>spec.config.engine</code>, so a mapping cannot reach a chart entry.</p>
 <pre><code class="language-yaml"># In the package:
