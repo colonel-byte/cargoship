@@ -97,7 +97,7 @@ charts:
 
 The case this exists for is a control-plane VIP. Cargoship writes `server: https://<lb>:<supervisor port>` on every controller after the first, so the address has to be answered before the second controller joins - which is before the CNI is up, and well before any ordinary Job could run.
 
-Two things it does not do, and both have bitten:
+Two things it does not do, and the first is easy to assume it does:
 
 - **It does not reach the workload the chart installs.** The flag changes the install Job. A DaemonSet that Job creates is an ordinary pod with its ServiceAccount's in-cluster config, pointed at the `kubernetes` ClusterIP by the kubelet - so on a cluster with kube-proxy disabled, it waits for the CNI even though the Job did not. A chart whose workload has to run that early needs the same substitution in its own pod spec, usually by setting `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` in the chart's values.
 - **It is not a free upgrade.** A host-networked job on a not-ready node runs where no CNI has been consulted and no network policy applies. Set it for the charts a cluster cannot form without and leave it off for everything else; a chart that merely *would like* to be early is an ordinary chart.
