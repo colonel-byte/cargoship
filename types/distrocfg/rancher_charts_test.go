@@ -63,6 +63,29 @@ func TestConfigureEngineWritesAHelmChart(t *testing.T) {
 	require.Empty(t, got.DigString(keySpec, "chart"), "nothing points at a repository or a served path")
 	require.Equal(t, "my-app", got.DigString(keySpec, "targetNamespace"))
 	require.Equal(t, "replicas: 2", got.DigString(keySpec, "valuesContent"))
+	// Absent rather than false, so a chart that never asked to be a bootstrap chart does not
+	// have the key written at all -- the helm controller reads the field's absence the same
+	// way, and an omitted key is what keeps this out of every resource already rendered.
+	require.NotContains(t, got[keySpec], "bootstrap")
+}
+
+// A bootstrap chart is how the helm controller is told to run the install job host-networked on
+// a not-ready control-plane node, talking to the local API server, which is the only shape that
+// can install before the CNI. Cargoship writes one key; everything that follows from it is the
+// helm controller's own behaviour.
+func TestHelmChartCarriesBootstrap(t *testing.T) {
+	d := newTestRancher()
+	dis := chartDistro()
+	dis.Spec.Config.Charts[0].Bootstrap = true
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.Host{Role: cluster.RoleController, Hostname: "node1"})
+	host.Metadata.IsLeader = true
+
+	require.NoError(t, d.ConfigureEngine(context.Background(), host, cluster.RuntimeMeta{}, dis))
+
+	path := filepath.Join(d.Data, "server/manifests/cargoship-my-app-chart.yaml")
+	got := parseWrittenYAML(t, cfg.files, path)
+	require.Equal(t, true, got.Dig(keySpec, "bootstrap"))
 }
 
 // A worker has no manifest directory, so the chart is a controller-only file the same way a
