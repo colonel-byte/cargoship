@@ -110,6 +110,8 @@ type Spec struct {
 type Config struct {
 	// LoadBalancer is the hostname clients use to reach the cluster control plane.
 	LoadBalancer string `json:"loadbalancer" jsonschema:"format=hostname"`
+	// TLSSan lists extra names and addresses to put on the controllers' API server certificate, on top of the loadbalancer and each controller's short and long hostname, which cargoship adds itself. Either a name or an IP address is accepted. This is what a cluster reached through a VIP or a proxy needs: `loadbalancer` is one address, and any other name a client dials -- the VIP's address where `loadbalancer` is a name, an external DNS alias, a bastion -- fails certificate verification unless it is listed here.
+	TLSSan []string `json:"tlsSan,omitempty"`
 	// Registries lists the container registries the cluster uses.
 	Registries []Registries `json:"registries,omitempty"`
 	// Profiles maps a profile name to host and engine overrides that a host can select.

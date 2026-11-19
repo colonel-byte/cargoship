@@ -33,9 +33,9 @@ argument_specs:
         default: {}
         description:
           - "The settings that belong to the cluster rather than to any host."
-          - "C(name) and C(loadbalancer) are required; C(profiles), C(registries), and C(values) are optional and take the shape the inventory schema documents."
+          - "C(name) and C(loadbalancer) are required; C(tlsSan), C(profiles), C(registries), and C(values) are optional and take the shape the inventory schema documents."
           - "See the inventory guide for the full document."
-        # Only the five top-level keys are declared, with their types and nothing more. The shape
+        # Only the six top-level keys are declared, with their types and nothing more. The shape
         # inside profiles and registries belongs to the inventory schema, which the module
         # validates the translated document against -- restating it here would be a second copy to
         # keep in step with the first, and the one that goes stale without anything failing.
@@ -58,6 +58,12 @@ argument_specs:
             description:
               - "The hostname clients use to reach the cluster control plane."
               - "Required, here or as C(cargoship_cluster_loadbalancer)."
+          tlsSan:
+            type: list
+            elements: str
+            description:
+              - "Extra names and addresses for the controllers' API server certificate, on top of C(loadbalancer) and the controllers' hostnames, which cargoship adds itself."
+              - "Needed when clients reach the cluster through a VIP, a proxy or an external alias that C(loadbalancer) does not name."
           profiles:
             type: dict
             description:
