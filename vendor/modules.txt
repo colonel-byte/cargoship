@@ -754,6 +754,8 @@ github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/cpuid/v2 v2.4.2
 ## explicit; go 1.24.0
+github.com/klauspost/cpuid/v2
+github.com/klauspost/cpuid/v2/topology
 # github.com/klauspost/pgzip v1.3.0
 ## explicit; go 1.25
 github.com/klauspost/pgzip
@@ -789,9 +791,12 @@ github.com/mholt/archives
 # github.com/mikelolasagasti/xz v1.0.1
 ## explicit; go 1.15
 github.com/mikelolasagasti/xz
-# github.com/minio/minlz v1.2.4
+# github.com/minio/minlz v1.3.0
 ## explicit; go 1.25
 github.com/minio/minlz
+github.com/minio/minlz/internal/cpu
+github.com/minio/minlz/internal/pivco
+github.com/minio/minlz/internal/pivco/kernel
 github.com/minio/minlz/internal/race
 # github.com/mitchellh/copystructure v1.2.0
 ## explicit; go 1.15
@@ -1201,6 +1206,9 @@ github.com/zarf-dev/zarf/src/pkg/utils/exec
 github.com/zarf-dev/zarf/src/pkg/value
 github.com/zarf-dev/zarf/src/pkg/variables
 github.com/zarf-dev/zarf/src/types
+# github.com/zeebo/xxh3 v1.1.1-0.20260908150653-f7225998cebf
+## explicit; go 1.22
+github.com/zeebo/xxh3
 # go.opentelemetry.io/auto/sdk v1.2.1
 ## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk
