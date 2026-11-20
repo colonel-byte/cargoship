@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.43.1](https://github.com/colonel-byte/cargoship/compare/v0.43.0...v0.43.1) (2026-11-20)
+
+
+### Features
+
+* **api:** add .spec.config.tlsSan, extra names on the API server certificate ([#1168](https://github.com/colonel-byte/cargoship/issues/1168)) ([6363c81](https://github.com/colonel-byte/cargoship/commit/6363c8123f205a5a680c06652da289a0a31d64d5))
+* **api:** let a chart install before the CNI, via .spec.bootstrap ([#1167](https://github.com/colonel-byte/cargoship/issues/1167)) ([251e9b2](https://github.com/colonel-byte/cargoship/commit/251e9b24c38ffe8a754a6d56df75fd9658fad179))
+
+
+### Build
+
+* **deps:** bump actions/setup-go from 7.0.0 to 7.1.0 in the core group ([#1176](https://github.com/colonel-byte/cargoship/issues/1176)) ([02960de](https://github.com/colonel-byte/cargoship/commit/02960dece9dc81ac414f22059fdaf6785d577ed0))
+* **deps:** bump chainguard/static from `fc42af3` to `8658e9e` in /containers/base ([#1171](https://github.com/colonel-byte/cargoship/issues/1171)) ([9d0e08f](https://github.com/colonel-byte/cargoship/commit/9d0e08f1bc4a843dbc0c72dbcbd681337baa1526))
+* **deps:** bump github.com/grpc-ecosystem/grpc-gateway/v2 from 2.33.0 to 2.34.0 ([#1174](https://github.com/colonel-byte/cargoship/issues/1174)) ([1e8239c](https://github.com/colonel-byte/cargoship/commit/1e8239c2ba5ab59f0080efb7b1f8936c82f46b8e))
+* **deps:** bump github.com/minio/minlz from 1.2.4 to 1.3.0 ([#1175](https://github.com/colonel-byte/cargoship/issues/1175)) ([1152994](https://github.com/colonel-byte/cargoship/commit/115299432eebee38adb2ba5371f28f5c3b63d2b4))
+* **deps:** bump github.com/sergi/go-diff from 1.4.0 to 1.4.5 ([#1177](https://github.com/colonel-byte/cargoship/issues/1177)) ([0ecd9d0](https://github.com/colonel-byte/cargoship/commit/0ecd9d0da37b4f94ead1e675dafa4da21e714105))
+* **deps:** bump j178/prek-action from 3.1.0 to 3.1.1 in the core group ([#1173](https://github.com/colonel-byte/cargoship/issues/1173)) ([1553129](https://github.com/colonel-byte/cargoship/commit/155312984d9a13b2367c504f4b7b65683c98bb6f))
+* **deps:** bump the openapi group with 3 updates ([#1172](https://github.com/colonel-byte/cargoship/issues/1172)) ([721da55](https://github.com/colonel-byte/cargoship/commit/721da55995235c2ff8fc50cefccd6f24e8dbc3d3))
+
 ## [0.43.0](https://github.com/colonel-byte/cargoship/compare/v0.42.5...v0.43.0) (2026-11-18)
 
 
