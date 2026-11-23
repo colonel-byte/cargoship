@@ -19,7 +19,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/k0sproject/bootloose v0.9.6
 	github.com/k0sproject/dig v0.4.0
-	github.com/k0sproject/rig/v2 v2.3.0
+	github.com/k0sproject/rig/v2 v2.4.0
 	github.com/klauspost/compress v1.20.4
 	github.com/magefile/mage v1.17.2
 	github.com/mholt/archives v0.1.5
