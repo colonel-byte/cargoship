@@ -396,7 +396,7 @@ github.com/go-openapi/analysis/internal/flatten/sortref
 # github.com/go-openapi/errors v0.22.9
 ## explicit; go 1.26.0
 github.com/go-openapi/errors
-# github.com/go-openapi/jsonpointer v1.0.2
+# github.com/go-openapi/jsonpointer v1.0.3
 ## explicit; go 1.26.0
 github.com/go-openapi/jsonpointer
 github.com/go-openapi/jsonpointer/jsonname
@@ -407,7 +407,7 @@ github.com/go-openapi/jsonreference/internal
 # github.com/go-openapi/loads v0.25.4
 ## explicit; go 1.26.0
 github.com/go-openapi/loads
-# github.com/go-openapi/runtime v0.33.4
+# github.com/go-openapi/runtime v0.33.5
 ## explicit; go 1.26.0
 github.com/go-openapi/runtime
 github.com/go-openapi/runtime/client
@@ -418,7 +418,7 @@ github.com/go-openapi/runtime/middleware/denco
 github.com/go-openapi/runtime/middleware/untyped
 github.com/go-openapi/runtime/security
 github.com/go-openapi/runtime/yamlpc
-# github.com/go-openapi/runtime/server-middleware v0.33.4
+# github.com/go-openapi/runtime/server-middleware v0.33.5
 ## explicit; go 1.26.0
 github.com/go-openapi/runtime/server-middleware/docui
 github.com/go-openapi/runtime/server-middleware/mediatype
@@ -462,7 +462,7 @@ github.com/go-openapi/swag/typeutils
 # github.com/go-openapi/swag/yamlutils v0.29.2
 ## explicit; go 1.26.0
 github.com/go-openapi/swag/yamlutils
-# github.com/go-openapi/validate v1.0.2
+# github.com/go-openapi/validate v1.0.3
 ## explicit; go 1.26.0
 github.com/go-openapi/validate
 # github.com/go-sprout/sprout v1.1.2
