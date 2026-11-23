@@ -1,13 +1,17 @@
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-11-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
-[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
-[![Go Reference](https://pkg.go.dev/badge/github.com/nao1215/markdown.svg)](https://pkg.go.dev/github.com/nao1215/markdown)
-[![MultiPlatformUnitTest](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml)
-[![reviewdog](https://github.com/nao1215/markdown/actions/workflows/reviewdog.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/reviewdog.yml)
-[![Gosec](https://github.com/nao1215/markdown/actions/workflows/gosec.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/gosec.yml)
+[![CI](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml)
 ![Coverage](https://raw.githubusercontent.com/nao1215/octocovs-central-repo/main/badges/nao1215/markdown/coverage.svg)
+[![Gitleaks](https://github.com/nao1215/markdown/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/gitleaks.yml)
+[![Trivy](https://github.com/nao1215/markdown/actions/workflows/trivy.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/trivy.yml)
+[![govulncheck](https://github.com/nao1215/markdown/actions/workflows/govulncheck.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/govulncheck.yml)
+[![Gosec](https://github.com/nao1215/markdown/actions/workflows/gosec.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/gosec.yml)
+[![reviewdog](https://github.com/nao1215/markdown/actions/workflows/reviewdog.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/reviewdog.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/nao1215/markdown.svg)](https://pkg.go.dev/github.com/nao1215/markdown)
+[![License](https://img.shields.io/github/license/nao1215/markdown)](./LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/nao1215/markdown/badge)](https://scorecard.dev/viewer/?uri=github.com/nao1215/markdown)
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 # What is markdown package
 
@@ -2510,6 +2514,37 @@ Next Description
 - [Test Title](expected/index.md)
 ```
   
+## Verifying releases
+
+Each GitHub Release made from now on carries a source archive (`markdown-<tag>.tar.gz`), `checksums.txt`, a keyless cosign signature of it (`checksums.txt.sigstore.json`) and the build provenance of the archive (`markdown-<tag>.intoto.jsonl`). Download them from the release page (replace `<tag>` with the release tag), then verify:
+
+```bash
+gh attestation verify markdown-<tag>.tar.gz --repo nao1215/markdown \
+  --bundle markdown-<tag>.intoto.jsonl
+
+cosign verify-blob --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github\.com/nao1215/markdown/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums.txt
+
+sha256sum --check checksums.txt
+```
+
+## Testing
+
+| Technique | Bug class caught here |
+|---|---|
+| [Unit tests and godoc examples](markdown_test.go) | Wrong bytes from a builder method, on Linux, macOS and Windows |
+| [Golden files](testdata/golden) | Unintended changes to a whole generated document |
+| [Parsing the output back](contract_test.go) | Output that reads fine but renders as something else: a table that loses a column, a list that swallows a paragraph |
+| [Property-based tests](contract_test.go) | Escaped tables, lists, headings and code blocks that do not keep their shape for some input |
+| [Metamorphic tests](contract_test.go) | Blocks that merge or change kind depending on `WithBlockSpacing` |
+| [Fuzzing](.github/workflows/fuzz.yml) | Escaping, anchors and fences that break on arbitrary text |
+| [Mutation testing](.github/workflows/mutation.yml) | Tests that run changed code without checking its result |
+| [Mermaid render check](scripts/mermaid-check) | Diagrams that the real mermaid renderer rejects or draws differently |
+
+The commands and CI jobs for each are in [doc/testing.md](doc/testing.md).
+
 ## License
 [MIT License](./LICENSE)
 
