@@ -446,8 +446,8 @@ github.com/k0sproject/bootloose v0.9.6 h1:gXm/k79cLLXSTs8XRw1TuNH9p4al5ZbAuKNrm1
 github.com/k0sproject/bootloose v0.9.6/go.mod h1:CwSOfAP1jQO+SB4zFZbpNVRbuQJu4u79DiDzoLc1TGw=
 github.com/k0sproject/dig v0.4.0 h1:yBxFUUxNXAMGBg6b7c6ypxdx/o3RmhoI5v5ABOw5tn0=
 github.com/k0sproject/dig v0.4.0/go.mod h1:rlZ7N7ZEcB4Fi96TPXkZ4dqyAiDWOGLapyL9YpZ7Qz4=
-github.com/k0sproject/rig/v2 v2.3.0 h1:zdW3guzGlBwW4daD1C7fIRfEnhP3U3KfbfVzE6V4bYU=
-github.com/k0sproject/rig/v2 v2.3.0/go.mod h1:/LRvNvL09df5Qyu+eHf9V9bEPrOrqJUliuO1O7HpjHM=
+github.com/k0sproject/rig/v2 v2.4.0 h1:gIeMgvzHXyBFuAO6wqUIl0afjULl4LCVvqPun3sagpY=
+github.com/k0sproject/rig/v2 v2.4.0/go.mod h1:cgzqYe/A9+Ku4vVLttB8NsxhGZa36vpzP6jFNe7xpbM=
 github.com/karrick/godirwalk v1.17.0 h1:b4kY7nqDdioR/6qnbHQyDvmA17u5G1cZ6J+CZXwSWoI=
 github.com/karrick/godirwalk v1.17.0/go.mod h1:j4mkqPuvaLI8mp1DroR3P6ad7cyYd4c1qeJ3RV7ULlk=
 github.com/kevinburke/ssh_config v1.6.0 h1:J1FBfmuVosPHf5GRdltRLhPJtJpTlMdKTBjRgTaQBFY=
