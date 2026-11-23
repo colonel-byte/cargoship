@@ -200,7 +200,7 @@ require (
 	github.com/sergi/go-diff v1.4.5 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.6.0 // indirect
-	github.com/sigstore/rekor v1.6.1 // indirect
+	github.com/sigstore/rekor v1.6.2 // indirect
 	github.com/sigstore/rekor-tiles/v2 v2.4.2 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.2.1 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
