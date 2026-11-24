@@ -122,6 +122,7 @@ func TestNftRuleset(t *testing.T) {
 	plan := Plan{
 		NodeAddresses: []string{"10.0.0.5", "10.0.0.6", "fd00::5"},
 		ClusterCIDRs:  []string{"10.42.0.0/16", "10.43.0.0/16"},
+		TrustedCIDRs:  []string{"10.123.0.0/16"},
 		Ports: []cluster.HostPort{
 			{Port: "6443", Protocol: "tcp"},
 			{Port: "8472", Protocol: "udp"},
@@ -145,7 +146,7 @@ table inet cargoship {
 	set cluster_v4 {
 		type ipv4_addr
 		flags interval
-		elements = { 10.0.0.5, 10.0.0.6, 10.42.0.0/16, 10.43.0.0/16 }
+		elements = { 10.0.0.5, 10.0.0.6, 10.42.0.0/16, 10.43.0.0/16, 10.123.0.0/16 }
 	}
 	set cluster_v6 {
 		type ipv6_addr

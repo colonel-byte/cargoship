@@ -19,6 +19,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -118,7 +119,7 @@ func (f *Firewalld) applyClusterTrust(h *cluster.Host, p Plan) error {
 		entries []string
 	}{
 		{firewalldNodeIPSet, "hash:ip", "k8nodes", "IPset for all k8 nodes", p.NodeAddresses},
-		{firewalldClusterIPSet, "hash:net", "k8subnets", "IPset for all k8 service and pod CIDRs", p.ClusterCIDRs},
+		{firewalldClusterIPSet, "hash:net", "k8subnets", "IPset for all k8 service, pod, and trusted CIDRs", slices.Concat(p.ClusterCIDRs, p.TrustedCIDRs)},
 	}
 
 	for _, set := range sets {

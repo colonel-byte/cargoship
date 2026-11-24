@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"sort"
@@ -112,6 +113,8 @@ type Config struct {
 	LoadBalancer string `json:"loadbalancer" jsonschema:"format=hostname"`
 	// TLSSan lists extra names and addresses to put on the controllers' API server certificate, on top of the loadbalancer and each controller's short and long hostname, which cargoship adds itself. Either a name or an IP address is accepted. This is what a cluster reached through a VIP or a proxy needs: `loadbalancer` is one address, and any other name a client dials -- the VIP's address where `loadbalancer` is a name, an external DNS alias, a bastion -- fails certificate verification unless it is listed here.
 	TLSSan []string `json:"tlsSan,omitempty"`
+	// TrustedSources lists the addresses every node's firewall trusts for node-to-node communication, on top of the discovered node addresses and the cluster's pod and service CIDRs that cargoship trusts itself. Each entry is a CIDR block, `10.0.0.0/16`, or an inclusive range, `10.1.2.2-10.1.2.150`. This is what a cloud or DHCP fleet needs, where a node's address is not known when the cluster is written down and nodes come and go. Every entry is trusted as fully as a node is, so keep the blocks as narrow as the fleet allows.
+	TrustedSources []string `json:"trustedSources,omitempty" jsonschema:"example=10.0.0.0/16,example=10.1.2.2-10.1.2.150"`
 	// Registries lists the container registries the cluster uses.
 	Registries []Registries `json:"registries,omitempty"`
 	// Profiles maps a profile name to host and engine overrides that a host can select.
@@ -571,6 +574,80 @@ func (a RegistryAuth) Validate(name RegistryName) error {
 		return fmt.Errorf("registry %q: auth.pass is set without auth.user", name)
 	}
 	return nil
+}
+
+// ValidateTrustedSources validates that every entry in sources is a valid CIDR block or inclusive IP range.
+func ValidateTrustedSources(sources []string) error {
+	_, err := ExpandTrustedSources(sources)
+	return err
+}
+
+// ExpandTrustedSources parses each entry in sources (a CIDR block like "10.0.0.0/16" or an
+// inclusive IP range like "10.1.2.2-10.1.2.150") and returns the equivalent list of CIDR strings.
+func ExpandTrustedSources(sources []string) ([]string, error) {
+	if len(sources) == 0 {
+		return nil, nil
+	}
+
+	out := make([]string, 0, len(sources))
+	for _, entry := range sources {
+		if strings.Contains(entry, "-") {
+			startStr, endStr, _ := strings.Cut(entry, "-")
+			start, err := netip.ParseAddr(strings.TrimSpace(startStr))
+			if err != nil {
+				return nil, fmt.Errorf("trustedSources: invalid range %q: %w", entry, err)
+			}
+			end, err := netip.ParseAddr(strings.TrimSpace(endStr))
+			if err != nil {
+				return nil, fmt.Errorf("trustedSources: invalid range %q: %w", entry, err)
+			}
+			if start.Is4() != end.Is4() {
+				return nil, fmt.Errorf("trustedSources: range %q mixes IPv4 and IPv6 addresses", entry)
+			}
+			if start.Compare(end) > 0 {
+				return nil, fmt.Errorf("trustedSources: range %q has start after end", entry)
+			}
+			out = append(out, ipRangeToCIDRs(start, end)...)
+			continue
+		}
+
+		if _, err := netip.ParsePrefix(entry); err != nil {
+			return nil, fmt.Errorf("trustedSources: invalid CIDR %q: %w", entry, err)
+		}
+		out = append(out, entry)
+	}
+
+	return out, nil
+}
+
+func ipRangeToCIDRs(start, end netip.Addr) []string {
+	maxBits := start.BitLen()
+	var out []string
+	for start.IsValid() && start.Compare(end) <= 0 {
+		bits := maxBits
+		for bits > 0 {
+			candidate := netip.PrefixFrom(start, bits-1)
+			if candidate.Masked().Addr() != start || prefixLastAddr(candidate).Compare(end) > 0 {
+				break
+			}
+			bits--
+		}
+		pfx := netip.PrefixFrom(start, bits)
+		out = append(out, pfx.String())
+		start = prefixLastAddr(pfx).Next()
+	}
+	return out
+}
+
+func prefixLastAddr(pfx netip.Prefix) netip.Addr {
+	addr := pfx.Addr()
+	b := addr.AsSlice()
+	bits := pfx.Bits()
+	for i := bits; i < len(b)*8; i++ {
+		b[i/8] |= 1 << (7 - uint(i%8))
+	}
+	last, _ := netip.AddrFromSlice(b)
+	return last
 }
 
 // Files defines a file to write to a host.

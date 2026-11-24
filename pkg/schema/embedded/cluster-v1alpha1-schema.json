@@ -55,6 +55,17 @@
           },
           "type": "array"
         },
+        "trustedSources": {
+          "description": "lists the addresses every node's firewall trusts for node-to-node communication, on top of the discovered node addresses and the cluster's pod and service CIDRs that cargoship trusts itself. Each entry is a CIDR block, `10.0.0.0/16`, or an inclusive range, `10.1.2.2-10.1.2.150`. This is what a cloud or DHCP fleet needs, where a node's address is not known when the cluster is written down and nodes come and go. Every entry is trusted as fully as a node is, so keep the blocks as narrow as the fleet allows.",
+          "items": {
+            "examples": [
+              "10.0.0.0/16",
+              "10.1.2.2-10.1.2.150"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
         "values": {
           "description": "overrides the values the distro package was built with. It is the same\nnested structure the package ships, addressed by the same dotted paths, and it\nmust still satisfy the package's values schema. Keys the package does not\ndefine are kept, so a cluster can carry values a later package version reads.",
           "type": "object"

@@ -87,6 +87,7 @@ func TestUFWRules(t *testing.T) {
 	plan := Plan{
 		NodeAddresses: []string{"10.0.0.1", "10.0.0.2"},
 		ClusterCIDRs:  []string{"10.42.0.0/16"},
+		TrustedCIDRs:  []string{"10.123.0.0/16"},
 		Ports:         []cluster.HostPort{{Port: "6443", Protocol: "tcp"}},
 		Rules: []cluster.FirewallRule{
 			{Name: "metrics", Action: "allow", Source: "10.0.0.0/8", Port: "9100", Protocol: "tcp"},
@@ -100,6 +101,7 @@ func TestUFWRules(t *testing.T) {
 		"allow from 10.0.0.1 comment 'cargoship:cluster'",
 		"allow from 10.0.0.2 comment 'cargoship:cluster'",
 		"allow from 10.42.0.0/16 comment 'cargoship:cluster'",
+		"allow from 10.123.0.0/16 comment 'cargoship:cluster'",
 		"allow in from 10.0.0.0/8 to any port 9100 proto tcp comment 'cargoship:metrics'",
 	}, got)
 

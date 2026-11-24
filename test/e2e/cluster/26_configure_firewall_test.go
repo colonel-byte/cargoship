@@ -15,6 +15,7 @@
 package cluster
 
 import (
+	apicluster "github.com/colonel-byte/cargoship/api/colonel-byte.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/firewall"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 )
@@ -42,6 +43,10 @@ var firewallDump = map[string]string{ //nolint:gochecknoglobals
 // set the firewall resolves, which is why firewallDump is a dump and not a single query. A
 // node running no firewall is not a failure -- the phase is meant to skip it -- so the test
 // asserts the gate matches what the hosts run and stops there when none do.
+//
+// The cluster's `.config.trustedSources` is checked the same way, against the same dump: it is
+// the one trust source cargoship does not discover, so nothing but the inventory says whether
+// it arrived.
 //
 // Against containers the gate is what gets tested, because nothing in a container runs a
 // firewall. Only the microvm backend reaches the assertions below; see
@@ -85,6 +90,17 @@ func (s *phaseWalk) configureFirewall() {
 			}
 			s.Require().Containsf(rules, peer.PrivateAddress,
 				"%s: %s does not trust %s", host, backend.Name(), peer)
+		}
+
+		// The sources the inventory asked for, not a copy of them: a backend reads the
+		// expanded CIDRs, so an inventory carrying none asserts nothing here and one carrying
+		// a range is checked against what the expansion produced rather than against the
+		// range as written, which no backend ever sees.
+		expanded, err := apicluster.ExpandTrustedSources(s.harness.manager.Config.Spec.Config.TrustedSources)
+		s.Require().NoError(err, "the inventory's trustedSources do not expand")
+		for _, cidr := range expanded {
+			s.Require().Containsf(rules, cidr,
+				"%s: %s does not trust the configured source %s", host, backend.Name(), cidr)
 		}
 	}
 }

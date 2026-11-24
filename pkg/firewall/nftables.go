@@ -226,7 +226,7 @@ func nftRuleset(p Plan) (string, error) {
 func nftSets(p Plan) string {
 	var b strings.Builder
 
-	trusted := append(slices.Clone(p.NodeAddresses), p.ClusterCIDRs...)
+	trusted := slices.Concat(p.NodeAddresses, p.ClusterCIDRs, p.TrustedCIDRs)
 	v4, v6 := NftSplitFamilies(trusted)
 
 	for _, set := range []struct {
@@ -258,7 +258,7 @@ func nftSets(p Plan) string {
 func nftChainRules(p Plan) (map[string][]string, error) {
 	chains := map[string][]string{}
 
-	trusted := append(slices.Clone(p.NodeAddresses), p.ClusterCIDRs...)
+	trusted := slices.Concat(p.NodeAddresses, p.ClusterCIDRs, p.TrustedCIDRs)
 	v4, v6 := NftSplitFamilies(trusted)
 	if len(v4) > 0 {
 		chains["input"] = append(chains["input"],

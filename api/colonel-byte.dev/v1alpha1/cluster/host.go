@@ -151,21 +151,19 @@ type HostConfig struct {
 	Ports []HostPort `json:"ports,omitempty" xml:"port"`
 }
 
-// Merge copies Policy and Ports from update into c, for whichever of those fields are empty in
-// c, and unions update's firewall rules into c's.
+// Merge copies Policy from update into c when Policy is empty in c, and unions update's
+// firewall rules and ports into c's.
 func (c *HostConfig) Merge(update HostConfig) {
 	c.Firewall.Merge(update.Firewall)
 	if len(c.Policy) == 0 && len(update.Policy) > 0 {
 		c.Policy = make(map[string]FirewallPolicyConfig)
 		maps.Copy(c.Policy, update.Policy)
 	}
-	if len(c.Ports) == 0 && len(update.Ports) > 0 {
-		for _, p := range update.Ports {
-			if slices.Contains(c.Ports, p) {
-				continue
-			}
-			c.Ports = append(c.Ports, p)
+	for _, p := range update.Ports {
+		if slices.Contains(c.Ports, p) {
+			continue
 		}
+		c.Ports = append(c.Ports, p)
 	}
 }
 

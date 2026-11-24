@@ -103,9 +103,15 @@ func (p *ConfigureFirewall) configureFirewall(ctx context.Context, h *cluster.Ho
 		return nil
 	}
 
+	trustedSources, err := cluster.ExpandTrustedSources(p.manager.Config.Spec.Config.TrustedSources)
+	if err != nil {
+		return fmt.Errorf("%s: %w", h, err)
+	}
+
 	plan := firewall.Plan{
 		NodeAddresses: p.ipaddress,
 		ClusterCIDRs:  p.Distro.GetClusterCIDR(*p.manager.Distro),
+		TrustedCIDRs:  trustedSources,
 		Ports:         h.Host.Ports,
 		Rules:         h.Host.Firewall.Rules,
 		Policies:      h.Host.Policy,

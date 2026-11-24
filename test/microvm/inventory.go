@@ -63,6 +63,19 @@ func Inventory(f Fleet) apicluster.Cluster {
 				// port: this is the address the other nodes join through, and they reach each
 				// other over that segment and not through the host.
 				LoadBalancer: f.Nodes[0].PrivateAddress,
+				// Both accepted forms, so that the firewall phase's expansion is exercised
+				// rather than only its plumbing. These are documentation ranges from RFC 5737
+				// and nothing in the fleet is on them, so what the nodes end up trusting is
+				// unreachable -- the assertion is that the addresses reached the firewall,
+				// not that traffic from them works.
+				//
+				// This is the microvm inventory and not the bootloose one because a container
+				// runs no firewall, so the phase correctly skips there and an assertion over
+				// these would never execute.
+				TrustedSources: []string{
+					"192.0.2.0/24",
+					"198.51.100.10-198.51.100.12",
+				},
 			},
 			Hosts: hosts,
 		},
