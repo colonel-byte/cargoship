@@ -1214,8 +1214,8 @@ github.com/zarf-dev/zarf/src/types
 # github.com/zeebo/xxh3 v1.1.1-0.20260908150653-f7225998cebf
 ## explicit; go 1.22
 github.com/zeebo/xxh3
-# go.opentelemetry.io/auto/sdk v1.2.1
-## explicit; go 1.24.0
+# go.opentelemetry.io/auto/sdk v1.2.2
+## explicit; go 1.25.0
 go.opentelemetry.io/auto/sdk
 go.opentelemetry.io/auto/sdk/internal/telemetry
 # go.opentelemetry.io/contrib/bridges/prometheus v0.72.0
