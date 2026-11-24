@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ea17ef52.js";
+            window.path_to_searchindex_js = "../searchindex-74ed1592.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-705bec50.js"></script>
@@ -231,6 +231,7 @@
 <tr><td><code>profiles</code></td><td>map[string]<a href="#profiles">Profiles</a></td><td>no</td><td></td><td>maps a profile name to host and engine overrides that a host can select.</td></tr>
 <tr><td><code>registries</code></td><td>array of <a href="#registries">Registries</a></td><td>no</td><td></td><td>lists the container registries the cluster uses.</td></tr>
 <tr><td><code>tlsSan</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists extra names and addresses to put on the controllers’ API server certificate, on top of the loadbalancer and each controller’s short and long hostname, which cargoship adds itself. Either a name or an IP address is accepted. This is what a cluster reached through a VIP or a proxy needs: <code>loadbalancer</code> is one address, and any other name a client dials – the VIP’s address where <code>loadbalancer</code> is a name, an external DNS alias, a bastion – fails certificate verification unless it is listed here.</td></tr>
+<tr><td><code>trustedSources</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the addresses every node’s firewall trusts for node-to-node communication, on top of the discovered node addresses and the cluster’s pod and service CIDRs that cargoship trusts itself. Each entry is a CIDR block, <code>10.0.0.0/16</code>, or an inclusive range, <code>10.1.2.2-10.1.2.150</code>. This is what a cloud or DHCP fleet needs, where a node’s address is not known when the cluster is written down and nodes come and go. Every entry is trusted as fully as a node is, so keep the blocks as narrow as the fleet allows.</td></tr>
 <tr><td><code>values</code></td><td>object</td><td>no</td><td></td><td>overrides the values the distro package was built with. It is the same<br>nested structure the package ships, addressed by the same dotted paths, and it<br>must still satisfy the package’s values schema. Keys the package does not<br>define are kept, so a cluster can carry values a later package version reads.</td></tr>
 </tbody>
 </table>
