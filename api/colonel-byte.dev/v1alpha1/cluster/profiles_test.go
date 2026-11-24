@@ -88,6 +88,34 @@ func TestResolveProfilesNearestAncestorWins(t *testing.T) {
 	require.Equal(t, "50%", out["c"].Concurrency)
 }
 
+func TestResolveProfilesUnionsPorts(t *testing.T) {
+	out, err := ResolveProfiles(map[string]Profiles{
+		"common": {
+			Host: HostConfig{
+				Ports: []HostPort{
+					{Port: "7946", Protocol: "tcp"},
+					{Port: "7946", Protocol: "udp"},
+				},
+			},
+		},
+		"control-plane": {
+			Inherit: "common",
+			Host: HostConfig{
+				Ports: []HostPort{
+					{Port: "6443", Protocol: "tcp"},
+					{Port: "7946", Protocol: "tcp"},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, []HostPort{
+		{Port: "6443", Protocol: "tcp"},
+		{Port: "7946", Protocol: "tcp"},
+		{Port: "7946", Protocol: "udp"},
+	}, out["control-plane"].Host.Ports)
+}
+
 func TestResolveProfilesErrors(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -122,6 +122,7 @@ func TestFirewalldTarget(t *testing.T) {
 func TestPlanIsEmpty(t *testing.T) {
 	require.True(t, Plan{}.IsEmpty())
 	require.False(t, Plan{NodeAddresses: []string{"10.0.0.1"}}.IsEmpty())
+	require.False(t, Plan{TrustedCIDRs: []string{"10.123.0.0/16"}}.IsEmpty())
 	require.False(t, Plan{Ports: []cluster.HostPort{{Port: "80", Protocol: "tcp"}}}.IsEmpty())
 	require.False(t, Plan{Policies: map[string]cluster.FirewallPolicyConfig{"p": {}}}.IsEmpty())
 }

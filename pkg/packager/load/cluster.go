@@ -72,6 +72,9 @@ func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions)
 }
 
 func validateCluster(ctx context.Context, c v1alpha1.Cluster, path string) error {
+	if err := v1alpha1.ValidateTrustedSources(c.Spec.Config.TrustedSources); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	if err := v1alpha1.ValidateRegistries(c.Spec.Config.Registries); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}

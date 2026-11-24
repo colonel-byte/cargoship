@@ -37,6 +37,10 @@ type Plan struct {
 	// ClusterCIDRs lists the pod and service CIDR blocks the distro engine uses. A node
 	// trusts all traffic from these blocks.
 	ClusterCIDRs []string
+	// TrustedCIDRs lists the CIDR blocks every node trusts for node-to-node communication, on
+	// top of the two above. It is the cluster's `.config.trustedSources`, with any inclusive
+	// range already expanded to CIDRs.
+	TrustedCIDRs []string
 	// Ports lists the ports the node exposes publicly, from the inventory's `.host.ports`.
 	Ports []cluster.HostPort
 	// Rules lists the backend-neutral rules from the inventory's `.host.firewall.rules`.
@@ -50,6 +54,7 @@ type Plan struct {
 func (p Plan) IsEmpty() bool {
 	return len(p.NodeAddresses) == 0 &&
 		len(p.ClusterCIDRs) == 0 &&
+		len(p.TrustedCIDRs) == 0 &&
 		len(p.Ports) == 0 &&
 		len(p.Rules) == 0 &&
 		len(p.Policies) == 0

@@ -207,7 +207,7 @@ func ufwRules(p Plan) ([]string, error) {
 		rules = append(rules, fmt.Sprintf("allow %s comment '%s:ports'", ufwProfileName, ufwComment))
 	}
 
-	for _, addr := range append(slices.Clone(p.NodeAddresses), p.ClusterCIDRs...) {
+	for _, addr := range slices.Concat(p.NodeAddresses, p.ClusterCIDRs, p.TrustedCIDRs) {
 		if addr == "" {
 			continue
 		}

@@ -497,3 +497,72 @@ dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
 		})
 	}
 }
+
+func TestValidateTrustedSources(t *testing.T) {
+	cases := map[string]struct {
+		cidrs   []string
+		want    []string
+		wantErr string
+	}{
+		"empty": {
+			cidrs: nil,
+		},
+		"valid v4 and v6 cidrs": {
+			cidrs: []string{"10.123.0.0/16", "fd00:1234::/48"},
+			want:  []string{"10.123.0.0/16", "fd00:1234::/48"},
+		},
+		"ipv4 range expands to minimal cidrs": {
+			cidrs: []string{"10.1.2.2-10.1.2.150"},
+			want: []string{
+				"10.1.2.2/31",
+				"10.1.2.4/30",
+				"10.1.2.8/29",
+				"10.1.2.16/28",
+				"10.1.2.32/27",
+				"10.1.2.64/26",
+				"10.1.2.128/28",
+				"10.1.2.144/30",
+				"10.1.2.148/31",
+				"10.1.2.150/32",
+			},
+		},
+		"single ip range": {
+			cidrs: []string{"10.1.2.5-10.1.2.5"},
+			want:  []string{"10.1.2.5/32"},
+		},
+		"ipv6 range": {
+			cidrs: []string{"fd00::1-fd00::4"},
+			want:  []string{"fd00::1/128", "fd00::2/127", "fd00::4/128"},
+		},
+		"bare ip without prefix": {
+			cidrs:   []string{"10.123.0.1"},
+			wantErr: `trustedSources: invalid CIDR "10.123.0.1": netip.ParsePrefix("10.123.0.1"): no '/'`,
+		},
+		"invalid cidr": {
+			cidrs:   []string{"10.123.0.0/33"},
+			wantErr: `trustedSources: invalid CIDR "10.123.0.0/33": netip.ParsePrefix("10.123.0.0/33"): prefix length out of range`,
+		},
+		"reversed range": {
+			cidrs:   []string{"10.1.2.150-10.1.2.2"},
+			wantErr: `trustedSources: range "10.1.2.150-10.1.2.2" has start after end`,
+		},
+		"mixed family range": {
+			cidrs:   []string{"10.1.2.2-fd00::1"},
+			wantErr: `trustedSources: range "10.1.2.2-fd00::1" mixes IPv4 and IPv6 addresses`,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got, err := ExpandTrustedSources(tc.cidrs)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				require.Equal(t, tc.want, got)
+				require.NoError(t, ValidateTrustedSources(tc.cidrs))
+				return
+			}
+			require.EqualError(t, err, tc.wantErr)
+			require.EqualError(t, ValidateTrustedSources(tc.cidrs), tc.wantErr)
+		})
+	}
+}

@@ -2,7 +2,21 @@
 
 Cargoship configures the firewall on every node that runs one. It picks the firewall per node, from the node's operating system and from what is running on it, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when `cargoship apply` is given the `--firewall` flag.
 
-Every node cargoship manages gets three things: the private address of every other node in the cluster is trusted, the engine's pod and service CIDR blocks are trusted, and the ports listed in `.host.ports` are opened. Anything beyond that comes from the rules in `.host.firewall.rules`.
+Every node cargoship manages gets three things: the private address of every other node in the cluster is trusted, the engine's pod and service CIDR blocks are trusted, and the ports listed in `.host.ports` are opened. Anything beyond that comes from `.config.trustedSources` and from the rules in `.host.firewall.rules`.
+
+## Trusting addresses cargoship cannot discover
+
+The node addresses above are the ones cargoship found on the hosts in the inventory, which is every node a fixed-address fleet has. A cloud or DHCP fleet is the case that breaks: a node's address is not known when the cluster is written down, and a node that scales up after `apply` has run was never in the inventory to discover. `.config.trustedSources` covers that gap by trusting a block rather than an address. Each entry is a CIDR block or an inclusive range, and both forms reach every backend as CIDRs:
+
+```yaml
+spec:
+  config:
+    trustedSources:
+      - 10.0.0.0/16
+      - 10.1.2.2-10.1.2.150
+```
+
+An entry is trusted as fully as a node is - all traffic, every port - so keep the blocks as narrow as the fleet allows. `10.0.0.0/8` trusts the whole of that private range, which is rarely what is meant.
 
 ## Backends
 
