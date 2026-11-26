@@ -31,9 +31,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/pterm/pterm v0.12.84
 	github.com/sigstore/cosign/v3 v3.1.4
-	github.com/sigstore/protobuf-specs v0.5.2
-	github.com/sigstore/sigstore v1.11.3
-	github.com/sigstore/sigstore-go v1.4.0
+	github.com/sigstore/protobuf-specs v0.5.3-0.20261112181914-a84bc5ff572a
+	github.com/sigstore/sigstore v1.11.4
+	github.com/sigstore/sigstore-go v1.4.1
 	github.com/sosedoff/ansible-vault-go v0.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
@@ -200,9 +200,9 @@ require (
 	github.com/sergi/go-diff v1.4.5 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.6.0 // indirect
-	github.com/sigstore/rekor v1.6.3 // indirect
-	github.com/sigstore/rekor-tiles/v2 v2.4.2 // indirect
-	github.com/sigstore/timestamp-authority/v2 v2.2.1 // indirect
+	github.com/sigstore/rekor v1.6.5 // indirect
+	github.com/sigstore/rekor-tiles/v2 v2.4.6 // indirect
+	github.com/sigstore/timestamp-authority/v2 v2.2.2 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
