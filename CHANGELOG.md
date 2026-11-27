@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.44.1](https://github.com/colonel-byte/cargoship/compare/v0.44.0...v0.44.1) (2026-11-27)
+
+
+### Build
+
+* **deps:** bump chainguard/static from `54b5f14` to `599c3cd` in /containers/base ([#1198](https://github.com/colonel-byte/cargoship/issues/1198)) ([6bf5653](https://github.com/colonel-byte/cargoship/commit/6bf56533767bfe0f05c81010e4d80dc604f80d91))
+* **deps:** bump github.com/k0sproject/rig/v2 from 2.4.0 to 2.4.1 ([#1204](https://github.com/colonel-byte/cargoship/issues/1204)) ([dfe6f52](https://github.com/colonel-byte/cargoship/commit/dfe6f524bacb94735b5fd38dbe7da9e703150c11))
+* **deps:** bump github.com/sigstore/cosign/v3 from 3.1.4 to 3.1.5 in the sigstore group ([#1203](https://github.com/colonel-byte/cargoship/issues/1203)) ([8a33df1](https://github.com/colonel-byte/cargoship/commit/8a33df15a7aea51423be2c1cae062ce8f8108948))
+* **deps:** bump k8s.io/streaming from 0.37.2 to 0.37.3 in the k8s group ([#1200](https://github.com/colonel-byte/cargoship/issues/1200)) ([8227ab1](https://github.com/colonel-byte/cargoship/commit/8227ab192eadf100d70ad9842ce9251c045efc8f))
+* **deps:** bump library/debian from `a72b443` to `8aa5a7b` in /containers/deb ([#1202](https://github.com/colonel-byte/cargoship/issues/1202)) ([4cf092d](https://github.com/colonel-byte/cargoship/commit/4cf092d5a902402e83b302ed912b22647e611290))
+* **deps:** bump the core group with 5 updates ([#1205](https://github.com/colonel-byte/cargoship/issues/1205)) ([03b238d](https://github.com/colonel-byte/cargoship/commit/03b238df86413396b03c9c4b3304975b28754d1f))
+* **deps:** bump the sigstore group with 5 updates ([#1201](https://github.com/colonel-byte/cargoship/issues/1201)) ([fb361ea](https://github.com/colonel-byte/cargoship/commit/fb361eab99e89b2aea1dd1905705965663ce4b72))
+
 ## [0.44.0](https://github.com/colonel-byte/cargoship/compare/v0.43.1...v0.44.0) (2026-11-24)
 
 
