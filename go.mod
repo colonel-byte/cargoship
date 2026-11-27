@@ -30,7 +30,7 @@ require (
 	github.com/pb33f/ordered-map/v2 v2.3.2
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/pterm/pterm v0.12.84
-	github.com/sigstore/cosign/v3 v3.1.4
+	github.com/sigstore/cosign/v3 v3.1.5
 	github.com/sigstore/protobuf-specs v0.5.3-0.20261112181914-a84bc5ff572a
 	github.com/sigstore/sigstore v1.11.4
 	github.com/sigstore/sigstore-go v1.4.1

@@ -607,8 +607,8 @@ github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
 github.com/shopspring/decimal v1.6.0 h1:DcTwjCj4tJPLuGZYsR9W0hyX9pQwMIkdo26Ig1T9xX4=
 github.com/shopspring/decimal v1.6.0/go.mod h1:gawqmDU56v4yIKSwfBSFip1HdCCXN8/+DMd9qYNcwME=
-github.com/sigstore/cosign/v3 v3.1.4 h1:d3UHS8oJebMf6XUhPtWv9weU1ZYRyXq9HJ7QPccmqvY=
-github.com/sigstore/cosign/v3 v3.1.4/go.mod h1:ZKgAdeS65uMLm3uoY8TiQGdzA8BoKYBSEIo2DEd1/4s=
+github.com/sigstore/cosign/v3 v3.1.5 h1:8zGkrk8WA7aGrEzpBBZUvOFaSDnh5bh8arMFiyzcXY4=
+github.com/sigstore/cosign/v3 v3.1.5/go.mod h1:cK0rQKhmkjG1ZM4ImBYL1ikUr2jxxEdGGwOiuWkS7g0=
 github.com/sigstore/protobuf-specs v0.5.3-0.20261112181914-a84bc5ff572a h1:5XG2LytaPWuYUctAEGtTPchXcqXs5VTa4RbJgVFaq4A=
 github.com/sigstore/protobuf-specs v0.5.3-0.20261112181914-a84bc5ff572a/go.mod h1:1QTwiRx4i1dbHGub43GV+0G/Y1rZdlyJDxPmJ+6RUOk=
 github.com/sigstore/rekor v1.6.5 h1:kGFQOB4lHKkkrzKp04iXHbuMDKwoeyRxE9UDdhys5mI=
